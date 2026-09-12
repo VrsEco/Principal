@@ -54,25 +54,12 @@ class KnowledgeBase:
                 persist_directory=self.persist_directory
             )
         except Exception as e:
-            logger.error(f"Erro ao carregar o Chroma DB (provável corrupção): {e}")
-            logger.info("Tentando recriar o banco de dados vetorial do zero...")
-            import shutil
-            if os.path.exists(self.persist_directory):
-                try:
-                    shutil.rmtree(self.persist_directory)
-                except Exception as ex:
-                    logger.warning(f"Aviso ao deletar diretório do Chroma: {ex}")
-            
-            try:
-                self.vector_store = Chroma(
-                    collection_name=self.collection_name,
-                    embedding_function=self.embeddings,
-                    persist_directory=self.persist_directory
-                )
-                logger.info("Chroma DB recriado com sucesso.")
-            except Exception as critical_error:
-                logger.error(f"Falha CRÍTICA ao recriar Chroma DB: {critical_error}")
-                self.vector_store = None
+            # Falha de leitura nunca é autorização para apagar a base de
+            # conhecimento. A recuperação precisa de backup, diagnóstico e ação
+            # explícita de operador; apagar aqui transformava uma falha transitória
+            # em perda de dados durante import/teste/startup.
+            logger.error("Erro ao carregar o Chroma DB; recuperação manual requerida: %s", e)
+            self.vector_store = None
             
         logger.info(f"KnowledgeBase inicializada (ChromaDB: {self.persist_directory})")
 

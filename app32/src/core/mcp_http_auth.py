@@ -23,6 +23,12 @@ except ImportError:  # pragma: no cover
         client_id: str
         scopes: list[str]
         resource: str | None = None
+        # Preservar claims técnicos mesmo no fallback sem o SDK MCP completo.
+        # Eles não concedem acesso por si: a autorização continua no vínculo
+        # APP32/principal e no grant por empresa.
+        expires_at: int | None = None
+        subject: str | None = None
+        claims: dict[str, Any] | None = None
 
     @dataclass(frozen=True)
     class AuthSettings:  # type: ignore[no-redef]

@@ -136,7 +136,6 @@ class ToolCatalog:
                 "runtime_profile",
                 "actor_type",
                 "client_id",
-                "token_subject",
             ):
                 if payload.get(key) is not None:
                     context[key] = payload.get(key)
@@ -171,7 +170,6 @@ class ToolCatalog:
                 "runtime_profile": str((payload or {}).get("runtime_profile") or "").strip().lower() or None,
                 "actor_type": str((payload or {}).get("actor_type") or "").strip().lower() or None,
                 "client_id": str((payload or {}).get("client_id") or "").strip() or None,
-                "token_subject": str((payload or {}).get("token_subject") or "").strip() or None,
             }
             record = build_ai_execution_audit_record(
                 event_type=f"mcp.{tool_name}.{status}",

@@ -42,6 +42,50 @@ def test_resolve_identity_context_normalizes_mapping_payload():
     assert principal.metadata == {"origin": "mcp"}
 
 
+def test_resolve_identity_context_preserves_oauth_principal_contract_without_exposing_subject_in_metadata():
+    principal = resolve_identity_context(
+        {
+            "principal_id": "81",
+            "subject_type": "service_account",
+            "issuer": "https://auth.gestaoversus.com.br/realms/versus",
+            "token_subject": "service:erp-bomix",
+            "client_id": "erp-bomix",
+            "auth_method": "CLIENT_CREDENTIALS",
+            "scopes": "mcp:user processes:read",
+            "metadata": {"request_id": "req-123"},
+        }
+    )
+
+    assert principal.principal_id == 81
+    assert principal.subject_type == "SERVICE"
+    assert principal.issuer == "https://auth.gestaoversus.com.br/realms/versus"
+    assert principal.subject == "service:erp-bomix"
+    assert principal.client_id == "erp-bomix"
+    assert principal.auth_method == "client_credentials"
+    assert principal.token_scopes == frozenset({"mcp:user", "processes:read"})
+    assert principal.correlation_id == "req-123"
+
+
+def test_resolve_identity_context_preserves_subject_exactly_for_external_identity_binding():
+    principal = resolve_identity_context(
+        {
+            "issuer": "https://auth.gestaoversus.com.br/realms/versus",
+            "subject": " service:erp-bomix ",
+        }
+    )
+
+    assert principal.subject == " service:erp-bomix "
+
+
+def test_resolve_identity_context_rejects_unknown_subject_type():
+    try:
+        resolve_identity_context({"subject_type": "robot"})
+    except ValueError as exc:
+        assert "subject_type inválido" in str(exc)
+    else:  # pragma: no cover - contrato explícito da identidade técnica
+        raise AssertionError("subject_type não reconhecido deveria ser rejeitado")
+
+
 def test_resolve_identity_context_accepts_object_source_and_overrides():
     principal = resolve_identity_context(
         SimpleNamespace(user_id="9", company_id=33, role="collaborator", channel="web"),

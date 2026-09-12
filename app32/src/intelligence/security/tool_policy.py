@@ -38,6 +38,19 @@ MUTATING_ACTIONS = {"create", "update", "delete", "approve", "review"}
 DESTRUCTIVE_ACTIONS = {"delete", "approve"}
 ADMIN_DOMAINS = {"admin", "diagnostics", "identity_admin"}
 
+# Scopes OAuth não são ToolScope/capabilities do catálogo. Este contrato é uma
+# fronteira independente: concede somente a surface MCP que o resource server
+# explicitamente recebeu no access token. ``mcp:access`` é pré-requisito, não
+# uma concessão global de surface.
+MCP_OAUTH_ACCESS_SCOPE = "mcp:access"
+MCP_OAUTH_SURFACE_SCOPES = {
+    "user": "mcp:user",
+    "admin": "mcp:admin",
+    "analytics": "mcp:analytics",
+    "ops": "mcp:ops",
+}
+INTERNAL_BEARER_AUTH_METHOD = "internal_bearer"
+
 
 @dataclass(frozen=True)
 class ToolPolicyRequest:
@@ -85,6 +98,13 @@ class ToolPolicyDecision:
             "required_context": list(self.request.required_context),
             "catalog_discovery": self.request.catalog_discovery,
             "principal": {
+                "principal_id": self.principal.principal_id,
+                "subject_type": self.principal.subject_type,
+                "issuer": self.principal.issuer,
+                "client_id": self.principal.client_id,
+                "auth_method": self.principal.auth_method,
+                "token_scopes": sorted(self.principal.token_scopes),
+                "correlation_id": self.principal.correlation_id,
                 "user_id": self.principal.user_id,
                 "employee_id": self.principal.employee_id,
                 "role": self.principal.role,
@@ -105,6 +125,66 @@ def _normalize_surface(surface: Any) -> str:
 def _normalize_risk(risk: Any) -> str:
     value = str(risk or "medium").strip().lower()
     return value if value in RISK_ORDER else "medium"
+
+
+def _is_oauth_authenticated_principal(principal: PrincipalContext) -> bool:
+    """Distingue access tokens OIDC do token interno de transição.
+
+    Um ``issuer`` combinado com qualquer método diferente de
+    ``internal_bearer`` é tratado como OAuth de forma fail-closed. Assim, um
+    método novo ou ausente não contorna o contrato de scopes por acidente.
+    """
+
+    return bool(principal.issuer) and principal.auth_method != INTERNAL_BEARER_AUTH_METHOD
+
+
+def _validate_oauth_mcp_scopes(
+    principal: PrincipalContext,
+    request: ToolPolicyRequest,
+    *,
+    surface: str,
+    risk: str,
+    checks: Sequence[str],
+) -> ToolPolicyDecision | None:
+    """Exige interseção explícita entre access token OAuth e surface MCP."""
+
+    if not _is_oauth_authenticated_principal(principal):
+        return None
+
+    scopes = set(principal.token_scopes)
+    if MCP_OAUTH_ACCESS_SCOPE not in scopes:
+        return _deny(
+            request,
+            principal,
+            surface,
+            risk,
+            None,
+            "access token OAuth sem scope mcp:access",
+            (*checks, "oauth_scope_gate", "oauth_scope_missing_mcp_access"),
+        )
+
+    required_surface_scope = MCP_OAUTH_SURFACE_SCOPES.get(surface)
+    if required_surface_scope is None:
+        return _deny(
+            request,
+            principal,
+            surface,
+            risk,
+            None,
+            f"surface {surface} não é suportada pelo contrato OAuth MCP",
+            (*checks, "oauth_scope_gate", "oauth_scope_surface_unsupported"),
+        )
+    if required_surface_scope not in scopes:
+        return _deny(
+            request,
+            principal,
+            surface,
+            risk,
+            None,
+            f"access token OAuth sem scope {required_surface_scope} para a surface {surface}",
+            (*checks, "oauth_scope_gate", "oauth_scope_surface_denied"),
+        )
+    return None
 
 
 def _deny(request: ToolPolicyRequest, principal: PrincipalContext, surface: str, risk: str, company_id: Optional[int], reason: str, checks: Sequence[str]) -> ToolPolicyDecision:
@@ -201,6 +281,18 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
 
     if not request.tool_name.strip():
         return _deny(request, principal, surface, risk, None, "tool_name ausente", (*checks, "missing_tool_name"))
+
+    oauth_scope_decision = _validate_oauth_mcp_scopes(
+        principal,
+        request,
+        surface=surface,
+        risk=risk,
+        checks=checks,
+    )
+    if oauth_scope_decision is not None:
+        return oauth_scope_decision
+    if _is_oauth_authenticated_principal(principal):
+        checks.extend(("oauth_scope_gate", "oauth_scope_allowed"))
 
     metadata = dict(principal.metadata or {})
     metadata.update(dict(request.metadata or {}))

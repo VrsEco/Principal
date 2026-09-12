@@ -20,6 +20,15 @@ ROLE_ALIASES = {
 }
 
 ADMIN_ROLES = {"administrador", "administrador_tecnico"}
+SUBJECT_TYPES = frozenset({"USER", "SERVICE", "AGENT"})
+SUBJECT_TYPE_ALIASES = {
+    "user": "USER",
+    "human": "USER",
+    "service": "SERVICE",
+    "service_account": "SERVICE",
+    "machine": "SERVICE",
+    "agent": "AGENT",
+}
 READ_ACTIONS = {"discover", "read", "list", "search", "analyze", "audit", "export"}
 WRITE_ACTIONS = {"create", "update", "delete", "approve", "execute", "review"}
 ACTION_ALIASES = {
@@ -155,6 +164,18 @@ def _normalize_role(role: Any) -> str:
     return ROLE_ALIASES.get(normalized, normalized)
 
 
+def _normalize_subject_type(subject_type: Any) -> str:
+    """Normaliza o tipo de principal sem inferi-lo do runtime ou do squad."""
+
+    normalized = _normalize_text(subject_type).lower()
+    if not normalized:
+        return "USER"
+    resolved = SUBJECT_TYPE_ALIASES.get(normalized, normalized.upper())
+    if resolved not in SUBJECT_TYPES:
+        raise ValueError(f"subject_type inválido: {subject_type!r}")
+    return resolved
+
+
 def _extract_value(source: Any, key: str) -> Any:
     if source is None:
         return None
@@ -199,6 +220,32 @@ def _normalize_permissions(permissions: Any) -> frozenset[str]:
     return frozenset(normalized)
 
 
+def _normalize_token_scopes(scopes: Any) -> frozenset[str]:
+    """Normaliza scopes OAuth sem confundí-los com capabilities APP32."""
+
+    if scopes is None:
+        return frozenset()
+    if isinstance(scopes, str):
+        values: Iterable[Any] = scopes.replace(",", " ").split()
+    elif isinstance(scopes, Iterable) and not isinstance(scopes, Mapping):
+        values = scopes
+    else:
+        values = [scopes]
+    return frozenset(_normalize_text(scope) for scope in values if _normalize_text(scope))
+
+
+def _coerce_exact_identity_identifier(value: Any) -> Optional[str]:
+    """Aceita identificador não vazio sem alterar seu valor semântico.
+
+    ``issuer`` e ``subject`` participam do vínculo único OIDC; trim ou
+    casefold nessa camada poderia criar colisão antes da consulta persistida.
+    """
+
+    if not isinstance(value, str) or not value or not value.strip():
+        return None
+    return value
+
+
 def _normalize_action(action: Any) -> Optional[str]:
     normalized = _normalize_text(action).lower()
     if not normalized:
@@ -208,6 +255,16 @@ def _normalize_action(action: Any) -> Optional[str]:
 
 @dataclass(frozen=True)
 class PrincipalContext:
+    # Identidade é aditiva e não substitui user_id durante a transição OAuth.
+    # SERVICE/AGENT não devem usar user_id sintético para obter autorização.
+    principal_id: Optional[int] = None
+    subject_type: str = "USER"
+    issuer: Optional[str] = None
+    subject: Optional[str] = None
+    client_id: Optional[str] = None
+    auth_method: Optional[str] = None
+    token_scopes: frozenset[str] = field(default_factory=frozenset)
+    correlation_id: Optional[str] = None
     user_id: Optional[int] = None
     company_id: Optional[int] = None
     employee_id: Optional[int] = None
@@ -283,6 +340,48 @@ def resolve_identity_context(source: Any = None, **overrides: Any) -> PrincipalC
     if isinstance(source, PrincipalContext):
         candidate = source
 
+    metadata = overrides.get("metadata", _extract_value(candidate, "metadata"))
+    metadata_values = metadata if isinstance(metadata, Mapping) else {}
+
+    principal_id = _coerce_optional_int(overrides.get("principal_id", _extract_value(candidate, "principal_id")))
+    subject_type = _normalize_subject_type(
+        overrides.get("subject_type", _extract_value(candidate, "subject_type") or metadata_values.get("subject_type"))
+    )
+    issuer = _coerce_exact_identity_identifier(
+        overrides.get("issuer", _extract_value(candidate, "issuer") or metadata_values.get("issuer"))
+    )
+    subject = _coerce_exact_identity_identifier(
+        overrides.get(
+            "subject",
+            _extract_value(candidate, "subject")
+            or _extract_value(candidate, "token_subject")
+            or metadata_values.get("subject")
+            or metadata_values.get("token_subject"),
+        )
+    )
+    client_id = _normalize_text(
+        overrides.get("client_id", _extract_value(candidate, "client_id") or metadata_values.get("client_id"))
+    ) or None
+    auth_method = _normalize_text(
+        overrides.get("auth_method", _extract_value(candidate, "auth_method") or metadata_values.get("auth_method"))
+    ).lower() or None
+    token_scopes = _normalize_token_scopes(
+        overrides.get(
+            "token_scopes",
+            _extract_value(candidate, "token_scopes")
+            or _extract_value(candidate, "scopes")
+            or metadata_values.get("token_scopes")
+            or metadata_values.get("scopes"),
+        )
+    )
+    correlation_id = _normalize_text(
+        overrides.get(
+            "correlation_id",
+            _extract_value(candidate, "correlation_id")
+            or metadata_values.get("correlation_id")
+            or metadata_values.get("request_id"),
+        )
+    ) or None
     user_id = _coerce_optional_int(overrides.get("user_id", _extract_value(candidate, "user_id")))
     company_id = _coerce_optional_int(overrides.get("company_id", _extract_value(candidate, "company_id")))
     employee_id = _coerce_optional_int(overrides.get("employee_id", _extract_value(candidate, "employee_id")))
@@ -291,9 +390,15 @@ def resolve_identity_context(source: Any = None, **overrides: Any) -> PrincipalC
     thread_id = _normalize_text(overrides.get("thread_id", _extract_value(candidate, "thread_id"))) or None
 
     permissions = overrides.get("permissions", _extract_value(candidate, "permissions"))
-    metadata = overrides.get("metadata", _extract_value(candidate, "metadata"))
-
     return PrincipalContext(
+        principal_id=principal_id,
+        subject_type=subject_type,
+        issuer=issuer,
+        subject=subject,
+        client_id=client_id,
+        auth_method=auth_method,
+        token_scopes=token_scopes,
+        correlation_id=correlation_id,
         user_id=user_id,
         company_id=company_id,
         employee_id=employee_id,

@@ -25,6 +25,110 @@ def test_tool_policy_allows_user_surface_read_inside_tenant() -> None:
     assert decision.to_audit_event()["tool_name"] == "list_project_tasks"
 
 
+def test_tool_policy_audits_oauth_principal_metadata_without_raw_subject() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "principal_id": 81,
+            "subject_type": "AGENT",
+            "issuer": "https://auth.gestaoversus.com.br/realms/versus",
+            "subject": "agent:finance-analyst",
+            "client_id": "finance-analyst",
+            "auth_method": "client_credentials",
+            "token_scopes": ["mcp:access", "mcp:analytics"],
+            "metadata": {"request_id": "req-456"},
+            "company_id": 7,
+            "role": "administrador",
+        },
+        ToolPolicyRequest(
+            tool_name="read_finance_summary",
+            surface="analytics",
+            domain="finance",
+            action="read",
+            risk="medium",
+            requested_company_id=7,
+        ),
+    )
+
+    audit_principal = decision.to_audit_event()["principal"]
+    assert audit_principal["principal_id"] == 81
+    assert audit_principal["subject_type"] == "AGENT"
+    assert audit_principal["client_id"] == "finance-analyst"
+    assert audit_principal["correlation_id"] == "req-456"
+    assert "subject" not in audit_principal
+
+
+def test_tool_policy_requires_baseline_scope_for_oauth_mcp_identity() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "principal_id": 81,
+            "issuer": "https://auth.gestaoversus.com.br/realms/versus",
+            "subject": "service:finance-analyst",
+            "auth_method": "client_credentials",
+            "token_scopes": ["mcp:analytics"],
+            "company_id": 7,
+            "role": "administrador",
+        },
+        ToolPolicyRequest(
+            tool_name="read_finance_summary",
+            surface="analytics",
+            domain="finance",
+            action="read",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is False
+    assert decision.reason == "access token OAuth sem scope mcp:access"
+    assert "oauth_scope_missing_mcp_access" in decision.checks
+
+
+def test_tool_policy_does_not_escalate_oauth_analytics_scope_to_admin_surface() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "principal_id": 81,
+            "issuer": "https://auth.gestaoversus.com.br/realms/versus",
+            "subject": "service:finance-analyst",
+            "auth_method": "client_credentials",
+            "token_scopes": ["mcp:access", "mcp:analytics"],
+            "company_id": 7,
+            "role": "administrador",
+        },
+        ToolPolicyRequest(
+            tool_name="list_users",
+            surface="admin",
+            domain="admin",
+            action="read",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is False
+    assert "scope mcp:admin" in decision.reason
+    assert "oauth_scope_surface_denied" in decision.checks
+
+
+def test_tool_policy_keeps_legacy_internal_identity_compatible_with_rbac() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "user_id": 1,
+            "issuer": "https://auth.gestaoversus.com.br/realms/versus",
+            "auth_method": "internal_bearer",
+            "company_id": 7,
+            "role": "administrador",
+        },
+        ToolPolicyRequest(
+            tool_name="list_users",
+            surface="admin",
+            domain="admin",
+            action="read",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is True
+    assert "oauth_scope_gate" not in decision.checks
+
+
 def test_tool_policy_blocks_user_surface_admin_domain() -> None:
     decision = evaluate_tool_policy(
         {"user_id": 10, "company_id": 7, "role": "administrador"},
