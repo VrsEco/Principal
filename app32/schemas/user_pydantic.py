@@ -175,3 +175,15 @@ class UserMcpTokenConfigSchema(BaseModel):
             return None
         normalized = str(value).strip().lower()
         return normalized or None
+
+class UserMcpOAuthEnableSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int = Field(..., gt=0)
+    temporary_password: str = Field(..., min_length=12, max_length=255)
+
+
+class UserMcpOAuthRevokeSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int = Field(..., gt=0)

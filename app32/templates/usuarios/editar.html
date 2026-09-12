@@ -27,6 +27,7 @@
             style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 2px; min-width: max-content;">
             <button class="tab-btn active" data-tab="dados" onclick="switchTab('dados')">Dados da Conta</button>
             <button class="tab-btn" data-tab="acessos" onclick="switchTab('acessos')">Acessos (Empresas)</button>
+            <button class="tab-btn" data-tab="mcp-oauth" onclick="switchTab('mcp-oauth'); loadMcpOAuthStatus();">MCP OAuth</button>
         </div>
     </div>
 
@@ -231,7 +232,19 @@
                 </div>
             </div>
         </div>
-    </div>
+        <div id="content-mcp-oauth" class="tab-pane" style="display: none;">
+            <div class="card mb-4" style="border-radius: 24px;"><div class="card-body">
+                <h3 style="font-size: 1.25rem; font-weight: 700;">Acesso remoto MCP via OAuth</h3>
+                <p style="color: var(--text-secondary); margin: .5rem 0 1.5rem;">Controle administrativo: o APP32 define a empresa autorizada; o cliente apenas autentica no navegador Versus.</p>
+                <div id="mcpOAuthStatus" style="margin-bottom: 1.5rem; color: var(--text-secondary);">Carregando status…</div>
+                <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1rem; align-items:end;">
+                    <div class="form-group" style="margin:0;"><label class="form-label" for="mcp_oauth_company_id">Empresa já vinculada</label><select id="mcp_oauth_company_id" class="form-control"><option value="">Selecione a empresa</option>{% for uc in user_companies %}<option value="{{ uc.company_id }}">{{ uc.company_name }}</option>{% endfor %}</select></div>
+                    <button type="button" class="btn btn-primary" onclick="enableMcpOAuth()">Habilitar MCP OAuth</button>
+                </div>
+                <small style="display:block; margin-top:.75rem; color:var(--text-tertiary);">A habilitação cria ou sincroniza a identidade no Keycloak e exige uma senha temporária, obrigatória para troca no primeiro login.</small>
+                <div style="margin-top:1rem;"><button type="button" class="btn btn-secondary" onclick="revokeMcpOAuth()">Revogar acesso da empresa selecionada</button></div>
+            </div></div>
+        </div>    </div>
 </div>
 
 <!-- Modal: Novo Vínculo -->
@@ -495,6 +508,13 @@
         }
     }
 
+    async function loadMcpOAuthStatus() {
+        const target = document.getElementById('mcpOAuthStatus');
+        try { const response = await fetch(`/api/usuarios/${USER_ID}/mcp-oauth`); const result = await response.json(); if (!result.success) throw new Error(result.message); const grants = result.data.grants || []; target.innerHTML = grants.length ? grants.map(grant => `<div style="margin:.35rem 0;"><strong>${grant.company_name || grant.company_id}</strong> · ${grant.status} · ${grant.role}</div>`).join('') : 'Nenhum acesso MCP OAuth habilitado para este usuário.'; } catch (_) { target.textContent = 'Não foi possível consultar o status MCP OAuth.'; }
+    }
+    function selectedMcpCompanyId() { const value = Number(document.getElementById('mcp_oauth_company_id').value); if (!value) { showAlert('Selecione uma empresa já vinculada ao usuário.', 'danger'); return null; } return value; }
+    async function enableMcpOAuth() { const companyId = selectedMcpCompanyId(); if (!companyId) return; const temporaryPassword = window.prompt('Informe uma senha temporária com ao menos 12 caracteres. O usuário será obrigado a trocá-la no primeiro login.', ''); if (temporaryPassword === null) return; try { const response = await fetch(`/api/usuarios/${USER_ID}/mcp-oauth/enable`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({company_id:companyId, temporary_password:temporaryPassword})}); const result = await response.json(); if (!result.success) throw new Error(result.message); showAlert(result.message, 'success'); loadMcpOAuthStatus(); } catch (error) { showAlert(error.message || 'Falha ao habilitar MCP OAuth.', 'danger'); } }
+    async function revokeMcpOAuth() { const companyId = selectedMcpCompanyId(); if (!companyId) return; if (!window.confirm('Revogar apenas o acesso MCP OAuth desta empresa? O acesso normal ao APP32 não será removido.')) return; try { const response = await fetch(`/api/usuarios/${USER_ID}/mcp-oauth/revoke`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({company_id:companyId})}); const result = await response.json(); if (!result.success) throw new Error(result.message); showAlert(result.message, 'success'); loadMcpOAuthStatus(); } catch (error) { showAlert(error.message || 'Falha ao revogar MCP OAuth.', 'danger'); } }
     // Modals
     function openVincularModal() {
         document.getElementById('vincularModal').style.display = 'flex';

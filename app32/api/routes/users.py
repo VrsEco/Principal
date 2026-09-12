@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import User, Employee, Company, db
-from schemas.user_pydantic import UserCreateSchema, UserUpdateSchema, UserChannelTestSchema
+from schemas.user_pydantic import (UserCreateSchema, UserUpdateSchema, UserChannelTestSchema, UserMcpOAuthEnableSchema, UserMcpOAuthRevokeSchema)
 from pydantic import ValidationError
 from utils.permissions import admin_required, is_platform_admin
 from services.notification_hub import notification_hub
+from services.mcp_oauth_onboarding_service import McpOAuthOnboardingError, mcp_oauth_onboarding_service
 from services.identity.user_employee_orchestrator_service import (
     UserEmployeeOrchestratorService,
 )
@@ -172,6 +173,7 @@ def editar(user_id):
         if emp.company_id in company_dict:
             user_companies.append({
                 "employee_id": emp.id,
+                "company_id": emp.company_id,
                 "company_name": company_dict[emp.company_id].name,
                 "department": emp.department,
                 "status": emp.status
@@ -306,6 +308,58 @@ def update_user(user_id):
     except ValidationError as e:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 400
     except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+@usuarios_bp.route('/api/usuarios/<int:user_id>/mcp-oauth', methods=['GET'])
+@login_required
+def get_user_mcp_oauth_status(user_id):
+    if not _is_platform_admin_local():
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+    User.query.get_or_404(user_id)
+    try:
+        return jsonify({"success": True, "data": mcp_oauth_onboarding_service.status(user_id=user_id)})
+    except Exception:
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@usuarios_bp.route('/api/usuarios/<int:user_id>/mcp-oauth/enable', methods=['POST'])
+@login_required
+def enable_user_mcp_oauth(user_id):
+    if not _is_platform_admin_local():
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+    try:
+        payload = UserMcpOAuthEnableSchema(**(request.get_json(silent=True) or {}))
+        result = mcp_oauth_onboarding_service.enable(
+            user_id=user_id,
+            company_id=payload.company_id,
+            temporary_password=payload.temporary_password,
+            actor_user_id=current_user.id,
+        )
+        return jsonify({"success": True, "message": "MCP OAuth habilitado. O usuário deverá trocar a senha no primeiro acesso.", "data": result})
+    except (ValidationError, McpOAuthOnboardingError) as exc:
+        return jsonify({"success": False, "message": str(exc) or "Dados inválidos"}), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@usuarios_bp.route('/api/usuarios/<int:user_id>/mcp-oauth/revoke', methods=['POST'])
+@login_required
+def revoke_user_mcp_oauth(user_id):
+    if not _is_platform_admin_local():
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+    try:
+        payload = UserMcpOAuthRevokeSchema(**(request.get_json(silent=True) or {}))
+        result = mcp_oauth_onboarding_service.revoke(
+            user_id=user_id,
+            company_id=payload.company_id,
+            actor_user_id=current_user.id,
+        )
+        return jsonify({"success": True, "message": "Acesso MCP OAuth revogado para esta empresa.", "data": result})
+    except (ValidationError, McpOAuthOnboardingError) as exc:
+        return jsonify({"success": False, "message": str(exc) or "Dados inválidos"}), 400
+    except Exception:
         db.session.rollback()
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
