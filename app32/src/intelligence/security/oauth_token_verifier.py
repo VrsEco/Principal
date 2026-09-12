@@ -46,6 +46,11 @@ class OAuthTokenVerifierSettings:
     jwks_unknown_kid_cache_size: int = 64
     ca_bundle_path: str | None = None
     expected_token_type: str | None = None
+    # Resource servers que aceitam Dynamic Client Registration não podem
+    # conhecer antecipadamente o ``azp`` público e efêmero de cada cliente
+    # nativo. A allowlist segue disponível para perfis estáticos; quando vazia,
+    # a confiança continua ancorada em issuer, JWKS, audience, escopos e
+    # resolução persistida de principal — nunca no client_id público.
     allowed_client_ids: tuple[str, ...] = ()
     required_scopes: tuple[str, ...] = ("mcp:access",)
 
@@ -116,12 +121,6 @@ class OAuthTokenVerifierSettings:
                 raise ValueError(f"configuração {name} inválida")
             return tuple(value.split(","))
 
-        def required_csv(name: str) -> tuple[str, ...]:
-            items = optional_csv(name)
-            if not items:
-                raise ValueError(f"configuração {name} obrigatória e inválida")
-            return items
-
         def optional_int(name: str, default: int) -> int:
             value = values.get(name)
             if value in (None, ""):
@@ -147,7 +146,7 @@ class OAuthTokenVerifierSettings:
             jwks_unknown_kid_cache_size=optional_int("jwks_unknown_kid_cache_size", 64),
             ca_bundle_path=values.get("ca_bundle_path") or None,
             expected_token_type=expected_token_type,
-            allowed_client_ids=required_csv("allowed_client_ids"),
+            allowed_client_ids=optional_csv("allowed_client_ids"),
             required_scopes=optional_csv("required_scopes") or ("mcp:access",),
         )
 

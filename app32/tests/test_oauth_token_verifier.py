@@ -141,6 +141,17 @@ def test_verifier_enforces_explicit_client_allowlist_when_resource_profile_requi
         verifier.verify(_access_token(private_key, azp="unknown-client"))
 
 
+def test_verifier_allows_dynamic_public_client_when_profile_uses_issuer_audience_and_scope(signing_material):
+    private_key, resolver = signing_material
+    verifier = OAuthAccessTokenVerifier(_settings(), signing_key_resolver=resolver)
+
+    verified = verifier.verify(
+        _access_token(private_key, azp="5f983600-c34d-49bc-ac1e-f211adaac5af")
+    )
+
+    assert verified.client_id == "5f983600-c34d-49bc-ac1e-f211adaac5af"
+
+
 def test_verifier_requires_resource_baseline_scope_without_granting_surface_access(signing_material):
     private_key, resolver = signing_material
     verifier = OAuthAccessTokenVerifier(_settings(), signing_key_resolver=resolver)
@@ -290,10 +301,10 @@ def test_verifier_settings_load_only_complete_strict_resource_server_profile():
 
     with pytest.raises(ValueError, match="issuer"):
         OAuthTokenVerifierSettings.from_mapping({"audience": AUDIENCE, "jwks_url": JWKS_URL})
-    with pytest.raises(ValueError, match="allowed_client_ids"):
-        OAuthTokenVerifierSettings.from_mapping(
-            {"issuer": ISSUER, "audience": AUDIENCE, "jwks_url": JWKS_URL}
-        )
+    dynamic_client_settings = OAuthTokenVerifierSettings.from_mapping(
+        {"issuer": ISSUER, "audience": AUDIENCE, "jwks_url": JWKS_URL}
+    )
+    assert dynamic_client_settings.allowed_client_ids == ()
     with pytest.raises(ValueError, match="allowed_client_ids"):
         OAuthTokenVerifierSettings.from_mapping(
             {"issuer": ISSUER, "audience": AUDIENCE, "jwks_url": JWKS_URL, "allowed_client_ids": "client, "}
