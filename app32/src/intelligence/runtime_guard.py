@@ -10,7 +10,7 @@ from typing import Literal
 LegacyRuntimeGuardMode = Literal["warn", "block", "off"]
 
 LEGACY_RUNTIME_GUARD_ENV = "APP32_LEGACY_RUNTIME_GUARD_MODE"
-DEFAULT_LEGACY_RUNTIME_GUARD_MODE: LegacyRuntimeGuardMode = "warn"
+DEFAULT_LEGACY_RUNTIME_GUARD_MODE: LegacyRuntimeGuardMode = "block"
 
 LEGACY_RUNTIME_ALLOWLIST: frozenset[str] = frozenset(
     {
@@ -101,8 +101,8 @@ def require_legacy_runtime_access(
     """
     Guard rail central para runtimes legados.
 
-    A fase AA.J.31.1318 usa `warn` como padrão para preservar compatibilidade,
-    deixando `block` disponível por configuração operacional controlada.
+    Runtimes legados são bloqueados por padrão. O modo `warn` existe apenas
+    para diagnóstico controlado e não deve ser usado por entrypoints públicos.
     """
 
     decision = evaluate_legacy_runtime_access(
