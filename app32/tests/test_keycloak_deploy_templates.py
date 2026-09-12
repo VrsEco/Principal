@@ -76,7 +76,7 @@ def test_configr_image_contains_the_versioned_versus_login_theme() -> None:
     properties = (theme_dir / "theme.properties").read_text(encoding="utf-8")
     stylesheet = (theme_dir / "resources" / "css" / "versus.css").read_text(encoding="utf-8")
     assert "parent=keycloak.v2" in properties
-    assert "styles=css/versus.css" in properties
+    assert "styles=css/versus-v2.css" in properties
     assert "#kc-header-wrapper" in stylesheet
     assert ".pf-v5-c-login__container" in stylesheet
     assert "@media (max-width:900px)" in stylesheet
