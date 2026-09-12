@@ -29,7 +29,7 @@ class KeycloakProvisioningSettings:
     def from_environment(cls) -> "KeycloakProvisioningSettings":
         values = {
             "base_url": str(os.getenv("APP32_KEYCLOAK_ADMIN_BASE_URL") or "").rstrip("/"),
-            "admin_realm": str(os.getenv("APP32_KEYCLOAK_ADMIN_REALM") or "master").strip(),
+            "admin_realm": str(os.getenv("APP32_KEYCLOAK_ADMIN_REALM") or "app32").strip(),
             "target_realm": str(os.getenv("APP32_KEYCLOAK_REALM") or "app32").strip(),
             "client_id": str(os.getenv("APP32_KEYCLOAK_ADMIN_CLIENT_ID") or "").strip(),
             "client_secret": str(os.getenv("APP32_KEYCLOAK_ADMIN_CLIENT_SECRET") or "").strip(),
