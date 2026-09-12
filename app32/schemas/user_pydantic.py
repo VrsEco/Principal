@@ -141,6 +141,19 @@ class UserPasswordChangeSchema(BaseModel):
     confirm_password: str = Field(..., min_length=6, max_length=255)
 
 
+class PasswordResetRequestSchema(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    email: str = Field(..., min_length=3, max_length=120, pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+
+
+class PasswordResetCompleteSchema(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    new_password: str = Field(..., min_length=12, max_length=255)
+    confirm_password: str = Field(..., min_length=12, max_length=255)
+
+
 class UserMcpTokenConfigSchema(BaseModel):
     model_config = ConfigDict(extra='forbid')
 

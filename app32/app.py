@@ -358,10 +358,16 @@ def create_app(config_name=None):
 
     @login_manager.user_loader
     def load_user(user_id):
+        from flask import session
         from models.user import User
         from utils.db_resilience import run_with_disconnect_retry
 
-        return run_with_disconnect_retry(lambda: User.query.get(int(user_id)))
+        user = run_with_disconnect_retry(lambda: User.query.get(int(user_id)))
+        expected_version = session.get('auth_session_version')
+        actual_version = getattr(user, 'auth_session_version', 1) if user else None
+        if user is None or expected_version is None or int(expected_version) != int(actual_version or 1):
+            return None
+        return user
 
     print("DEBUG: Registering API resources...")
     # RESTful API
@@ -623,14 +629,23 @@ def create_app(config_name=None):
         log_path = os.path.join(base_dir, 'request_debug.log')
         
         # Public endpoints that don't require authentication
-        public_endpoints = ['auth.login', 'static', 'telegram.telegram_webhook']
+        public_endpoints = [
+            'auth.login',
+            'auth.password_reset_request',
+            'auth.password_reset_complete',
+            'static',
+            'telegram.telegram_webhook',
+        ]
         public_endpoints.extend(['healthz', 'oauth_pilot_protected_resource_metadata'])
         if app.config.get("DEV_ROUTES_ENABLED"):
             public_endpoints.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
         
         try:
             with open(log_path, 'a') as f:
-                f.write(f"[{datetime.now()}] {request.method} {request.path}\n")
+                safe_path = request.path
+                if safe_path.startswith('/password-reset/') or safe_path.startswith('/auth/password-reset/'):
+                    safe_path = safe_path.rsplit('/', 1)[0] + '/[redacted]'
+                f.write(f"[{datetime.now()}] {request.method} {safe_path}\n")
                 f.write(f"  Auth: {current_user.is_authenticated}, Active Company: {session.get('active_company_id')}\n")
         except:
             pass

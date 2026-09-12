@@ -1,4 +1,5 @@
 import logging
+import os
 from urllib.parse import urlparse
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
@@ -7,6 +8,7 @@ from pydantic import ValidationError
 from models import User, Employee, Company, ProjectTask, ProcessInstance, Project
 from datetime import date, datetime, timedelta
 from services.auth_service import auth_service
+from services.password_reset_service import PasswordResetError, password_reset_service
 from services.user_presence_service import UserPresenceService
 from services.user_mcp_token_service import user_mcp_token_service
 from services.mcp_oauth_codex_connector_service import mcp_oauth_codex_connector_service
@@ -14,6 +16,8 @@ from services.mcp_versus_oauth_connector_service import mcp_versus_oauth_connect
 from schemas.user_pydantic import (
     UserProfileUpdateSchema,
     UserPasswordChangeSchema,
+    PasswordResetCompleteSchema,
+    PasswordResetRequestSchema,
     UserMcpTokenConfigSchema,
 )
 from utils.error_handling import (
@@ -22,7 +26,7 @@ from utils.error_handling import (
 )
 from utils.db_resilience import run_with_disconnect_retry
 from utils.permissions import can_access_company, get_default_company_id, is_platform_admin
-from utils.security import consume_rate_limit, get_request_ip, rate_limit_exceeded_response
+from utils.security import consume_rate_limit, get_request_ip, rate_limit_exceeded_response, same_origin_verified
 
 auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
@@ -136,6 +140,7 @@ def login():
         if user and is_active and user.check_password(password):
             session.clear()
             login_user(user)
+            session['auth_session_version'] = int(getattr(user, 'auth_session_version', 1) or 1)
             UserPresenceService.ensure_session_token(session)
             if next_target:
                 session['post_login_redirect'] = next_target
@@ -164,6 +169,82 @@ def login():
         return jsonify({"success": False, "message": "Credenciais inválidas"}), 401
     
     return render_template('auth/login_v2.html')
+
+
+def _password_reset_prefix() -> str:
+    """URL pública confiável; nunca use o Host controlado pela requisição."""
+    base_url = str(os.getenv("APP32_PUBLIC_BASE_URL") or "https://app.gestaoversus.com.br").strip().rstrip("/")
+    parsed = urlparse(base_url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise RuntimeError("APP32_PUBLIC_BASE_URL deve ser uma URL HTTPS válida.")
+    return f"{base_url}/password-reset"
+
+
+@auth_bp.route('/auth/password-reset', methods=['GET', 'POST'])
+@auth_bp.route('/password-reset', methods=['GET', 'POST'])
+def password_reset_request():
+    """Solicita link opaco sem revelar se há uma conta ativa para o e-mail."""
+    if request.method == 'GET':
+        return render_template('auth/password_reset_request.html')
+
+    if not same_origin_verified():
+        return jsonify({"success": False, "message": "Origem não permitida"}), 403
+
+    payload = request.get_json(silent=True) or request.form.to_dict() or {}
+    raw_email = str(payload.get('email') or '').strip().lower()
+    ip_key = get_request_ip()
+    # A mesma limitação vale para e-mails existentes e inexistentes.
+    if not consume_rate_limit("auth.password_reset.ip", ip_key, limit=5, window_seconds=900):
+        return rate_limit_exceeded_response("Muitas solicitações. Aguarde alguns minutos.")
+    if not consume_rate_limit("auth.password_reset.email", raw_email or "invalid", limit=3, window_seconds=900):
+        return rate_limit_exceeded_response("Muitas solicitações. Aguarde alguns minutos.")
+
+    try:
+        validated = PasswordResetRequestSchema(**payload)
+        password_reset_service.request_reset(
+            email=validated.email,
+            request_ip=ip_key,
+            reset_url_prefix=_password_reset_prefix(),
+        )
+    except (ValidationError, RuntimeError):
+        # Não diferencia formato inválido, conta inexistente ou falha de envio.
+        pass
+    except Exception:
+        logger.exception("Falha inesperada na solicitação de redefinição de senha")
+
+    return jsonify({
+        "success": True,
+        "message": "Se houver uma conta ativa para este e-mail, enviaremos um link de redefinição.",
+    }), 202
+
+
+@auth_bp.route('/auth/password-reset/<token>', methods=['GET', 'POST'])
+@auth_bp.route('/password-reset/<token>', methods=['GET', 'POST'])
+def password_reset_complete(token):
+    """Consome o token uma vez e altera apenas a credencial local do APP32."""
+    if request.method == 'GET':
+        return render_template('auth/password_reset_complete.html', token=token)
+
+    if not same_origin_verified():
+        return jsonify({"success": False, "message": "Origem não permitida"}), 403
+
+    try:
+        payload = request.get_json(silent=True) or request.form.to_dict() or {}
+        validated = PasswordResetCompleteSchema(**payload)
+        if validated.new_password != validated.confirm_password:
+            return jsonify({"success": False, "message": "Senha e confirmação não coincidem"}), 400
+        password_reset_service.complete_reset(raw_token=token, new_password=validated.new_password)
+        session.clear()
+        return jsonify({"success": True, "message": "Senha redefinida. Entre novamente para continuar.", "redirect": "/login"})
+    except (ValidationError, PasswordResetError):
+        return jsonify({"success": False, "message": "Link inválido, expirado ou já utilizado."}), 400
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao concluir redefinição de senha',
+            success=False,
+        )
 
 @auth_bp.route('/portal', methods=['GET', 'POST'])
 @login_required

@@ -421,3 +421,24 @@ Clientes OAuth públicos são separados somente para restringir redirects e faci
 - cliente genérico: não usa wildcard. O administrador cadastra previamente nome do cliente e redirect URI HTTPS exato antes da liberação.
 
 O client legado `app32-mcp-pilot` permanece apenas para compatibilidade da coorte Codex já conectada. Novas telas e instruções não devem expor `app32-mcp` como nome de conexão. OAuth inválido nunca recua silenciosamente para token pessoal; o modo token é legado/controlado e visivelmente separado.
+
+## 16. Redefinição de senha local — resposta P0 a comprometimento
+
+O APP32 mantém, durante a transição de identidade, uma credencial local em
+`users.password_hash`. A recuperação dessa credencial usa token opaco,
+aleatório, armazenado somente como HMAC-SHA-256, com validade de 30 minutos e
+consumo atômico único. Não há `company_id` nesse token: a identidade é global e
+o tenant só é selecionado depois do login; nenhum vínculo empresarial é exposto
+na rota pública. Solicitações possuem resposta neutra, limitação por IP/e-mail e
+não registram o token em log da aplicação.
+
+Ao concluir a troca, `auth_session_version` é incrementado e invalida cookies
+locais anteriores no próximo request. O link não transporta senha e a senha
+nunca aparece em auditoria ou logs. A implantação exige migration aditiva,
+configuração de e-mail testada e rate limit compartilhado entre processos antes
+de liberar coorte ou forçar reset em massa.
+
+Este fluxo **não** altera senhas, sessões ou required actions do Keycloak. OAuth
+continua tendo ciclo de senha e recuperação próprios no IdP; a convergência só
+será definida em entrega específica, após decidir qual autoridade autentica cada
+coorte. Não se deve sincronizar senhas entre APP32 e Keycloak.
