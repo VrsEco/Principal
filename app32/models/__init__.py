@@ -5,6 +5,7 @@ db = SQLAlchemy()
 # Core Models
 from .company import Company
 from .user import User
+from .password_reset_token import PasswordResetToken
 from .user_mcp_token import UserMcpToken
 from .identity_principal import IdentityPrincipal, ExternalIdentity, PrincipalCompanyGrant
 from .instruction_registry import InstructionRegistryEntry, InstructionRegistryAuditLog
@@ -217,7 +218,7 @@ __all__ = [
     'UsageTelemetryHourly',
     'RoleCostProfile',
     'EmployeeRoleOccupancy',
-    'db', 'Company', 'User', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
+    'db', 'Company', 'User', 'PasswordResetToken', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
     'InstructionRegistryEntry', 'InstructionRegistryAuditLog',
     'KnowledgeSource', 'KnowledgeSourceGrant', 'KnowledgeChunk', 'KnowledgeIndexRun', 'KnowledgeInteraction', 'KnowledgeFeedback', 'KnowledgeTrainingProposal',
     'StrategicTree', 'StrategicTreeNode', 'StrategicTreeContribution', 'StrategicTreeAuditEvent',

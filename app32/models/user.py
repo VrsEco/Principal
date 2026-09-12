@@ -23,6 +23,9 @@ class User(UserMixin, db.Model):
         db.String(100), nullable=False, default="telegram"
     )
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    # Versão persistida usada pelo Flask-Login para invalidar cookies antigos
+    # após redefinição de senha ou resposta a incidente.
+    auth_session_version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False

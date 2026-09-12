@@ -409,3 +409,24 @@ Aceite: legado desativado sem regressão dos clientes suportados e sem mecanismo
 `Reconciliação/cadastro → R01 → R02 → R03 → R04 → R05 → R06 → aprovação de produção → R07 → janela aprovada sem legado → R08`.
 
 Próxima entrega técnica: R01. Não iniciar R05 por haver verifier e 95 testes unitários verdes. Datas serão definidas após estimativa e disponibilidade; nenhum prazo foi inventado nesta revisão.
+
+## 15. Redefinição de senha local — resposta P0 a comprometimento
+
+O APP32 mantém, durante a transição de identidade, uma credencial local em
+`users.password_hash`. A recuperação dessa credencial usa token opaco,
+aleatório, armazenado somente como HMAC-SHA-256, com validade de 30 minutos e
+consumo atômico único. Não há `company_id` nesse token: a identidade é global e
+o tenant só é selecionado depois do login; nenhum vínculo empresarial é exposto
+na rota pública. Solicitações possuem resposta neutra, limitação por IP/e-mail e
+não registram o token em log da aplicação.
+
+Ao concluir a troca, `auth_session_version` é incrementado e invalida cookies
+locais anteriores no próximo request. O link não transporta senha e a senha
+nunca aparece em auditoria ou logs. A implantação exige migration aditiva,
+configuração de e-mail testada e rate limit compartilhado entre processos antes
+de liberar coorte ou forçar reset em massa.
+
+Este fluxo **não** altera senhas, sessões ou required actions do Keycloak. OAuth
+continua tendo ciclo de senha e recuperação próprios no IdP; a convergência só
+será definida em entrega específica, após decidir qual autoridade autentica cada
+coorte. Não se deve sincronizar senhas entre APP32 e Keycloak.

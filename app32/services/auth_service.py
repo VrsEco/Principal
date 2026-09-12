@@ -7,6 +7,7 @@ import logging
 import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import session
 from flask_login import login_user, logout_user, login_required, current_user
 from models.user import User
 from models import db
@@ -113,6 +114,7 @@ class AuthService:
         try:
             success = login_user(user, remember=remember)
             if success:
+                session['auth_session_version'] = int(getattr(user, 'auth_session_version', 1) or 1)
                 log_service.log_login(user, success=True)
             return success
         except Exception as e:
@@ -131,6 +133,7 @@ class AuthService:
             if current_user and current_user.is_authenticated:
                 log_service.log_logout(current_user)
                 logout_user()
+                session.pop('auth_session_version', None)
                 return True
             return False
         except Exception as e:
