@@ -1,4 +1,5 @@
 import re
+import logging
 
 import pytest
 from flask import Flask
@@ -134,3 +135,38 @@ def test_request_renders_reset_url_as_link_in_transactional_email(reset_app, mon
     assert len(sent) == 1
     assert '<a href=\'https://app.example.test/password-reset/' in sent[0]
     assert "&lt;a href=" not in sent[0]
+
+
+def test_request_for_unknown_email_does_not_dispatch_message(reset_app, monkeypatch):
+    sent = []
+    monkeypatch.setattr(
+        "services.password_reset_service.email_service.send_email",
+        lambda *args, **kwargs: sent.append((args, kwargs)) or True,
+    )
+
+    with reset_app.app_context():
+        password_reset_service.request_reset(
+            email="inexistente@empresa.test",
+            request_ip="ip",
+            reset_url_prefix="https://app.example.test/password-reset",
+        )
+
+    assert sent == []
+
+
+def test_delivery_failure_does_not_log_reset_token(reset_app, monkeypatch, caplog):
+    canary_token = "token-canario-nao-registrar"
+    monkeypatch.setattr("services.password_reset_service.secrets.token_urlsafe", lambda _size: canary_token)
+    monkeypatch.setattr(
+        "services.password_reset_service.email_service.send_email",
+        lambda *args, **kwargs: False,
+    )
+
+    with reset_app.app_context(), caplog.at_level(logging.WARNING):
+        password_reset_service.request_reset(
+            email="pessoa@empresa.test",
+            request_ip="ip",
+            reset_url_prefix="https://app.example.test/password-reset",
+        )
+
+    assert canary_token not in caplog.text
