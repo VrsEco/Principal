@@ -78,3 +78,7 @@ def test_configr_image_contains_the_versioned_versus_login_theme() -> None:
     assert "parent=keycloak.v2" in properties
     assert "styles=css/versus.css" in properties
     assert "#kc-header-wrapper" in stylesheet
+    assert ".pf-v5-c-login__container" in stylesheet
+    assert "@media (max-width:760px)" in stylesheet
+    messages = (theme_dir / "messages" / "messages_pt_BR.properties").read_text(encoding="utf-8")
+    assert "loginTitle=Entrar na sua conta" in messages
