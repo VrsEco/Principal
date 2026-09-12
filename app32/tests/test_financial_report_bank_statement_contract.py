@@ -192,6 +192,90 @@ def test_build_bank_statement_exposes_component_allocations(monkeypatch):
     assert result["rows"][0]["rateio_desconto_itens"] == 0
 
 
+def test_build_bank_statement_consolidates_bordero_child_settlements(monkeypatch):
+    children = [
+        SimpleNamespace(
+            id=3614 + index,
+            financial_entry_id=2465 + index,
+            settlement_date=date(2026, 9, 9),
+            settlement_code=f"BX-00248{6 + index}",
+            bank_account_id=7,
+            reconciliation_status="reconciled",
+            net_amount=amount,
+            principal_amount=amount,
+            metadata_json={"bordero_settlement_id": 59},
+        )
+        for index, amount in enumerate((Decimal("7745.92"), Decimal("14303.20"), Decimal("6923.07"), Decimal("3325.00")))
+    ]
+    entries = [
+        SimpleNamespace(
+            id=item.financial_entry_id,
+            movement_nature="credit",
+            entry_code=f"AG-{item.financial_entry_id}",
+            description="Título filho",
+            counterparty_id=4,
+            financial_schedule_id=None,
+            competence_date=date(2026, 8, 1),
+            due_date=date(2026, 9, 10),
+        )
+        for item in children
+    ]
+    bordero_settlement = SimpleNamespace(id=59, settlement_code="B-35-BX-003", settlement_date=date(2026, 9, 9))
+    bordero = SimpleNamespace(id=53, bordero_code="B-35", name="recebido dia 9/09", description=None)
+
+    monkeypatch.setattr(report_module.FinancialReportService, "_settlement_query", lambda company_id, filters: _QueryStub(children))
+    monkeypatch.setattr(
+        report_module.FinancialReportService,
+        "_group_bank_statement_settlements",
+        lambda **kwargs: [(children, bordero_settlement, bordero)],
+    )
+    monkeypatch.setattr(report_module.FinancialReportService, "_name_map", lambda model, company_id: {7: "Itaú", 4: "Cliente"})
+    monkeypatch.setattr(report_module.FinancialDashboardAnalytics, "calculate_current_balance", lambda **kwargs: 0)
+    monkeypatch.setattr(
+        report_module.FinancialService,
+        "serialize_settlement",
+        lambda settlement, **kwargs: {
+            "settlement_component_summary": {"principal": settlement.principal_amount},
+            "settlement_allocation_breakdown": {"principal": {"items": []}},
+        },
+    )
+    monkeypatch.setattr(
+        report_module,
+        "FinancialEntry",
+        type("FinancialEntryStub", (), {"company_id": _Column(), "id": _Column(), "deleted_at": _Column(), "query": _QueryStub(entries)}),
+    )
+    monkeypatch.setattr(
+        report_module,
+        "FinancialSettlement",
+        type("FinancialSettlementStub", (), {"company_id": _Column(), "deleted_at": _Column(), "settlement_status": _Column(), "settlement_date": _Column(), "bank_account_id": _Column(), "id": _Column(), "query": _QueryStub([])}),
+    )
+
+    filters = SimpleNamespace(
+        report_type="bank_statement",
+        period_start=date(2026, 9, 9),
+        period_end=date(2026, 9, 9),
+        bank_account_id=7,
+        bank_account_ids=[],
+        include_reconciled_only=False,
+        include_receivable=True,
+        include_payable=True,
+        include_partial=True,
+        include_settled=True,
+    )
+
+    result = FinancialReportService._build_bank_statement(1, filters)
+
+    assert len(result["rows"]) == 1
+    row = result["rows"][0]
+    assert row["is_bordero"] is True
+    assert row["codigo"] == "B-35-BX-003"
+    assert row["lancamento"] == "B-35"
+    assert row["descricao"] == "recebido dia 9/09"
+    assert row["favorecido"] == "4 título(s) no borderô"
+    assert row["valor"] == 32297.19
+    assert row["conciliacao"] == "reconciled"
+
+
 def test_build_bank_statement_dossier_collects_title_entry_and_settlement_attachments(monkeypatch):
     settlement = SimpleNamespace(
         id=10,

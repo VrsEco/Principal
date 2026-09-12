@@ -26,6 +26,7 @@ from models.financial import (
     FinancialBankAccount,
     FinancialBordero,
     FinancialBorderoItem,
+    FinancialBorderoSettlement,
     FinancialChartAccount,
     FinancialCostCenter,
     FinancialCounterparty,
@@ -2162,6 +2163,69 @@ class FinancialReportService:
         return balance
 
     @staticmethod
+    def _bordero_settlement_id_from_child_settlement(settlement: FinancialSettlement) -> Optional[int]:
+        metadata = dict(getattr(settlement, "metadata_json", None) or {})
+        raw_id = metadata.get("bordero_settlement_id") or (metadata.get("bordero_trace") or {}).get("bordero_settlement_id")
+        try:
+            bordero_settlement_id = int(raw_id or 0)
+        except (TypeError, ValueError):
+            return None
+        return bordero_settlement_id if bordero_settlement_id > 0 else None
+
+    @staticmethod
+    def _group_bank_statement_settlements(
+        *,
+        company_id: int,
+        settlements: Sequence[FinancialSettlement],
+    ) -> List[Tuple[List[FinancialSettlement], Optional[FinancialBorderoSettlement], Optional[FinancialBordero]]]:
+        """Mantém uma linha de extrato para cada baixa de borderô, não para cada título filho."""
+        regular_groups: List[Tuple[List[FinancialSettlement], Optional[FinancialBorderoSettlement], Optional[FinancialBordero]]] = []
+        grouped_children: Dict[int, List[FinancialSettlement]] = defaultdict(list)
+        for settlement in settlements:
+            bordero_settlement_id = FinancialReportService._bordero_settlement_id_from_child_settlement(settlement)
+            if bordero_settlement_id:
+                grouped_children[bordero_settlement_id].append(settlement)
+            else:
+                regular_groups.append(([settlement], None, None))
+
+        if not grouped_children:
+            return regular_groups
+
+        bordero_settlements = FinancialBorderoSettlement.query.filter(
+            FinancialBorderoSettlement.company_id == company_id,
+            FinancialBorderoSettlement.id.in_(list(grouped_children.keys())),
+            FinancialBorderoSettlement.deleted_at.is_(None),
+        ).all()
+        bordero_settlement_by_id = {int(item.id): item for item in bordero_settlements}
+        bordero_ids = sorted({int(item.bordero_id) for item in bordero_settlements if getattr(item, "bordero_id", None)})
+        borderos = FinancialBordero.query.filter(
+            FinancialBordero.company_id == company_id,
+            FinancialBordero.id.in_(bordero_ids),
+            FinancialBordero.deleted_at.is_(None),
+        ).all() if bordero_ids else []
+        bordero_by_id = {int(item.id): item for item in borderos}
+
+        for bordero_settlement_id, child_settlements in grouped_children.items():
+            bordero_settlement = bordero_settlement_by_id.get(int(bordero_settlement_id))
+            bordero = bordero_by_id.get(int(getattr(bordero_settlement, "bordero_id", 0) or 0)) if bordero_settlement else None
+            if bordero_settlement is None or bordero is None:
+                regular_groups.extend(([settlement], None, None) for settlement in child_settlements)
+                continue
+            regular_groups.append((child_settlements, bordero_settlement, bordero))
+        return regular_groups
+
+    @staticmethod
+    def _aggregate_reconciliation_status(settlements: Sequence[FinancialSettlement]) -> str:
+        statuses = {str(getattr(item, "reconciliation_status", "") or "pending").strip().lower() for item in settlements}
+        if statuses and statuses.issubset({"matched", "reconciled"}):
+            return "reconciled" if "reconciled" in statuses else "matched"
+        if "rejected" in statuses:
+            return "rejected"
+        if "suggested" in statuses:
+            return "suggested"
+        return "pending"
+
+    @staticmethod
     def _build_bank_statement(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
         definition = FinancialReportService.REPORT_DEFINITIONS[filters.report_type]
         bank_names = FinancialReportService._name_map(FinancialBankAccount, company_id)
@@ -2181,16 +2245,20 @@ class FinancialReportService:
             and FinancialReportService._bank_statement_accepts_entry(entries[settlement.financial_entry_id], filters)
         ]
         reverse_order = (getattr(filters, "order_direction", "asc") or "asc") == "desc"
-        settlements.sort(
-            key=lambda item: FinancialReportService._bank_statement_sort_key(
-                item,
-                entries[item.financial_entry_id],
+        settlement_groups = FinancialReportService._group_bank_statement_settlements(
+            company_id=company_id,
+            settlements=settlements,
+        )
+        settlement_groups.sort(
+            key=lambda group: FinancialReportService._bank_statement_sort_key(
+                group[0][0],
+                entries[group[0][0].financial_entry_id],
                 counterparty_names=counterparty_names,
                 filters=filters,
             ),
             reverse=reverse_order,
         )
-        entry_ids = [item.financial_entry_id for item in settlements]
+        entry_ids = [item.financial_entry_id for group, _, _ in settlement_groups for item in group]
         is_dossier = filters.report_type == "bank_statement_dossier"
         schedules_by_id: Dict[int, Any] = {}
         allocations_by_entry: Dict[int, List[Any]] = defaultdict(list)
@@ -2224,13 +2292,29 @@ class FinancialReportService:
         outflow = Decimal("0")
         rows: List[Dict[str, Any]] = []
         dossier_documents: List[Dict[str, Any]] = []
-        for settlement in settlements:
+        for child_settlements, bordero_settlement, bordero in settlement_groups:
+            settlement = child_settlements[0]
             entry = entries.get(settlement.financial_entry_id)
             if not entry:
                 continue
-            settlement_payload = FinancialService.serialize_settlement(settlement, entry=entry, include_components=True)
-            component_summary = dict(settlement_payload.get("settlement_component_summary") or {})
-            allocation_breakdown = dict(settlement_payload.get("settlement_allocation_breakdown") or {})
+            child_entries = [entries[item.financial_entry_id] for item in child_settlements if entries.get(item.financial_entry_id)]
+            is_bordero = bordero_settlement is not None and bordero is not None
+            settlement_payloads = [
+                FinancialService.serialize_settlement(
+                    item,
+                    entry=entries.get(item.financial_entry_id),
+                    include_components=True,
+                )
+                for item in child_settlements
+            ]
+            component_summary: Dict[str, Decimal] = defaultdict(Decimal)
+            allocation_breakdown: Dict[str, Dict[str, Any]] = {}
+            for settlement_payload in settlement_payloads:
+                for component_key, component_amount in dict(settlement_payload.get("settlement_component_summary") or {}).items():
+                    component_summary[component_key] += Decimal(str(component_amount or 0))
+                for component_key, component_payload in dict(settlement_payload.get("settlement_allocation_breakdown") or {}).items():
+                    bucket = allocation_breakdown.setdefault(component_key, {"items": []})
+                    bucket["items"].extend(list(dict(component_payload or {}).get("items") or []))
             chart_labels = FinancialReportService._bank_statement_dimension_labels(
                 entry=entry,
                 allocation_breakdown=allocation_breakdown,
@@ -2247,46 +2331,65 @@ class FinancialReportService:
             )
             schedule = schedules_by_id.get(int(getattr(entry, "financial_schedule_id", 0) or 0))
             counterparty_label = counterparty_names.get(getattr(entry, "counterparty_id", None), "Não informado")
-            amount = Decimal(settlement.net_amount or 0)
-            movement_tone = "positive" if entry.movement_nature == "credit" else "negative"
-            signed_amount = amount if entry.movement_nature == "credit" else -amount
-            if entry.movement_nature == "credit":
-                inflow += amount
-                running += amount
+            amount = sum((Decimal(item.net_amount or 0) for item in child_settlements), Decimal("0"))
+            movement_natures = {str(getattr(item, "movement_nature", "") or "").lower() for item in child_entries}
+            movement_nature = next(iter(movement_natures)) if len(movement_natures) == 1 else "mixed"
+            signed_amount = amount if movement_nature == "credit" else -amount if movement_nature == "debit" else sum(
+                (Decimal(item.net_amount or 0) if getattr(entry_item, "movement_nature", None) == "credit" else -Decimal(item.net_amount or 0))
+                for item, entry_item in zip(child_settlements, child_entries)
+            )
+            movement_tone = "positive" if signed_amount > 0 else "negative" if signed_amount < 0 else "neutral"
+            if signed_amount >= 0:
+                inflow += signed_amount
+                running += signed_amount
             else:
-                outflow += amount
-                running -= amount
+                outflow += abs(signed_amount)
+                running += signed_amount
+            reconciliation_status = FinancialReportService._aggregate_reconciliation_status(child_settlements)
+            settlement_date = getattr(bordero_settlement, "settlement_date", None) if is_bordero else settlement.settlement_date
+            settlement_date = settlement_date or settlement.settlement_date
+            settlement_code = getattr(bordero_settlement, "settlement_code", None) if is_bordero else settlement.settlement_code
+            bordero_code = getattr(bordero, "bordero_code", None) if is_bordero else None
+            if is_bordero:
+                counterparty_label = f"{len(child_entries)} título(s) no borderô"
+                chart_labels = ["Baixa agrupada por borderô"]
+                center_labels = ["Baixa agrupada por borderô"]
             row_payload = {
-                    "settlement_id": getattr(settlement, "id", None),
-                    "financial_entry_id": getattr(entry, "id", None),
-                    "financial_schedule_id": getattr(entry, "financial_schedule_id", None),
-                    "data": settlement.settlement_date.isoformat(),
-                    "codigo": settlement.settlement_code,
+                    "settlement_id": getattr(bordero_settlement, "id", None) if is_bordero else getattr(settlement, "id", None),
+                    "financial_entry_id": None if is_bordero else getattr(entry, "id", None),
+                    "financial_entry_ids": [item.id for item in child_entries],
+                    "financial_schedule_id": None if is_bordero else getattr(entry, "financial_schedule_id", None),
+                    "data": settlement_date.isoformat(),
+                    "codigo": settlement_code or bordero_code or settlement.settlement_code,
                     "conta_bancaria": bank_names.get(settlement.bank_account_id, "Não informada"),
-                    "lancamento": entry.entry_code,
-                    "descricao": entry.description,
+                    "lancamento": bordero_code or entry.entry_code,
+                    "descricao": (getattr(bordero, "name", None) or getattr(bordero, "description", None) or bordero_code) if is_bordero else entry.description,
                     "favorecido": counterparty_label,
-                    "competencia": FinancialReportService._iso_date_or_none(getattr(entry, "competence_date", None)),
-                    "vencimento": FinancialReportService._iso_date_or_none(getattr(entry, "due_date", None)),
-                    "liquidacao": FinancialReportService._iso_date_or_none(getattr(settlement, "settlement_date", None)),
+                    "competencia": FinancialReportService._iso_date_or_none(settlement_date) if is_bordero else FinancialReportService._iso_date_or_none(getattr(entry, "competence_date", None)),
+                    "vencimento": FinancialReportService._iso_date_or_none(settlement_date) if is_bordero else FinancialReportService._iso_date_or_none(getattr(entry, "due_date", None)),
+                    "liquidacao": FinancialReportService._iso_date_or_none(settlement_date),
                     "plano_contas": ", ".join(chart_labels) if chart_labels else "Não informado",
                     "centro_resultados": ", ".join(center_labels) if center_labels else "Não informado",
-                    "titulo": getattr(schedule, "schedule_code", None) or getattr(entry, "financial_schedule_id", None) or "Não informado",
-                    "titulo_nome": getattr(schedule, "name", None),
-                    "movimento": "Entrada" if entry.movement_nature == "credit" else "Saída",
+                    "titulo": bordero_code or getattr(schedule, "schedule_code", None) or getattr(entry, "financial_schedule_id", None) or "Não informado",
+                    "titulo_nome": getattr(bordero, "name", None) if is_bordero else getattr(schedule, "name", None),
+                    "is_bordero": is_bordero,
+                    "bordero_id": getattr(bordero, "id", None) if is_bordero else None,
+                    "bordero_code": bordero_code,
+                    "bordero_settlement_id": getattr(bordero_settlement, "id", None) if is_bordero else None,
+                    "movimento": "Entrada" if signed_amount >= 0 else "Saída",
                     "movimento_tone": movement_tone,
                     "valor": FinancialReportService._serialize_money(signed_amount),
                     "valor_label": FinancialReportService._format_decimal_br(signed_amount),
                     "valor_tone": "negative" if signed_amount < 0 else ("positive" if signed_amount > 0 else "neutral"),
-                    "valor_principal": FinancialReportService._serialize_money(component_summary.get("principal") or settlement.principal_amount or 0),
+                    "valor_principal": FinancialReportService._serialize_money(component_summary.get("principal") or sum((Decimal(item.principal_amount or 0) for item in child_settlements), Decimal("0"))),
                     "valor_correcao": FinancialReportService._serialize_money(component_summary.get("financial_correction") or 0),
                     "valor_desconto": FinancialReportService._serialize_money(component_summary.get("discount") or 0),
                     "rateio_principal_itens": len(dict(allocation_breakdown.get("principal") or {}).get("items") or []),
                     "rateio_correcao_itens": len(dict(allocation_breakdown.get("financial_correction") or {}).get("items") or []),
                     "rateio_desconto_itens": len(dict(allocation_breakdown.get("discount") or {}).get("items") or []),
-                    "conciliacao": settlement.reconciliation_status,
-                    "conciliacao_label": FinancialReportService._reconciliation_status_label(settlement.reconciliation_status),
-                    "conciliacao_tone": FinancialReportService._reconciliation_status_tone(settlement.reconciliation_status),
+                    "conciliacao": reconciliation_status,
+                    "conciliacao_label": FinancialReportService._reconciliation_status_label(reconciliation_status),
+                    "conciliacao_tone": FinancialReportService._reconciliation_status_tone(reconciliation_status),
                     "saldo": FinancialReportService._serialize_money(running),
                     "saldo_label": FinancialReportService._format_decimal_br(running),
                     "saldo_tone": "negative" if running < 0 else ("positive" if running > 0 else "neutral"),
