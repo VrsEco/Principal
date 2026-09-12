@@ -409,3 +409,15 @@ Aceite: legado desativado sem regressão dos clientes suportados e sem mecanismo
 `Reconciliação/cadastro → R01 → R02 → R03 → R04 → R05 → R06 → aprovação de produção → R07 → janela aprovada sem legado → R08`.
 
 Próxima entrega técnica: R01. Não iniciar R05 por haver verifier e 95 testes unitários verdes. Datas serão definidas após estimativa e disponibilidade; nenhum prazo foi inventado nesta revisão.
+
+## 15. Decisão operacional — conector público `mcp-versus`
+
+A partir de 2026-09-12, `mcp-versus` é o único nome público do servidor MCP remoto da Gestão Versus. Ele não é `client_id`, tenant nem papel de autorização. Todos os clientes conectam-se ao mesmo resource server `https://app.gestaoversus.com.br/mcp/pilot/user/`; a resolução de `company_id` continua posterior ao login e depende do grant persistido do principal.
+
+Clientes OAuth públicos são separados somente para restringir redirects e facilitar revogação por plataforma:
+
+- `mcp-versus-claude`: redirect fixo `https://claude.ai/api/mcp/auth_callback`, Authorization Code + PKCE S256;
+- `mcp-versus-antigravity`: redirect fixo `https://antigravity.google/oauth-callback`, Authorization Code + PKCE S256;
+- cliente genérico: não usa wildcard. O administrador cadastra previamente nome do cliente e redirect URI HTTPS exato antes da liberação.
+
+O client legado `app32-mcp-pilot` permanece apenas para compatibilidade da coorte Codex já conectada. Novas telas e instruções não devem expor `app32-mcp` como nome de conexão. OAuth inválido nunca recua silenciosamente para token pessoal; o modo token é legado/controlado e visivelmente separado.

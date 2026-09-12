@@ -576,7 +576,7 @@
         syncSquadButtonsForConfig(resolvedConfig);
         syncInstallModeButtons();
         if (mcpConfigOutput) mcpConfigOutput.value = outputForMode(resolvedConfig, selectedInstallMode);
-        if (selectedMcpRuntime !== 'codex') renderMcpConnectorForRuntime(resolvedConfig);
+
     }
 
     async function loadMcpTokenStatus(showError = false) {
@@ -604,40 +604,40 @@
         return data.data;
     }
 
-    function renderMcpConnectorForRuntime(config = null) {
+    function renderMcpConnectorForRuntime() {
         const runtime = selectedMcpRuntime;
-        const isClaude = runtime === 'claude';
-        const isCodex = runtime === 'codex';
-        if (mcpConnectorCard) mcpConnectorCard.hidden = !isClaude && !isCodex;
-        if (!isClaude && !isCodex) return;
-
-        if (isClaude) {
-            const command = config ? outputForMode(config, selectedInstallMode) : '';
-            if (mcpConnectorKind) mcpConnectorKind.textContent = 'Token';
-            if (mcpConnectorTitle) mcpConnectorTitle.textContent = 'Conectar Claude';
-            if (mcpConnectorDescription) mcpConnectorDescription.textContent = 'Use o conector Claude com seu token MCP pessoal. OAuth remoto para Claude ainda não foi homologado.';
-            if (mcpConnectorStatus) mcpConnectorStatus.textContent = config?.token_required
-                ? 'Crie ou renove seu token MCP para gerar um comando seguro do Claude.'
-                : 'Comando compatível com o Claude pronto para copiar.';
-            if (mcpConnectorCommand) mcpConnectorCommand.value = command;
-            if (loadMcpConnectorButton) loadMcpConnectorButton.textContent = 'Ver comando do Claude';
-            if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = !command.trim() || Boolean(config?.token_required);
-            return;
-        }
-
+        if (mcpConnectorCard) mcpConnectorCard.hidden = false;
         if (mcpConnectorKind) mcpConnectorKind.textContent = 'OAuth';
-        if (mcpConnectorTitle) mcpConnectorTitle.textContent = 'Conectar Codex por OAuth';
-        if (mcpConnectorDescription) mcpConnectorDescription.textContent = 'Coorte controlada: o Codex abre o navegador somente para o login inicial ou reconexão.';
-        if (mcpConnectorStatus) mcpConnectorStatus.textContent = 'Verificando se sua coorte OAuth está liberada.';
         if (mcpConnectorCommand) mcpConnectorCommand.value = '';
-        if (loadMcpConnectorButton) loadMcpConnectorButton.textContent = 'Ver conexão OAuth';
         if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = true;
+        if (loadMcpConnectorButton) loadMcpConnectorButton.textContent = 'Ver conexão OAuth';
+        if (runtime === 'claude') {
+            if (mcpConnectorTitle) mcpConnectorTitle.textContent = 'Conectar Claude por OAuth';
+            if (mcpConnectorDescription) mcpConnectorDescription.textContent = 'Conector remoto mcp-versus: o Claude abre o navegador para login inicial ou reconexão.';
+        } else if (runtime === 'antigravity') {
+            if (mcpConnectorTitle) mcpConnectorTitle.textContent = 'Conectar Antigravity por OAuth';
+            if (mcpConnectorDescription) mcpConnectorDescription.textContent = 'Conector remoto mcp-versus com OAuth e configuração JSON compatível.';
+        } else if (runtime === 'other') {
+            if (mcpConnectorTitle) mcpConnectorTitle.textContent = 'Conectar cliente MCP por OAuth';
+            if (mcpConnectorDescription) mcpConnectorDescription.textContent = 'Clientes genéricos exigem redirect URI HTTPS previamente cadastrado pela administração.';
+        } else {
+            if (mcpConnectorTitle) mcpConnectorTitle.textContent = 'Conectar Codex por OAuth';
+            if (mcpConnectorDescription) mcpConnectorDescription.textContent = 'Coorte controlada: o Codex abre o navegador somente para o login inicial ou reconexão.';
+        }
+        if (mcpConnectorStatus) mcpConnectorStatus.textContent = 'Verificando se OAuth mcp-versus está liberado para esta ferramenta.';
+    }
+
+    function oauthConnectorOutput(config) {
+        if (config.runtime === 'codex') return `${config.add_command}\n${config.login_command}\n${config.verify_command}`;
+        if (config.runtime === 'antigravity') return config.config_text || '';
+        return [`Nome do conector: ${config.server_name || 'mcp-versus'}`, `URL MCP: ${config.mcp_url || ''}`, '', ...(config.instructions || [])].join('\n').trim();
     }
 
     async function loadOAuthCodexConfig(showSuccessAlert = false) {
-        const response = await fetch('{{ url_for('auth.profile_mcp_oauth_codex_config') }}');
+        const runtime = selectedMcpRuntime;
+        const response = await fetch(`{{ url_for('auth.profile_mcp_oauth_connector_config') }}?runtime=${encodeURIComponent(runtime)}`);
         const data = await response.json();
-        if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao carregar a conexão OAuth do Codex.');
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao carregar a conexão OAuth mcp-versus.');
         const config = data.data || {};
         if (!config.available) {
             if (mcpConnectorStatus) mcpConnectorStatus.textContent = config.message || 'Conexão OAuth indisponível para esta coorte.';
@@ -645,11 +645,11 @@
             if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = true;
             return config;
         }
-        const command = `${config.add_command}\n${config.login_command}\n${config.verify_command}`;
+        const command = oauthConnectorOutput(config);
         if (mcpConnectorCommand) mcpConnectorCommand.value = command;
-        if (mcpConnectorStatus) mcpConnectorStatus.textContent = config.security_note || 'Conexão OAuth pronta para copiar.';
-        if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = false;
-        if (showSuccessAlert) renderAlert('mcp-token-alert-container', true, 'Comandos OAuth do Codex atualizados. O login abrirá o navegador quando você executar o segundo comando.');
+        if (mcpConnectorStatus) mcpConnectorStatus.textContent = config.security_note || 'Conexão OAuth mcp-versus pronta para copiar.';
+        if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = !command;
+        if (showSuccessAlert) renderAlert('mcp-token-alert-container', true, `Configuração OAuth do ${config.server_name || 'mcp-versus'} atualizada.`);
         return config;
     }
 
@@ -708,7 +708,7 @@
             renderMcpConnectorForRuntime();
             try {
                 await buildMcpConfig(false);
-                if (selectedMcpRuntime === 'codex') await loadOAuthCodexConfig(false);
+                await loadOAuthCodexConfig(false);
             } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     });
@@ -787,11 +787,7 @@
     if (loadMcpConnectorButton) {
         loadMcpConnectorButton.addEventListener('click', async () => {
             try {
-                if (selectedMcpRuntime === 'claude') {
-                    await buildMcpConfig(true);
-                    return;
-                }
-                if (selectedMcpRuntime === 'codex') await loadOAuthCodexConfig(true);
+                await loadOAuthCodexConfig(true);
             } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
@@ -800,13 +796,10 @@
         copyMcpConnectorButton.addEventListener('click', async () => {
             try {
                 if (!mcpConnectorCommand || !mcpConnectorCommand.value.trim()) {
-                    if (selectedMcpRuntime === 'claude') await buildMcpConfig(false);
-                    else if (selectedMcpRuntime === 'codex') await loadOAuthCodexConfig(false);
+                    await loadOAuthCodexConfig(false);
                 }
                 await copyText(mcpConnectorCommand ? mcpConnectorCommand.value : '');
-                const message = selectedMcpRuntime === 'claude'
-                    ? 'Comando do Claude copiado.'
-                    : 'Comandos OAuth do Codex copiados. Execute primeiro a conexão e depois o login.';
+                const message = 'Configuração OAuth mcp-versus copiada.';
                 renderAlert('mcp-token-alert-container', true, message);
             } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
@@ -927,8 +920,11 @@
         activateProfileTab('profile-security-panel');
     }
 
+    renderMcpConnectorForRuntime();
     loadMcpTokenStatus().finally(() => {
-        buildMcpConfig(false).catch((error) => renderAlert('mcp-token-alert-container', false, error.message));
+        buildMcpConfig(false)
+            .then(() => loadOAuthCodexConfig(false))
+            .catch((error) => renderAlert('mcp-token-alert-container', false, error.message));
     });
 </script>
 {% endblock %}\n

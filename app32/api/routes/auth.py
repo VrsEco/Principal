@@ -10,6 +10,7 @@ from services.auth_service import auth_service
 from services.user_presence_service import UserPresenceService
 from services.user_mcp_token_service import user_mcp_token_service
 from services.mcp_oauth_codex_connector_service import mcp_oauth_codex_connector_service
+from services.mcp_versus_oauth_connector_service import mcp_versus_oauth_connector_service
 from schemas.user_pydantic import (
     UserProfileUpdateSchema,
     UserPasswordChangeSchema,
@@ -506,6 +507,24 @@ def profile_mcp_token_config():
             success=False,
         )
 
+
+@auth_bp.route('/auth/profile/mcp-oauth/config', methods=['GET'])
+@auth_bp.route('/profile/mcp-oauth/config', methods=['GET'])
+@login_required
+def profile_mcp_oauth_connector_config():
+    """Retorna apenas dados públicos do conector OAuth mcp-versus escolhido."""
+    try:
+        config = mcp_versus_oauth_connector_service.build_config(request.args.get("runtime"))
+        return jsonify({"success": True, "data": config})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao montar configuração OAuth do conector mcp-versus',
+            success=False,
+        )
 
 @auth_bp.route('/auth/profile/mcp-oauth/codex/config', methods=['GET'])
 @auth_bp.route('/profile/mcp-oauth/codex/config', methods=['GET'])

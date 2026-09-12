@@ -68,6 +68,10 @@ class _FakeUserMcpTokenService:
         }
 
 
+class _FakeMcpVersusOAuthConnectorService:
+    def build_config(self, runtime):
+        return {"available": True, "runtime": runtime, "server_name": "mcp-versus"}
+
 class _FakeOAuthCodexConnectorService:
     def build_config(self):
         return {"available": True, "add_command": "codex mcp add mcp-versus"}
@@ -174,3 +178,17 @@ def test_profile_oauth_codex_config_route_does_not_accept_tenant_input(monkeypat
     assert response.status_code == 200
     payload = response.get_json()
     assert payload == {"success": True, "data": {"available": True, "add_command": "codex mcp add mcp-versus"}}
+
+def test_profile_mcp_versus_oauth_config_uses_runtime_without_tenant_input(monkeypatch):
+    app = _build_app()
+    fake_service = _FakeMcpVersusOAuthConnectorService()
+    monkeypatch.setattr(auth_route, 'current_user', _fake_user())
+    monkeypatch.setattr(auth_route, 'mcp_versus_oauth_connector_service', fake_service)
+
+    response = app.test_client().get('/profile/mcp-oauth/config?runtime=antigravity&company_id=999')
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "success": True,
+        "data": {"available": True, "runtime": "antigravity", "server_name": "mcp-versus"},
+    }

@@ -33,9 +33,9 @@ def test_profile_template_supports_simple_runtime_installer_flow():
     assert "Copiar Comando" in template
     assert "id=\"mcpConnectorCard\"" in template
     assert "Conectar Claude" in template
-    assert "OAuth remoto para Claude ainda não foi homologado" in template
-    assert "function renderMcpConnectorForRuntime(config = null)" in template
-    assert "if (selectedMcpRuntime === 'codex') await loadOAuthCodexConfig(false);" in template
+    assert "Conectar Claude por OAuth" in template
+    assert "function renderMcpConnectorForRuntime()" in template
+    assert "profile_mcp_oauth_connector_config" in template
     assert "function buildMcpTokenPayload()" in template
     assert "return buildMcpConfigPayload();" in template
     assert "function outputForMode(config, mode)" in template
