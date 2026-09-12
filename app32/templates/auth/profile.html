@@ -170,19 +170,19 @@
             <p class="mcp-microcopy" id="mcpTokenHelpText">O token aparece uma única vez ao criar ou renovar.</p>
         </section>
 
-        <section class="mcp-profile-card" aria-labelledby="oauth-codex-title">
+        <section class="mcp-profile-card" id="mcpConnectorCard" aria-labelledby="mcp-connector-title">
             <div class="mcp-section-head">
-                <span>OAuth</span>
+                <span id="mcpConnectorKind">Conexão</span>
                 <div>
-                    <h2 id="oauth-codex-title">Conectar Codex por OAuth</h2>
-                    <p>Coorte controlada: o Codex abre o navegador somente para o login inicial ou reconexão.</p>
+                    <h2 id="mcp-connector-title">Conectar Claude</h2>
+                    <p id="mcpConnectorDescription">O Claude usa seu token MCP pessoal; OAuth remoto ainda não foi homologado neste cliente.</p>
                 </div>
             </div>
-            <p class="mcp-microcopy" id="oauthCodexStatus">Verificando se sua coorte OAuth está liberada.</p>
-            <textarea id="oauthCodexCommand" class="form-control mcp-command-output" rows="5" readonly placeholder="A configuração OAuth aparecerá quando sua coorte estiver liberada."></textarea>
+            <p class="mcp-microcopy" id="mcpConnectorStatus">Crie ou renove seu token MCP para gerar o comando do Claude.</p>
+            <textarea id="mcpConnectorCommand" class="form-control mcp-command-output" rows="5" readonly placeholder="O comando compatível com a ferramenta selecionada aparecerá aqui."></textarea>
             <div class="mcp-command-actions">
-                <button type="button" class="btn btn-secondary" id="loadOAuthCodexButton">Ver conexão OAuth</button>
-                <button type="button" class="btn btn-primary" id="copyOAuthCodexButton" disabled>Copiar comandos</button>
+                <button type="button" class="btn btn-secondary" id="loadMcpConnectorButton">Ver comando do Claude</button>
+                <button type="button" class="btn btn-primary" id="copyMcpConnectorButton" disabled>Copiar comando</button>
             </div>
         </section>
 
@@ -354,10 +354,14 @@
     const renewMcpTokenButton = document.getElementById('renewMcpTokenButton');
     const revokeMcpTokenButton = document.getElementById('revokeMcpTokenButton');
     const copyMcpConfigButton = document.getElementById('copyMcpConfigButton');
-    const loadOAuthCodexButton = document.getElementById('loadOAuthCodexButton');
-    const copyOAuthCodexButton = document.getElementById('copyOAuthCodexButton');
-    const oauthCodexCommand = document.getElementById('oauthCodexCommand');
-    const oauthCodexStatus = document.getElementById('oauthCodexStatus');
+    const mcpConnectorCard = document.getElementById('mcpConnectorCard');
+    const mcpConnectorKind = document.getElementById('mcpConnectorKind');
+    const mcpConnectorTitle = document.getElementById('mcp-connector-title');
+    const mcpConnectorDescription = document.getElementById('mcpConnectorDescription');
+    const mcpConnectorStatus = document.getElementById('mcpConnectorStatus');
+    const mcpConnectorCommand = document.getElementById('mcpConnectorCommand');
+    const loadMcpConnectorButton = document.getElementById('loadMcpConnectorButton');
+    const copyMcpConnectorButton = document.getElementById('copyMcpConnectorButton');
     const buildMcpConfigButton = document.getElementById('buildMcpConfigButton');
     const mcpResolvedRuntime = document.getElementById('mcpResolvedRuntime');
     const mcpResolvedSquad = document.getElementById('mcpResolvedSquad');
@@ -572,6 +576,7 @@
         syncSquadButtonsForConfig(resolvedConfig);
         syncInstallModeButtons();
         if (mcpConfigOutput) mcpConfigOutput.value = outputForMode(resolvedConfig, selectedInstallMode);
+        if (selectedMcpRuntime !== 'codex') renderMcpConnectorForRuntime(resolvedConfig);
     }
 
     async function loadMcpTokenStatus(showError = false) {
@@ -599,21 +604,51 @@
         return data.data;
     }
 
+    function renderMcpConnectorForRuntime(config = null) {
+        const runtime = selectedMcpRuntime;
+        const isClaude = runtime === 'claude';
+        const isCodex = runtime === 'codex';
+        if (mcpConnectorCard) mcpConnectorCard.hidden = !isClaude && !isCodex;
+        if (!isClaude && !isCodex) return;
+
+        if (isClaude) {
+            const command = config ? outputForMode(config, selectedInstallMode) : '';
+            if (mcpConnectorKind) mcpConnectorKind.textContent = 'Token';
+            if (mcpConnectorTitle) mcpConnectorTitle.textContent = 'Conectar Claude';
+            if (mcpConnectorDescription) mcpConnectorDescription.textContent = 'Use o conector Claude com seu token MCP pessoal. OAuth remoto para Claude ainda não foi homologado.';
+            if (mcpConnectorStatus) mcpConnectorStatus.textContent = config?.token_required
+                ? 'Crie ou renove seu token MCP para gerar um comando seguro do Claude.'
+                : 'Comando compatível com o Claude pronto para copiar.';
+            if (mcpConnectorCommand) mcpConnectorCommand.value = command;
+            if (loadMcpConnectorButton) loadMcpConnectorButton.textContent = 'Ver comando do Claude';
+            if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = !command.trim() || Boolean(config?.token_required);
+            return;
+        }
+
+        if (mcpConnectorKind) mcpConnectorKind.textContent = 'OAuth';
+        if (mcpConnectorTitle) mcpConnectorTitle.textContent = 'Conectar Codex por OAuth';
+        if (mcpConnectorDescription) mcpConnectorDescription.textContent = 'Coorte controlada: o Codex abre o navegador somente para o login inicial ou reconexão.';
+        if (mcpConnectorStatus) mcpConnectorStatus.textContent = 'Verificando se sua coorte OAuth está liberada.';
+        if (mcpConnectorCommand) mcpConnectorCommand.value = '';
+        if (loadMcpConnectorButton) loadMcpConnectorButton.textContent = 'Ver conexão OAuth';
+        if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = true;
+    }
+
     async function loadOAuthCodexConfig(showSuccessAlert = false) {
         const response = await fetch('{{ url_for('auth.profile_mcp_oauth_codex_config') }}');
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao carregar a conexão OAuth do Codex.');
         const config = data.data || {};
         if (!config.available) {
-            if (oauthCodexStatus) oauthCodexStatus.textContent = config.message || 'Conexão OAuth indisponível para esta coorte.';
-            if (oauthCodexCommand) oauthCodexCommand.value = '';
-            if (copyOAuthCodexButton) copyOAuthCodexButton.disabled = true;
+            if (mcpConnectorStatus) mcpConnectorStatus.textContent = config.message || 'Conexão OAuth indisponível para esta coorte.';
+            if (mcpConnectorCommand) mcpConnectorCommand.value = '';
+            if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = true;
             return config;
         }
         const command = `${config.add_command}\n${config.login_command}\n${config.verify_command}`;
-        if (oauthCodexCommand) oauthCodexCommand.value = command;
-        if (oauthCodexStatus) oauthCodexStatus.textContent = config.security_note || 'Conexão OAuth pronta para copiar.';
-        if (copyOAuthCodexButton) copyOAuthCodexButton.disabled = false;
+        if (mcpConnectorCommand) mcpConnectorCommand.value = command;
+        if (mcpConnectorStatus) mcpConnectorStatus.textContent = config.security_note || 'Conexão OAuth pronta para copiar.';
+        if (copyMcpConnectorButton) copyMcpConnectorButton.disabled = false;
         if (showSuccessAlert) renderAlert('mcp-token-alert-container', true, 'Comandos OAuth do Codex atualizados. O login abrirá o navegador quando você executar o segundo comando.');
         return config;
     }
@@ -670,7 +705,11 @@
         button.addEventListener('click', async () => {
             selectedMcpRuntime = button.getAttribute('data-choice-value') || 'claude';
             syncChoiceButtons('runtime', selectedMcpRuntime);
-            try { await buildMcpConfig(false); } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
+            renderMcpConnectorForRuntime();
+            try {
+                await buildMcpConfig(false);
+                if (selectedMcpRuntime === 'codex') await loadOAuthCodexConfig(false);
+            } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     });
 
@@ -745,18 +784,30 @@
         });
     }
 
-    if (loadOAuthCodexButton) {
-        loadOAuthCodexButton.addEventListener('click', async () => {
-            try { await loadOAuthCodexConfig(true); } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
+    if (loadMcpConnectorButton) {
+        loadMcpConnectorButton.addEventListener('click', async () => {
+            try {
+                if (selectedMcpRuntime === 'claude') {
+                    await buildMcpConfig(true);
+                    return;
+                }
+                if (selectedMcpRuntime === 'codex') await loadOAuthCodexConfig(true);
+            } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
 
-    if (copyOAuthCodexButton) {
-        copyOAuthCodexButton.addEventListener('click', async () => {
+    if (copyMcpConnectorButton) {
+        copyMcpConnectorButton.addEventListener('click', async () => {
             try {
-                if (!oauthCodexCommand || !oauthCodexCommand.value.trim()) await loadOAuthCodexConfig(false);
-                await copyText(oauthCodexCommand.value);
-                renderAlert('mcp-token-alert-container', true, 'Comandos OAuth copiados. Execute primeiro a conexão e depois o login.');
+                if (!mcpConnectorCommand || !mcpConnectorCommand.value.trim()) {
+                    if (selectedMcpRuntime === 'claude') await buildMcpConfig(false);
+                    else if (selectedMcpRuntime === 'codex') await loadOAuthCodexConfig(false);
+                }
+                await copyText(mcpConnectorCommand ? mcpConnectorCommand.value : '');
+                const message = selectedMcpRuntime === 'claude'
+                    ? 'Comando do Claude copiado.'
+                    : 'Comandos OAuth do Codex copiados. Execute primeiro a conexão e depois o login.';
+                renderAlert('mcp-token-alert-container', true, message);
             } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
@@ -880,4 +931,4 @@
         buildMcpConfig(false).catch((error) => renderAlert('mcp-token-alert-container', false, error.message));
     });
 </script>
-{% endblock %}
+{% endblock %}\n

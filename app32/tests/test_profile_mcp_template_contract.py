@@ -27,17 +27,19 @@ def test_profile_template_supports_simple_runtime_installer_flow():
     assert "Criar token" in template
     assert "Renovar" in template
     assert "Revogar" in template
-    assert "Instalação via Prompt" in template
-    assert "Instalação via PowerShell" in template
+    assert "Usuário Normal" in template
+    assert "Usuário Avançado" in template
     assert "Instalação Técnica" in template
     assert "Copiar Comando" in template
+    assert "id=\"mcpConnectorCard\"" in template
+    assert "Conectar Claude" in template
+    assert "OAuth remoto para Claude ainda não foi homologado" in template
+    assert "function renderMcpConnectorForRuntime(config = null)" in template
+    assert "if (selectedMcpRuntime === 'codex') await loadOAuthCodexConfig(false);" in template
     assert "function buildMcpTokenPayload()" in template
     assert "return buildMcpConfigPayload();" in template
-    assert "function injectLatestTokenIntoConfig(config)" in template
     assert "function outputForMode(config, mode)" in template
-    assert "const resolvedData = injectLatestTokenIntoConfig(data.data);" in template
-    assert "const resolvedConfig = injectLatestTokenIntoConfig(config);" in template
-    assert "install_command: replacePlaceholder(config.install_command)" in template
+    assert "const resolvedConfig = config;" in template
     assert "cli_install_text" in template
     assert "powershell_install_command" in template
     assert "config.copy_install_command_text || config.install_command" in template
