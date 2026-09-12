@@ -115,3 +115,22 @@ def test_complete_rejects_expired_token(reset_app, monkeypatch):
         with pytest.raises(PasswordResetError):
             password_reset_service.complete_reset(raw_token=token, new_password="NovaSenhaMuitoForte")
         assert PasswordResetToken.query.one().used_at is None
+
+
+def test_request_renders_reset_url_as_link_in_transactional_email(reset_app, monkeypatch):
+    sent = []
+    monkeypatch.setattr(
+        "services.password_reset_service.email_service.send_email",
+        lambda recipients, subject, body, html_body=None: sent.append(html_body) or True,
+    )
+
+    with reset_app.app_context():
+        password_reset_service.request_reset(
+            email="pessoa@empresa.test",
+            request_ip="ip",
+            reset_url_prefix="https://app.example.test/password-reset",
+        )
+
+    assert len(sent) == 1
+    assert '<a href=\'https://app.example.test/password-reset/' in sent[0]
+    assert "&lt;a href=" not in sent[0]

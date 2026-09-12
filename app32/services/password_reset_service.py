@@ -11,7 +11,6 @@ import hmac
 import logging
 import secrets
 from datetime import datetime, timedelta
-from html import escape
 
 from flask import current_app
 
@@ -94,8 +93,9 @@ class PasswordResetService:
             title="Redefina sua senha",
             preheader="Link temporário para redefinição de senha.",
             body=(
-                "Recebemos uma solicitação para redefinir sua senha.<br><br>"
-                f'<a href="{escape(reset_url, quote=True)}">Redefinir minha senha</a><br><br>'
+                "Recebemos uma solicitação para redefinir sua senha.\n\n"
+                "Acesse o link seguro abaixo:\n"
+                f"{reset_url}\n\n"
                 f"Este link expira em {cls.TOKEN_TTL_MINUTES} minutos e só pode ser usado uma vez. "
                 "Se você não solicitou a alteração, ignore esta mensagem."
             ),
