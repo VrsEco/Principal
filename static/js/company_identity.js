@@ -158,11 +158,13 @@
         byId('identityMission').textContent = summary.company.mission || 'Ainda não definida.';
         byId('identityVision').textContent = summary.company.vision || 'Ainda não definida.';
         byId('identityValues').textContent = formatInstitutionalValues(summary.company.values, true) || 'Ainda não definidos.';
-        byId('rolesTableCount').textContent = `${summary.roles.length} registros`;
+        const rolesCount = byId('rolesTableCount');
+        if (rolesCount) rolesCount.textContent = `${summary.roles.length} registros`;
         byId('employeesTableCount').textContent = `${summary.employees.length} registros`;
         renderIdentityReport(summary);
 
-        byId('identityRolesBody').innerHTML = summary.roles.length ? summary.roles.map((role) => `
+        const rolesBody = byId('identityRolesBody');
+        if (rolesBody) rolesBody.innerHTML = summary.roles.length ? summary.roles.map((role) => `
             <tr>
                 <td><strong>${escapeHtml(role.title)}</strong><div class="text-secondary">${role.vacancy_count || 0} vagas livres</div></td>
                 <td>${escapeHtml(role.department || '—')}</td>
@@ -406,7 +408,7 @@
     }
 
     function setEditorEnabled(enabled) {
-        ['identityRoleTitle', 'identityRoleDepartment', 'identityRoleParent', 'identityRoleHeadcount', 'identityRoleColor', 'identityEditorSave']
+        ['identityRoleTitle', 'identityRoleDepartment', 'identityRoleParent', 'identityRoleHeadcount', 'identityRoleWeeklyHours', 'identityRoleNotes', 'identityRoleQualifications', 'identityRoleColor', 'identityEditorSave']
             .forEach((id) => { if (byId(id)) byId(id).disabled = !enabled; });
         document.querySelectorAll('[data-role-color]').forEach((button) => { button.disabled = !enabled; });
     }
@@ -420,6 +422,9 @@
         byId('identityRoleTitle').value = role?.title || '';
         byId('identityRoleDepartment').value = role?.department || '';
         byId('identityRoleHeadcount').value = role?.headcount_planned ?? 1;
+        byId('identityRoleWeeklyHours').value = role?.weekly_hours ?? '';
+        byId('identityRoleNotes').value = role?.notes ?? '';
+        byId('identityRoleQualifications').value = role?.qualification_requirements ?? '';
         byId('identityRoleColor').value = safeColor(role?.color);
         byId('identityRoleColorValue').textContent = safeColor(role?.color);
         byId('identityEditorMode').textContent = role ? 'Editando cargo' : 'Novo cargo';
@@ -467,6 +472,7 @@
     async function saveRole(event) {
         event.preventDefault();
         if (!canEdit) return;
+        if (!byId('identityRoleEditorForm').reportValidity()) return;
         const title = byId('identityRoleTitle').value.trim();
         if (!title) {
             byId('identityRoleTitle').focus();
@@ -479,7 +485,10 @@
             title,
             department: byId('identityRoleDepartment').value.trim() || null,
             parent_role_id: parentRoleId,
-            headcount_planned: Math.max(0, Number.parseInt(byId('identityRoleHeadcount').value, 10) || 0),
+            headcount_planned: Number(byId('identityRoleHeadcount').value),
+            weekly_hours: byId('identityRoleWeeklyHours').value === '' ? null : Number(byId('identityRoleWeeklyHours').value),
+            notes: byId('identityRoleNotes').value.trim() || null,
+            qualification_requirements: byId('identityRoleQualifications').value.trim() || null,
             color: safeColor(byId('identityRoleColor').value),
         };
         const saveButton = byId('identityEditorSave');
@@ -585,9 +594,11 @@
                 fetchJson(`/api/companies/${companyId}/roles/tree`),
             ]);
             state.summary = summary;
+            renderLinkCandidates();
             state.tree = treeResponse.data || [];
             state.rolesById = new Map(summary.roles.map((role) => [Number(role.id), role]));
             state.treeNodesById = new Map(flattenTree(state.tree).map((role) => [Number(role.id), role]));
+            renderEmployeeRoleOptions();
             state.selectedRoleId = options.preserveRoleId || state.selectedRoleId;
             renderSummary(summary);
             populateDepartmentFilter();
@@ -597,12 +608,151 @@
             console.error(error);
             byId('identityOrgChart').innerHTML = `<div class="identity-org-chart__empty">${escapeHtml(error.message || 'Falha ao carregar organograma.')}</div>`;
             byId('identityEditorTree').innerHTML = '<div class="identity-org-chart__empty">Falha ao carregar cargos.</div>';
-            byId('identityRolesBody').innerHTML = '<tr><td colspan="4" class="identity-empty-row">Falha ao carregar cargos.</td></tr>';
+            const rolesBody = byId('identityRolesBody');
+            if (rolesBody) rolesBody.innerHTML = '<tr><td colspan="4" class="identity-empty-row">Falha ao carregar cargos.</td></tr>';
             byId('identityEmployeesBody').innerHTML = '<tr><td colspan="4" class="identity-empty-row">Falha ao carregar colaboradores.</td></tr>';
         }
     }
 
+    function renderEmployeeRoleOptions() {
+        const select = byId('identityEmployeeRole');
+        if (!select) return;
+        const current = select.value;
+        const roles = [...state.rolesById.values()].sort((a, b) => String(a.title).localeCompare(String(b.title), 'pt-BR'));
+        select.innerHTML = '<option value="">Selecione o cargo inicial</option>' + roles.map((role) =>
+            `<option value="${Number(role.id)}">${escapeHtml(role.title)}${role.department ? ` · ${escapeHtml(role.department)}` : ''}</option>`
+        ).join('');
+        select.value = state.rolesById.has(Number(current)) ? current : '';
+        const help = byId('identityEmployeeRoleHelp');
+        if (help) help.textContent = roles.length
+            ? 'A ocupação inicial não cria acesso ao sistema.'
+            : 'Ainda não há cargos. Crie um cargo para registrar a ocupação inicial.';
+    }
+
+    function renderLinkCandidates() {
+        const select = byId('identityExistingEmployee');
+        if (!select) return;
+        const employees = (state.summary?.employees || []).filter(employee =>
+            !employee.role_id && !employee.user_id && ['', 'active', 'ativo'].includes(String(employee.status || '').trim().toLowerCase()));
+        select.innerHTML = '<option value="">Selecione um colaborador</option>' + employees.map(employee =>
+            `<option value="${Number(employee.id)}">${escapeHtml(employee.name)}</option>`).join('');
+    }
+
+    function setEmployeeMode(mode) {
+        const isExisting = mode === 'existing';
+        document.querySelectorAll('[data-employee-mode]').forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.employeeMode === mode);
+        });
+        document.querySelectorAll('[data-employee-mode-panel]').forEach((panel) => {
+            panel.hidden = panel.dataset.employeeModePanel !== mode;
+        });
+        byId('identityNewEmployeeStatus').textContent = '';
+        byId('identityNewEmployeeSave').textContent = isExisting ? 'Vincular ao cargo' : 'Cadastrar sem login';
+    }
+
+    function openEmployeeDrawer() {
+        const drawer = byId('identityEmployeeDrawer');
+        if (!drawer) return;
+        renderEmployeeRoleOptions();
+        renderLinkCandidates();
+        setEmployeeMode('new');
+        if (typeof drawer.showModal === 'function') drawer.showModal();
+        else drawer.setAttribute('open', '');
+        byId('identityNewEmployeeName').focus();
+    }
+
+    function closeEmployeeDrawer() {
+        const drawer = byId('identityEmployeeDrawer');
+        if (!drawer) return;
+        byId('identityEmployeeDrawerForm').reset();
+        byId('identityNewEmployeeStatus').textContent = '';
+        if (typeof drawer.close === 'function') drawer.close();
+        else drawer.removeAttribute('open');
+    }
+
+    async function saveEmployeeFromDrawer(event) {
+        event.preventDefault();
+        const activeMode = document.querySelector('[data-employee-mode].is-active')?.dataset.employeeMode || 'new';
+        const roleId = Number(byId('identityEmployeeRole').value);
+        const button = byId('identityNewEmployeeSave');
+        const status = byId('identityNewEmployeeStatus');
+        if (!canEdit || !roleId || !state.rolesById.has(roleId)) {
+            status.textContent = 'Selecione um cargo inicial válido.';
+            return;
+        }
+        const name = byId('identityNewEmployeeName').value.trim();
+        const employeeId = Number(byId('identityExistingEmployee').value);
+        if (activeMode === 'new' && !name) {
+            status.textContent = 'Informe o nome do colaborador.';
+            byId('identityNewEmployeeName').focus();
+            return;
+        }
+        if (activeMode === 'existing' && !employeeId) {
+            status.textContent = 'Selecione o colaborador existente.';
+            byId('identityExistingEmployee').focus();
+            return;
+        }
+        const roleTitle = state.rolesById.get(roleId).title;
+        const subject = activeMode === 'new' ? name : byId('identityExistingEmployee').selectedOptions[0].textContent;
+        if (!window.confirm(`${activeMode === 'new' ? 'Cadastrar' : 'Vincular'} ${subject} no cargo ${roleTitle}? Nenhum login será criado.`)) return;
+        button.disabled = true;
+        status.textContent = 'Salvando cadastro…';
+        try {
+            await fetchJson(`/api/companies/${companyId}/roles/${roleId}/employees`, {
+                method: activeMode === 'new' ? 'POST' : 'PUT',
+                body: JSON.stringify(activeMode === 'new' ? { name } : { employee_id: employeeId }),
+            });
+            await loadPage();
+            closeEmployeeDrawer();
+        } catch (error) {
+            status.textContent = error.message || 'Não foi possível concluir o cadastro.';
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    async function queryOccupancies(event) {
+        event.preventDefault();
+        const date = byId('identityOccupancyDate').value;
+        const button = byId('identityOccupancySearch');
+        if (!date || button.disabled) return;
+        button.disabled = true;
+        const status = byId('identityOccupancyStatus');
+        const rows = byId('identityOccupancyRows');
+        rows.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
+        status.textContent = 'Consultando vigências registradas…';
+        try {
+            const result = await fetchJson(`/api/companies/${companyId}/occupancy-snapshot?as_of=${encodeURIComponent(date)}`);
+            const assignments = result.assignments || [];
+            const pending = (result.legacy_pending_employee_ids || []).length;
+            status.textContent = `${result.as_of}: ${result.distinct_people_count} pessoa(s) distinta(s), ${assignments.length} ocupação(ões). ${pending} colaborador(es) com legado pendente de reconciliação.`;
+            rows.innerHTML = assignments.length ? assignments.map(item => `<tr>
+                <td>${escapeHtml(item.employee_name)}</td><td>${escapeHtml(item.role_title)}</td>
+                <td>${escapeHtml(item.weekly_hours ?? 'Não informada')}</td>
+                <td>${item.source === 'temporal' ? 'Vigência registrada' : 'Legado não verificado'}${item.capacity_pending ? ' · dedicação pendente' : ''}</td>
+            </tr>`).join('') : '<tr><td colspan="4">Sem ocupações comprovadas ou legadas elegíveis nesta data.</td></tr>';
+        } catch (error) {
+            status.textContent = error.message || 'Não foi possível consultar ocupações.';
+            rows.innerHTML = '<tr><td colspan="4">Consulta indisponível. Não interprete esta falha como ausência de colaboradores.</td></tr>';
+        } finally { button.disabled = false; }
+    }
+
     function bindEvents() {
+        byId('identityOccupancyQuery').addEventListener('submit', queryOccupancies);
+        const today = new Date();
+        byId('identityOccupancyDate').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        byId('identityNewEmployee')?.addEventListener('click', openEmployeeDrawer);
+        byId('identityEmployeeDrawerClose')?.addEventListener('click', closeEmployeeDrawer);
+        byId('identityEmployeeDrawerCancel')?.addEventListener('click', closeEmployeeDrawer);
+        byId('identityEmployeeDrawerForm')?.addEventListener('submit', saveEmployeeFromDrawer);
+        byId('identityEmployeeCreateRole')?.addEventListener('click', () => {
+            closeEmployeeDrawer();
+            activateTab('editor');
+            openRoleEditor();
+        });
+        document.querySelectorAll('[data-employee-mode]').forEach((button) => {
+            button.addEventListener('click', () => setEmployeeMode(button.dataset.employeeMode));
+        });
         document.querySelectorAll('.identity-tab-btn').forEach((button) => button.addEventListener('click', () => activateTab(button.dataset.identityTab)));
         byId('identityEditorNewRole')?.addEventListener('click', () => openRoleEditor());
         byId('identityEditorCancel').addEventListener('click', closeRoleEditor);
@@ -632,7 +782,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         bindEvents();
         const hashTab = (window.location.hash || '').replace('#', '').trim();
-        const allowedTabs = ['mvv', 'estrutura', 'editor', 'organograma', 'relatorios'];
+        const allowedTabs = Array.from(document.querySelectorAll('[data-identity-tab]')).map(button => button.dataset.identityTab);
         activateTab(allowedTabs.includes(hashTab) ? hashTab : 'mvv');
         loadPage();
     });

@@ -282,7 +282,6 @@ fi
 # 5. Scheduler dedicado (fora dos workers uWSGI para impedir duplicidade)
 echo "⏰ Reiniciando scheduler dedicado do APP32..."
 if [ -f "$APP/scripts/manage_scheduler.sh" ]; then
-    chmod +x "$APP/scripts/manage_scheduler.sh" "$APP/scripts/run_scheduler.py"
     APP32_BASE_DIR="$BASE" \
     APP32_APP_DIR="$APP" \
     APP32_PYTHON="$PYTHON" \
@@ -311,10 +310,8 @@ MCP_STDERR_LOG="$APP/logs/mcp_http_stderr.log"
 
 if [ -f "$APP/scripts/start_mcp_http.sh" ]; then
     mkdir -p "$APP/logs"
-    chmod +x "$APP/scripts/start_mcp_http.sh"
     if [ -f "$APP/scripts/manage_mcp_http.sh" ]; then
         echo "   - Usando gerenciador MCP idempotente: scripts/manage_mcp_http.sh restart"
-        chmod +x "$APP/scripts/manage_mcp_http.sh"
         APP32_MCP_PUBLIC_BASE_URL="https://app.gestaoversus.com.br" \
         APP32_MCP_HTTP_PORT="8101" \
         bash "$APP/scripts/manage_mcp_http.sh" restart
@@ -329,7 +326,7 @@ if [ -f "$APP/scripts/start_mcp_http.sh" ]; then
         nohup env \
             APP32_MCP_PUBLIC_BASE_URL="https://app.gestaoversus.com.br" \
             APP32_MCP_HTTP_PORT="8101" \
-            "$APP/scripts/start_mcp_http.sh" \
+            bash "$APP/scripts/start_mcp_http.sh" \
             >> "$MCP_STDOUT_LOG" 2>> "$MCP_STDERR_LOG" < /dev/null &
     fi
 

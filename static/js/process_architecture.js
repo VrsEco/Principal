@@ -1289,12 +1289,7 @@ async function deleteProcess(id) {
 
 // Actions
 function openMP2() {
-    const ownerDisplayMode = document.getElementById('ownerDisplayMode')?.value || 'employee';
-    const params = new URLSearchParams({
-        company_id: state.companyId,
-        owner_display: ownerDisplayMode,
-    });
-    window.open(`/process-map/compact?${params.toString()}`, '_blank');
+    window.open(`/process-map/compact?company_id=${state.companyId}`, '_blank');
 }
 
 // Helpers

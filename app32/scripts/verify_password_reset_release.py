@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Mapping
 from urllib.parse import urlparse
 
@@ -23,6 +25,19 @@ PASSWORD_RESET_COLUMNS = {
     "used_at",
     "created_at",
 }
+
+
+# Ao executar ``python scripts/arquivo.py``, o Python inclui apenas ``scripts``
+# no início do import path. O projeto Flask, porém, começa no diretório pai.
+APP_ROOT = Path(__file__).resolve().parents[1]
+
+
+def ensure_app_root_on_path(path: list[str] | None = None) -> None:
+    """Garante que o diretório do APP32 seja importável em execução direta."""
+    search_path = sys.path if path is None else path
+    root = str(APP_ROOT)
+    if root not in search_path:
+        search_path.insert(0, root)
 
 
 @dataclass(frozen=True)
@@ -63,10 +78,13 @@ def _email_delivery_is_configured(email_service) -> bool:
 def run_preflight(*, production: bool, environ: Mapping[str, str] | None = None) -> list[CheckResult]:
     """Executa validações sem revelar valores operacionais."""
     # Imports tardios evitam carregar a aplicação ao testar validadores puros.
-    from app import app
+    ensure_app_root_on_path()
+    from app import create_app
     from models import db
     from services.email_service import email_service
     from sqlalchemy import inspect, text
+
+    app = create_app("production" if production else None)
 
     # A aplicação carrega o dotenv antes de lermos o ambiente efetivo.
     env = os.environ if environ is None else environ

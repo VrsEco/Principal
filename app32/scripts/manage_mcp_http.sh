@@ -96,7 +96,6 @@ stop_mcp() {
 }
 
 start_mcp() {
-    chmod +x "$START_SCRIPT"
     if health_ok; then
         local existing
         existing="$(port_pids)"
@@ -116,7 +115,7 @@ start_mcp() {
         APP32_MCP_PUBLIC_BASE_URL="$PUBLIC_BASE" \
         APP32_MCP_HTTP_HOST="$HOST" \
         APP32_MCP_HTTP_PORT="$PORT" \
-        "$START_SCRIPT" \
+        bash "$START_SCRIPT" \
         >> "$STDOUT_LOG" 2>> "$STDERR_LOG" < /dev/null &
 
     echo "$!" > "$PID_FILE"
