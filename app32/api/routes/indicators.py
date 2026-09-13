@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify, abort
+from sqlalchemy.orm import joinedload
 from utils.indicator_ranges import normalize_performance_ranges
 from utils.catalog_sort import sort_catalog_entries
 from utils.permissions import active_company_permission_required
@@ -583,18 +584,35 @@ def indicator_data_list():
             or getattr(goal, 'name', None)
         ),
     )
-    data_records = IndicatorData.query.filter_by(company_id=int(company_id)).order_by(
-        IndicatorData.measured_date.desc()
-    ).all()
-    data_records = sort_catalog_entries(
-        data_records,
-        code=lambda record: getattr(getattr(record, 'indicator', None), 'code', None),
-        name=lambda record: getattr(getattr(record, 'indicator', None), 'name', None),
+    page = max(request.args.get('page', 1, type=int) or 1, 1)
+    per_page = 50
+    records_query = (
+        IndicatorData.query.filter_by(company_id=int(company_id))
+        .options(
+            joinedload(IndicatorData.indicator),
+            joinedload(IndicatorData.routine),
+            joinedload(IndicatorData.employee),
+        )
+        .order_by(IndicatorData.measured_date.desc(), IndicatorData.id.desc())
     )
+    total_records = records_query.order_by(None).count()
+    last_page = max((total_records + per_page - 1) // per_page, 1)
+    page = min(page, last_page)
+    data_records = records_query.offset((page - 1) * per_page).limit(per_page).all()
+    pagination = {
+        'page': page,
+        'per_page': per_page,
+        'total': total_records,
+        'has_previous': page > 1,
+        'has_more': page * per_page < total_records,
+        'first_item': ((page - 1) * per_page) + 1 if total_records else 0,
+        'last_item': min(page * per_page, total_records),
+    }
     employees = Employee.query.filter_by(company_id=int(company_id), status='active').order_by(Employee.name).all()
     
     return render_template('modules/indicators/indicator_data_list.html', 
                          data_records=data_records,
+                         pagination=pagination,
                          goals=goals,
                          employees=employees)
 

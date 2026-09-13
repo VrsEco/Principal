@@ -218,6 +218,21 @@
                 </tbody>
             </table>
         </div>
+        {% if pagination.total > 0 %}
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:1.25rem; flex-wrap:wrap;">
+            <span class="text-secondary" style="font-size:0.85rem;">
+                Exibindo {{ pagination.first_item }}–{{ pagination.last_item }} de {{ pagination.total }} registros
+            </span>
+            <div style="display:flex; gap:.75rem;">
+                {% if pagination.has_previous %}
+                <a class="btn btn-secondary btn-sm" href="{{ url_for('indicators.indicator_data_list', page=pagination.page - 1) }}">Anterior</a>
+                {% endif %}
+                {% if pagination.has_more %}
+                <a class="btn btn-primary btn-sm" href="{{ url_for('indicators.indicator_data_list', page=pagination.page + 1) }}">Próximos 50</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
         {% else %}
         <div class="empty-state" style="padding: 6rem 2rem; text-align: center; background: var(--surface); border: 2px dashed var(--border); border-radius: 24px;">
             <div style="font-size: 5rem; margin-bottom: 2rem; filter: grayscale(1); opacity: 0.3;">📥</div>
