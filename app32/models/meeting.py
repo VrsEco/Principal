@@ -3,6 +3,10 @@ from datetime import datetime
 
 class Meeting(db.Model):
     __tablename__ = 'meetings'
+    __table_args__ = (
+        db.Index('ix_meetings_company_created_at', 'company_id', 'created_at'),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id', ondelete='CASCADE'), nullable=False)

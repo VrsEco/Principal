@@ -11,6 +11,7 @@ class Project(db.Model):
     __tablename__ = "projects"
     __table_args__ = (
         UniqueConstraint("company_id", "code_sequence", name="uq_projects_company_code_sequence"),
+        db.Index("ix_projects_company_portfolio_id", "company_id", "portfolio_id"),
         {'extend_existing': True},
     )
 
