@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, abort
 from flask_login import current_user, login_required
+from sqlalchemy.orm import joinedload
 from models import Company, Meeting, MeetingAgendaItem, Employee, Project, db
 from services.meeting_report_service import build_meeting_report_context
 from utils.permissions import get_default_company_id, has_company_full_access, permission_required
@@ -56,7 +57,14 @@ def meetings_company_manage(company_id):
     session['active_company_id'] = company_id
     
     # Fetch meetings (using model)
-    meetings = Meeting.query.filter_by(company_id=company_id).order_by(Meeting.created_at.desc()).all()
+    # ``Meeting.to_dict`` reads the linked project.  Eager loading prevents one
+    # additional query for each meeting in this workspace.
+    meetings = (
+        Meeting.query.options(joinedload(Meeting.project))
+        .filter_by(company_id=company_id)
+        .order_by(Meeting.created_at.desc())
+        .all()
+    )
     all_meetings_data = [m.to_dict() for m in meetings]
     
     # Filter meetings based on user context
@@ -103,8 +111,16 @@ def meetings_company_manage(company_id):
     agenda_items_data = [a.to_dict() for a in agenda_items]
     
     # Fetch projects
-    projects = Project.query.filter_by(company_id=company_id).all()
-    projects_data = [p.to_dict() for p in projects]
+    # This template needs only the project directory.  Avoid ``Project.to_dict``
+    # here because it calculates task statistics per project (N+1 queries).
+    projects_data = [
+        {"id": project.id, "name": project.name, "code": project.code}
+        for project in (
+            Project.query.filter_by(company_id=company_id)
+            .order_by(Project.name.asc())
+            .all()
+        )
+    ]
 
     return render_template(
         "meetings_manage.html",

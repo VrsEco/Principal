@@ -1,9 +1,12 @@
 """Portfolio API routes"""
 from flask import Blueprint, request, jsonify, render_template, abort, send_file, url_for
 from flask_login import login_required, current_user
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from models import db
 from models.portfolio import Portfolio
 from models.company import Company
+from models.project import Project
 from schemas.portfolio import (
     PortfolioSchema,
     PortfolioCreateSchema,
@@ -86,13 +89,37 @@ def list_portfolios(company_id):
         # Verify company access
         company = Company.query.get_or_404(company_id)
 
-        # Get all portfolios for this company
-        portfolios = Portfolio.query.filter_by(company_id=company_id).order_by(
-            Portfolio.code
-        ).all()
-
-        # Serialize with project count
-        portfolios_data = [p.to_dict(include_project_count=True) for p in portfolios]
+        # The previous implementation ran one COUNT query for every portfolio
+        # during serialization.  Aggregate project counts once, still bound to
+        # the active tenant, and eager-load the responsible employee.
+        project_counts = (
+            db.session.query(
+                Project.portfolio_id.label("portfolio_id"),
+                func.count(Project.id).label("project_count"),
+            )
+            .filter(
+                Project.company_id == company_id,
+                Project.portfolio_id.isnot(None),
+            )
+            .group_by(Project.portfolio_id)
+            .subquery()
+        )
+        portfolio_rows = (
+            db.session.query(
+                Portfolio,
+                func.coalesce(project_counts.c.project_count, 0).label("project_count"),
+            )
+            .outerjoin(project_counts, project_counts.c.portfolio_id == Portfolio.id)
+            .options(joinedload(Portfolio.responsible))
+            .filter(Portfolio.company_id == company_id)
+            .order_by(Portfolio.code)
+            .all()
+        )
+        portfolios_data = []
+        for portfolio, project_count in portfolio_rows:
+            payload = portfolio.to_dict()
+            payload["project_count"] = int(project_count or 0)
+            portfolios_data.append(payload)
 
         return jsonify({"success": True, "portfolios": portfolios_data}), 200
 
