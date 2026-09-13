@@ -459,7 +459,10 @@ def upload_process_flow():
 @permission_required('processes', 'view')
 def processes_list():
     """Processes list page"""
-    company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
+    company_id = session.get('active_company_id')
+    requested_company_id = request.args.get('company_id', type=int)
+    if requested_company_id and requested_company_id != company_id:
+        return jsonify({"error": "Empresa da requisição não corresponde à empresa ativa."}), 403
     if not company_id and current_user.is_authenticated:
         company_id = get_default_company_id()
     if company_id:
@@ -472,12 +475,16 @@ def process_map():
     """Process map (Big Picture)"""
     from flask_login import current_user
 
-    arg_company_id = request.args.get('company_id', type=int)
-    company_id = arg_company_id or session.get('active_company_id')
+    company_id = session.get('active_company_id')
+    requested_company_id = request.args.get('company_id', type=int)
+    if requested_company_id and requested_company_id != company_id:
+        return jsonify({"error": "Empresa da requisição não corresponde à empresa ativa."}), 403
 
-    # Fallback: pega a primeira empresa permitida para o usuário
+    # Fallback: pega a primeira empresa permitida para o usuário.
     if not company_id and current_user.is_authenticated:
         company_id = get_default_company_id()
+        if company_id:
+            session['active_company_id'] = company_id
     
     is_collaborator = is_collaborator_in_company(company_id)
 
@@ -623,13 +630,13 @@ def api_process_portal_process_detail(company_id, process_id):
 @permission_required('processes', 'view')
 def process_map_compact():
     """Print-friendly Compact Process Map (MP-2)"""
-    # Use company_id from query params or session
-    arg_id = request.args.get('company_id')
-    company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
-    
+    company_id = session.get('active_company_id')
+    requested_company_id = request.args.get('company_id', type=int)
+    if requested_company_id and requested_company_id != company_id:
+        return jsonify({"error": "Empresa da requisição não corresponde à empresa ativa."}), 403
+
     logger.debug(
-        "[DEBUG] MP-2 View Request - arg_id: %s, session_id: %s, final_id: %s",
-        arg_id,
+        "[DEBUG] MP-2 View Request - session_id: %s, final_id: %s",
         session.get('active_company_id'),
         company_id,
     )

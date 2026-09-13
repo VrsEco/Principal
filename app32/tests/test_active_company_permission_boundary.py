@@ -236,3 +236,10 @@ def test_dashboard_and_export_routes_require_active_tenant_without_query_overrid
     assert main_source.count('Empresa da requisição não corresponde à empresa ativa.') >= 3
     assert "company_id = request.args.get('company_id', type=int) or session.get('active_company_id')" not in main_source
     assert configs_source.count('Empresa da requisição não corresponde à empresa ativa.') >= 2
+
+
+def test_process_page_routes_do_not_select_tenant_from_query():
+    source = (Path(__file__).resolve().parents[1] / 'api' / 'routes' / 'processes.py').read_text(encoding='utf-8')
+
+    assert "request.args.get('company_id', type=int) or session.get('active_company_id')" not in source
+    assert source.count('Empresa da requisição não corresponde à empresa ativa.') >= 3
