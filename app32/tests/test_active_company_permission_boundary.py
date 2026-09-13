@@ -148,3 +148,28 @@ def test_financial_resources_and_routes_use_active_company_guard():
         source = (root / relative_path).read_text(encoding='utf-8')
         assert '@permission_required(' not in source
         assert '@active_company_permission_required(' in source
+from api.routes import contracts as contracts_route
+
+
+def test_contracts_active_company_ignores_client_tenant_selector(monkeypatch):
+    app = _app()
+    captured_company_ids = []
+    expected_company = SimpleNamespace(id=9)
+    monkeypatch.setattr(contracts_route, 'has_permission', lambda *args: True)
+    monkeypatch.setattr(
+        contracts_route,
+        'Company',
+        SimpleNamespace(query=SimpleNamespace(get=lambda company_id: captured_company_ids.append(company_id) or expected_company)),
+    )
+
+    with app.test_request_context('/contracts?company_id=22'):
+        session['active_company_id'] = 9
+        assert contracts_route.get_active_company() is expected_company
+
+    assert captured_company_ids == [9]
+
+
+def test_contract_routes_use_active_company_guard():
+    source = (Path(__file__).resolve().parents[1] / 'api' / 'routes' / 'contracts.py').read_text(encoding='utf-8')
+    assert '@permission_required(' not in source
+    assert '@active_company_permission_required(' in source

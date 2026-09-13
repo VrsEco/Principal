@@ -90,9 +90,9 @@ def test_contracts_p1_routes_are_registered_authenticated_and_scoped():
             continue
         node, body = candidates[0]
         decorators = _decorator_names(node)
-        if not ({"permission_required", "login_required"} & decorators):
+        if not ({"permission_required", "active_company_permission_required", "login_required"} & decorators):
             unguarded.append(f"{relative_file}:{route}:missing auth/permission guard")
-        if not any(marker in body for marker in ("company_id", "active_company", "session", "current_user", "has_company_full_access", "permission_required", "Contract")) and "permission_required" not in decorators:
+        if not any(marker in body for marker in ("company_id", "active_company", "session", "current_user", "has_company_full_access", "permission_required", "Contract")) and not ({"permission_required", "active_company_permission_required"} & decorators):
             unguarded.append(f"{relative_file}:{route}:missing tenant/domain scope guard")
     assert missing == []
     assert unguarded == []

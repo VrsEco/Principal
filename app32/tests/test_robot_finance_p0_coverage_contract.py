@@ -136,9 +136,9 @@ def test_finance_p0_routes_are_registered_and_permission_guarded():
             continue
         node, body = route_map[route]
         decorators = _decorator_names(node)
-        if "permission_required" not in decorators and "login_required" not in decorators:
+        if not ({"permission_required", "active_company_permission_required", "login_required"} & decorators):
             unguarded.append(f"{relative_file}:{route}:missing permission_required")
-        has_tenant_context = "permission_required" in decorators or any(
+        has_tenant_context = bool({"permission_required", "active_company_permission_required"} & decorators) or any(
             token in body
             for token in (
                 "company_id",

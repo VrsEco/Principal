@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
 from models import Company, Employee
@@ -10,7 +10,7 @@ from models.contracts import ContractDocument, ContractFinancialTerm, ContractFi
 from services.contract_financial_service import ContractFinancialService
 from services.contracts_catalog_service import ContractsCatalogService
 from services.contracts_service import ContractService
-from utils.permissions import get_default_company_id, has_permission, permission_required
+from utils.permissions import active_company_permission_required, get_active_company_id, has_permission
 
 
 contracts_bp = Blueprint("contracts", __name__)
@@ -43,19 +43,13 @@ CONTRACTS_LIST_TAB_ALIASES = {
 
 
 def get_active_company():
-    company_id = request.args.get("company_id", type=int) or session.get("active_company_id")
-    if not company_id and current_user.is_authenticated:
-        employee = Employee.query.filter_by(user_id=current_user.id, status="active").first()
-        if employee and employee.company_id:
-            company_id = employee.company_id
-        else:
-            company_id = get_default_company_id()
-    if company_id:
-        if not has_permission(company_id, "contracts", "view"):
-            abort(403, description="Acesso negado ao contexto de contratos desta empresa.")
-        session["active_company_id"] = company_id
-        return Company.query.get(company_id)
-    return None
+    """Resolve contratos exclusivamente pela empresa ativa da sessão."""
+    company_id = get_active_company_id()
+    if not company_id:
+        return None
+    if not has_permission(company_id, "contracts", "view"):
+        abort(403, description="Acesso negado ao contexto de contratos desta empresa.")
+    return Company.query.get(company_id)
 
 
 def _normalize_contract_tab(tab_name: str | None) -> str:
@@ -524,7 +518,7 @@ def _process_contract_section_submission(company: Company, contract, active_tab:
 
 @contracts_bp.route("/contracts", methods=["GET", "POST"])
 @contracts_bp.route("/contracts/dashboard", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_dashboard():
     company = get_active_company()
     if not company:
@@ -604,7 +598,7 @@ def contracts_dashboard():
 
 
 @contracts_bp.route("/contracts/customers/portfolio")
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_customer_portfolio():
     company = get_active_company()
     if not company:
@@ -625,7 +619,7 @@ def contracts_customer_portfolio():
 
 
 @contracts_bp.route("/contracts/customers")
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_customers_workspace():
     company = get_active_company()
     if not company:
@@ -654,7 +648,7 @@ def contracts_customers_workspace():
 
 
 @contracts_bp.route("/contracts/parties")
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_parties_list():
     company = get_active_company()
     parties = ContractService.list_parties(company.id) if company else []
@@ -663,7 +657,7 @@ def contracts_parties_list():
 
 @contracts_bp.route("/contracts/parties/new", methods=["GET", "POST"])
 @contracts_bp.route("/contracts/parties/<int:party_id>", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_party_manage(party_id: int | None = None):
     company = get_active_company()
     if not company:
@@ -694,7 +688,7 @@ def _select_contract_from_filtered_list(contracts: list, selected_contract_id: i
 
 
 @contracts_bp.route("/contracts/list", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_list():
     company = get_active_company()
     if not company:
@@ -834,7 +828,7 @@ def contracts_list():
 
 
 @contracts_bp.route("/contracts/catalogs/items", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_items_catalog():
     company = get_active_company()
     if not company:
@@ -1044,7 +1038,7 @@ def contracts_items_catalog():
 
 
 @contracts_bp.route("/contracts/legal-entities", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_legal_entities():
     company = get_active_company()
     if not company:
@@ -1093,7 +1087,7 @@ def contracts_legal_entities():
 
 
 @contracts_bp.route("/contracts/billing", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_billing_workspace():
     company = get_active_company()
     if not company:
@@ -1130,7 +1124,7 @@ def contracts_billing_workspace():
 
 
 @contracts_bp.route("/contracts/billing/review", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_billing_review():
     company = get_active_company()
     if not company:
@@ -1177,7 +1171,7 @@ def contracts_billing_review():
 
 
 @contracts_bp.route("/contracts/billing/done", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_billing_done():
     company = get_active_company()
     if not company:
@@ -1233,7 +1227,7 @@ def contracts_billing_done():
 
 
 @contracts_bp.route("/contracts/invoices", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_fiscal_invoices():
     company = get_active_company()
     if not company:
@@ -1348,7 +1342,7 @@ def contracts_fiscal_invoices():
 
 
 @contracts_bp.route("/contracts/new", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_create():
     company = get_active_company()
     if not company:
@@ -1390,7 +1384,7 @@ def contracts_create():
 
 
 @contracts_bp.route("/contracts/<int:contract_id>", methods=["GET", "POST"])
-@permission_required("contracts", "view")
+@active_company_permission_required("contracts", "view")
 def contracts_manage(contract_id: int):
     company = get_active_company()
     if not company:
