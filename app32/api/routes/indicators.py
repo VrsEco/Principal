@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify, abort
 from utils.indicator_ranges import normalize_performance_ranges
 from utils.catalog_sort import sort_catalog_entries
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 from models import db, Company, Indicator, IndicatorTree, IndicatorGoal, IndicatorData, Employee, Team, Routine
 from services.indicator_service import IndicatorGoalService
 import json
@@ -124,7 +124,7 @@ def _get_company_tree_node(company_id: int, node_id: int | None):
     return IndicatorTree.query.filter_by(id=node_id, company_id=company_id).first()
 
 @indicators_bp.route('/indicators')
-@permission_required('indicators', 'view')
+@active_company_permission_required('indicators', 'view')
 def indicators_list():
     """Unified Indicators list page"""
     from flask import session, redirect, url_for
@@ -189,7 +189,7 @@ def indicators_list():
 
 
 @indicators_bp.route('/indicators/<int:indicator_id>')
-@permission_required('indicators', 'view')
+@active_company_permission_required('indicators', 'view')
 def indicator_details(indicator_id):
     """Indicator details page (dashboard/history)"""
     company_id = session.get('active_company_id')
@@ -199,7 +199,7 @@ def indicator_details(indicator_id):
     return render_template('modules/indicators/indicator_details_v2.html', indicator_id=indicator_id)
 
 @indicators_bp.route('/indicators/new')
-@permission_required('indicators', 'create')
+@active_company_permission_required('indicators', 'create')
 def indicator_new():
     """New indicator form"""
     company_id = session.get('active_company_id')
@@ -209,7 +209,7 @@ def indicator_new():
     return render_template('modules/indicators/indicator_form_v2.html', **ctx)
 
 @indicators_bp.route('/indicators/<int:indicator_id>/edit')
-@permission_required('indicators', 'edit')
+@active_company_permission_required('indicators', 'edit')
 def indicator_edit(indicator_id):
     """Edit indicator form — usa o mesmo template unificado indicator_form_v2"""
     company_id = session.get('active_company_id')
@@ -223,7 +223,7 @@ def indicator_edit(indicator_id):
 # --- Tree (Groups/Hierarchy) ---
 
 @indicators_bp.route('/indicators/tree')
-@permission_required('indicators', 'view')
+@active_company_permission_required('indicators', 'view')
 def indicator_tree():
     """Hierarchical tree of indicator groups"""
     company_id = session.get('active_company_id')
@@ -247,7 +247,7 @@ def indicator_tree():
 
 @indicators_bp.route('/indicators/tree/new', methods=['GET', 'POST'])
 @indicators_bp.route('/indicators/tree/<int:node_id>/edit', methods=['GET', 'POST'])
-@permission_required('indicators', 'create')
+@active_company_permission_required('indicators', 'create')
 def indicator_tree_form(node_id=None):
     """Create or edit tree nodes"""
     company_id = session.get('active_company_id')
@@ -373,7 +373,7 @@ def indicator_tree_form(node_id=None):
 
 
 @indicators_bp.route('/indicators/tree/<int:node_id>/delete', methods=['POST'])
-@permission_required('indicators', 'delete')
+@active_company_permission_required('indicators', 'delete')
 def indicator_tree_delete(node_id):
     company_id = session.get('active_company_id')
     if not company_id: return jsonify({'error': 'Unauthorized'}), 401
@@ -408,7 +408,7 @@ def indicator_tree_delete(node_id):
 # --- Goals (Metas) ---
 
 @indicators_bp.route('/indicators/goals')
-@permission_required('indicators', 'view')
+@active_company_permission_required('indicators', 'view')
 def indicator_goals():
     """List of indicator goals"""
     import datetime
@@ -455,7 +455,7 @@ def indicator_goals():
                          **ctx)
 
 @indicators_bp.route('/indicators/measurement-routines')
-@permission_required('indicators', 'view')
+@active_company_permission_required('indicators', 'view')
 def measurement_routines():
     """Operaional view of routines selection"""
     company_id = session.get('active_company_id')
@@ -496,7 +496,7 @@ def measurement_routines():
     return render_template('modules/indicators/measurement_routines.html', routines_data=routines_data)
 
 @indicators_bp.route('/indicators/routine-execution/<int:routine_id>')
-@permission_required('indicators', 'edit')
+@active_company_permission_required('indicators', 'edit')
 def routine_execution(routine_id):
     """Spreadsheet-style view for batch indicator data entry"""
     company_id = session.get('active_company_id')
@@ -553,7 +553,7 @@ def routine_execution(routine_id):
 # --- Data (Registros) ---
 
 @indicators_bp.route('/indicators/data')
-@permission_required('indicators', 'edit')
+@active_company_permission_required('indicators', 'edit')
 def indicator_data_list():
     """List of measured data points"""
     company_id = session.get('active_company_id')
@@ -601,7 +601,7 @@ def indicator_data_list():
 # --- Analysis (Dashboard) ---
 
 @indicators_bp.route('/indicators/dashboard')
-@permission_required('indicators', 'view')
+@active_company_permission_required('indicators', 'view')
 def indicator_dashboard():
     """Indicator analysis dashboard — dados reais com status de desempenho"""
     import datetime
@@ -692,7 +692,7 @@ def indicator_dashboard():
 
 
 @indicators_bp.route('/indicators/link-map')
-@permission_required('indicators', 'view')
+@active_company_permission_required('indicators', 'view')
 def indicator_link_map():
     """Mapa N:N Indicadores × processos/projetos/estratégia."""
     company_id = session.get('active_company_id')
@@ -702,7 +702,7 @@ def indicator_link_map():
 
 
 @indicators_bp.route('/indicators/analysis')
-@permission_required('indicators', 'view')
+@active_company_permission_required('indicators', 'view')
 def indicator_analysis():
     """Análise comparativa de indicadores, metas e medições históricas."""
     company_id = session.get('active_company_id')
@@ -792,7 +792,7 @@ def indicator_analysis():
 # --- API Actions ---
 
 @indicators_bp.route('/api/indicators/<int:indicator_id>/toggle-active', methods=['POST'])
-@permission_required('indicators', 'edit')
+@active_company_permission_required('indicators', 'edit')
 def toggle_indicator_active(indicator_id):
     company_id = session.get('active_company_id')
     if not company_id: return jsonify({"error": "Sessão expirada"}), 401
@@ -808,7 +808,7 @@ def toggle_indicator_active(indicator_id):
     })
 
 @indicators_bp.route('/api/indicators/<int:indicator_id>', methods=['DELETE'])
-@permission_required('indicators', 'delete')
+@active_company_permission_required('indicators', 'delete')
 def delete_indicator(indicator_id):
     company_id = session.get('active_company_id')
     if not company_id: return jsonify({"error": "Sessão expirada"}), 401
