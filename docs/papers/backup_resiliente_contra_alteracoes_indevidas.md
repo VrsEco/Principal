@@ -17,6 +17,13 @@ A retenção GFS preserva todos os snapshots por 30 dias, o marco de 03h até 90
 ## Riscos assumidos no MVP
 Google Drive pessoal não fornece bloqueio técnico de exclusão para uma credencial comprometida. MFA, conta dedicada, logs de manifesto, restauração testada e ausência de limpeza automática reduzem o risco, mas não substituem WORM.
 
+## Estado da implantação
+O projeto `GV Backup Drive`, a API do Drive, o app OAuth em modo de teste e um
+cliente exclusivo do Configr já foram criados sem ativar faturamento. A credencial
+de cliente está fora do Git, protegida no Configr. A próxima barreira é o
+consentimento interativo ao escopo `drive.file`, seguido de um único upload de
+teste que não sobrescreve nem remove nenhum objeto remoto.
+
 ## Evolução necessária
 1. OAuth direto Configr → Drive e validação de restauração isolada.
 2. PostgreSQL PITR com WAL.
