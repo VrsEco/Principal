@@ -7,6 +7,23 @@ from utils.permissions import get_default_company_id, has_company_full_access, h
 from services.project_task_stats_service import ProjectTaskStatsService
 
 
+PROJECT_LIST_MAX_PER_PAGE = 100
+
+
+def _project_list_pagination_args():
+    """Resolve paginação opt-in sem quebrar consumidores legados da coleção."""
+    paginated = request.args.get('paginated', 'false').lower() == 'true'
+    if not paginated:
+        return False, 1, PROJECT_LIST_MAX_PER_PAGE
+
+    page = max(request.args.get('page', 1, type=int) or 1, 1)
+    per_page = min(
+        max(request.args.get('per_page', PROJECT_LIST_MAX_PER_PAGE, type=int) or 1, 1),
+        PROJECT_LIST_MAX_PER_PAGE,
+    )
+    return True, page, per_page
+
+
 def _get_current_company_employee(company_id):
     from flask_login import current_user
     from models.employee import Employee
@@ -142,12 +159,15 @@ def apply_project_employee_filter(query, company_id):
 class ProjectListResource(Resource):
     @active_company_permission_required('projects', 'view')
     def get(self):
-        """List all projects, optionally filtered by company_id, plan_id, and inactive status."""
+        """Lista projetos com paginação opt-in e contrato legado preservado."""
         company_id = get_request_company_id()
         plan_id = request.args.get('plan_id', type=int)
         show_inactive = request.args.get('show_inactive', 'false').lower() == 'true'
+        paginated, page, per_page = _project_list_pagination_args()
         
         if not company_id:
+            if paginated:
+                return {"items": [], "total": 0, "page": page, "per_page": per_page, "has_more": False}, 200
             return [], 200
             
         query = Project.query.filter_by(company_id=company_id).order_by(Project.id.asc())
@@ -159,7 +179,11 @@ class ProjectListResource(Resource):
         if plan_id:
             query = query.filter_by(plan_id=plan_id)
             
-        projects = query.all()
+        total = query.order_by(None).count() if paginated else None
+        if paginated:
+            projects = query.offset((page - 1) * per_page).limit(per_page).all()
+        else:
+            projects = query.all()
         stats_by_project = ProjectTaskStatsService.build_for_projects(
             company_id=company_id,
             project_ids=[project.id for project in projects],
@@ -169,7 +193,16 @@ class ProjectListResource(Resource):
                 int(project.id),
                 ProjectTaskStatsService.empty(),
             )
-        return projects_schema.dump(projects), 200
+        payload = projects_schema.dump(projects)
+        if paginated:
+            return {
+                "items": payload,
+                "total": int(total or 0),
+                "page": page,
+                "per_page": per_page,
+                "has_more": page * per_page < int(total or 0),
+            }, 200
+        return payload, 200
 
     @active_company_permission_required('projects', 'create')
     def post(self):
