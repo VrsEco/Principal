@@ -38,3 +38,10 @@ def test_postgres_url_decodes_password_without_exposing_it():
     host, port, user, password, database = runner.parse_postgres_url("postgresql://app:p%40ss@db.example:5433/versus")
 
     assert (host, port, user, password, database) == ("db.example", "5433", "app", "p@ss", "versus")
+
+
+def test_default_dotenv_is_the_runtime_app_directory():
+    args = runner.parse_args(["--dry-run"])
+
+    assert Path(args.dotenv).name == ".env"
+    assert Path(args.dotenv).parent.name == "app32"
