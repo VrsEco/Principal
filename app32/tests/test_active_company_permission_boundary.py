@@ -226,3 +226,13 @@ def test_config_and_audit_routes_do_not_allow_query_to_select_tenant():
     assert "request.args.get('company_id', type=int) or session.get('active_company_id')" not in active_resolver
     assert main_source.count('Empresa da requisição não corresponde à empresa ativa.') >= 1
     assert configs_source.count('Empresa da requisição não corresponde à empresa ativa.') >= 1
+
+
+def test_dashboard_and_export_routes_require_active_tenant_without_query_override():
+    root = Path(__file__).resolve().parents[1]
+    main_source = (root / 'api' / 'routes' / 'main.py').read_text(encoding='utf-8')
+    configs_source = (root / 'api' / 'routes' / 'configs.py').read_text(encoding='utf-8')
+
+    assert main_source.count('Empresa da requisição não corresponde à empresa ativa.') >= 3
+    assert "company_id = request.args.get('company_id', type=int) or session.get('active_company_id')" not in main_source
+    assert configs_source.count('Empresa da requisição não corresponde à empresa ativa.') >= 2

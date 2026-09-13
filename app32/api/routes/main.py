@@ -82,13 +82,13 @@ def operations_audit_panel_api():
 @login_required
 def dashboard_stats():
     """Returns filtered analytics and counts for the dashboard cards"""
-    from flask import session
-    company_id = request.args.get('company_id', type=int)
-    
-    # Use session company if none provided
+    company_id = session.get('active_company_id')
+    requested_company_id = request.args.get('company_id', type=int)
+    if requested_company_id and requested_company_id != company_id:
+        return jsonify({"error": "Empresa da requisição não corresponde à empresa ativa."}), 403
     if not company_id:
-        company_id = session.get('active_company_id')
-        
+        return jsonify({"error": "Empresa ativa obrigatória."}), 400
+
     project_id = request.args.get('project_id', type=int)
     process_id = request.args.get('process_id', type=int)
     responsible = request.args.get('responsible')
@@ -267,9 +267,14 @@ def dashboard_stats():
 def dashboard_filter_options():
     try:
         from flask_login import current_user
-        company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
+        company_id = session.get('active_company_id')
+        requested_company_id = request.args.get('company_id', type=int)
+        if requested_company_id and requested_company_id != company_id:
+            return jsonify({"error": "Empresa da requisição não corresponde à empresa ativa."}), 403
+        if not company_id:
+            return jsonify({"error": "Empresa ativa obrigatória."}), 400
 
-        if company_id and has_company_full_access(company_id):
+        if has_company_full_access(company_id):
             if company_id:
                 companies = Company.query.filter_by(id=company_id, is_active=True).all()
                 employees = (
