@@ -187,6 +187,14 @@ def get_user_activities_v2(
     """
     filters = filters or {}
 
+    def parse_due_date_filter(value):
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(str(value)[:10])
+        except (TypeError, ValueError):
+            return None
+
     user = User.query.get(user_id)
     associated = _get_active_associated_companies(user_id)
     associated_company_ids = _dedupe_company_ids(associated)
@@ -241,20 +249,26 @@ def get_user_activities_v2(
             can_view_by_cid[cid] = has_permission(cid, 'companies', 'view')
 
     directory, lookup = build_employee_lookup_v2(allowed_company_ids)
+    due_date_start = parse_due_date_filter(filters.get("due_date_start"))
+    due_date_end = parse_due_date_filter(filters.get("due_date_end"))
 
     project_rows = fetch_normalized_project_rows(
         employee_ids=None,
         company_ids=allowed_company_ids,
         project_ids=filters.get("project_ids"),
         employee_lookup=lookup,
-        employee_directory=directory
+        employee_directory=directory,
+        due_date_start=due_date_start,
+        due_date_end=due_date_end,
     )
     process_rows = fetch_normalized_process_rows(
         employee_ids=None,
         company_ids=allowed_company_ids,
         process_ids=filters.get("process_ids"),
         employee_lookup=lookup,
-        employee_directory=directory
+        employee_directory=directory,
+        due_date_start=due_date_start,
+        due_date_end=due_date_end,
     )
 
     all_raw = project_rows + process_rows

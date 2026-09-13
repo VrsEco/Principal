@@ -296,7 +296,13 @@ class ProjectTaskListResource(Resource):
         if not include_completed:
             query = query.filter(ProjectTask.stage != 'completed')
         if stage:
-            query = query.filter(ProjectTask.stage == stage)
+            # ``todo`` is a persisted legacy alias of the canonical inbox
+            # column. Keep the stage-scoped pagination contract complete while
+            # clients use the canonical ``inbox`` name.
+            if stage == 'inbox':
+                query = query.filter(ProjectTask.stage.in_(('inbox', 'todo')))
+            else:
+                query = query.filter(ProjectTask.stage == stage)
         if search:
             pattern = f'%{search}%'
             query = query.filter(or_(ProjectTask.what.ilike(pattern), ProjectTask.notes.ilike(pattern)))
@@ -374,7 +380,10 @@ class ProjectTaskListResource(Resource):
             )
         )
         stage_rows = apply_task_employee_filter(stage_rows, company_id)
-        stage_counts = {str(key or 'inbox'): int(value) for key, value in stage_rows.group_by(ProjectTask.stage).all()}
+        stage_counts = {}
+        for key, value in stage_rows.group_by(ProjectTask.stage).all():
+            normalized_stage = 'inbox' if key in (None, 'todo', 'inbox') else str(key)
+            stage_counts[normalized_stage] = stage_counts.get(normalized_stage, 0) + int(value)
         return {
             'items': dumped_tasks,
             'total': total,

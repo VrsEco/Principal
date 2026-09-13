@@ -96,7 +96,7 @@ def test_compact_board_serializer_avoids_full_task_payload(monkeypatch):
     assert "project_name" not in payload
 
 
-def test_project_manage_uses_incremental_board_contract():
+def test_project_manage_uses_stage_scoped_incremental_board_contract():
     template = (
         Path(__file__).resolve().parents[1]
         / "templates"
@@ -107,12 +107,23 @@ def test_project_manage_uses_incremental_board_contract():
 
     assert "paginated: 'true'" in template
     assert "compact: 'true'" in template
-    assert "per_page: '150'" in template
+    assert "KANBAN_STAGE_PAGE_SIZE = 30" in template
+    assert "stage," in template
+    assert "loadStageTasks(stage" in template
+    assert "taskPagingByStage" in template
+    assert "Carregar mais (${loadedCount} de ${paging.total})" in template
     assert "filterIncludeCompleted" in template
-    assert "loadMoreTasks()" in template
+    assert "loadMoreTasks(stage)" in template
     assert "Object.prototype.hasOwnProperty.call(currentTask, 'logs')" in template
     assert "kanbanCapacityGuardrail" in template
     assert "payload.capacity" in template
+
+
+def test_project_task_resource_normalizes_legacy_todo_for_inbox_stage_pagination():
+    source = inspect.getsource(project_task_resource.ProjectTaskListResource.get)
+
+    assert "ProjectTask.stage.in_(('inbox', 'todo'))" in source
+    assert "'inbox' if key in (None, 'todo', 'inbox')" in source
 
 
 def test_project_analysis_all_tasks_excludes_soft_deleted_cards():

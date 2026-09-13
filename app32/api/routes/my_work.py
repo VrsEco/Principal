@@ -655,11 +655,13 @@ def my_work_filter_options():
 @login_required
 def my_work_api_activities():
     from services.my_work.discovery_service import get_user_activities_v2
+    from services.my_work.pagination_service import paginate_activities
     # In v2, stats are calculated directly or derived from data for now
     from services.my_work_service import _calculate_stats_from_activities
     
     # user = User.query.get(current_user.id) # Redundante pois current_user já é o objeto User
     scope = request.args.get('scope', 'me')
+    paginated = request.args.get('paginated', 'false').lower() == 'true'
 
     def _parse_ints(val_str):
         if not val_str: return None
@@ -718,12 +720,22 @@ def my_work_api_activities():
         )
         
         stats = _calculate_stats_from_activities(activities)
+        page_payload = (
+            paginate_activities(
+                activities,
+                request.args.get('page', 1),
+                request.args.get('per_page'),
+            )
+            if paginated
+            else None
+        )
 
         return jsonify({
             "success": True,
-            "data": activities,
+            "data": page_payload["items"] if page_payload else activities,
             "stats": stats,
-            "scope_counts": scope_counts
+            "scope_counts": scope_counts,
+            "pagination": page_payload if paginated else None,
         })
     except Exception as e:
         logger.exception("Erro ao listar atividades do My Work para user_id=%s", getattr(current_user, "id", None))

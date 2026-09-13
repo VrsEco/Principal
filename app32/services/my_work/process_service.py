@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional, Sequence, Set
+from datetime import date
 import logging
 from models import db
 from models.process import Process, ProcessInstance
@@ -53,7 +54,9 @@ def fetch_normalized_process_rows(
     company_ids: Optional[Sequence[int]] = None,
     process_ids: Optional[Sequence[int]] = None,
     employee_lookup: Optional[Dict[str, Set[int]]] = None,
-    employee_directory: Optional[Dict[int, Dict[str, Any]]] = None
+    employee_directory: Optional[Dict[int, Dict[str, Any]]] = None,
+    due_date_start: Optional[date] = None,
+    due_date_end: Optional[date] = None,
 ) -> List[Dict[str, Any]]:
     """
     Fetch and normalize process instances activities.
@@ -72,6 +75,10 @@ def fetch_normalized_process_rows(
         query = query.filter(ProcessInstance.company_id.in_(company_ids))
     if process_ids:
         query = query.filter(ProcessInstance.process_id.in_(process_ids))
+    if due_date_start:
+        query = query.filter(ProcessInstance.due_date >= due_date_start)
+    if due_date_end:
+        query = query.filter(ProcessInstance.due_date <= due_date_end)
 
     query = query.order_by(ProcessInstance.due_date.nullslast(), ProcessInstance.updated_at.desc())
     

@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional, Sequence, Set, Tuple
+from datetime import date
 import logging
 import json
 from models import db
@@ -63,7 +64,9 @@ def fetch_normalized_project_rows(
     project_ids: Optional[Sequence[int]] = None,
     employee_lookup: Optional[Dict[str, Set[int]]] = None,
     employee_directory: Optional[Dict[int, Dict[str, Any]]] = None,
-    include_inactive: bool = False
+    include_inactive: bool = False,
+    due_date_start: Optional[date] = None,
+    due_date_end: Optional[date] = None,
 ) -> List[Dict[str, Any]]:
     """
     Fetch and normalize project activities from both table activities and legacy JSON.
@@ -86,6 +89,13 @@ def fetch_normalized_project_rows(
         query = query.filter(Project.company_id.in_(company_ids))
     if project_ids:
         query = query.filter(ProjectTask.project_id.in_(project_ids))
+    # Apply the same date window used by Discovery before materializing the
+    # normalized task rows. Legacy JSON activities remain filtered downstream,
+    # because they have no queryable due-date column.
+    if due_date_start:
+        query = query.filter(ProjectTask.due_date >= due_date_start)
+    if due_date_end:
+        query = query.filter(ProjectTask.due_date <= due_date_end)
 
     # Soft-deleted tasks are not operational records anymore. Keep the
     # discovery contract aligned with the task resources, which also require
