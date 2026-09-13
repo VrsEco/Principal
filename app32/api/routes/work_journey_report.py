@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from models import Company, Employee
 from services.work_journey_report_service import build_work_journey_management_report
-from utils.permissions import get_default_company_id, has_company_full_access, permission_required
+from utils.permissions import active_company_permission_required, get_default_company_id, has_company_full_access, permission_required
 
 work_journey_report_bp = Blueprint('work_journey_report', __name__)
 
@@ -38,7 +38,6 @@ def _parse_layout(raw: str | None) -> str:
 
 
 def _build_report_payload(company_id: int) -> tuple[object, dict, bool]:
-    session['active_company_id'] = company_id
     company = Company.query.get_or_404(company_id)
     selected_employee_id = request.args.get('employee_id', type=int)
     selected_department = (request.args.get('department') or '').strip() or None
@@ -141,11 +140,14 @@ def work_journey_report_redirect():
     company_id = session.get('active_company_id') or get_default_company_id()
     if not company_id:
         abort(404)
+    # Persist only the server-side default.  A company_id received in a URL
+    # is validated against the active tenant and must never switch it.
+    session['active_company_id'] = company_id
     return work_journey_report_page(company_id)
 
 
 @work_journey_report_bp.route('/companies/<int:company_id>/work-journey/report')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def work_journey_report_page(company_id: int):
     company, report, can_manage_all = _build_report_payload(company_id)
     current_args = request.args.to_dict()
@@ -176,11 +178,12 @@ def work_journey_report_pdf_redirect():
     company_id = session.get('active_company_id') or get_default_company_id()
     if not company_id:
         abort(404)
+    session['active_company_id'] = company_id
     return work_journey_report_pdf(company_id)
 
 
 @work_journey_report_bp.route('/companies/<int:company_id>/work-journey/export-pdf')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def work_journey_report_pdf(company_id: int):
     company, report, can_manage_all = _build_report_payload(company_id)
     layout = _parse_layout(request.args.get('layout'))

@@ -21,7 +21,7 @@ from services.work_journey_agenda_service import (
     unlock_work_journey_agenda,
 )
 from services.work_journey_base import WorkJourneyError
-from utils.permissions import has_company_full_access, permission_required
+from utils.permissions import active_company_permission_required, has_company_full_access, permission_required
 
 
 work_journey_agendas_bp = Blueprint('work_journey_agendas', __name__)
@@ -72,7 +72,7 @@ def _agenda_context_from_item(company_id: int, agenda_item_id: int) -> WorkJourn
 
 
 @work_journey_agendas_bp.route('/api/companies/<int:company_id>/work-journey/agendas', methods=['GET'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_get_agenda(company_id: int):
     try:
         employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
@@ -92,7 +92,7 @@ def api_get_agenda(company_id: int):
 
 
 @work_journey_agendas_bp.route('/api/companies/<int:company_id>/work-journey/agendas/generate', methods=['POST'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_generate_agenda(company_id: int):
     try:
         raw_payload = request.get_json(silent=True) or {}
@@ -127,7 +127,7 @@ def api_generate_agenda(company_id: int):
 
 
 @work_journey_agendas_bp.route('/api/companies/<int:company_id>/work-journey/agendas/<int:agenda_id>/lock', methods=['POST'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_lock_agenda(company_id: int, agenda_id: int):
     try:
         agenda = WorkJourneyAgenda.query.filter_by(company_id=company_id, id=agenda_id).first()
@@ -150,7 +150,7 @@ def api_lock_agenda(company_id: int, agenda_id: int):
 
 
 @work_journey_agendas_bp.route('/api/companies/<int:company_id>/work-journey/agendas/<int:agenda_id>/unlock', methods=['POST'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_unlock_agenda(company_id: int, agenda_id: int):
     try:
         agenda = WorkJourneyAgenda.query.filter_by(company_id=company_id, id=agenda_id).first()
@@ -168,7 +168,7 @@ def api_unlock_agenda(company_id: int, agenda_id: int):
 
 
 @work_journey_agendas_bp.route('/api/companies/<int:company_id>/work-journey/agendas/items/<int:agenda_item_id>', methods=['PATCH'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_move_agenda_item(company_id: int, agenda_item_id: int):
     try:
         agenda_item = _agenda_context_from_item(company_id, agenda_item_id)
@@ -212,7 +212,7 @@ def api_move_agenda_item(company_id: int, agenda_item_id: int):
 
 
 @work_journey_agendas_bp.route('/api/companies/<int:company_id>/work-journey/agendas/<int:agenda_id>/pdf', methods=['GET'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_agenda_pdf(company_id: int, agenda_id: int):
     try:
         agenda = WorkJourneyAgenda.query.filter_by(company_id=company_id, id=agenda_id).first()
