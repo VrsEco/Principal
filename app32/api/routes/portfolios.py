@@ -10,7 +10,7 @@ from schemas.portfolio import (
     PortfolioUpdateSchema,
 )
 from marshmallow import ValidationError
-from utils.permissions import permission_required, has_company_full_access
+from utils.permissions import active_company_permission_required, has_company_full_access, permission_required
 
 portfolios_bp = Blueprint("portfolios", __name__)
 
@@ -67,7 +67,7 @@ def portfolios_page_redirect():
 
 
 @portfolios_bp.route("/companies/<int:company_id>/project-portfolios")
-@permission_required("projects", "view")
+@active_company_permission_required("projects", "view")
 def portfolios_page(company_id):
     """Portfolio management page"""
     if not has_company_full_access(company_id):
@@ -77,7 +77,7 @@ def portfolios_page(company_id):
 
 
 @portfolios_bp.route("/api/companies/<int:company_id>/portfolios", methods=["GET"])
-@permission_required("projects", "view")
+@active_company_permission_required("projects", "view")
 def list_portfolios(company_id):
     """List all portfolios for a company"""
     try:
@@ -101,7 +101,7 @@ def list_portfolios(company_id):
 
 
 @portfolios_bp.route("/api/companies/<int:company_id>/portfolios", methods=["POST"])
-@permission_required("projects", "create")
+@active_company_permission_required("projects", "create")
 def create_portfolio(company_id):
     """Create a new portfolio"""
     try:
@@ -155,7 +155,7 @@ def create_portfolio(company_id):
 @portfolios_bp.route(
     "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>", methods=["GET"]
 )
-@permission_required("projects", "view")
+@active_company_permission_required("projects", "view")
 def get_portfolio(company_id, portfolio_id):
     """Get a specific portfolio"""
     try:
@@ -179,7 +179,7 @@ def get_portfolio(company_id, portfolio_id):
 @portfolios_bp.route(
     "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>", methods=["PUT"]
 )
-@permission_required("projects", "edit")
+@active_company_permission_required("projects", "edit")
 def update_portfolio(company_id, portfolio_id):
     """Update a portfolio"""
     try:
@@ -237,7 +237,7 @@ def update_portfolio(company_id, portfolio_id):
     "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>",
     methods=["DELETE"],
 )
-@permission_required("projects", "delete")
+@active_company_permission_required("projects", "delete")
 def delete_portfolio(company_id, portfolio_id):
     """Delete a portfolio"""
     try:
@@ -277,7 +277,7 @@ def delete_portfolio(company_id, portfolio_id):
 
 
 @portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary-options')
-@permission_required('projects', 'view')
+@active_company_permission_required('projects', 'view')
 def portfolio_summary_options(company_id, portfolio_id):
     from services.project_responsible_summary_service import build_summary_hint, build_summary_options, get_portfolio_responsible_user
 
@@ -299,7 +299,7 @@ def portfolio_summary_options(company_id, portfolio_id):
 
 @portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary-pdf')
 @portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary.pdf')
-@permission_required('projects', 'view')
+@active_company_permission_required('projects', 'view')
 def portfolio_summary_pdf(company_id, portfolio_id):
     from io import BytesIO
     from services.project_summary_pdf_service import generate_portfolio_summary_pdf_bytes
@@ -317,7 +317,7 @@ def portfolio_summary_pdf(company_id, portfolio_id):
 
 
 @portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary', methods=['POST'])
-@permission_required('projects', 'view')
+@active_company_permission_required('projects', 'view')
 def send_portfolio_summary(company_id, portfolio_id):
     from services.project_responsible_summary_service import send_portfolio_summary_to_responsible
 
