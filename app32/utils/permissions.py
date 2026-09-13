@@ -261,10 +261,23 @@ def active_company_permission_required(resource, action):
             if not company_id:
                 return {"error": "Empresa ativa obrigatória."}, 400
 
-            requested_company_id = _requested_company_id()
-            if requested_company_id is False or (
-                requested_company_id is not None
-                and requested_company_id != company_id
+            requested_company_ids = [_requested_company_id()]
+            if "company_id" in kwargs:
+                try:
+                    route_company_id = int(kwargs["company_id"])
+                except (TypeError, ValueError):
+                    route_company_id = False
+                requested_company_ids.append(
+                    route_company_id if route_company_id > 0 else False
+                )
+
+            if any(
+                requested_company_id is False
+                or (
+                    requested_company_id is not None
+                    and requested_company_id != company_id
+                )
+                for requested_company_id in requested_company_ids
             ):
                 return {"error": "Empresa da requisição não corresponde à empresa ativa."}, 403
 

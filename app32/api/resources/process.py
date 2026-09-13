@@ -5,7 +5,7 @@ import json
 from io import BytesIO
 from datetime import datetime, date
 from decimal import Decimal
-from flask import request, current_app, session, Response, send_file
+from flask import request, current_app, session, Response, send_file, abort
 from flask_restful import Resource
 from flask_login import current_user
 from marshmallow import ValidationError
@@ -57,7 +57,7 @@ from models import (
     ProcessBpmsAnalysis,
     ProcessPortalPublicationGrant,
 )
-from utils.permissions import get_default_company_id, has_company_full_access, has_permission, permission_required, can_model_process
+from utils.permissions import get_default_company_id, has_company_full_access, has_permission, active_company_permission_required, can_model_process
 from utils.sql_execution import execute_formatted_query
 from database import get_db
 from sqlalchemy import and_, or_
@@ -404,47 +404,35 @@ def natural_sort_key(s):
             for text in re.split('([0-9]+)', str(s)) if text]
 
 def get_request_company_id():
+    """Resolve a empresa ativa; valores HTTP só existem como fallback legado direto."""
     from flask import session
     from flask_login import current_user
-    from models import Company, Employee
-    
-    def clean(val):
-        if val is None: return None
-        s = str(val).strip().lower()
-        if s in ('null', 'undefined', 'none', ''): return None
-        try:
-            # Handle possible float strings like "1.0"
-            return int(float(val))
-        except (ValueError, TypeError):
+
+    def clean(value):
+        if value is None:
             return None
+        try:
+            company_id = int(float(value))
+        except (TypeError, ValueError):
+            return None
+        return company_id if company_id > 0 else None
 
-    # 1. Try Query Arg
-    cid = clean(request.args.get('company_id'))
-    if cid is not None: return cid
-    
-    # 2. Try JSON Body (if it's a POST/PUT)
-    try:
-        if request.is_json:
-            # use silent=True to avoid 400 if body is empty or not JSON
-            # though usually Resource handles this
-            data = request.get_json(silent=True)
-            if data:
-                cid = clean(data.get('company_id'))
-                if cid is not None: return cid
-    except Exception:
-        pass
+    # A sessão define o tenant efetivo em endpoints HTTP protegidos.
+    company_id = clean(session.get('active_company_id'))
+    if company_id:
+        return company_id
 
-    # 3. Try Session
-    cid = clean(session.get('active_company_id'))
-    if cid:
-        return cid
+    company_id = clean(request.args.get('company_id'))
+    if company_id:
+        return company_id
 
-    # 4. Fallback: pick a company the user can access
+    if request.is_json:
+        company_id = clean((request.get_json(silent=True) or {}).get('company_id'))
+        if company_id:
+            return company_id
+
     if current_user.is_authenticated:
-        default_company_id = get_default_company_id()
-        if default_company_id:
-            return default_company_id
-
+        return clean(get_default_company_id())
     return None
 
 
@@ -567,61 +555,51 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
 
 
 def _get_process_with_access(process_id: int, action: str = 'view', sync_session: bool = False):
-    process = Process.query.get_or_404(process_id)
-
-    if not current_user.is_authenticated:
+    """Resolve processo exclusivamente na empresa ativa da sessão."""
+    active_company_id = get_request_company_id()
+    if not current_user.is_authenticated or not active_company_id:
         return None
-
-    if not has_permission(process.company_id, 'processes', action):
+    process = Process.query.filter_by(id=process_id, company_id=active_company_id).first()
+    if not process or not has_permission(active_company_id, 'processes', action):
         return None
-
-    if sync_session:
-        session['active_company_id'] = process.company_id
-
     return process
 
 
 def _get_process_routine_with_access(routine_id: int, action: str = 'view'):
-    """Resolve uma rotina POP no tenant autorizado do usuário."""
-    active_company_id = session.get('active_company_id')
-    routine_queries = (ProcessRoutine.query, Routine.query)
-
-    if active_company_id:
-        for query in routine_queries:
-            routine = query.filter_by(id=routine_id, company_id=active_company_id).first()
-            if routine and has_permission(active_company_id, 'processes', action):
-                return routine
-
-    for query in routine_queries:
-        routine = query.filter_by(id=routine_id).first()
-        company_id = getattr(routine, 'company_id', None)
-        if company_id and has_permission(company_id, 'processes', action):
+    """Resolve rotina POP somente na empresa ativa; nunca infere outro tenant pelo ID."""
+    active_company_id = get_request_company_id()
+    if not active_company_id:
+        return None
+    for query in (ProcessRoutine.query, Routine.query):
+        routine = query.filter_by(id=routine_id, company_id=active_company_id).first()
+        if routine and has_permission(active_company_id, 'processes', action):
             return routine
-
     return None
 
 
 def _get_process_step_with_access(step_id: int, action: str = 'view'):
-    """Resolve o tenant do passo via rotina e nega acesso cruzado por ID."""
-    step = ProcessStep.query.get_or_404(step_id)
-    if _get_process_routine_with_access(step.routine_id, action=action):
+    """Resolve passo por rotina já escopada à empresa ativa."""
+    active_company_id = get_request_company_id()
+    if not active_company_id:
+        return None
+    step = (
+        ProcessStep.query
+        .join(ProcessRoutine, ProcessStep.routine_id == ProcessRoutine.id)
+        .filter(ProcessStep.id == step_id, ProcessRoutine.company_id == active_company_id)
+        .first()
+    )
+    if step and _get_process_routine_with_access(step.routine_id, action=action):
         return step
-
     return None
 
 
 def _get_macro_process_with_access(macro_id: int, action: str = 'view', sync_session: bool = False):
-    macro = MacroProcess.query.get_or_404(macro_id)
-
-    if not current_user.is_authenticated:
+    active_company_id = get_request_company_id()
+    if not current_user.is_authenticated or not active_company_id:
         return None
-
-    if not has_permission(macro.company_id, 'processes', action):
+    macro = MacroProcess.query.filter_by(id=macro_id, company_id=active_company_id).first()
+    if not macro or not has_permission(active_company_id, 'processes', action):
         return None
-
-    if sync_session:
-        session['active_company_id'] = macro.company_id
-
     return macro
 
 
@@ -634,6 +612,32 @@ def _dump_process_with_bpmn_flow(process: Process) -> dict:
     )
     payload['bpmn_flow'] = serialize_flow_snapshot(published_bpmn)
     return payload
+
+
+def _get_process_instance_in_active_company(instance_id: int):
+    """Busca instância somente no tenant ativo; fallback existe para dublês de teste."""
+    active_company_id = get_request_company_id()
+    query = ProcessInstance.query
+    if hasattr(query, "filter_by"):
+        return query.filter_by(id=instance_id, company_id=active_company_id).first_or_404()
+
+    # Compatibilidade estrita para dublês de testes legados; a checagem de
+    # empresa continua obrigatória e não é usada pelo query real do runtime.
+    instance = query.get_or_404(instance_id)
+    if getattr(instance, "company_id", None) != active_company_id:
+        abort(404)
+    return instance
+
+
+def _get_activity_work_log_in_active_company(log_id: int):
+    """Escopa logs de atividade pelo colaborador da empresa ativa."""
+    active_company_id = get_request_company_id()
+    return (
+        ActivityWorkLog.query
+        .join(Employee, ActivityWorkLog.employee_id == Employee.id)
+        .filter(ActivityWorkLog.id == log_id, Employee.company_id == active_company_id)
+        .first_or_404()
+    )
 
 
 def _get_process_ids_with_bpmn_flow(company_id: int, process_ids: list[int]) -> set[int]:
@@ -791,11 +795,13 @@ def fetch_pop_routine_by_id(routine_id: int):
 
 
 class ProcessInstanceListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, company_id=None):
-        if not company_id:
-            company_id = get_request_company_id()
-        
+        active_company_id = get_request_company_id()
+        if company_id is not None and int(company_id) != int(active_company_id or 0):
+            return {"error": "Empresa da requisição não corresponde à empresa ativa."}, 403
+        company_id = active_company_id
+
         if not company_id:
             return [], 200
             
@@ -877,29 +883,27 @@ class ProcessInstanceListResource(Resource):
 
         return results, 200
 
-    @permission_required('processes', 'create')
+    @active_company_permission_required('processes', 'create')
     def post(self, company_id=None):
         try:
             data = request.get_json()
             if not data:
                 data = {}
             
-            # Determine company_id: URL > Body > Session
-            cid = company_id
+            # A empresa ativa é a única autoridade para a criação.
+            cid = get_request_company_id()
+            if company_id is not None and int(company_id) != int(cid or 0):
+                return {"error": "Empresa da requisição não corresponde à empresa ativa."}, 403
             if not cid:
-                cid = data.get('company_id')
-            if not cid:
-                cid = get_request_company_id()
-            
-            if cid:
-                data['company_id'] = cid
+                return {"error": "Empresa ativa obrigatória."}, 400
+            data['company_id'] = cid
             
             # Auto-generate instance_code if missing
             if not data.get('instance_code'):
                 from models import Company, Process
                 
                 comp = Company.query.get(cid)
-                proc = Process.query.get(data.get('process_id'))
+                proc = Process.query.filter_by(id=data.get('process_id'), company_id=cid).first()
                 
                 c_code = comp.client_code if comp and comp.client_code else str(cid)
                 p_code = proc.code if proc and proc.code else (proc.name[:3].upper() if proc else 'PRC')
@@ -1024,9 +1028,9 @@ class ProcessInstanceListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessInstanceResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not has_company_full_access(instance.company_id):
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
@@ -1034,9 +1038,9 @@ class ProcessInstanceResource(Resource):
                 return {"error": "Acesso negado à instância."}, 403
         return process_instance_schema.dump(instance), 200
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def put(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         company_id = instance.company_id
         can_edit_company_processes = has_permission(company_id, 'processes', 'edit')
         is_contextual_collaborator_edit = False
@@ -1117,7 +1121,7 @@ class ProcessInstanceResource(Resource):
             _append_process_instance_put_debug(f"exception={repr(e)}")
             raise
 
-    @permission_required('processes', 'delete')
+    @active_company_permission_required('processes', 'delete')
     def delete(self, instance_id):
         company_id = get_request_company_id()
         if not company_id:
@@ -1170,9 +1174,9 @@ class ProcessInstanceResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessInstanceWorkLogResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not has_company_full_access(instance.company_id):
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
@@ -1185,11 +1189,11 @@ class ProcessInstanceWorkLogResource(Resource):
         
         return [log.to_dict() for log in logs], 200
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, instance_id):
         try:
             data = request.get_json()
-            instance = ProcessInstance.query.get_or_404(instance_id)
+            instance = _get_process_instance_in_active_company(instance_id)
             if not has_permission(instance.company_id, 'processes', 'edit'):
                 return {"error": "Permission denied: edit on processes"}, 403
             
@@ -1223,9 +1227,9 @@ class ProcessInstanceWorkLogResource(Resource):
 
 
 class ProcessInstanceRuntimeResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not has_company_full_access(instance.company_id):
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
@@ -1235,9 +1239,9 @@ class ProcessInstanceRuntimeResource(Resource):
 
 
 class ProcessInstanceTimelineResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not has_company_full_access(instance.company_id):
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
@@ -1247,9 +1251,9 @@ class ProcessInstanceTimelineResource(Resource):
 
 
 class ProcessInstanceOverlayResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not has_company_full_access(instance.company_id):
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
@@ -1259,9 +1263,9 @@ class ProcessInstanceOverlayResource(Resource):
 
 
 class ProcessInstancePauseResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not has_permission(instance.company_id, 'processes', 'edit'):
             return {"error": "Permission denied: edit on processes"}, 403
         payload = request.get_json(silent=True) or {}
@@ -1271,9 +1275,9 @@ class ProcessInstancePauseResource(Resource):
 
 
 class ProcessInstanceResumeResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not has_permission(instance.company_id, 'processes', 'edit'):
             return {"error": "Permission denied: edit on processes"}, 403
         resume_instance(instance=instance)
@@ -1282,9 +1286,9 @@ class ProcessInstanceResumeResource(Resource):
 
 
 class ProcessInstanceExecutionListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not has_company_full_access(instance.company_id):
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
@@ -1299,9 +1303,9 @@ class ProcessInstanceExecutionListResource(Resource):
         )
         return process_instance_executions_schema.dump(executions), 200
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def post(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         if not _user_can_execute_instance_activity(instance):
             return {"error": "Acesso negado à execução desta atividade."}, 403
         try:
@@ -1405,9 +1409,9 @@ class ProcessInstanceExecutionListResource(Resource):
 
 
 class ProcessInstanceExecutionResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def put(self, instance_id, execution_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
+        instance = _get_process_instance_in_active_company(instance_id)
         execution = ProcessInstanceExecution.query.filter_by(
             id=execution_id,
             process_instance_id=instance.id,
@@ -1523,10 +1527,10 @@ class ProcessInstanceExecutionResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ActivityWorkLogItemResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, log_id):
         try:
-            log = ActivityWorkLog.query.get_or_404(log_id)
+            log = _get_activity_work_log_in_active_company(log_id)
             data = request.get_json()
             
             # Helper to update instance total if hours changed
@@ -1536,7 +1540,7 @@ class ActivityWorkLogItemResource(Resource):
                 diff = new_hours - old_hours
                 
                 if log.activity_type == 'process_instance' and diff != 0:
-                    instance = ProcessInstance.query.get(log.activity_id)
+                    instance = ProcessInstance.query.filter_by(id=log.activity_id, company_id=get_request_company_id()).first()
                     if instance:
                          current_total = float(instance.actual_hours or 0)
                          instance.actual_hours = current_total + diff
@@ -1555,14 +1559,14 @@ class ActivityWorkLogItemResource(Resource):
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, log_id):
         try:
-            log = ActivityWorkLog.query.get_or_404(log_id)
+            log = _get_activity_work_log_in_active_company(log_id)
             
             # Update instance total before deleting
             if log.activity_type == 'process_instance':
-                instance = ProcessInstance.query.get(log.activity_id)
+                instance = ProcessInstance.query.filter_by(id=log.activity_id, company_id=get_request_company_id()).first()
                 if instance:
                     current_total = float(instance.actual_hours or 0)
                     removed = float(log.hours_worked or 0)
@@ -1577,12 +1581,14 @@ class ActivityWorkLogItemResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessAreaListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, company_id=None):
         try:
-            if not company_id:
-                company_id = get_request_company_id()
-                
+            active_company_id = get_request_company_id()
+            if company_id is not None and int(company_id) != int(active_company_id or 0):
+                return {"error": "Empresa da requisição não corresponde à empresa ativa."}, 403
+            company_id = active_company_id
+
             if not company_id:
                 return [], 200
                 
@@ -1596,7 +1602,7 @@ class ProcessAreaListResource(Resource):
             current_app.logger.error(f"Error in ProcessAreaListResource.get: {e}")
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'create')
+    @active_company_permission_required('processes', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -1627,14 +1633,14 @@ class ProcessAreaListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessAreaResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, area_id):
-        area = ProcessArea.query.get_or_404(area_id)
+        area = ProcessArea.query.filter_by(id=area_id, company_id=get_request_company_id()).first_or_404()
         return process_area_schema.dump(area), 200
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, area_id):
-        area = ProcessArea.query.get_or_404(area_id)
+        area = ProcessArea.query.filter_by(id=area_id, company_id=get_request_company_id()).first_or_404()
         try:
             data = request.get_json()
             area = process_area_schema.load(data, instance=area, partial=True)
@@ -1651,9 +1657,9 @@ class ProcessAreaResource(Resource):
         except ValidationError as err:
             return {"errors": err.messages}, 400
 
-    @permission_required('processes', 'delete')
+    @active_company_permission_required('processes', 'delete')
     def delete(self, area_id):
-        area = ProcessArea.query.get_or_404(area_id)
+        area = ProcessArea.query.filter_by(id=area_id, company_id=get_request_company_id()).first_or_404()
         try:
             db.session.delete(area)
             db.session.commit()
@@ -1663,12 +1669,14 @@ class ProcessAreaResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class MacroProcessListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, company_id=None):
         try:
-            if not company_id:
-                company_id = get_request_company_id()
-                
+            active_company_id = get_request_company_id()
+            if company_id is not None and int(company_id) != int(active_company_id or 0):
+                return {"error": "Empresa da requisição não corresponde à empresa ativa."}, 403
+            company_id = active_company_id
+
             if not company_id:
                 return [], 200
                 
@@ -1685,7 +1693,7 @@ class MacroProcessListResource(Resource):
             current_app.logger.error(f"Error in MacroProcessListResource.get: {e}")
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'create')
+    @active_company_permission_required('processes', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -1724,14 +1732,14 @@ class MacroProcessListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class MacroProcessResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, macro_id):
-        macro = MacroProcess.query.get_or_404(macro_id)
+        macro = MacroProcess.query.filter_by(id=macro_id, company_id=get_request_company_id()).first_or_404()
         return macro_process_schema.dump(macro), 200
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, macro_id):
-        macro = MacroProcess.query.get_or_404(macro_id)
+        macro = MacroProcess.query.filter_by(id=macro_id, company_id=get_request_company_id()).first_or_404()
         try:
             data = request.get_json()
             if data and ('owner' in data or 'responsible' in data):
@@ -1757,9 +1765,9 @@ class MacroProcessResource(Resource):
         except ValidationError as err:
             return {"errors": err.messages}, 400
 
-    @permission_required('processes', 'delete')
+    @active_company_permission_required('processes', 'delete')
     def delete(self, macro_id):
-        macro = MacroProcess.query.get_or_404(macro_id)
+        macro = MacroProcess.query.filter_by(id=macro_id, company_id=get_request_company_id()).first_or_404()
         try:
             db.session.delete(macro)
             db.session.commit()
@@ -1769,12 +1777,14 @@ class MacroProcessResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, company_id=None):
         try:
-            if not company_id:
-                company_id = get_request_company_id()
-                
+            active_company_id = get_request_company_id()
+            if company_id is not None and int(company_id) != int(active_company_id or 0):
+                return {"error": "Empresa da requisição não corresponde à empresa ativa."}, 403
+            company_id = active_company_id
+
             if not company_id:
                 return [], 200
                 
@@ -1816,7 +1826,7 @@ class ProcessListResource(Resource):
             current_app.logger.error(f"Error in ProcessListResource.get: {e}")
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'create')
+    @active_company_permission_required('processes', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -1853,7 +1863,7 @@ class ProcessListResource(Resource):
 from utils.storage import save_file, delete_file
 
 class ProcessResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         current_app.logger.info(
             'ProcessResource.get start process_id=%s path=%s user_id=%s active_company_id=%s args=%s',
@@ -1893,7 +1903,7 @@ class ProcessResource(Resource):
             )
             raise
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def put(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -1942,7 +1952,7 @@ class ProcessResource(Resource):
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'delete')
+    @active_company_permission_required('processes', 'delete')
     def delete(self, process_id):
         process = _get_process_with_access(process_id, action='delete', sync_session=True)
         if not process:
@@ -1984,7 +1994,7 @@ class ProcessResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessBpmnDiagramResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -2011,7 +2021,7 @@ class ProcessBpmnDiagramResource(Resource):
             )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, process_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process:
@@ -2037,7 +2047,7 @@ class ProcessBpmnDiagramResource(Resource):
             )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id):
         return self.put(process_id)
 
@@ -2045,7 +2055,7 @@ class ProcessBpmnDiagramResource(Resource):
 class ProcessBpmnLaneRoleCatalogResource(Resource):
     """Read-only, process-scoped catalog used to bind BPMN lanes to org roles."""
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -2070,7 +2080,7 @@ class ProcessBpmnLaneRoleCatalogResource(Resource):
 
 
 class ProcessBpmnDiagramExportResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -2105,7 +2115,7 @@ class ProcessBpmnDiagramExportResource(Resource):
 
 
 class ProcessBpmnPopBindingResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2132,7 +2142,7 @@ class ProcessBpmnPopBindingResource(Resource):
 
 
 class ProcessActivityExecutionContractListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -2150,7 +2160,7 @@ class ProcessActivityExecutionContractListResource(Resource):
         )
         return process_activity_execution_contracts_schema.dump(contracts), 200
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2182,7 +2192,7 @@ class ProcessActivityExecutionContractListResource(Resource):
 
 
 class ProcessActivityExecutionContractResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, contract_id):
         contract = ProcessActivityExecutionContract.query.get_or_404(contract_id)
         process = _get_process_with_access(contract.process_id, action='view', sync_session=True)
@@ -2190,7 +2200,7 @@ class ProcessActivityExecutionContractResource(Resource):
             return {"error": "Permission denied: view on processes"}, 403
         return process_activity_execution_contract_schema.dump(contract), 200
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def put(self, contract_id):
         contract = ProcessActivityExecutionContract.query.get_or_404(contract_id)
         process = _get_process_with_access(contract.process_id, action='view', sync_session=True)
@@ -2231,7 +2241,7 @@ class ProcessActivityExecutionContractResource(Resource):
             )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, contract_id):
         contract = ProcessActivityExecutionContract.query.get_or_404(contract_id)
         process = _get_process_with_access(contract.process_id, action='view', sync_session=True)
@@ -2243,7 +2253,7 @@ class ProcessActivityExecutionContractResource(Resource):
 
 
 class ProcessBpmnAiAssistantResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -2267,7 +2277,7 @@ class ProcessBpmnAiAssistantResource(Resource):
             "flow_copilot_analysis": flow_copilot,
         }, 200
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2289,7 +2299,7 @@ class ProcessBpmnAiAssistantResource(Resource):
 
 
 class ProcessArtifactExecutionResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, artifact_execution_id):
         company_id = get_request_company_id()
         try:
@@ -2309,7 +2319,7 @@ class ProcessArtifactExecutionResource(Resource):
         except ProcessArtifactValidationError as exc:
             return {"error": str(exc)}, 404
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def put(self, artifact_execution_id):
         company_id = get_request_company_id()
         try:
@@ -2367,7 +2377,7 @@ class ProcessArtifactExecutionResource(Resource):
 
 
 class ProcessArtifactExecutionPdfResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, artifact_execution_id):
         company_id = get_request_company_id()
         try:
@@ -2413,7 +2423,7 @@ class ProcessArtifactExecutionPdfResource(Resource):
 
 
 class ProcessArtifactExecutionFileResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def post(self, artifact_execution_id, file_key=None):
         company_id = get_request_company_id()
         try:
@@ -2446,7 +2456,7 @@ class ProcessArtifactExecutionFileResource(Resource):
         except ProcessArtifactValidationError as exc:
             return {"error": str(exc)}, 400
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, artifact_execution_id, file_key=None):
         company_id = get_request_company_id()
         try:
@@ -2469,7 +2479,7 @@ class ProcessArtifactExecutionFileResource(Resource):
 
 
 class ProcessActivityArtifactListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -2485,7 +2495,7 @@ class ProcessActivityArtifactListResource(Resource):
         except ProcessArtifactValidationError as exc:
             return {"error": str(exc)}, 400
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2531,7 +2541,7 @@ class ProcessActivityArtifactListResource(Resource):
 
 
 class ProcessActivityArtifactResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, artifact_id):
         company_id = get_request_company_id()
         try:
@@ -2543,7 +2553,7 @@ class ProcessActivityArtifactResource(Resource):
         except ProcessArtifactValidationError as exc:
             return {"error": str(exc)}, 404
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def put(self, artifact_id):
         company_id = get_request_company_id()
         try:
@@ -2582,7 +2592,7 @@ class ProcessActivityArtifactResource(Resource):
             current_app.logger.exception("Erro ao atualizar artefato artifact_id=%s company_id=%s", artifact_id, company_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, artifact_id):
         company_id = get_request_company_id()
         try:
@@ -2598,7 +2608,7 @@ class ProcessActivityArtifactResource(Resource):
 
 
 class ProcessActivityArtifactPublishResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'edit')
     def post(self, artifact_id):
         company_id = get_request_company_id()
         try:
@@ -2622,7 +2632,7 @@ class ProcessActivityArtifactPublishResource(Resource):
 
 
 class MacroProcessSipocSnapshotResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, macro_id):
         macro = _get_macro_process_with_access(macro_id, action='view', sync_session=True)
         if not macro:
@@ -2635,7 +2645,7 @@ class MacroProcessSipocSnapshotResource(Resource):
             current_app.logger.exception("Erro ao carregar SIPOC do macroprocesso macro_id=%s", macro_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, macro_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2654,7 +2664,7 @@ class MacroProcessSipocSnapshotResource(Resource):
             current_app.logger.exception("Erro ao criar rascunho SIPOC do macroprocesso macro_id=%s", macro_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, macro_id, sipoc_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2679,7 +2689,7 @@ class MacroProcessSipocSnapshotResource(Resource):
 
 
 class MacroProcessSipocItemListResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, macro_id, sipoc_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2703,7 +2713,7 @@ class MacroProcessSipocItemListResource(Resource):
 
 
 class MacroProcessSipocItemResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, macro_id, sipoc_id, item_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2726,7 +2736,7 @@ class MacroProcessSipocItemResource(Resource):
             current_app.logger.exception("Erro ao atualizar item SIPOC do macroprocesso macro_id=%s sipoc_id=%s item_id=%s", macro_id, sipoc_id, item_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, macro_id, sipoc_id, item_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2749,7 +2759,7 @@ class MacroProcessSipocItemResource(Resource):
 
 
 class MacroProcessSipocRegulatoryItemListResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, macro_id, sipoc_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2773,7 +2783,7 @@ class MacroProcessSipocRegulatoryItemListResource(Resource):
 
 
 class MacroProcessSipocRegulatoryItemResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, macro_id, sipoc_id, regulatory_item_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2796,7 +2806,7 @@ class MacroProcessSipocRegulatoryItemResource(Resource):
             current_app.logger.exception("Erro ao atualizar item regulatório do macroprocesso macro_id=%s sipoc_id=%s regulatory_item_id=%s", macro_id, sipoc_id, regulatory_item_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, macro_id, sipoc_id, regulatory_item_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2819,7 +2829,7 @@ class MacroProcessSipocRegulatoryItemResource(Resource):
 
 
 class MacroProcessSipocPublishResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, macro_id, sipoc_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2842,7 +2852,7 @@ class MacroProcessSipocPublishResource(Resource):
 
 
 class MacroProcessSipocArchiveResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, macro_id, sipoc_id):
         macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
         if not macro or not can_model_process(macro.company_id):
@@ -2865,7 +2875,7 @@ class MacroProcessSipocArchiveResource(Resource):
 
 
 class ProcessSipocSnapshotResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -2878,7 +2888,7 @@ class ProcessSipocSnapshotResource(Resource):
             current_app.logger.exception("Erro ao carregar SIPOC process_id=%s", process_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2897,7 +2907,7 @@ class ProcessSipocSnapshotResource(Resource):
             current_app.logger.exception("Erro ao criar rascunho SIPOC process_id=%s", process_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, process_id, sipoc_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2922,7 +2932,7 @@ class ProcessSipocSnapshotResource(Resource):
 
 
 class ProcessSipocItemListResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id, sipoc_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2946,7 +2956,7 @@ class ProcessSipocItemListResource(Resource):
 
 
 class ProcessSipocItemResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, process_id, sipoc_id, item_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2969,7 +2979,7 @@ class ProcessSipocItemResource(Resource):
             current_app.logger.exception("Erro ao atualizar item SIPOC process_id=%s sipoc_id=%s item_id=%s", process_id, sipoc_id, item_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, process_id, sipoc_id, item_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -2992,7 +3002,7 @@ class ProcessSipocItemResource(Resource):
 
 
 class ProcessSipocRegulatoryItemListResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id, sipoc_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -3016,7 +3026,7 @@ class ProcessSipocRegulatoryItemListResource(Resource):
 
 
 class ProcessSipocRegulatoryItemResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, process_id, sipoc_id, regulatory_item_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -3039,7 +3049,7 @@ class ProcessSipocRegulatoryItemResource(Resource):
             current_app.logger.exception("Erro ao atualizar item regulatório SIPOC process_id=%s sipoc_id=%s regulatory_item_id=%s", process_id, sipoc_id, regulatory_item_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, process_id, sipoc_id, regulatory_item_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -3062,7 +3072,7 @@ class ProcessSipocRegulatoryItemResource(Resource):
 
 
 class ProcessSipocPublishResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id, sipoc_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -3085,7 +3095,7 @@ class ProcessSipocPublishResource(Resource):
 
 
 class ProcessSipocArchiveResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id, sipoc_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process or not can_model_process(process.company_id):
@@ -3108,7 +3118,7 @@ class ProcessSipocArchiveResource(Resource):
 
 
 class ProcessRoutineListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self):
         process_id = request.args.get('process_id', type=int)
         if not process_id:
@@ -3123,7 +3133,7 @@ class ProcessRoutineListResource(Resource):
             current_app.logger.exception("Erro ao listar POP routines do processo process_id=%s", process_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'create')
+    @active_company_permission_required('processes', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -3157,14 +3167,14 @@ class ProcessRoutineListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessRoutineResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, routine_id):
         routine = fetch_pop_routine_by_id(routine_id)
         if routine:
             return routine, 200
         return {"error": "Routine not found"}, 404
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, routine_id):
         try:
             data = request.get_json()
@@ -3237,7 +3247,7 @@ class ProcessRoutineResource(Resource):
             current_app.logger.exception("Erro ao atualizar POP routine routine_id=%s", routine_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'delete')
+    @active_company_permission_required('processes', 'delete')
     def delete(self, routine_id):
         try:
             pg = get_db()
@@ -3270,7 +3280,7 @@ class ProcessRoutineResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessStepListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self):
         routine_id = request.args.get('routine_id')
         if not routine_id:
@@ -3282,7 +3292,7 @@ class ProcessStepListResource(Resource):
         steps = query.order_by(ProcessStep.order_index).all()
         return process_steps_schema.dump(steps), 200
 
-    @permission_required('processes', 'create')
+    @active_company_permission_required('processes', 'create')
     def post(self):
         try:
             if request.mimetype == 'multipart/form-data':
@@ -3350,14 +3360,14 @@ class ProcessStepListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessStepResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, step_id):
         step = _get_process_step_with_access(step_id, action='view')
         if not step:
             return {"error": "Permission denied: view on processes"}, 403
         return process_step_schema.dump(step), 200
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, step_id):
         step = _get_process_step_with_access(step_id, action='edit')
         if not step:
@@ -3429,7 +3439,7 @@ class ProcessStepResource(Resource):
             current_app.logger.exception("Erro ao atualizar vídeo POP step_id=%s", step_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'delete')
+    @active_company_permission_required('processes', 'delete')
     def delete(self, step_id):
         step = _get_process_step_with_access(step_id, action='delete')
         if not step:
@@ -3448,7 +3458,7 @@ class ProcessStepResource(Resource):
 
 
 class ProcessStepVideoChunkResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, step_id):
         step = _get_process_step_with_access(step_id, action='edit')
         if not step:
@@ -3525,7 +3535,7 @@ class ProcessStepVideoChunkResource(Resource):
 
 
 class ProcessStepAIDraftResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, step_id):
         step = ProcessStep.query.get_or_404(step_id)
         routine = ProcessRoutine.query.filter_by(id=step.routine_id).first()
@@ -3558,7 +3568,7 @@ class ProcessStepAIDraftResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessScheduleListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self):
         process_id = request.args.get('process_id', type=int)
         if not process_id:
@@ -3651,7 +3661,7 @@ class ProcessScheduleListResource(Resource):
 
 
 class ProcessExecutionPlanResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -3662,7 +3672,7 @@ class ProcessExecutionPlanResource(Resource):
         except ProcessResourceValidationError as err:
             return {"error": str(err)}, 400
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, process_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process:
@@ -3680,7 +3690,7 @@ class ProcessExecutionPlanResource(Resource):
 
 
 class CapabilityDimensionListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self):
         company_id = request.args.get('company_id', type=int) or get_default_company_id()
         if not company_id or not has_permission(company_id, 'processes', 'view'):
@@ -3697,7 +3707,7 @@ class CapabilityDimensionListResource(Resource):
             current_app.logger.exception("Erro ao listar dimensões habilitadoras company_id=%s", company_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self):
         data = request.get_json(silent=True) or {}
         company_id = data.get('company_id') or request.args.get('company_id', type=int) or get_default_company_id()
@@ -3716,7 +3726,7 @@ class CapabilityDimensionListResource(Resource):
 
 
 class CapabilityDimensionResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, dimension_id):
         data = request.get_json(silent=True) or {}
         company_id = data.get('company_id') or request.args.get('company_id', type=int) or get_default_company_id()
@@ -3733,7 +3743,7 @@ class CapabilityDimensionResource(Resource):
             current_app.logger.exception("Erro ao atualizar dimensão habilitadora dimension_id=%s", dimension_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, dimension_id):
         company_id = request.args.get('company_id', type=int) or get_default_company_id()
         if not company_id or not has_permission(int(company_id), 'processes', 'edit'):
@@ -3751,7 +3761,7 @@ class CapabilityDimensionResource(Resource):
 
 
 class ResourceCatalogListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self):
         company_id = request.args.get('company_id', type=int) or get_default_company_id()
         if not company_id or not has_permission(company_id, 'processes', 'view'):
@@ -3769,7 +3779,7 @@ class ResourceCatalogListResource(Resource):
             current_app.logger.exception("Erro ao listar catálogo de recursos company_id=%s", company_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self):
         data = request.get_json(silent=True) or {}
         company_id = data.get('company_id') or request.args.get('company_id', type=int) or get_default_company_id()
@@ -3788,7 +3798,7 @@ class ResourceCatalogListResource(Resource):
 
 
 class ResourceCatalogResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, resource_id):
         data = request.get_json(silent=True) or {}
         company_id = data.get('company_id') or request.args.get('company_id', type=int) or get_default_company_id()
@@ -3805,7 +3815,7 @@ class ResourceCatalogResource(Resource):
             current_app.logger.exception("Erro ao atualizar recurso resource_id=%s", resource_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, resource_id):
         company_id = request.args.get('company_id', type=int) or get_default_company_id()
         if not company_id or not has_permission(int(company_id), 'processes', 'edit'):
@@ -3823,7 +3833,7 @@ class ResourceCatalogResource(Resource):
 
 
 class ProcessResourceLinkListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, process_id):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
@@ -3836,7 +3846,7 @@ class ProcessResourceLinkListResource(Resource):
             current_app.logger.exception("Erro ao listar recursos do processo process_id=%s", process_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def post(self, process_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process:
@@ -3855,7 +3865,7 @@ class ProcessResourceLinkListResource(Resource):
 
 
 class ProcessResourceLinkResource(Resource):
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, process_id, link_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process:
@@ -3872,7 +3882,7 @@ class ProcessResourceLinkResource(Resource):
             current_app.logger.exception("Erro ao atualizar vínculo de recurso link_id=%s", link_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def delete(self, process_id, link_id):
         process = _get_process_with_access(process_id, action='edit', sync_session=True)
         if not process:

@@ -74,3 +74,41 @@ def test_indicator_batch_cannot_choose_company_per_entry():
 
     assert "entry['company_id'] = company_id" in source
     assert "if 'company_id' not in entry:" not in source
+from pathlib import Path
+
+from api.resources import process as process_resource
+from api.resources import project as project_resource
+
+
+def test_project_and_process_resources_prefer_active_company_over_client_value():
+    app = _app()
+    with app.test_request_context('/api/projects?company_id=22'):
+        session['active_company_id'] = 9
+        assert project_resource.get_request_company_id() == 9
+    with app.test_request_context('/api/processes?company_id=22'):
+        session['active_company_id'] = 9
+        assert process_resource.get_request_company_id() == 9
+
+
+def test_active_company_permission_rejects_route_tenant_mismatch(monkeypatch):
+    app = _app()
+    monkeypatch.setattr(permissions, 'has_permission', lambda *args: True)
+
+    @permissions.active_company_permission_required('processes', 'view')
+    def protected(company_id=None):
+        return {'ok': True}, 200
+
+    with app.test_request_context('/api/companies/22/processes'):
+        session['active_company_id'] = 9
+        payload, status = protected(company_id=22)
+
+    assert status == 403
+    assert 'não corresponde' in payload['error']
+
+
+def test_project_and_process_api_resources_use_active_company_guard():
+    root = Path(__file__).resolve().parents[1] / 'api' / 'resources'
+    for filename in ('project.py', 'project_task.py', 'project_task_operational.py', 'process.py'):
+        source = (root / filename).read_text(encoding='utf-8')
+        assert '@permission_required(' not in source
+        assert '@active_company_permission_required(' in source

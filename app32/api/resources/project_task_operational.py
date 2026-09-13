@@ -9,7 +9,7 @@ from services.backlog_human_gate_service import (
     execute_backlog_human_gate_operation,
     serialize_linked_agent_action,
 )
-from utils.permissions import has_company_full_access, permission_required
+from utils.permissions import has_company_full_access, active_company_permission_required
 
 from .project import get_request_company_id
 from .project_task import PUBLIC_ERROR_MESSAGE, apply_task_employee_filter
@@ -24,7 +24,7 @@ def _serialize_task_with_human_gate(task):
 
 
 class ProjectTaskBacklogActionResource(Resource):
-    @permission_required("projects", "edit")
+    @active_company_permission_required("projects", "edit")
     def post(self, project_id, task_id, operation):
         company_id = get_request_company_id()
         query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)

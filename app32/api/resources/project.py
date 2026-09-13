@@ -3,7 +3,7 @@ from flask_restful import Resource
 from models import db, Project
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_schema, projects_schema
-from utils.permissions import get_default_company_id, has_company_full_access, has_permission, is_platform_admin, permission_required, can_create_projects
+from utils.permissions import get_default_company_id, has_company_full_access, has_permission, is_platform_admin, active_company_permission_required, can_create_projects
 from services.project_task_stats_service import ProjectTaskStatsService
 
 
@@ -78,39 +78,34 @@ def _get_task_with_access(project_id, task_id, action='view'):
     return task, project, company_id
 
 def get_request_company_id():
+    """Resolve a empresa ativa; valores HTTP só existem como fallback legado direto."""
     from flask import session
     from flask_login import current_user
-    
-    # 1. Try Query Arg
-    val = request.args.get('company_id')
-    if val:
-        try:
-            return int(float(val))
-        except Exception:
-            pass
 
-    # 2. Try JSON payload before session fallback. This keeps the authorization
-    # tenant and the persistence tenant aligned for API mutations.
+    def clean(value):
+        try:
+            company_id = int(float(value))
+        except (TypeError, ValueError):
+            return None
+        return company_id if company_id > 0 else None
+
+    # Rotas protegidas usam active_company_permission_required: o contexto da
+    # sessão é a autoridade. O fallback preserva chamadas internas legadas.
+    company_id = clean(session.get('active_company_id'))
+    if company_id:
+        return company_id
+
+    company_id = clean(request.args.get('company_id'))
+    if company_id:
+        return company_id
+
     if request.is_json:
-        data = request.get_json(silent=True) or {}
-        val = data.get('company_id')
-        if val:
-            try:
-                return int(float(val))
-            except Exception:
-                pass
-            
-    # 3. Try session
-    cid = session.get('active_company_id')
-    if cid:
-        return int(cid)
-        
-    # 4. Try current_user
+        company_id = clean((request.get_json(silent=True) or {}).get('company_id'))
+        if company_id:
+            return company_id
+
     if current_user.is_authenticated:
-        default_company_id = get_default_company_id()
-        if default_company_id:
-            return default_company_id
-            
+        return clean(get_default_company_id())
     return None
 
 def apply_project_employee_filter(query, company_id):
@@ -145,7 +140,7 @@ def apply_project_employee_filter(query, company_id):
     return query
 
 class ProjectListResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self):
         """List all projects, optionally filtered by company_id, plan_id, and inactive status."""
         company_id = get_request_company_id()
@@ -176,7 +171,7 @@ class ProjectListResource(Resource):
             )
         return projects_schema.dump(projects), 200
 
-    @permission_required('projects', 'create')
+    @active_company_permission_required('projects', 'create')
     def post(self):
         """Create a new project."""
         from services.project_service import ProjectService
@@ -193,7 +188,7 @@ class ProjectListResource(Resource):
         return project_schema.dump(project), 201
 
 class ProjectResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id):
         """Get a specific project by ID."""
         project, company_id = _get_project_with_access(project_id, action='view')
@@ -201,7 +196,7 @@ class ProjectResource(Resource):
             return {"message": "Active company context required"}, 400
         return project_schema.dump(project), 200
 
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def put(self, project_id):
         """Update an existing project."""
         project, company_id = _get_project_with_access(project_id, action='edit')
@@ -224,7 +219,7 @@ class ProjectResource(Resource):
         db.session.commit()
         return project_schema.dump(project), 200
 
-    @permission_required('projects', 'delete')
+    @active_company_permission_required('projects', 'delete')
     def delete(self, project_id):
         """Delete a project."""
         project, company_id = _get_project_with_access(project_id, action='delete')
@@ -237,7 +232,7 @@ class ProjectResource(Resource):
         return '', 204
 
 class ProjectTaskListResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id):
         """List all tasks for a project."""
         from flask_login import current_user
@@ -269,7 +264,7 @@ class ProjectTaskListResource(Resource):
         tasks = tasks_query.all()
         return project_tasks_schema.dump(tasks), 200
 
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def post(self, project_id):
         """Add a new task to a project."""
         from models.project import ProjectTask
@@ -298,7 +293,7 @@ class ProjectTaskListResource(Resource):
         return project_task_schema.dump(new_task), 201
 
 class ProjectTaskResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id, task_id):
         """Get a specific project task."""
         from schemas.project import project_task_schema
@@ -307,7 +302,7 @@ class ProjectTaskResource(Resource):
             return {"message": "Acesso negado à atividade."}, 403
         return project_task_schema.dump(task), 200
 
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def put(self, project_id, task_id):
         """Update a project task."""
         from schemas.project import project_task_schema
@@ -344,7 +339,7 @@ class ProjectTaskResource(Resource):
         db.session.commit()
         return project_task_schema.dump(task), 200
 
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def delete(self, project_id, task_id):
         """Delete a project task."""
         task, _, company_id = _get_task_with_access(project_id, task_id, action='delete')
@@ -362,7 +357,7 @@ class ProjectTaskResource(Resource):
         return '', 204
 
 class ProjectTaskStageResource(Resource):
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def patch(self, project_id, task_id):
         """Update only the stage of a task."""
         from schemas.project import project_task_schema
@@ -383,7 +378,7 @@ class ProjectTaskStageResource(Resource):
         return project_task_schema.dump(task), 200
 
 class ProjectTaskCollaboratorListResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id, task_id):
         from models.project import ProjectActivityCollaborator
         from schemas.project import project_activity_collaborator_schema
@@ -393,7 +388,7 @@ class ProjectTaskCollaboratorListResource(Resource):
         collaborators = ProjectActivityCollaborator.query.filter_by(activity_id=task_id, is_deleted=False).all()
         return project_activity_collaborator_schema.dump(collaborators, many=True), 200
 
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def post(self, project_id, task_id):
         from models.project import ProjectActivityCollaborator
         from schemas.project import project_activity_collaborator_schema
@@ -414,7 +409,7 @@ class ProjectTaskCollaboratorListResource(Resource):
         return project_activity_collaborator_schema.dump(new_collab), 201
 
 class ProjectTaskCollaboratorResource(Resource):
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def delete(self, project_id, task_id, collaborator_id):
         from models.project import ProjectActivityCollaborator
         _, _, company_id = _get_task_with_access(project_id, task_id, action='edit')
@@ -428,7 +423,7 @@ class ProjectTaskCollaboratorResource(Resource):
         return '', 204
 
 class ProjectTaskHoursSummaryResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id, task_id):
         from models.project import ProjectTaskHoursSummary
         task, _, _ = _get_task_with_access(project_id, task_id, action='view')
@@ -443,7 +438,7 @@ class ProjectTaskHoursSummaryResource(Resource):
         }, 200
 
 class ProjectAllTasksResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self):
         """List all tasks across all projects for a company, or all tasks if missing company context."""
         from flask_login import current_user

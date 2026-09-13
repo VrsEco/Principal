@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from models import db, ProjectTask, Project, Indicator, Process
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_task_schema, project_tasks_schema
-from utils.permissions import can_manage_project_tasks, has_company_full_access, has_permission, permission_required
+from utils.permissions import can_manage_project_tasks, has_company_full_access, has_permission, active_company_permission_required
 from datetime import datetime
 from services.project_task_due_date_change_service import (
     ProjectTaskDueDateChangeService,
@@ -268,7 +268,7 @@ def _normalize_task_assignment_payload(company_id, data):
     return normalized
 
 class ProjectTaskListResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id):
         """List all tasks for a project with dependency status."""
         from services.task_dependency_service import TaskDependencyService
@@ -386,7 +386,7 @@ class ProjectTaskListResource(Resource):
             'capacity': ProjectBoardCapacityService.build(stage_counts),
         }, 200
 
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'edit')
     def post(self, project_id):
         """Create a new task for a project."""
         from .project import get_request_company_id
@@ -477,7 +477,7 @@ class ProjectTaskListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id, task_id):
         """Get a single task."""
         from .project import get_request_company_id
@@ -490,7 +490,7 @@ class ProjectTaskResource(Resource):
             include_backlog_human_gate=_should_include_backlog_human_gate(project_id),
         ), 200
 
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'edit')
     def put(self, project_id, task_id):
         """Update a task."""
         from .project import get_request_company_id
@@ -558,12 +558,12 @@ class ProjectTaskResource(Resource):
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'edit')
     def patch(self, project_id, task_id):
         """Partial update (e.g. for stage moves)."""
         return self.put(project_id, task_id)
 
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def delete(self, project_id, task_id):
         """Delete a task."""
         from .project import get_request_company_id
@@ -599,7 +599,7 @@ class ProjectTaskResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskStageResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'edit')
     def patch(self, project_id, task_id):
         """Update task stage (Kanban drag & drop)."""
         from .project import get_request_company_id
@@ -659,7 +659,7 @@ class ProjectTaskStageResource(Resource):
 
 
 class ProjectTaskDueDateChangeRequestListResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id, task_id):
         company_id = _resolve_due_date_change_company_id(project_id, task_id)
         if not company_id:
@@ -694,7 +694,7 @@ class ProjectTaskDueDateChangeRequestListResource(Resource):
             "project_owner_name": getattr(project, "owner", None) if project else None,
         }, 200
 
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'edit')
     def post(self, project_id, task_id):
         company_id = _resolve_due_date_change_company_id(project_id, task_id)
         if not company_id:
@@ -717,7 +717,7 @@ class ProjectTaskDueDateChangeRequestListResource(Resource):
 
 
 class ProjectTaskDueDateChangeRequestDecisionResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'edit')
     def post(self, project_id, task_id, request_id, action):
         company_id = _resolve_due_date_change_company_id(project_id, task_id)
         if not company_id:
@@ -761,14 +761,14 @@ class ProjectTaskDueDateChangeRequestDecisionResource(Resource):
         }, 200
 
 class ProjectTaskCollaboratorListResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id, task_id):
         """List collaborators and their hours for a task."""
         from models.project import ProjectActivityCollaborator
         collaborators = ProjectActivityCollaborator.query.filter_by(activity_id=task_id, is_deleted=False).all()
         return [c.to_dict() for c in collaborators], 200
 
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'edit')
     def post(self, project_id, task_id):
         """Add or update a collaborator/hours for a task."""
         from models.project import ProjectActivityCollaborator
@@ -815,7 +815,7 @@ class ProjectTaskCollaboratorListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskCollaboratorResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'edit')
     def delete(self, project_id, task_id, collaborator_id):
         """Delete a specific work log entry for a task."""
         from models.project import ProjectActivityCollaborator
@@ -844,7 +844,7 @@ class ProjectTaskCollaboratorResource(Resource):
 
 class ProjectTaskHoursSummaryResource(Resource):
 
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id, task_id):
         """Get summary of hours for a task."""
         from models.project import ProjectActivityCollaborator
@@ -868,7 +868,7 @@ class ProjectTaskHoursSummaryResource(Resource):
         }, 200
 
 class ProjectAllTasksResource(Resource):
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self):
         """List all tasks for all projects in the active company."""
         from .project import get_request_company_id
@@ -915,7 +915,7 @@ class ProjectAllTasksResource(Resource):
             current_app.logger.exception("Erro ao listar todas as tarefas da empresa company_id=%s", company_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 class ProjectTaskTransferResource(Resource):
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def post(self, project_id, task_id):
         """Transfer a task to another project."""
         from .project import get_request_company_id
@@ -972,7 +972,7 @@ class ProjectTaskTransferResource(Resource):
 class ProjectTaskDependencyListResource(Resource):
     """Gerencia dependências de uma atividade: predecessoras e sucessoras."""
 
-    @permission_required('projects', 'view')
+    @active_company_permission_required('projects', 'view')
     def get(self, project_id, task_id):
         """Lista todas as dependências (predecessoras e sucessoras) de uma atividade."""
         from services.task_dependency_service import TaskDependencyService
@@ -995,7 +995,7 @@ class ProjectTaskDependencyListResource(Resource):
         )
         return result, 200
 
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def post(self, project_id, task_id):
         """Adiciona uma dependência finish_to_start: predecessor_task_id → task_id (successor)."""
         from flask_login import current_user
@@ -1045,7 +1045,7 @@ class ProjectTaskDependencyListResource(Resource):
 class ProjectTaskDependencyResource(Resource):
     """Remove uma dependência específica."""
 
-    @permission_required('projects', 'edit')
+    @active_company_permission_required('projects', 'edit')
     def delete(self, project_id, task_id, dep_id):
         """Remove uma dependência de atividade."""
         from services.task_dependency_service import TaskDependencyService
