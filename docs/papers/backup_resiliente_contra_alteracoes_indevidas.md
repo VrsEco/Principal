@@ -19,10 +19,16 @@ Google Drive pessoal não fornece bloqueio técnico de exclusão para uma creden
 
 ## Estado da implantação
 O projeto `GV Backup Drive`, a API do Drive, o app OAuth em modo de teste e um
-cliente exclusivo do Configr já foram criados sem ativar faturamento. A credencial
-de cliente está fora do Git, protegida no Configr. A próxima barreira é o
-consentimento interativo ao escopo `drive.file`, seguido de um único upload de
-teste que não sobrescreve nem remove nenhum objeto remoto.
+cliente exclusivo do Configr foram criados sem ativar faturamento. O consentimento
+interativo ao escopo `drive.file` foi concluído e o refresh token está fora do Git,
+protegido no Configr. Em 2026-09-13, o uploader enviou com sucesso um manifesto
+de validação de 109 bytes, sem dados de clientes, para `GV-Backups/validation`.
+O teste confirmou criação de pasta, renovação OAuth e upload append-only; não houve
+sobrescrita nem exclusão remota.
+
+Ainda não há job recorrente nem transferência de dump, código ou uploads de
+produção. Essas etapas só avançam com o orquestrador, alertas e validação de
+restauração definidos nesta arquitetura.
 
 ## Evolução necessária
 1. OAuth direto Configr → Drive e validação de restauração isolada.
