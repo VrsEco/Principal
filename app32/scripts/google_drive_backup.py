@@ -18,7 +18,7 @@ import json
 import mimetypes
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -74,6 +74,7 @@ class BackupArtifact:
     path: Path
     sha256: str
     artifact_type: str
+    extra_properties: dict[str, str] = field(default_factory=dict)
 
     @property
     def object_key(self) -> str:
@@ -167,6 +168,32 @@ class GoogleDriveBackupClient:
         matches = self._list(query)
         return matches[0] if matches else None
 
+    def find_existing_code_commit(self, commit: str) -> dict[str, Any] | None:
+        """Localiza um bundle de código já associado ao commit informado.
+
+        O índice fica no próprio artefato e permite pular a geração de um
+        bundle completo nas execuções seguintes. A consulta é somente leitura.
+        """
+        query = (
+            "appProperties has { key='gv_backup_git_commit' and "
+            f"value='{escape_drive_query(commit)}' }} and trashed = false"
+        )
+        matches = self._list(query)
+        return matches[0] if matches else None
+
+    def storage_quota(self) -> dict[str, int | None]:
+        """Lê a quota da conta, sem alterar arquivos do Drive."""
+        response = self._request("GET", f"{DRIVE_API}/about", params={"fields": "storageQuota(limit,usage)"})
+        raw = response.json().get("storageQuota", {})
+
+        def as_int(value: Any) -> int | None:
+            try:
+                return int(value) if value is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        return {"limit": as_int(raw.get("limit")), "usage": as_int(raw.get("usage"))}
+
     def upload_new_artifact(self, artifact: BackupArtifact, parent_id: str) -> dict[str, Any]:
         """Faz upload resumivel de um novo arquivo, sem atualizar objetos existentes."""
         content_type = mimetypes.guess_type(artifact.path.name)[0] or "application/octet-stream"
@@ -177,6 +204,7 @@ class GoogleDriveBackupClient:
                 "gv_backup_object_key": artifact.object_key,
                 "gv_backup_sha256": artifact.sha256,
                 "gv_backup_type": artifact.artifact_type,
+                **artifact.extra_properties,
             },
         }
         session_response = self._request(
