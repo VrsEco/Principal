@@ -7,7 +7,7 @@ import logging
 from flask_login import current_user
 from flask_restful import Resource
 from marshmallow import ValidationError
-from utils.permissions import is_platform_admin, permission_required
+from utils.permissions import active_company_permission_required, is_platform_admin, permission_required
 from models import db, Company, Employee
 from schemas.company import company_schema, companies_schema
 
@@ -102,7 +102,7 @@ class CompanyResource(Resource):
     DELETE /api/companies/<id> - Delete company (soft delete)
     """
     
-    @permission_required('companies', 'view')
+    @active_company_permission_required('companies', 'view')
     def get(self, company_id):
         """
         Get company by ID (including inactive).
@@ -122,7 +122,7 @@ class CompanyResource(Resource):
         
         return company_schema.dump(company), 200
     
-    @permission_required('companies', 'edit')
+    @active_company_permission_required('companies', 'edit')
     def put(self, company_id):
         """
         Update company.
@@ -158,7 +158,7 @@ class CompanyResource(Resource):
             db.session.rollback()
             return {'error': PUBLIC_ERROR_MESSAGE}, 500
     
-    @permission_required('companies', 'delete')
+    @active_company_permission_required('companies', 'delete')
     def delete(self, company_id):
         """
         Delete company (soft delete).

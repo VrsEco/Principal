@@ -173,3 +173,34 @@ def test_contract_routes_use_active_company_guard():
     source = (Path(__file__).resolve().parents[1] / 'api' / 'routes' / 'contracts.py').read_text(encoding='utf-8')
     assert '@permission_required(' not in source
     assert '@active_company_permission_required(' in source
+
+
+def test_active_company_permission_rejects_positional_resource_tenant_mismatch(monkeypatch):
+    app = _app()
+    monkeypatch.setattr(permissions, 'has_permission', lambda *args: True)
+
+    @permissions.active_company_permission_required('companies', 'view')
+    def protected(_resource, company_id):
+        return {'ok': True}, 200
+
+    with app.test_request_context('/api/companies/22'):
+        session['active_company_id'] = 9
+        payload, status = protected(object(), 22)
+
+    assert status == 403
+    assert 'não corresponde' in payload['error']
+
+
+def test_company_endpoints_bind_to_active_tenant_and_do_not_use_default_password():
+    root = Path(__file__).resolve().parents[1]
+    route_source = (root / 'api' / 'routes' / 'companies.py').read_text(encoding='utf-8')
+    resource_source = (root / 'api' / 'resources' / 'company.py').read_text(encoding='utf-8')
+
+    assert "@active_company_permission_required('companies', 'edit')\ndef company_edit" in route_source
+    assert "@active_company_permission_required('companies', 'edit')\ndef update_performance_settings" in route_source
+    assert "@active_company_permission_required('companies', 'view')\ndef get_system_users" in route_source
+    assert "User.query.join(Employee, Employee.user_id == User.id)" in route_source
+    assert "Employee.company_id == active_company_id" in route_source
+    assert "data.get('password', '123456')" not in route_source
+    assert "Senha é obrigatória para criar um novo acesso." in route_source
+    assert "@active_company_permission_required('companies', 'view')\n    def get(self, company_id):" in resource_source

@@ -17,6 +17,7 @@ URL = "/api/companies/7/roles/12/employees"
 def client_context(monkeypatch):
     app = Flask(__name__)
     app.config["TESTING"] = True
+    app.secret_key = "test"
     app.register_blueprint(routes.companies_bp)
     access = Mock(return_value=True)
     permission = Mock(return_value=True)
@@ -28,7 +29,10 @@ def client_context(monkeypatch):
     monkeypatch.setattr(service, "create_org_employee", create)
     monkeypatch.setattr(service, "link_org_employee", link)
     monkeypatch.setattr(routes, "db", database)
-    return app.test_client(), access, permission, create, link, database
+    client = app.test_client()
+    with client.session_transaction() as browser_session:
+        browser_session["active_company_id"] = 7
+    return client, access, permission, create, link, database
 
 
 @pytest.mark.parametrize("method,payload,index,status", [("post", {"name": "Ana"}, 3, 201), ("put", {"employee_id": 23}, 4, 200)])
@@ -65,9 +69,9 @@ def test_body_cannot_select_authorization_tenant(client_context):
     payload = {"employee_id": 23, "company_id": 999}
     client_context[4].side_effect = ValueError("Informe apenas employee_id.")
     response = client_context[0].put(URL, json=payload)
-    assert response.status_code == 400
-    client_context[2].assert_called_once_with(7, "companies", "edit")
-    client_context[4].assert_called_once_with(7, 12, payload)
+    assert response.status_code == 403
+    client_context[2].assert_not_called()
+    client_context[4].assert_not_called()
 
 
 def test_snapshot_read_uses_view_permission(client_context, monkeypatch):

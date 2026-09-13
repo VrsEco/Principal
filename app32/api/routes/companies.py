@@ -21,7 +21,13 @@ from services.company_role_permission_preset_service import (
     CompanyRolePermissionPresetService,
 )
 from services.rbac_permission_catalog_service import RbacPermissionCatalogService
-from utils.permissions import can_access_company, is_platform_admin, permission_required
+from utils.permissions import (
+    active_company_permission_required,
+    can_access_company,
+    get_active_company_id,
+    is_platform_admin,
+    permission_required,
+)
 from flask_login import login_required, current_user
 from utils.logo_processor import resize_and_save_logo, get_logo_url
 
@@ -54,7 +60,7 @@ def company_new():
     )
 
 @companies_bp.route('/companies/<int:company_id>/edit')
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def company_edit(company_id):
     """Edit company form with tab support"""
     tab = request.args.get('tab', 'dados')
@@ -63,7 +69,7 @@ def company_edit(company_id):
 
 
 @companies_bp.route('/companies/<int:company_id>/identity')
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def company_identity(company_id):
     """Hub consolidado da identidade organizacional."""
     denied = _ensure_company_access(company_id)
@@ -79,7 +85,7 @@ def company_identity(company_id):
 
 
 @companies_bp.route('/companies/<int:company_id>/people')
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def company_people_hub(company_id):
     """Compatibilidade: a Central Pessoas agora é a tela única de identidade."""
     denied = _ensure_company_access(company_id)
@@ -89,7 +95,7 @@ def company_people_hub(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/usage-telemetry', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def company_usage_telemetry(company_id):
     """Fundação analítica temporariamente restrita ao admin da plataforma."""
     denied = _ensure_company_access(company_id)
@@ -107,7 +113,7 @@ def company_usage_telemetry(company_id):
 # Core CRUD functionality should be exclusively in api/resources/company.py
 
 @companies_bp.route('/api/companies/<int:company_id>/users', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_company_users(company_id):
     # Security check: User must have access to this company
     denied = _ensure_company_access(company_id)
@@ -129,16 +135,18 @@ def get_company_users(company_id):
     return jsonify(result)
 
 @companies_bp.route('/api/companies/<int:company_id>/users', methods=['POST'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def add_company_user(company_id):
     data = request.json
     email = data.get('email')
     name = data.get('name')
-    password = data.get('password', '123456') # Default password if not provided
+    password = data.get('password')
     role = data.get('role', 'collaborator')
-    
+
     if not email or not name:
         return jsonify({"error": "Nome e Email são obrigatórios"}), 400
+    if not password:
+        return jsonify({"error": "Senha é obrigatória para criar um novo acesso."}), 400
         
     result = UserEmployeeOrchestratorService.register_or_link_user_employee(
         company_id=company_id,
@@ -168,7 +176,7 @@ def add_company_user(company_id):
     return jsonify(result['employee']), status_code
 
 @companies_bp.route('/api/companies/<int:company_id>/roles', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_company_roles(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -178,7 +186,7 @@ def get_company_roles(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>/employees', methods=['POST', 'PUT'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def create_role_employee(company_id, role_id):
     from werkzeug.exceptions import HTTPException
     from services.company_org_employee_service import create_org_employee, link_org_employee
@@ -201,7 +209,7 @@ def create_role_employee(company_id, role_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>/qualification-evidences', methods=['POST'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def create_employee_qualification_evidence(company_id, employee_id):
     from werkzeug.exceptions import HTTPException
     from services.employee_qualification_service import create
@@ -224,7 +232,7 @@ def create_employee_qualification_evidence(company_id, employee_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>/qualification-evidences', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_employee_qualification_evidences(company_id, employee_id):
     from werkzeug.exceptions import HTTPException
     from services.employee_qualification_service import list_for_employee
@@ -242,8 +250,8 @@ def get_employee_qualification_evidences(company_id, employee_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>/cost-profiles', methods=['POST'])
-@permission_required('companies', 'edit')
-@permission_required('financial', 'edit')
+@active_company_permission_required('companies', 'edit')
+@active_company_permission_required('financial', 'edit')
 def add_role_cost_profile(company_id, role_id):
     from werkzeug.exceptions import HTTPException
     from services.role_cost_profile_service import create_cost_profile
@@ -266,8 +274,8 @@ def add_role_cost_profile(company_id, role_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/planned-role-costs', methods=['GET'])
-@permission_required('companies', 'view')
-@permission_required('financial', 'view')
+@active_company_permission_required('companies', 'view')
+@active_company_permission_required('financial', 'view')
 def get_planned_role_costs(company_id):
     from werkzeug.exceptions import HTTPException
     from services.role_cost_profile_service import build_planned_cost_snapshot
@@ -286,7 +294,7 @@ def get_planned_role_costs(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/occupancy-snapshot', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_occupancy_snapshot(company_id):
     from werkzeug.exceptions import HTTPException
     from services.org_occupancy_read_service import build_occupancy_snapshot
@@ -305,7 +313,7 @@ def get_occupancy_snapshot(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/tree', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_company_roles_tree(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -314,7 +322,7 @@ def get_company_roles_tree(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/identity/summary', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_company_identity_summary(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -340,7 +348,7 @@ def get_company_identity_summary(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/permission-catalog', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_company_permission_catalog(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -352,7 +360,7 @@ def get_company_permission_catalog(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/role-permission-presets', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def list_company_role_permission_presets(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -361,7 +369,7 @@ def list_company_role_permission_presets(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/role-permission-presets', methods=['POST'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def create_company_role_permission_preset(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -382,7 +390,7 @@ def create_company_role_permission_preset(company_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/role-permission-presets/<int:preset_id>', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_company_role_permission_preset(company_id, preset_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -394,7 +402,7 @@ def get_company_role_permission_preset(company_id, preset_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/role-permission-presets/<int:preset_id>', methods=['PUT'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def update_company_role_permission_preset(company_id, preset_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -417,7 +425,7 @@ def update_company_role_permission_preset(company_id, preset_id):
 
 
 @companies_bp.route('/api/companies/<int:company_id>/role-permission-presets/<int:preset_id>', methods=['DELETE'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def delete_company_role_permission_preset(company_id, preset_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -433,7 +441,7 @@ def delete_company_role_permission_preset(company_id, preset_id):
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 @companies_bp.route('/api/companies/<int:company_id>/roles', methods=['POST'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def add_company_role(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -449,7 +457,7 @@ def add_company_role(company_id):
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>', methods=['PUT', 'GET'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def update_company_role(company_id, role_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -469,7 +477,7 @@ def update_company_role(company_id, role_id):
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>', methods=['DELETE'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def delete_company_role(company_id, role_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -480,7 +488,7 @@ def delete_company_role(company_id, role_id):
     return jsonify({"success": True})
 
 @companies_bp.route('/api/companies/<int:company_id>/performance-settings', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_performance_settings(company_id):
     settings = CompanyPerformanceSettings.query.filter_by(company_id=company_id).first()
     if not settings:
@@ -491,7 +499,7 @@ def get_performance_settings(company_id):
     return jsonify(settings.to_dict())
 
 @companies_bp.route('/api/companies/<int:company_id>/performance-settings', methods=['PUT'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def update_performance_settings(company_id):
     settings = CompanyPerformanceSettings.query.filter_by(company_id=company_id).first()
     if not settings:
@@ -512,7 +520,7 @@ def update_performance_settings(company_id):
     return jsonify(settings.to_dict())
 
 @companies_bp.route('/api/companies/<int:company_id>/employees/full', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_company_employees_full(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -522,7 +530,7 @@ def get_company_employees_full(company_id):
     return jsonify([e.to_dict() for e in employees])
 
 @companies_bp.route('/api/companies/<int:company_id>/employees', methods=['POST'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def add_company_employee(company_id):
     try:
         data = request.json
@@ -550,10 +558,16 @@ def add_company_employee(company_id):
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 @companies_bp.route('/api/system-users', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_system_users():
-    # Retorna usuários ativos do sistema para vínculo
-    users = User.query.filter_by(is_active=True).all()
+    # Nunca expõe diretório global: vínculo é restrito à empresa ativa.
+    active_company_id = get_active_company_id()
+    users = (
+        User.query.join(Employee, Employee.user_id == User.id)
+        .filter(Employee.company_id == active_company_id, User.is_active.is_(True))
+        .distinct()
+        .all()
+    )
     # Adicionando tratamento caso a model User não possua to_dict ou similares
     result = []
     for u in users:
@@ -566,14 +580,14 @@ def get_system_users():
     return jsonify(result)
 
 @companies_bp.route('/api/companies/<int:company_id>/unlinked-employees', methods=['GET'])
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def get_unlinked_employees(company_id):
     # Retorna colaboradores da unidade que não possuem user_id vinculado e estão ativos
     employees = Employee.query.filter_by(company_id=company_id, user_id=None, status='active').all()
     return jsonify([e.to_dict() for e in employees])
 
 @companies_bp.route('/api/companies/<int:company_id>/link-user', methods=['POST'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def link_company_user(company_id):
     data = request.json
     user_id = data.get('user_id')
@@ -606,7 +620,7 @@ def link_company_user(company_id):
     return jsonify({"success": True, "assignment": result.get("assignment")}), 200
 
 @companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>', methods=['GET', 'PUT'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def update_company_employee(company_id, employee_id):
     denied = _ensure_company_access(company_id)
     if denied:
@@ -623,7 +637,7 @@ def update_company_employee(company_id, employee_id):
     return jsonify(employee.to_dict())
 
 @companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>/access', methods=['DELETE'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def remove_company_user_access(company_id, employee_id):
     from models.user_employee_assignment import UserEmployeeAssignment
     from datetime import date
@@ -653,7 +667,7 @@ def remove_company_user_access(company_id, employee_id):
     return jsonify({"success": True})
 
 @companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>', methods=['DELETE'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def delete_company_employee(company_id, employee_id):
     employee = Employee.query.filter_by(id=employee_id, company_id=company_id).first_or_404()
     # Soft delete do histórico/função do colaborador em si
@@ -662,7 +676,7 @@ def delete_company_employee(company_id, employee_id):
     return jsonify({"success": True})
 
 @companies_bp.route('/api/companies/<int:company_id>/logo', methods=['POST'])
-@permission_required('companies', 'edit')
+@active_company_permission_required('companies', 'edit')
 def upload_company_logo(company_id):
     if 'logo' not in request.files:
         return jsonify({"error": "Nenhum arquivo enviado"}), 400

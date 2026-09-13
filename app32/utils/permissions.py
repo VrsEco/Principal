@@ -1,4 +1,5 @@
 from functools import wraps
+from inspect import signature
 
 from flask import abort, request, session
 from flask_login import current_user
@@ -262,9 +263,17 @@ def active_company_permission_required(resource, action):
                 return {"error": "Empresa ativa obrigatória."}, 400
 
             requested_company_ids = [_requested_company_id()]
-            if "company_id" in kwargs:
+            route_company_value = kwargs.get("company_id")
+            if route_company_value is None:
+                # Flask-RESTful pode entregar company_id como argumento posicional.
+                # Fazemos o bind pela assinatura para manter o mesmo limite de tenant.
                 try:
-                    route_company_id = int(kwargs["company_id"])
+                    route_company_value = signature(f).bind_partial(*args, **kwargs).arguments.get("company_id")
+                except (TypeError, ValueError):
+                    route_company_value = None
+            if route_company_value is not None:
+                try:
+                    route_company_id = int(route_company_value)
                 except (TypeError, ValueError):
                     route_company_id = False
                 requested_company_ids.append(
