@@ -807,13 +807,31 @@ class ProcessInstanceListResource(Resource):
             
         query = ProcessInstance.query.filter_by(company_id=company_id)
         query = apply_instance_employee_filter(query, company_id)
-        
-        process_id = request.args.get('process_id')
+        process_id = request.args.get('process_id', type=int)
+        status = (request.args.get('status') or '').strip()
+        priority = (request.args.get('priority') or '').strip()
+        search = (request.args.get('search') or '').strip()
+        paginated = (request.args.get('paginated') or 'false').lower() == 'true'
         if process_id:
             query = query.filter_by(process_id=process_id)
-            
-        instances = query.all()
-        if not has_company_full_access(company_id):
+        if status:
+            query = query.filter(ProcessInstance.status == status)
+        if priority:
+            query = query.filter(ProcessInstance.priority == priority)
+        if search:
+            pattern = f'%{search}%'
+            query = query.filter(or_(ProcessInstance.title.ilike(pattern), ProcessInstance.instance_code.ilike(pattern)))
+
+        query = query.order_by(ProcessInstance.due_date.asc().nullslast(), ProcessInstance.id.desc())
+        page = max(request.args.get('page', 1, type=int) or 1, 1)
+        per_page = min(max(request.args.get('per_page', 50, type=int) or 50, 1), 100)
+        full_company_access = has_company_full_access(company_id)
+        total = query.order_by(None).count() if paginated and full_company_access else None
+        if paginated and full_company_access:
+            instances = query.offset((page - 1) * per_page).limit(per_page).all()
+        else:
+            instances = query.all()
+        if not full_company_access:
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
             if employee:
@@ -881,6 +899,14 @@ class ProcessInstanceListResource(Resource):
             data['normalized_collaborators'] = collabs
             results.append(data)
 
+        if paginated:
+            if total is None:
+                total = len(results)
+                results = results[(page - 1) * per_page: page * per_page]
+            return {
+                'items': results,
+                'pagination': {'page': page, 'per_page': per_page, 'total': total, 'has_more': page * per_page < total},
+            }, 200
         return results, 200
 
     @active_company_permission_required('processes', 'create')

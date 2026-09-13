@@ -216,6 +216,8 @@
     const companyId = parseInt('{{ company.id if company else 0 }}') || null;
     const isCollaborator = {{ is_collaborator | tojson }};
     let allInstances = [];
+    let instancesPagination = { page: 1, total: 0, has_more: false };
+    let instancesFilterTimer = null;
     const pageParams = new URLSearchParams(window.location.search);
     let pendingInstanceFocusId = Number.parseInt(pageParams.get('instance_id'), 10);
     if (!Number.isFinite(pendingInstanceFocusId)) {
@@ -248,10 +250,21 @@
         clearShortcutParams();
     }
 
-    async function loadInstances() {
+    async function loadInstances({ append = false } = {}) {
         try {
-            const res = await fetch(`/api/companies/${companyId}/process-instances`);
-            allInstances = await res.json();
+            const page = append ? instancesPagination.page + 1 : 1;
+            const params = new URLSearchParams({ paginated: 'true', page: String(page), per_page: '50' });
+            ['filterStatus', 'filterPriority', 'filterProcess'].forEach((id, index) => {
+                const value = document.getElementById(id)?.value;
+                if (value) params.set(['status', 'priority', 'process_id'][index], value);
+            });
+            const search = document.getElementById('searchInput')?.value.trim();
+            if (search) params.set('search', search);
+            const res = await fetch(`/api/companies/${companyId}/process-instances?${params}`);
+            const payload = await res.json();
+            if (!res.ok || !Array.isArray(payload.items)) throw new Error('Resposta inválida');
+            allInstances = append ? allInstances.concat(payload.items) : payload.items;
+            instancesPagination = payload.pagination;
             renderInstances(allInstances);
             populateProcessFilter();
         } catch (err) {
@@ -261,33 +274,26 @@
 
     function populateProcessFilter() {
         const select = document.getElementById('filterProcess');
+        if (!select) return;
+        const selectedValue = select.value;
+        const existingIds = new Set([...select.options].map(option => String(option.value)));
         const processes = [...new Set(allInstances.map(i => ({ id: i.process_id, name: i.process_name })))]
             .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
 
         processes.forEach(p => {
             if (!p.id) return;
+            if (existingIds.has(String(p.id))) return;
             const opt = document.createElement('option');
             opt.value = p.id;
             opt.textContent = p.name;
             select.appendChild(opt);
         });
+        select.value = selectedValue;
     }
 
     function applyFilters() {
-        const status = document.getElementById('filterStatus').value;
-        const priority = document.getElementById('filterPriority').value;
-        const processId = document.getElementById('filterProcess').value;
-        const search = document.getElementById('searchInput').value.toLowerCase();
-
-        const filtered = allInstances.filter(inst => {
-            const statusMatch = !status || inst.status === status;
-            const priorityMatch = !priority || (inst.priority || 'normal') === priority;
-            const processMatch = !processId || inst.process_id == processId;
-            const searchMatch = !search || inst.title.toLowerCase().includes(search) || (inst.instance_code || '').toLowerCase().includes(search);
-            return statusMatch && priorityMatch && processMatch && searchMatch;
-        });
-
-        renderInstances(filtered);
+        window.clearTimeout(instancesFilterTimer);
+        instancesFilterTimer = window.setTimeout(() => loadInstances(), 250);
     }
 
     function resetFilters() {
@@ -295,7 +301,7 @@
         document.getElementById('filterPriority').value = '';
         document.getElementById('filterProcess').value = '';
         document.getElementById('searchInput').value = '';
-        renderInstances(allInstances);
+        loadInstances();
     }
 
     function formatDateBR(value, fallback = '') {
@@ -415,6 +421,16 @@
                 </div>
             `;
         }).join('');
+
+        if (instancesPagination.has_more) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-secondary';
+            button.style.cssText = 'grid-column:1/-1; justify-self:center;';
+            button.textContent = `Carregar mais (${allInstances.length} de ${instancesPagination.total})`;
+            button.addEventListener('click', () => loadInstances({ append: true }));
+            grid.appendChild(button);
+        }
 
         focusPendingInstanceCard();
     }
