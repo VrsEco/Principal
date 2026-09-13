@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from schemas.operational_audit import OperationalAuditPanelQuery
 from services.operational_audit_service import OperationalAuditService
 from utils.company_access import get_accessible_company_ids
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 
 from .process import get_request_company_id
 
@@ -15,7 +15,7 @@ from .process import get_request_company_id
 class OperationalAuditPanelResource(Resource):
     """API REST do painel unificado de auditoria operacional."""
 
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         try:
             filters = OperationalAuditPanelQuery(**request.args.to_dict(flat=True))
