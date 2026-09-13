@@ -16,7 +16,8 @@ def _active_employee_filter():
 
 
 def _resolve_active_company():
-    company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
+    # A URL não pode trocar nem persistir o tenant da sessão autenticada.
+    company_id = session.get('active_company_id')
 
     if not company_id and current_user.is_authenticated:
         employee = (
@@ -58,7 +59,10 @@ def operations_audit_panel():
 @login_required
 def operations_audit_panel_api():
     active_company = _resolve_active_company()
-    company_id = request.args.get('company_id', type=int) or getattr(active_company, 'id', None)
+    company_id = getattr(active_company, 'id', None)
+    requested_company_id = request.args.get('company_id', type=int)
+    if requested_company_id and requested_company_id != company_id:
+        return jsonify({"success": False, "error": "Empresa da requisição não corresponde à empresa ativa."}), 403
     if not company_id:
         return jsonify({"success": False, "error": "Empresa ativa obrigatória para consultar a auditoria operacional."}), 400
     if not has_company_full_access(company_id):

@@ -214,3 +214,15 @@ def test_user_employee_routes_scope_direct_employee_ids_to_active_company():
     assert source.count('id=employee_id,\n            company_id=active_company_id,') == 2
     assert "else ['phone', 'whatsapp']" in source
     assert "Apenas administradores podem alterar vínculo de usuário" in source
+
+
+def test_config_and_audit_routes_do_not_allow_query_to_select_tenant():
+    root = Path(__file__).resolve().parents[1]
+    main_source = (root / 'api' / 'routes' / 'main.py').read_text(encoding='utf-8')
+    configs_source = (root / 'api' / 'routes' / 'configs.py').read_text(encoding='utf-8')
+
+    active_resolver = main_source.split('@main_bp.route', 1)[0]
+    assert "company_id = session.get('active_company_id')" in active_resolver
+    assert "request.args.get('company_id', type=int) or session.get('active_company_id')" not in active_resolver
+    assert main_source.count('Empresa da requisição não corresponde à empresa ativa.') >= 1
+    assert configs_source.count('Empresa da requisição não corresponde à empresa ativa.') >= 1

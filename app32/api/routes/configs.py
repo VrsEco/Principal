@@ -56,6 +56,7 @@ configs_bp = Blueprint('configs', __name__)
 
 
 def _resolve_active_company():
+    # Delegamos apenas a resolução de sessão/fallback; query string não seleciona tenant.
     from api.routes.main import _resolve_active_company as _main_resolve_active_company
 
     return _main_resolve_active_company()
@@ -778,7 +779,10 @@ def ai_monitoring_legacy_redirect():
 @login_required
 def ai_monitoring_panel_api():
     active_company = _resolve_active_company()
-    company_id = request.args.get('company_id', type=int) or getattr(active_company, 'id', None)
+    company_id = getattr(active_company, 'id', None)
+    requested_company_id = request.args.get('company_id', type=int)
+    if requested_company_id and requested_company_id != company_id:
+        return jsonify({"success": False, "error": "Empresa da requisição não corresponde à empresa ativa."}), 403
     if not company_id:
         return jsonify({"success": False, "error": "Empresa ativa obrigatória para monitoramento."}), 400
     if not _can_access_ai_mcp_console(company_id):
