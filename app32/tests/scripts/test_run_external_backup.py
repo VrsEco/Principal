@@ -1,5 +1,6 @@
 import importlib.util
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -45,3 +46,42 @@ def test_default_dotenv_is_the_runtime_app_directory():
 
     assert Path(args.dotenv).name == ".env"
     assert Path(args.dotenv).parent.name == "app32"
+
+
+def test_gfs_metadata_uses_intraday_daily_and_monthly_windows():
+    intraday, intraday_until = runner.retention_metadata(datetime(2026, 9, 13, 22, tzinfo=runner.TZ))
+    daily, daily_until = runner.retention_metadata(datetime(2026, 9, 13, 3, tzinfo=runner.TZ))
+    monthly, monthly_until = runner.retention_metadata(datetime(2026, 10, 1, 3, tzinfo=runner.TZ))
+
+    assert (intraday, daily, monthly) == ("intraday", "daily", "monthly")
+    assert intraday_until - datetime(2026, 9, 13, 22, tzinfo=runner.TZ) == timedelta(days=30)
+    assert daily_until - datetime(2026, 9, 13, 3, tzinfo=runner.TZ) == timedelta(days=90)
+    assert monthly_until - datetime(2026, 10, 1, 3, tzinfo=runner.TZ) == timedelta(days=180)
+
+
+def test_drive_capacity_fails_closed_when_quota_is_unknown_or_insufficient():
+    with pytest.raises(runner.BackupRunError, match="quota"):
+        runner.assert_drive_capacity({"limit": None, "usage": 1}, 10, 5)
+
+    with pytest.raises(runner.BackupRunError, match="Espaço insuficiente"):
+        runner.assert_drive_capacity({"limit": 100, "usage": 80}, 10, 20)
+
+    runner.assert_drive_capacity({"limit": 100, "usage": 60}, 10, 20)
+
+
+def test_prune_local_staging_removes_only_expired_manifest_runs(tmp_path):
+    expired = tmp_path / "expired"
+    expired.mkdir()
+    (expired / "manifest.json").write_text('{"retain_until":"2026-09-01T03:00:00-03:00"}', encoding="utf-8")
+    retained = tmp_path / "retained"
+    retained.mkdir()
+    (retained / "manifest.json").write_text('{"retain_until":"2026-12-01T03:00:00-03:00"}', encoding="utf-8")
+    legacy = tmp_path / "legacy"
+    legacy.mkdir()
+
+    removed = runner.prune_local_staging(tmp_path, datetime(2026, 9, 13, 3, tzinfo=runner.TZ), exclude=retained)
+
+    assert removed == ["expired"]
+    assert not expired.exists()
+    assert retained.exists()
+    assert legacy.exists()
