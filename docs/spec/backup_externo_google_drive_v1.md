@@ -51,6 +51,10 @@ somente objetos novos e não executou exclusão ou sobrescrita remota.
   com hash SHA-256, idempotência por `appProperties` e upload resumível.
 - `app32/scripts/google_drive_authorize.py`: auxiliar local de autorização OAuth
   com callback em loopback; deve ser executado somente em estação confiável.
+- `app32/scripts/run_external_backup.py`: orquestrador protegido que gera dump
+  PostgreSQL em formato custom, `git bundle`, manifesto SHA-256 e só permite envio
+  quando invocado explicitamente com `--upload`; o modo `--dry-run` não acessa
+  banco, Git nem Drive.
 
 ## Fora do escopo
 Não usar cópia local como requisito, não gravar credenciais no `.env`, não executar limpeza remota automática e não substituir backup/PITR por snapshot de provedor.
