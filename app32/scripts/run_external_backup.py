@@ -126,7 +126,7 @@ def upload_artifacts(artifacts: list[BackupArtifact], remote_folder: str, env_fi
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=str(SCRIPT_DIR.parent.parent))
-    parser.add_argument("--dotenv", default=".env")
+    parser.add_argument("--dotenv", default=str(SCRIPT_DIR.parent / ".env"))
     parser.add_argument("--staging-dir", default=os.getenv("GV_BACKUP_STAGING_DIR", DEFAULT_STAGING))
     parser.add_argument("--drive-env-file", default=os.getenv("GV_GOOGLE_DRIVE_ENV_FILE", DEFAULT_ENV_FILE))
     parser.add_argument("--upload", action="store_true", help="Permite envio externo ao Google Drive.")
