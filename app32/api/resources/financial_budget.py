@@ -10,7 +10,7 @@ from services.financial_budget_service import FinancialBudgetService
 from services.financial_budget_version_clone_service import FinancialBudgetVersionCloneService
 from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
 from utils.company_access import get_accessible_company_ids
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 
 from .process import get_request_company_id
 
@@ -32,7 +32,7 @@ def _parse_bool_arg(name: str, default: bool = False) -> bool:
 
 
 class FinancialBudgetVersionListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -59,7 +59,7 @@ class FinancialBudgetVersionListResource(Resource):
             return {"error": service_error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -80,7 +80,7 @@ class FinancialBudgetVersionListResource(Resource):
 
 
 class FinancialBudgetVersionResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, version_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -94,7 +94,7 @@ class FinancialBudgetVersionResource(Resource):
             return {"error": service_error}, 404
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, version_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -113,7 +113,7 @@ class FinancialBudgetVersionResource(Resource):
         except ValidationError as exc:
             return {"errors": exc.errors()}, 400
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, version_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -129,7 +129,7 @@ class FinancialBudgetVersionResource(Resource):
 
 
 class FinancialBudgetMatrixResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, version_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -143,7 +143,7 @@ class FinancialBudgetMatrixResource(Resource):
             return {"error": service_error}, 400
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, version_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -164,7 +164,7 @@ class FinancialBudgetMatrixResource(Resource):
 
 
 class FinancialBudgetOptionsResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -179,7 +179,7 @@ class FinancialBudgetOptionsResource(Resource):
 
 
 class FinancialBudgetImportResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, version_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -202,7 +202,7 @@ class FinancialBudgetImportResource(Resource):
 
 
 class FinancialBudgetVersionDuplicateResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, version_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -225,7 +225,7 @@ class FinancialBudgetVersionDuplicateResource(Resource):
 
 
 class FinancialBudgetPlanningWorkspaceResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -247,7 +247,7 @@ class FinancialBudgetPlanningWorkspaceResource(Resource):
 
 
 class FinancialBudgetExecutionWorkspaceResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -275,7 +275,7 @@ class FinancialBudgetExecutionWorkspaceResource(Resource):
 
 
 class FinancialBudgetLineListResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, version_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -296,7 +296,7 @@ class FinancialBudgetLineListResource(Resource):
 
 
 class FinancialBudgetLineResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, line_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -315,7 +315,7 @@ class FinancialBudgetLineResource(Resource):
         except ValidationError as exc:
             return {"errors": exc.errors()}, 400
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, line_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -331,7 +331,7 @@ class FinancialBudgetLineResource(Resource):
 
 
 class FinancialBudgetContractListResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, line_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -353,7 +353,7 @@ class FinancialBudgetContractListResource(Resource):
 
 
 class FinancialBudgetContractResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, contract_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -372,7 +372,7 @@ class FinancialBudgetContractResource(Resource):
         except ValidationError as exc:
             return {"errors": exc.errors()}, 400
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, contract_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -388,7 +388,7 @@ class FinancialBudgetContractResource(Resource):
 
 
 class FinancialBudgetDocumentListResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, contract_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -410,7 +410,7 @@ class FinancialBudgetDocumentListResource(Resource):
 
 
 class FinancialBudgetDocumentResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, document_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -429,7 +429,7 @@ class FinancialBudgetDocumentResource(Resource):
         except ValidationError as exc:
             return {"errors": exc.errors()}, 400
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, document_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -445,7 +445,7 @@ class FinancialBudgetDocumentResource(Resource):
 
 
 class FinancialBudgetDocumentScheduleListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, document_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -459,7 +459,7 @@ class FinancialBudgetDocumentScheduleListResource(Resource):
             return {"error": service_error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, document_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -480,7 +480,7 @@ class FinancialBudgetDocumentScheduleListResource(Resource):
 
 
 class FinancialBudgetDocumentScheduleResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, document_id: int, schedule_id: int):
         company_id, error = _get_company_id_or_error()
         if error:
@@ -500,7 +500,7 @@ class FinancialBudgetDocumentScheduleResource(Resource):
         except ValidationError as exc:
             return {"errors": exc.errors()}, 400
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, document_id: int, schedule_id: int):
         company_id, error = _get_company_id_or_error()
         if error:

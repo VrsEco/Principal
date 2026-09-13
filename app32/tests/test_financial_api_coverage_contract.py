@@ -34,7 +34,7 @@ def test_critical_financial_api_methods_have_explicit_permission_contract():
             method = getattr(resource_cls, method_name)
             marker = getattr(method, "_permission_required", None)
 
-            assert marker == {"resource": "financial", "action": expected_action}, (
+            assert marker == {"resource": "financial", "action": expected_action, "active_company_only": True}, (
                 f"{resource_cls.__name__}.{method_name} precisa manter permission_required"
                 f"('financial', '{expected_action}')"
             )

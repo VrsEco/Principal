@@ -5,7 +5,7 @@ from flask import abort, jsonify, redirect, render_template, request, send_file,
 
 from services.financial_report_service import FinancialReportService
 from utils.company_access import get_accessible_company_ids
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 
 from .financial import financial_bp, get_active_company
 
@@ -137,7 +137,7 @@ def _cash_flow_title_filter_payload():
 
 
 @financial_bp.route('/financial/reports')
-@permission_required('financial', 'view')
+@active_company_permission_required('financial', 'view')
 def financial_reports_page():
     company = get_active_company()
     if not company:
@@ -146,7 +146,7 @@ def financial_reports_page():
 
 
 @financial_bp.route('/financial/reports/<report_slug>')
-@permission_required('financial', 'view')
+@active_company_permission_required('financial', 'view')
 def financial_report_filters_page(report_slug: str):
     company = get_active_company()
     if not company:
@@ -229,7 +229,7 @@ def _build_financial_report_with_definition_or_abort(report_slug: str, *, forced
 
 
 @financial_bp.route('/financial/reports/<report_slug>/view')
-@permission_required('financial', 'view')
+@active_company_permission_required('financial', 'view')
 def financial_report_view_page(report_slug: str):
     if str(report_slug or '').strip().lower() in {'agendamento', 'extrato-bancario', 'dossie-extrato-bancario', 'demonstrativo-resultados', 'demonstrativo-resultados-02', 'razao'}:
         target = url_for('financial.financial_report_filters_page', report_slug=report_slug)
@@ -247,7 +247,7 @@ def financial_report_view_page(report_slug: str):
 
 
 @financial_bp.route('/financial/reports/<report_slug>/layout-test')
-@permission_required('financial', 'view')
+@active_company_permission_required('financial', 'view')
 def financial_report_layout_test_page(report_slug: str):
     company, report_definition, report = _build_financial_report_with_definition_or_abort(
         report_slug,
@@ -266,7 +266,7 @@ def financial_report_layout_test_page(report_slug: str):
 
 
 @financial_bp.route('/financial/reports/<report_slug>/drilldown')
-@permission_required('financial', 'view')
+@active_company_permission_required('financial', 'view')
 def financial_report_income_statement_drilldown(report_slug: str):
     company = get_active_company()
     if not company:
@@ -303,7 +303,7 @@ def financial_report_income_statement_drilldown(report_slug: str):
 
 
 @financial_bp.route('/financial/reports/<report_slug>/projected-titles')
-@permission_required('financial', 'view')
+@active_company_permission_required('financial', 'view')
 def financial_report_cash_flow_projected_titles(report_slug: str):
     company = get_active_company()
     if not company:
@@ -326,7 +326,7 @@ def financial_report_cash_flow_projected_titles(report_slug: str):
 
 @financial_bp.route('/financial/reports/<report_slug>/export.xlsx')
 @financial_bp.route('/financial/reports/<report_slug>/export-xlsx')
-@permission_required('financial', 'view')
+@active_company_permission_required('financial', 'view')
 def financial_report_export_xlsx(report_slug: str):
     company, report = _build_financial_report_or_abort(report_slug)
     report["company_name"] = company.name
@@ -341,7 +341,7 @@ def financial_report_export_xlsx(report_slug: str):
 
 @financial_bp.route('/financial/reports/<report_slug>/export.pdf', methods=['GET', 'POST'])
 @financial_bp.route('/financial/reports/<report_slug>/export-pdf', methods=['GET', 'POST'])
-@permission_required('financial', 'view')
+@active_company_permission_required('financial', 'view')
 def financial_report_export_pdf(report_slug: str):
     company, report = _build_financial_report_or_abort(report_slug)
     report["company_name"] = company.name

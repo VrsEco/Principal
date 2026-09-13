@@ -2,7 +2,7 @@ import os
 import sys
 from types import SimpleNamespace
 
-from flask import Flask
+from flask import Flask, session
 from flask_login import LoginManager
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -26,6 +26,11 @@ def _build_app():
         return None
 
     app.register_blueprint(automation_route.financial_automation_bp)
+
+    @app.before_request
+    def _set_active_company_for_authenticated_portal_test():
+        session.setdefault("active_company_id", 9)
+
     return app
 
 

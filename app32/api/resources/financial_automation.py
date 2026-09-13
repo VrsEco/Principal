@@ -6,13 +6,13 @@ from flask_restful import Resource
 
 from services.financial_automation_service import FinancialAutomationService
 from utils.company_access import get_accessible_company_ids
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 
 from .process import get_request_company_id
 
 
 class FinancialAutomationOptionsResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.list_options(
@@ -25,7 +25,7 @@ class FinancialAutomationOptionsResource(Resource):
 
 
 class FinancialAutomationBatchListResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -40,7 +40,7 @@ class FinancialAutomationBatchListResource(Resource):
 
 
 class FinancialAutomationUploadBatchResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.upload_batch_files(
@@ -58,7 +58,7 @@ class FinancialAutomationUploadBatchResource(Resource):
 
 
 class FinancialAutomationBatchParseResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, batch_id: int):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.parse_batch_documents(
@@ -74,7 +74,7 @@ class FinancialAutomationBatchParseResource(Resource):
 
 
 class FinancialAutomationRecordListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.list_records(
@@ -95,7 +95,7 @@ class FinancialAutomationRecordListResource(Resource):
 
 
 class FinancialAutomationRecordResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, record_id: int):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.get_record(
@@ -107,7 +107,7 @@ class FinancialAutomationRecordResource(Resource):
             return {"error": error}, 404
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, record_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -122,7 +122,7 @@ class FinancialAutomationRecordResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, record_id: int):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.delete_record(
@@ -137,7 +137,7 @@ class FinancialAutomationRecordResource(Resource):
 
 
 class FinancialAutomationBulkStatusResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -152,7 +152,7 @@ class FinancialAutomationBulkStatusResource(Resource):
 
 
 class FinancialAutomationGenerateResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -167,7 +167,7 @@ class FinancialAutomationGenerateResource(Resource):
 
 
 class FinancialAutomationDocumentResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, document_id: int):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.get_document(

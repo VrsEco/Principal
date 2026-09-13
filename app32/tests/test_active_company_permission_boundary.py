@@ -112,3 +112,39 @@ def test_project_and_process_api_resources_use_active_company_guard():
         source = (root / filename).read_text(encoding='utf-8')
         assert '@permission_required(' not in source
         assert '@active_company_permission_required(' in source
+from types import SimpleNamespace
+
+from api.routes import financial as financial_route
+
+
+def test_financial_active_company_ignores_client_tenant_selector(monkeypatch):
+    app = _app()
+    captured_company_ids = []
+    expected_company = SimpleNamespace(id=9)
+    monkeypatch.setattr(financial_route, 'has_permission', lambda *args: True)
+    monkeypatch.setattr(
+        financial_route,
+        'Company',
+        SimpleNamespace(query=SimpleNamespace(get=lambda company_id: captured_company_ids.append(company_id) or expected_company)),
+    )
+
+    with app.test_request_context('/financial?company_id=22'):
+        session['active_company_id'] = 9
+        assert financial_route.get_active_company() is expected_company
+
+    assert captured_company_ids == [9]
+
+
+def test_financial_resources_and_routes_use_active_company_guard():
+    root = Path(__file__).resolve().parents[1]
+    for relative_path in (
+        'api/resources/financial.py',
+        'api/resources/financial_automation.py',
+        'api/resources/financial_budget.py',
+        'api/routes/financial.py',
+        'api/routes/financial_reports.py',
+        'api/routes/financial_automation.py',
+    ):
+        source = (root / relative_path).read_text(encoding='utf-8')
+        assert '@permission_required(' not in source
+        assert '@active_company_permission_required(' in source

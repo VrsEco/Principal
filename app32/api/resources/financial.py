@@ -49,7 +49,7 @@ from services.financial_reconciliation_service import FinancialReconciliationSer
 from services.financial_reconciliation_workspace_service import FinancialReconciliationWorkspaceService
 from services.financial_bordero_service import FinancialBorderoService
 from utils.company_access import get_accessible_company_ids
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 
 from .process import get_request_company_id
 
@@ -156,7 +156,7 @@ def _recalculate_entry_status(entry: FinancialEntry) -> None:
 
 
 class FinancialEntryListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         if not company_id:
@@ -191,7 +191,7 @@ class FinancialEntryListResource(Resource):
             return {"error": error}, 400
         return entries or [], 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json() or {}
         company_id = get_request_company_id()
@@ -209,7 +209,7 @@ class FinancialEntryListResource(Resource):
 
 
 class FinancialDirectEntryOptionsResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialDirectEntryService.list_options(
@@ -222,7 +222,7 @@ class FinancialDirectEntryOptionsResource(Resource):
 
 
 class FinancialDirectEntryCreateResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -237,7 +237,7 @@ class FinancialDirectEntryCreateResource(Resource):
 
 
 class FinancialTransferCreateResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialTransferService.list_transfers(
@@ -252,7 +252,7 @@ class FinancialTransferCreateResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = _attach_financial_actor_context(request.get_json(silent=True) or {})
         payload["company_id"] = get_request_company_id()
@@ -266,7 +266,7 @@ class FinancialTransferCreateResource(Resource):
 
 
 class FinancialTransferResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, transfer_group_id: str):
         company_id = get_request_company_id()
         result, error = FinancialTransferService.get_transfer(
@@ -278,7 +278,7 @@ class FinancialTransferResource(Resource):
             return {"error": error}, 404
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, transfer_group_id: str):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -295,7 +295,7 @@ class FinancialTransferResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, transfer_group_id: str):
         company_id = get_request_company_id()
         result, error = FinancialTransferService.delete_transfer(
@@ -309,7 +309,7 @@ class FinancialTransferResource(Resource):
 
 
 class FinancialCatalogListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, catalog_type: str):
         company_id = get_request_company_id()
         result, error = FinancialCatalogService.list_items(
@@ -321,7 +321,7 @@ class FinancialCatalogListResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, catalog_type: str):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -336,7 +336,7 @@ class FinancialCatalogListResource(Resource):
 
 
 class FinancialCatalogResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, catalog_type: str, item_id: int):
         company_id = get_request_company_id()
         payload = _sanitize_update_payload(request.get_json(silent=True))
@@ -351,7 +351,7 @@ class FinancialCatalogResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, catalog_type: str, item_id: int):
         company_id = get_request_company_id()
         result, error = FinancialCatalogService.delete_item(
@@ -366,7 +366,7 @@ class FinancialCatalogResource(Resource):
 
 
 class FinancialCatalogToggleResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, catalog_type: str, item_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -383,7 +383,7 @@ class FinancialCatalogToggleResource(Resource):
 
 
 class FinancialDomainEnablementListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialDomainEnablementService.list_items(
@@ -397,7 +397,7 @@ class FinancialDomainEnablementListResource(Resource):
 
 
 class FinancialDomainEnablementResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, domain_type: str, source_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -412,7 +412,7 @@ class FinancialDomainEnablementResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, domain_type: str, source_id: int):
         company_id = get_request_company_id()
         payload = _sanitize_update_payload(request.get_json(silent=True), "domain_type", "source_id")
@@ -429,7 +429,7 @@ class FinancialDomainEnablementResource(Resource):
 
 
 class FinancialDomainEnablementToggleResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, domain_type: str, source_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -446,7 +446,7 @@ class FinancialDomainEnablementToggleResource(Resource):
 
 
 class FinancialManualDomainListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialManualDomainService.list_items(
@@ -458,7 +458,7 @@ class FinancialManualDomainListResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -473,7 +473,7 @@ class FinancialManualDomainListResource(Resource):
 
 
 class FinancialManualDomainResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, item_id: int):
         company_id = get_request_company_id()
         payload = _sanitize_update_payload(request.get_json(silent=True))
@@ -487,7 +487,7 @@ class FinancialManualDomainResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, item_id: int):
         company_id = get_request_company_id()
         result, error = FinancialManualDomainService.delete_item(
@@ -501,7 +501,7 @@ class FinancialManualDomainResource(Resource):
 
 
 class FinancialIngestionRecordListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialIngestionService.list_records(
@@ -515,7 +515,7 @@ class FinancialIngestionRecordListResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -530,7 +530,7 @@ class FinancialIngestionRecordListResource(Resource):
 
 
 class FinancialIngestionRecordResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, record_id: int):
         company_id = get_request_company_id()
         result, error = FinancialIngestionService.get_record(
@@ -542,7 +542,7 @@ class FinancialIngestionRecordResource(Resource):
             return {"error": error}, 404
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, record_id: int):
         company_id = get_request_company_id()
         payload = _sanitize_update_payload(request.get_json(silent=True), "record_id", "import_batch_id")
@@ -572,7 +572,7 @@ class FinancialIngestionRecordResource(Resource):
 
 
 class FinancialIngestionRecordReviewResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, record_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -604,7 +604,7 @@ class FinancialIngestionRecordReviewResource(Resource):
 
 
 class FinancialIngestionRecordConvertResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, record_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -632,7 +632,7 @@ class FinancialIngestionRecordConvertResource(Resource):
 
 
 class FinancialScheduleListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         summary_mode = str(request.args.get("summary_mode") or "full").strip().lower()
@@ -650,7 +650,7 @@ class FinancialScheduleListResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -664,7 +664,7 @@ class FinancialScheduleListResource(Resource):
 
 
 class FinancialScheduleOptionsResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         allowed_company_ids = get_accessible_company_ids()
@@ -817,7 +817,7 @@ class FinancialScheduleOptionsResource(Resource):
 
 
 class FinancialScheduleResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, schedule_id: int):
         company_id = get_request_company_id()
         result, error = FinancialScheduleService.get_schedule_detail(
@@ -829,7 +829,7 @@ class FinancialScheduleResource(Resource):
             return {"error": error}, 404
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, schedule_id: int):
         company_id = get_request_company_id()
         payload = _sanitize_update_payload(
@@ -850,7 +850,7 @@ class FinancialScheduleResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, schedule_id: int):
         company_id = get_request_company_id()
         result, error = FinancialScheduleService.delete_schedule(
@@ -864,7 +864,7 @@ class FinancialScheduleResource(Resource):
 
 
 class FinancialScheduleToggleResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, schedule_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -880,7 +880,7 @@ class FinancialScheduleToggleResource(Resource):
 
 
 class FinancialScheduleGenerateResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -905,7 +905,7 @@ class FinancialScheduleGenerateResource(Resource):
 
 
 class FinancialScheduleCreateEntryResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, schedule_id: int):
         company_id = get_request_company_id()
         result, error = FinancialScheduleService.create_entry_from_schedule(
@@ -919,7 +919,7 @@ class FinancialScheduleCreateEntryResource(Resource):
 
 
 class FinancialScheduleSettlementResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, schedule_id: int):
         company_id = get_request_company_id()
         payload = _attach_financial_actor_context(request.get_json(silent=True) or {})
@@ -935,7 +935,7 @@ class FinancialScheduleSettlementResource(Resource):
 
 
 class FinancialScheduleSettlementSimulationResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def post(self, schedule_id: int):
         company_id = get_request_company_id()
         if not company_id:
@@ -953,7 +953,7 @@ class FinancialScheduleSettlementSimulationResource(Resource):
 
 
 class FinancialScheduleAssistedSettlementResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, schedule_id: int):
         company_id = get_request_company_id()
         if not company_id:
@@ -971,7 +971,7 @@ class FinancialScheduleAssistedSettlementResource(Resource):
 
 
 class FinancialScheduleCalculationLogListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, schedule_id: int):
         company_id = get_request_company_id()
         if not company_id:
@@ -989,7 +989,7 @@ class FinancialScheduleCalculationLogListResource(Resource):
 
 
 class FinancialScheduleAttachmentListResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, schedule_id: int):
         company_id = get_request_company_id()
         uploaded_file = request.files.get("file")
@@ -1005,7 +1005,7 @@ class FinancialScheduleAttachmentListResource(Resource):
 
 
 class FinancialScheduleAttachmentResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def delete(self, schedule_id: int, attachment_id: str):
         company_id = get_request_company_id()
         result, error = FinancialScheduleService.delete_attachment(
@@ -1020,7 +1020,7 @@ class FinancialScheduleAttachmentResource(Resource):
 
 
 class FinancialBorderoListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialBorderoService.list_borderos(
@@ -1033,7 +1033,7 @@ class FinancialBorderoListResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -1048,7 +1048,7 @@ class FinancialBorderoListResource(Resource):
 
 
 class FinancialBorderoResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, bordero_id: int):
         company_id = get_request_company_id()
         result, error = FinancialBorderoService.get_bordero_detail(
@@ -1060,7 +1060,7 @@ class FinancialBorderoResource(Resource):
             return {"error": error}, 404
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, bordero_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1074,7 +1074,7 @@ class FinancialBorderoResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, bordero_id: int):
         company_id = get_request_company_id()
         result, error = FinancialBorderoService.delete_bordero(
@@ -1088,7 +1088,7 @@ class FinancialBorderoResource(Resource):
 
 
 class FinancialBorderoSettlementListResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, bordero_id: int):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -1104,7 +1104,7 @@ class FinancialBorderoSettlementListResource(Resource):
 
 
 class FinancialBorderoSettlementResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, bordero_id: int, settlement_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1120,7 +1120,7 @@ class FinancialBorderoSettlementResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, bordero_id: int, settlement_id: int):
         company_id = get_request_company_id()
         result, error = FinancialBorderoService.delete_settlement(
@@ -1135,7 +1135,7 @@ class FinancialBorderoSettlementResource(Resource):
 
 
 class FinancialAutomationRuleListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.list_rules(
@@ -1146,7 +1146,7 @@ class FinancialAutomationRuleListResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json(silent=True) or {}
         payload["company_id"] = get_request_company_id()
@@ -1160,7 +1160,7 @@ class FinancialAutomationRuleListResource(Resource):
 
 
 class FinancialAutomationRuleResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, rule_id: int):
         company_id = get_request_company_id()
         payload = _sanitize_update_payload(request.get_json(silent=True), "rule_id", "rule_code")
@@ -1176,7 +1176,7 @@ class FinancialAutomationRuleResource(Resource):
 
 
 class FinancialAutomationExecutionListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialAutomationService.list_executions(
@@ -1191,7 +1191,7 @@ class FinancialAutomationExecutionListResource(Resource):
 
 
 class FinancialAutomationApplyInstanceResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, rule_id: int, process_instance_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1208,7 +1208,7 @@ class FinancialAutomationApplyInstanceResource(Resource):
 
 
 class FinancialProcessTriggerDispatchResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, process_instance_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1225,7 +1225,7 @@ class FinancialProcessTriggerDispatchResource(Resource):
 
 
 class FinancialEntryResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, entry_id: int):
         company_id = get_request_company_id()
         entry = FinancialEntry.query.filter(
@@ -1235,7 +1235,7 @@ class FinancialEntryResource(Resource):
         ).first_or_404()
         return _serialize_entry(entry), 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, entry_id: int):
         company_id = get_request_company_id()
         payload = _sanitize_update_payload(
@@ -1258,7 +1258,7 @@ class FinancialEntryResource(Resource):
 
         return _serialize_entry(entry), 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, entry_id: int):
         company_id = get_request_company_id()
         result, error = FinancialService.delete_entry(
@@ -1272,7 +1272,7 @@ class FinancialEntryResource(Resource):
 
 
 class FinancialEntryAllocationListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, entry_id: int):
         company_id = get_request_company_id()
         entry = FinancialEntry.query.filter(
@@ -1288,7 +1288,7 @@ class FinancialEntryAllocationListResource(Resource):
         ).order_by(FinancialEntryAllocation.id.asc()).all()
         return financial_entry_allocations_schema.dump(allocations), 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, entry_id: int):
         company_id = get_request_company_id()
         payload = request.get_json() or {}
@@ -1306,7 +1306,7 @@ class FinancialEntryAllocationListResource(Resource):
 
 
 class FinancialEntrySettlementListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, entry_id: int):
         company_id = get_request_company_id()
         entry = FinancialEntry.query.filter(
@@ -1326,7 +1326,7 @@ class FinancialEntrySettlementListResource(Resource):
             entry_by_id={entry.id: entry},
         ), 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, entry_id: int):
         payload = _attach_financial_actor_context(request.get_json() or {})
         company_id = get_request_company_id()
@@ -1361,7 +1361,7 @@ class FinancialEntrySettlementListResource(Resource):
 
 
 class FinancialEntryAttachmentListResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, entry_id: int):
         company_id = get_request_company_id()
         upload = request.files.get("file")
@@ -1380,7 +1380,7 @@ class FinancialEntryAttachmentListResource(Resource):
 
 
 class FinancialEntryAttachmentResource(Resource):
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, entry_id: int, attachment_id: str):
         company_id = get_request_company_id()
         removed, error = FinancialService.delete_entry_attachment(
@@ -1395,7 +1395,7 @@ class FinancialEntryAttachmentResource(Resource):
 
 
 class FinancialSettlementResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, settlement_id: int):
         company_id = get_request_company_id()
         settlement = FinancialSettlement.query.filter(
@@ -1405,7 +1405,7 @@ class FinancialSettlementResource(Resource):
         ).first_or_404()
         return FinancialService.serialize_settlement(settlement, include_components=True), 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, settlement_id: int):
         company_id = get_request_company_id()
         result, error = FinancialService.delete_settlement(
@@ -1419,7 +1419,7 @@ class FinancialSettlementResource(Resource):
 
 
 class FinancialSettlementAttachmentListResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, settlement_id: int):
         company_id = get_request_company_id()
         upload = request.files.get("file")
@@ -1438,7 +1438,7 @@ class FinancialSettlementAttachmentListResource(Resource):
 
 
 class FinancialSettlementAttachmentResource(Resource):
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, settlement_id: int, attachment_id: str):
         company_id = get_request_company_id()
         removed, error = FinancialService.delete_settlement_attachment(
@@ -1453,7 +1453,7 @@ class FinancialSettlementAttachmentResource(Resource):
 
 
 class FinancialImportBatchListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         batches, error = FinancialImportService.list_import_batches(
@@ -1464,7 +1464,7 @@ class FinancialImportBatchListResource(Resource):
             return {"error": error}, 400
         return batches, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         company_id = get_request_company_id()
         upload = request.files.get("file")
@@ -1510,7 +1510,7 @@ class FinancialImportBatchListResource(Resource):
 
 
 class FinancialImportBatchResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, batch_id: int):
         company_id = get_request_company_id()
         result, error = FinancialImportService.get_import_batch(
@@ -1522,7 +1522,7 @@ class FinancialImportBatchResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "delete")
+    @active_company_permission_required("financial", "delete")
     def delete(self, batch_id: int):
         company_id = get_request_company_id()
         result, error = FinancialImportService.delete_import_batch(
@@ -1536,7 +1536,7 @@ class FinancialImportBatchResource(Resource):
 
 
 class FinancialImportBatchProcessResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, batch_id: int):
         company_id = get_request_company_id()
         result, error = FinancialImportService.process_import_batch(
@@ -1550,7 +1550,7 @@ class FinancialImportBatchProcessResource(Resource):
 
 
 class FinancialImportBatchReconcileResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, batch_id: int):
         company_id = get_request_company_id()
         result, error = FinancialReconciliationService.auto_match_batch(
@@ -1564,7 +1564,7 @@ class FinancialImportBatchReconcileResource(Resource):
 
 
 class FinancialReconciliationMatchReviewResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, match_id: int):
         company_id = get_request_company_id()
         payload = request.get_json() or {}
@@ -1589,7 +1589,7 @@ class FinancialReconciliationMatchReviewResource(Resource):
 
 
 class FinancialBankReconciliationOverviewResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialReconciliationWorkspaceService.get_overview(
@@ -1602,7 +1602,7 @@ class FinancialBankReconciliationOverviewResource(Resource):
 
 
 class FinancialBankReconciliationWorkspaceResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         bank_account_id = request.args.get("bank_account_id", type=int)
@@ -1629,7 +1629,7 @@ class FinancialBankReconciliationWorkspaceResource(Resource):
 
 
 class FinancialBankReconciliationRowCandidatesResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self, row_id: int):
         company_id = get_request_company_id()
         result, error = FinancialReconciliationWorkspaceService.list_row_candidates(
@@ -1644,7 +1644,7 @@ class FinancialBankReconciliationRowCandidatesResource(Resource):
 
 
 class FinancialBankReconciliationRowMatchResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, row_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1668,7 +1668,7 @@ class FinancialBankReconciliationRowMatchResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def delete(self, row_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1684,7 +1684,7 @@ class FinancialBankReconciliationRowMatchResource(Resource):
 
 
 class FinancialBankReconciliationGroupMatchResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1705,7 +1705,7 @@ class FinancialBankReconciliationGroupMatchResource(Resource):
 
 
 class FinancialBankReconciliationBatchCancelResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1721,7 +1721,7 @@ class FinancialBankReconciliationBatchCancelResource(Resource):
 
 
 class FinancialBankReconciliationTitleSettlementResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, row_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1742,7 +1742,7 @@ class FinancialBankReconciliationTitleSettlementResource(Resource):
 
 
 class FinancialBankReconciliationBorderoMatchResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, row_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1765,7 +1765,7 @@ class FinancialBankReconciliationBorderoMatchResource(Resource):
 
 
 class FinancialBankReconciliationCreateEntryResource(Resource):
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self, row_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1781,7 +1781,7 @@ class FinancialBankReconciliationCreateEntryResource(Resource):
 
 
 class FinancialClassificationRuleListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialClassificationService.list_rules(
@@ -1792,7 +1792,7 @@ class FinancialClassificationRuleListResource(Resource):
             return {"error": error}, 400
         return result, 200
 
-    @permission_required("financial", "create")
+    @active_company_permission_required("financial", "create")
     def post(self):
         payload = request.get_json() or {}
         payload["company_id"] = get_request_company_id()
@@ -1806,7 +1806,7 @@ class FinancialClassificationRuleListResource(Resource):
 
 
 class FinancialClassificationRuleResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, rule_id: int):
         company_id = get_request_company_id()
         payload = _sanitize_update_payload(request.get_json(silent=True), "rule_id")
@@ -1822,7 +1822,7 @@ class FinancialClassificationRuleResource(Resource):
 
 
 class FinancialClassificationRuleToggleResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, rule_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1838,7 +1838,7 @@ class FinancialClassificationRuleToggleResource(Resource):
 
 
 class FinancialImportBatchClassifyResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, batch_id: int):
         company_id = get_request_company_id()
         result, error = FinancialClassificationService.classify_batch(
@@ -1852,7 +1852,7 @@ class FinancialImportBatchClassifyResource(Resource):
 
 
 class FinancialClassificationMemoryListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialClassificationHybridService.list_memories(
@@ -1865,7 +1865,7 @@ class FinancialClassificationMemoryListResource(Resource):
 
 
 class FinancialClassificationMemoryResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def put(self, memory_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1881,7 +1881,7 @@ class FinancialClassificationMemoryResource(Resource):
 
 
 class FinancialClassificationMemoryToggleResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, memory_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1897,7 +1897,7 @@ class FinancialClassificationMemoryToggleResource(Resource):
 
 
 class FinancialImportBatchSuggestionResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, batch_id: int):
         company_id = get_request_company_id()
         result, error = FinancialClassificationHybridService.suggest_from_memory(
@@ -1911,7 +1911,7 @@ class FinancialImportBatchSuggestionResource(Resource):
 
 
 class FinancialClassificationSuggestionListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         batch_id = request.args.get("batch_id", type=int)
@@ -1926,7 +1926,7 @@ class FinancialClassificationSuggestionListResource(Resource):
 
 
 class FinancialClassificationSuggestionReviewResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, suggestion_id: int):
         company_id = get_request_company_id()
         payload = request.get_json() or {}
@@ -1942,7 +1942,7 @@ class FinancialClassificationSuggestionReviewResource(Resource):
 
 
 class FinancialClassificationPendingQueueResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         batch_id = request.args.get("batch_id", type=int)
@@ -1957,7 +1957,7 @@ class FinancialClassificationPendingQueueResource(Resource):
 
 
 class FinancialClassificationDashboardResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialClassificationDashboardService.get_dashboard(
@@ -1970,7 +1970,7 @@ class FinancialClassificationDashboardResource(Resource):
 
 
 class FinancialClassificationAskUserResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, import_row_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -1988,7 +1988,7 @@ class FinancialClassificationAskUserResource(Resource):
 
 
 class FinancialClassificationResolveAnswerResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, import_row_id: int):
         company_id = get_request_company_id()
         payload = request.get_json(silent=True) or {}
@@ -2005,7 +2005,7 @@ class FinancialClassificationResolveAnswerResource(Resource):
 
 
 class FinancialImportBatchAIRankingResource(Resource):
-    @permission_required("financial", "edit")
+    @active_company_permission_required("financial", "edit")
     def post(self, batch_id: int):
         company_id = get_request_company_id()
         result, error = FinancialAIClassificationService.rank_batch_with_ai(
@@ -2019,7 +2019,7 @@ class FinancialImportBatchAIRankingResource(Resource):
 
 
 class FinancialReportTypeListResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialReportService.list_report_types(
@@ -2032,7 +2032,7 @@ class FinancialReportTypeListResource(Resource):
 
 
 class FinancialReportGenerateResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         report_type = request.args.get("report_type")
@@ -2051,7 +2051,7 @@ class FinancialReportGenerateResource(Resource):
 
 
 class FinancialExecutiveDashboardResource(Resource):
-    @permission_required("financial", "view")
+    @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
         result, error = FinancialExecutiveDashboardService.get_dashboard(

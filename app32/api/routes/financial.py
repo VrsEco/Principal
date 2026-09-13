@@ -16,7 +16,7 @@ from models.project import Project
 from services.financial_import_service import FinancialImportService
 from services.financial_budget_import_service import FinancialBudgetImportService
 from services.financial_local_automation_service import FinancialLocalAutomationService
-from utils.permissions import get_default_company_id, has_permission, permission_required
+from utils.permissions import active_company_permission_required, get_active_company_id, has_permission
 
 
 financial_bp = Blueprint("financial", __name__)
@@ -112,37 +112,22 @@ FINANCIAL_CATALOG_HUB_PAGES = [
 
 
 def get_active_company():
-    from models import Employee
-
-    company_id = request.args.get("company_id", type=int) or session.get("active_company_id")
-
-    if not company_id and current_user.is_authenticated:
-        employee = Employee.query.filter_by(user_id=current_user.id, status="active").first()
-        if employee and employee.company_id:
-            company_id = employee.company_id
-        else:
-            company_id = get_default_company_id()
-
-    if company_id:
-        if not has_permission(company_id, "financial", "view"):
-            abort(403, description="Acesso negado ao contexto financeiro da empresa.")
-        session["active_company_id"] = company_id
-        return Company.query.get(company_id)
-
-    return None
+    """Retorna somente a empresa selecionada na sessão autenticada."""
+    company_id = get_active_company_id()
+    if not company_id:
+        return None
+    if not has_permission(company_id, "financial", "view"):
+        abort(403, description="Acesso negado ao contexto financeiro da empresa.")
+    return Company.query.get(company_id)
 
 
 def _get_entry_with_access(entry_id: int) -> FinancialEntry:
-    entry = FinancialEntry.query.get_or_404(entry_id)
-    if not current_user.is_authenticated:
-        abort(403, description="Usuário não autenticado.")
-
-    if session.get("active_company_id") != entry.company_id:
-        session["active_company_id"] = entry.company_id
-
-    if not has_permission(entry.company_id, "financial", "view"):
+    company_id = get_active_company_id()
+    if not current_user.is_authenticated or not company_id:
+        abort(403, description="Contexto financeiro ativo obrigatório.")
+    entry = FinancialEntry.query.filter_by(id=entry_id, company_id=company_id).first_or_404()
+    if not has_permission(company_id, "financial", "view"):
         abort(403, description="Acesso negado ao lançamento financeiro solicitado.")
-
     return entry
 
 
@@ -159,22 +144,18 @@ def _extract_entry_schedule_id(entry: FinancialEntry) -> int | None:
 
 
 def _get_schedule_with_access(schedule_id: int) -> FinancialSchedule:
-    schedule = FinancialSchedule.query.get_or_404(schedule_id)
-    if not current_user.is_authenticated:
-        abort(403, description="Usuário não autenticado.")
-
-    if session.get("active_company_id") != schedule.company_id:
-        session["active_company_id"] = schedule.company_id
-
-    if not has_permission(schedule.company_id, "financial", "view"):
+    company_id = get_active_company_id()
+    if not current_user.is_authenticated or not company_id:
+        abort(403, description="Contexto financeiro ativo obrigatório.")
+    schedule = FinancialSchedule.query.filter_by(id=schedule_id, company_id=company_id).first_or_404()
+    if not has_permission(company_id, "financial", "view"):
         abort(403, description="Acesso negado ao agendamento financeiro solicitado.")
-
     return schedule
 
 
 @financial_bp.route("/financial")
 @financial_bp.route("/financial/dashboard")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_dashboard_page():
     company = get_active_company()
     return render_template(
@@ -185,7 +166,7 @@ def financial_dashboard_page():
 
 
 @financial_bp.route("/financial/entries")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_entries_page():
     company = get_active_company()
     return render_template(
@@ -196,7 +177,7 @@ def financial_entries_page():
 
 
 @financial_bp.route("/financial/entries/direct")
-@permission_required("financial", "create")
+@active_company_permission_required("financial", "create")
 def financial_direct_entry_page():
     company = get_active_company()
     return render_template(
@@ -208,7 +189,7 @@ def financial_direct_entry_page():
 
 
 @financial_bp.route("/financial/transfers")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_transfers_page():
     company = get_active_company()
     return render_template(
@@ -219,7 +200,7 @@ def financial_transfers_page():
 
 
 @financial_bp.route("/financial/entries/<int:entry_id>")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_entry_manage(entry_id: int):
     entry = _get_entry_with_access(entry_id)
     linked_schedule_id = _extract_entry_schedule_id(entry)
@@ -239,7 +220,7 @@ def financial_entry_manage(entry_id: int):
 
 
 @financial_bp.route("/financial/schedules/<int:schedule_id>/settle")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_schedule_settle(schedule_id: int):
     schedule = _get_schedule_with_access(schedule_id)
     return redirect(
@@ -249,7 +230,7 @@ def financial_schedule_settle(schedule_id: int):
 
 
 @financial_bp.route("/financial/imports/<int:batch_id>")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_import_batch_manage(batch_id: int):
     company = get_active_company()
     return render_template(
@@ -261,7 +242,7 @@ def financial_import_batch_manage(batch_id: int):
 
 
 @financial_bp.route("/financial/reconciliation")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_bank_reconciliation_page():
     company = get_active_company()
     return render_template(
@@ -272,7 +253,7 @@ def financial_bank_reconciliation_page():
 
 
 @financial_bp.route("/financial/import-template")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_import_template_download():
     content, error = FinancialImportService.build_import_template()
     if error:
@@ -287,7 +268,7 @@ def financial_import_template_download():
 
 
 @financial_bp.route("/financial/budget-template")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_budget_template_download():
     company = get_active_company()
     company_id = company.id if company else None
@@ -311,7 +292,7 @@ def financial_budget_template_download():
 
 
 @financial_bp.route("/financial/classification-rules")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_classification_rules_page():
     company = get_active_company()
     return render_template(
@@ -322,7 +303,7 @@ def financial_classification_rules_page():
 
 
 @financial_bp.route("/financial/classification-memories")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_classification_memories_page():
     company = get_active_company()
     return render_template(
@@ -333,19 +314,19 @@ def financial_classification_memories_page():
 
 
 @financial_bp.route("/financial/classification-queue")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_classification_queue_page():
     return redirect("/financial/automation", code=302)
 
 
 @financial_bp.route("/financial/classification-dashboard")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_classification_dashboard_page():
     return redirect("/financial/automation", code=302)
 
 
 @financial_bp.route("/financial/catalogs")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_catalogs_page():
     company = get_active_company()
     return render_template(
@@ -357,7 +338,7 @@ def financial_catalogs_page():
 
 
 @financial_bp.route("/financial/catalogs/<string:catalog_slug>")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_catalog_detail_page(catalog_slug: str):
     catalog_page = FINANCIAL_CATALOG_PAGES.get(catalog_slug)
     if not catalog_page:
@@ -379,7 +360,7 @@ def financial_catalog_detail_page(catalog_slug: str):
 
 
 @financial_bp.route("/financial/domain-enablements")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_domain_enablements_page():
     company = get_active_company()
     return render_template(
@@ -390,19 +371,19 @@ def financial_domain_enablements_page():
 
 
 @financial_bp.route("/financial/ingestions")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_ingestions_page():
     return redirect("/financial/automation", code=302)
 
 
 @financial_bp.route("/financial/accountability")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_accountability_page():
     return redirect("/financial/automation?origin_type=accountability", code=302)
 
 
 @financial_bp.route("/financial/schedules")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_schedules_page():
     company = get_active_company()
     return render_template(
@@ -414,7 +395,7 @@ def financial_schedules_page():
 
 @financial_bp.route("/financial/schedules/new")
 @financial_bp.route("/financial/schedules/<int:schedule_id>")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_schedule_form_page(schedule_id: int | None = None):
     company = get_active_company()
     schedule = _get_schedule_with_access(schedule_id) if schedule_id else None
@@ -431,7 +412,7 @@ def financial_schedule_form_page(schedule_id: int | None = None):
 
 
 @financial_bp.route("/financial/schedules/<int:schedule_id>/automations", methods=["POST"])
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_schedule_automation_action(schedule_id: int):
     schedule = _get_schedule_with_access(schedule_id)
     if not has_permission(schedule.company_id, "financial", "edit"):
@@ -468,7 +449,7 @@ def financial_schedule_automation_action(schedule_id: int):
 
 
 @financial_bp.route("/financial/borderos")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_borderos_page():
     company = get_active_company()
     return render_template(
@@ -480,7 +461,7 @@ def financial_borderos_page():
 
 @financial_bp.route("/financial/borderos/new")
 @financial_bp.route("/financial/borderos/<int:bordero_id>")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_bordero_workspace_page(bordero_id: int | None = None):
     company = get_active_company()
     return render_template(
@@ -493,7 +474,7 @@ def financial_bordero_workspace_page(bordero_id: int | None = None):
 
 
 @financial_bp.route("/financial/automation-rules")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_automation_rules_page():
     company = get_active_company()
     return render_template(
@@ -504,7 +485,7 @@ def financial_automation_rules_page():
 
 
 @financial_bp.route("/financial/automation-audit")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_automation_audit_page():
     company = get_active_company()
     return render_template(
@@ -515,16 +496,16 @@ def financial_automation_audit_page():
 
 
 @financial_bp.route("/financial/budgets")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_budget_planning_page():
     company = get_active_company()
-    company_id = request.args.get("company_id") or (company.id if company else None)
+    company_id = company.id if company else None
     query = f"?company_id={company_id}" if company_id else ""
     return redirect(f"/financial/budget{query}")
 
 
 @financial_bp.route("/financial/budget")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_budget_matrix_page():
     company = get_active_company()
     return render_template(
@@ -536,7 +517,7 @@ def financial_budget_matrix_page():
 
 @financial_bp.route("/financial/budgets/workspace")
 @financial_bp.route("/financial/budget/workspace")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_budget_workspace_page():
     company = get_active_company()
     return render_template(
@@ -547,7 +528,7 @@ def financial_budget_workspace_page():
 
 
 @financial_bp.route("/financial/budget/execution")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_budget_execution_page():
     company = get_active_company()
     return render_template(

@@ -3,7 +3,7 @@ import sys
 from io import BytesIO
 from types import SimpleNamespace
 
-from flask import Flask, render_template
+from flask import Flask, session, render_template
 from flask_login import LoginManager
 from pypdf import PdfReader
 
@@ -30,6 +30,11 @@ def _build_app():
         return None
 
     app.register_blueprint(financial_route.financial_bp)
+
+    @app.before_request
+    def _set_active_company_for_authenticated_portal_test():
+        session.setdefault("active_company_id", 7)
+
     return app
 
 

@@ -5,7 +5,7 @@ from flask import Blueprint, abort, current_app, render_template, send_file
 
 from api.routes.financial import get_active_company
 from services.financial_import_service import FinancialImportService
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 
 
 financial_automation_bp = Blueprint("financial_automation", __name__)
@@ -26,7 +26,7 @@ def _financial_automation_asset_version() -> str:
 
 
 @financial_automation_bp.route("/financial/automation")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_automation_page():
     company = get_active_company()
     return render_template(
@@ -38,7 +38,7 @@ def financial_automation_page():
 
 
 @financial_automation_bp.route("/financial/automation/template")
-@permission_required("financial", "view")
+@active_company_permission_required("financial", "view")
 def financial_automation_template_download():
     content, error = FinancialImportService.build_import_template()
     if error:
