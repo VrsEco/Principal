@@ -4,7 +4,12 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from models import db, Occurrence, Company, Employee
 from schemas.occurrence import occurrence_schema, occurrences_schema
-from utils.permissions import get_default_company_id, has_company_full_access, permission_required
+from utils.permissions import (
+    active_company_permission_required,
+    get_active_company_id,
+    get_default_company_id,
+    has_company_full_access,
+)
 from flask import session
 from flask_login import current_user
 
@@ -20,21 +25,10 @@ def get_request_company_id():
         except (ValueError, TypeError):
             return None
 
-    cid = clean(request.args.get('company_id'))
-    if cid is not None: return cid
-    
-    try:
-        if request.is_json:
-            data = request.get_json(silent=True)
-            if data:
-                cid = clean(data.get('company_id'))
-                if cid is not None: return cid
-    except Exception:
-        pass
-
+    # The active session owns the tenant boundary.  Client supplied IDs are
+    # only validated by the active-company decorator; they never select data.
     cid = clean(session.get('active_company_id'))
-    if cid:
-        return cid
+    if cid is not None: return cid
 
     if current_user.is_authenticated:
         default_company_id = get_default_company_id()
@@ -75,6 +69,8 @@ def _occurrence_visible_to_employee(occurrence, employee_id):
 def _get_occurrence_with_access(occurrence_id, action='view'):
     occurrence = Occurrence.query.get_or_404(occurrence_id)
     company_id = occurrence.company_id
+    if company_id != get_active_company_id():
+        return None
 
     if not has_company_full_access(company_id):
         employee = _get_current_employee(company_id)
@@ -84,7 +80,7 @@ def _get_occurrence_with_access(occurrence_id, action='view'):
     return occurrence
 
 class OccurrenceListResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self):
         company_id = get_request_company_id()
         if not company_id:
@@ -119,7 +115,7 @@ class OccurrenceListResource(Resource):
 
         return occurrences_schema.dump(occurrences), 200
 
-    @permission_required('processes', 'create')
+    @active_company_permission_required('processes', 'create')
     def post(self):
         try:
             data = request.get_json() or {}
@@ -148,14 +144,14 @@ class OccurrenceListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class OccurrenceResource(Resource):
-    @permission_required('processes', 'view')
+    @active_company_permission_required('processes', 'view')
     def get(self, occurrence_id):
         occurrence = _get_occurrence_with_access(occurrence_id, action='view')
         if not occurrence:
             return {"error": "Acesso negado à ocorrência."}, 403
         return occurrence_schema.dump(occurrence), 200
 
-    @permission_required('processes', 'edit')
+    @active_company_permission_required('processes', 'edit')
     def put(self, occurrence_id):
         occurrence = _get_occurrence_with_access(occurrence_id, action='edit')
         if not occurrence:
@@ -177,7 +173,7 @@ class OccurrenceResource(Resource):
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'delete')
+    @active_company_permission_required('processes', 'delete')
     def delete(self, occurrence_id):
         occurrence = _get_occurrence_with_access(occurrence_id, action='delete')
         if not occurrence:
