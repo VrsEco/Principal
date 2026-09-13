@@ -927,7 +927,10 @@ class FinancialService:
         description_query: Optional[str] = None,
         general_query: Optional[str] = None,
         amount_value: Optional[Decimal] = None,
-    ) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
+        paginated: bool = False,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> Tuple[Optional[Any], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
             return None, scope_error
@@ -1153,8 +1156,29 @@ class FinancialService:
             settlement_match = db.session.query(FinancialSettlement.id).filter(*settlement_filters).exists()
             query = query.filter(settlement_match)
 
-        entries = query.order_by(FinancialEntry.competence_date.desc(), FinancialEntry.id.desc()).all()
-        return FinancialService.serialize_entry_list(entries), None
+        ordered_query = query.order_by(FinancialEntry.competence_date.desc(), FinancialEntry.id.desc())
+        if not paginated:
+            entries = ordered_query.all()
+            return FinancialService.serialize_entry_list(entries), None
+
+        normalized_page = max(int(page or 1), 1)
+        normalized_per_page = min(max(int(per_page or 50), 1), 100)
+        total = ordered_query.order_by(None).count()
+        entries = (
+            ordered_query
+            .offset((normalized_page - 1) * normalized_per_page)
+            .limit(normalized_per_page)
+            .all()
+        )
+        return {
+            "items": FinancialService.serialize_entry_list(entries),
+            "pagination": {
+                "page": normalized_page,
+                "per_page": normalized_per_page,
+                "total": total,
+                "has_more": normalized_page * normalized_per_page < total,
+            },
+        }, None
 
     @staticmethod
     def get_entry(

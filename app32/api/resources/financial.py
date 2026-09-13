@@ -161,6 +161,7 @@ class FinancialEntryListResource(Resource):
         company_id = get_request_company_id()
         if not company_id:
             return [], 200
+        paginated = str(request.args.get("paginated") or "false").strip().lower() == "true"
         entries, error = FinancialService.list_entries(
             company_id=company_id,
             allowed_company_ids=get_accessible_company_ids(),
@@ -186,6 +187,9 @@ class FinancialEntryListResource(Resource):
             description_query=(request.args.get("description_query") or "").strip() or None,
             general_query=(request.args.get("general_query") or "").strip() or None,
             amount_value=_get_optional_decimal_arg("amount_value"),
+            paginated=paginated,
+            page=request.args.get("page", 1, type=int) or 1,
+            per_page=request.args.get("per_page", 50, type=int) or 50,
         )
         if error:
             return {"error": error}, 400

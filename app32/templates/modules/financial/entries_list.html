@@ -42,15 +42,15 @@
             <strong id="stat-total">0</strong>
         </article>
         <article class="stat-card">
-            <span class="stat-label">Recebido</span>
+            <span class="stat-label">Recebido (lote)</span>
             <strong id="stat-received" class="stat-value stat-value--positive">R$ 0,00</strong>
         </article>
         <article class="stat-card">
-            <span class="stat-label">Pago</span>
+            <span class="stat-label">Pago (lote)</span>
             <strong id="stat-paid" class="stat-value stat-value--negative">R$ 0,00</strong>
         </article>
         <article class="stat-card">
-            <span class="stat-label">Total</span>
+            <span class="stat-label">Saldo (lote)</span>
             <strong id="stat-balance" class="stat-value">R$ 0,00</strong>
         </article>
     </section>
@@ -83,6 +83,7 @@
                 </tbody>
             </table>
         </div>
+        <div id="entries-pagination" style="display:flex; justify-content:center; margin:1rem 1.25rem 1.25rem;"></div>
     </section>
 </div>
 
@@ -191,6 +192,9 @@
         const entryFilterCount = document.getElementById('entries-filters-count');
         const clearEntriesFiltersButton = document.getElementById('entries-clear-filters');
         const applyEntriesFiltersButton = document.getElementById('entries-apply-filters');
+        const entriesPaginationContainer = document.getElementById('entries-pagination');
+        let loadedEntries = [];
+        let entriesPagination = { page: 1, total: 0, has_more: false };
         const autocompleteState = {
             counterparties: [],
             bankAccounts: [],
@@ -315,21 +319,26 @@
                 : 'amount-pill amount-pill--positive';
         }
 
-        async function loadEntries() {
+        async function loadEntries({ append = false } = {}) {
             tableBody.innerHTML = '<tr><td colspan="8" class="empty-cell">Carregando lançamentos...</td></tr>';
-            const params = new URLSearchParams({ company_id: companyId });
+            const page = append ? entriesPagination.page + 1 : 1;
+            const params = new URLSearchParams({ company_id: companyId, paginated: 'true', page: String(page), per_page: '50' });
             for (const [field, elementId] of entryFilterConfig) {
                 const value = document.getElementById(elementId)?.value;
                 if (value) params.set(field, value);
             }
 
             const response = await fetch(`/api/financial/entries?${params.toString()}`);
-            const items = await response.json();
-            renderEntries(Array.isArray(items) ? items : []);
+            const payload = await response.json();
+            if (!response.ok || !Array.isArray(payload.items)) throw new Error('Resposta inválida ao carregar lançamentos');
+            loadedEntries = append ? loadedEntries.concat(payload.items) : payload.items;
+            entriesPagination = payload.pagination || { page, total: loadedEntries.length, has_more: false };
+            renderEntries(loadedEntries);
         }
 
         function renderEntries(items) {
-            document.getElementById('stat-total').textContent = items.length;
+            document.getElementById('stat-total').textContent = entriesPagination.total;
+            entriesPaginationContainer.innerHTML = '';
             const received = items
                 .filter(item => Number(item.settled_amount || 0) > 0 && item.movement_nature === 'credit')
                 .reduce((acc, item) => acc + Number(item.settled_amount || 0), 0);
@@ -381,6 +390,15 @@
                     </td>
                 </tr>
             `).join('');
+
+            if (entriesPagination.has_more) {
+                const loadMoreButton = document.createElement('button');
+                loadMoreButton.type = 'button';
+                loadMoreButton.className = 'btn btn-secondary btn-sm';
+                loadMoreButton.textContent = `Carregar mais (${items.length} de ${entriesPagination.total})`;
+                loadMoreButton.addEventListener('click', () => loadEntries({ append: true }));
+                entriesPaginationContainer.appendChild(loadMoreButton);
+            }
         }
 
         entryFilterIds.forEach((id) => {
