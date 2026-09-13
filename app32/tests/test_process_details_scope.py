@@ -51,7 +51,7 @@ def _build_app():
     return app
 
 
-def test_process_details_route_syncs_active_company_from_process(monkeypatch):
+def test_process_details_route_uses_active_company_from_session(monkeypatch):
     app = _build_app()
     fake_process = SimpleNamespace(id=287, company_id=22, name='Processo X')
     fake_company = SimpleNamespace(id=22, name='Empresa X')
@@ -66,6 +66,7 @@ def test_process_details_route_syncs_active_company_from_process(monkeypatch):
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
     with app.test_request_context('/processes/287'):
+        session['active_company_id'] = 22
         response = process_routes.process_details.__wrapped__(287)
         active_company_id = session['active_company_id']
 
@@ -111,6 +112,7 @@ def test_process_bpmn_modeler_route_exposes_asset_version(monkeypatch):
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
     with app.test_request_context('/processes/287/bpmn-modeler'):
+        session['active_company_id'] = 22
         response = process_routes.process_bpmn_modeler.__wrapped__(287)
 
     assert response['template'] == 'modules/processes/bpmn_modeler.html'
@@ -132,6 +134,7 @@ def test_collaborator_can_access_bpmn_modeler_when_modeling_is_temporarily_open(
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
     with app.test_request_context('/processes/287/bpmn-modeler'):
+        session['active_company_id'] = 22
         response = process_routes.process_bpmn_modeler.__wrapped__(287)
 
     assert response['template'] == 'modules/processes/bpmn_modeler.html'

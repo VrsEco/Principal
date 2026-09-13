@@ -44,6 +44,7 @@ def test_process_portal_page_syncs_active_company(monkeypatch):
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
     with app.test_request_context('/companies/22/process-portal'):
+        session['active_company_id'] = 22
         response = process_routes.process_portal_page.__wrapped__(22)
         active_company_id = session['active_company_id']
 
@@ -67,6 +68,7 @@ def test_process_map_compact_passes_owner_display_mode_to_context_builder(monkey
     )
 
     with app.test_request_context('/process-map/compact?company_id=22&owner_display=role'):
+        session['active_company_id'] = 22
         response = process_routes.process_map_compact.__wrapped__()
 
     assert response['template'] == 'modules/processes/process_map_compact_view.html'

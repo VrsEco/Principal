@@ -27,7 +27,7 @@ from services.process_portal_service import (
 )
 from services.strategic_management_panel_service import build_strategic_management_panel
 from utils.indicator_filters import PROCESS_SOURCE_MODULES, indicator_supports_source_context
-from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company, can_model_process
+from utils.permissions import active_company_permission_required, get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company, can_model_process
 
 processes_bp = Blueprint('processes', __name__)
 logger = logging.getLogger(__name__)
@@ -322,7 +322,10 @@ def _fetch_routine_scope(cursor, routine_id: int):
         (routine_id,),
     )
     row = cursor.fetchone()
-    return dict(row) if row else None
+    routine = dict(row) if row else None
+    if routine and not _is_active_process_company(routine.get("company_id")):
+        return None
+    return routine
 
 
 def _validate_routine_collaborator_payload(data: dict):
@@ -354,16 +357,38 @@ def _validate_routine_collaborator_payload(data: dict):
     }, None
 
 
+def _get_active_process_company_id() -> int | None:
+    """Resolve o tenant ativo sem aceitar objeto/URL como seletor de contexto."""
+    try:
+        company_id = int(session.get('active_company_id'))
+    except (TypeError, ValueError):
+        company_id = None
+    if company_id and company_id > 0:
+        return company_id
+
+    if current_user.is_authenticated:
+        default_company_id = get_default_company_id()
+        if default_company_id:
+            session['active_company_id'] = default_company_id
+            return int(default_company_id)
+    return None
+
+
+def _is_active_process_company(company_id: int | None) -> bool:
+    active_company_id = _get_active_process_company_id()
+    return bool(active_company_id and company_id and int(active_company_id) == int(company_id))
+
+
 def _get_process_with_access(process_id: int, action: str = 'view') -> Process:
     process = Process.query.get_or_404(process_id)
 
     if not current_user.is_authenticated:
         abort(403, description="Usuário não autenticado.")
-
+    if not _is_active_process_company(process.company_id):
+        abort(403, description="Processo não pertence à empresa ativa.")
     if not has_permission(process.company_id, 'processes', action):
         abort(403, description=f"Permission denied: {action} on processes")
 
-    session['active_company_id'] = process.company_id
     return process
 
 
@@ -372,11 +397,11 @@ def _get_macro_process_with_access(macro_id: int, action: str = 'view') -> Macro
 
     if not current_user.is_authenticated:
         abort(403, description="Usuário não autenticado.")
-
+    if not _is_active_process_company(macro.company_id):
+        abort(403, description="Macroprocesso não pertence à empresa ativa.")
     if not has_permission(macro.company_id, 'processes', action):
         abort(403, description=f"Permission denied: {action} on processes")
 
-    session['active_company_id'] = macro.company_id
     return macro
 
 
@@ -520,9 +545,8 @@ def strategic_management_panel_redirect():
 
 
 @processes_bp.route('/companies/<int:company_id>/process-portal')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def process_portal_page(company_id):
-    session['active_company_id'] = company_id
     try:
         context = _build_process_map_compact_context(company_id)
     except ValueError as exc:
@@ -537,9 +561,8 @@ def process_portal_page(company_id):
 
 
 @processes_bp.route('/companies/<int:company_id>/process-portal/processes/<int:process_id>')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def process_portal_process_page(company_id, process_id):
-    session['active_company_id'] = company_id
     company = Company.query.get_or_404(company_id)
     return render_template(
         'modules/processes/process_portal_process_detail.html',
@@ -550,9 +573,8 @@ def process_portal_process_page(company_id, process_id):
 
 
 @processes_bp.route('/companies/<int:company_id>/process-portal/strategic-management')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def strategic_management_panel_page(company_id):
-    session['active_company_id'] = company_id
     company = Company.query.get_or_404(company_id)
     period = request.args.get('period') or 'month'
     audience = request.args.get('audience') or 'consultant'
@@ -569,9 +591,8 @@ def strategic_management_panel_page(company_id):
 
 
 @processes_bp.route('/api/companies/<int:company_id>/process-portal', methods=['GET'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_process_portal_summary(company_id):
-    session['active_company_id'] = company_id
     current_employee = _get_current_company_employee(company_id)
     payload = build_process_portal_summary(
         company_id,
@@ -582,9 +603,8 @@ def api_process_portal_summary(company_id):
 
 
 @processes_bp.route('/api/companies/<int:company_id>/process-portal/strategic-management', methods=['GET'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_strategic_management_panel(company_id):
-    session['active_company_id'] = company_id
     period = request.args.get('period') or 'month'
     audience = request.args.get('audience') or 'consultant'
     try:
@@ -601,9 +621,8 @@ def api_strategic_management_panel(company_id):
 
 
 @processes_bp.route('/api/companies/<int:company_id>/process-portal/processes/<int:process_id>', methods=['GET'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_process_portal_process_detail(company_id, process_id):
-    session['active_company_id'] = company_id
     current_employee = _get_current_company_employee(company_id)
     try:
         payload = build_process_portal_process_detail(
@@ -861,7 +880,7 @@ def bpms_analysis_redirect():
     return redirect(url_for('my_work.my_work'))
 
 @processes_bp.route('/companies/<int:company_id>/bpms-analysis')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def bpms_analysis_page(company_id):
     from services.process_bpms_analysis_service import build_bpms_analysis_page_context
 
@@ -876,7 +895,7 @@ def bpms_analysis_page(company_id):
     return render_template('modules/processes/bpms_analysis.html', **context)
 
 @processes_bp.route('/companies/<int:company_id>/bpms-analysis/save', methods=['POST'])
-@permission_required('processes', 'edit')
+@active_company_permission_required('processes', 'edit')
 def bpms_analysis_save(company_id):
     from services.process_bpms_analysis_service import save_bpms_analysis
 
@@ -913,7 +932,7 @@ def bpms_analysis_save(company_id):
 
 
 @processes_bp.route('/companies/<int:company_id>/bpms-analysis/request', methods=['POST'])
-@permission_required('processes', 'edit')
+@active_company_permission_required('processes', 'edit')
 def bpms_analysis_request(company_id):
     from services.process_bpms_analysis_service import create_improvement_request
 
@@ -942,7 +961,7 @@ def bpms_analysis_request(company_id):
 
 
 @processes_bp.route('/companies/<int:company_id>/bpms-analysis/<int:analysis_id>/review', methods=['POST'])
-@permission_required('processes', 'edit')
+@active_company_permission_required('processes', 'edit')
 def bpms_analysis_review(company_id, analysis_id):
     from services.process_bpms_analysis_service import review_squad_analysis
 
@@ -967,7 +986,7 @@ def bpms_analysis_review(company_id, analysis_id):
     return redirect(url_for('processes.bpms_analysis_page', company_id=company_id, analysis_id=analysis_id))
 
 @processes_bp.route('/companies/<int:company_id>/processes/<int:process_id>/bpms-analysis')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def bpms_analysis_for_process(company_id, process_id):
     process = Process.query.filter_by(company_id=company_id, id=process_id).first_or_404()
     return redirect(url_for('processes.bpms_analysis_page', company_id=company_id, process_id=process.id))
@@ -988,7 +1007,7 @@ def process_instances_redirect():
     return redirect(url_for('my_work.my_work'))
 
 @processes_bp.route('/companies/<int:company_id>/process-instances')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def process_instances_page(company_id):
     """Render the process instances management page."""
     instance_id = request.args.get('instance_id', type=int)
@@ -1017,7 +1036,7 @@ def process_occurrences_redirect():
     return redirect(url_for('my_work.my_work'))
 
 @processes_bp.route('/companies/<int:company_id>/process-occurrences')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def process_occurrences_page(company_id):
     """Render the process occurrences management page."""
     company = Company.query.get_or_404(company_id)
@@ -1031,7 +1050,7 @@ def process_occurrences_page(company_id):
     )
 
 @processes_bp.route('/companies/<int:company_id>/process-routines')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def process_routines_page(company_id):
     """Render the process routines management page."""
     company = Company.query.get_or_404(company_id)
@@ -1039,7 +1058,7 @@ def process_routines_page(company_id):
     return render_template('process_routines.html', company=company, is_collaborator=is_collaborator)
 
 @processes_bp.route('/companies/<int:company_id>/process-routines/analysis')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def process_routines_analysis_page(company_id):
     """Render analytical page for routine capacity and commitments."""
     from services.routine_analysis_service import get_routine_analysis
@@ -1084,7 +1103,7 @@ def process_routines_analysis_page(company_id):
 
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis', methods=['GET'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_get_process_routines_analysis(company_id):
     """Return analytical payload for routine capacity and commitments."""
     from services.routine_analysis_service import get_routine_analysis
@@ -1106,7 +1125,7 @@ def api_get_process_routines_analysis(company_id):
         return jsonify({"success": False, "message": str(exc)}), 500
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines', methods=['GET'])
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_get_process_routines(company_id):
     """Get all process routines for a company with collaborator summary"""
     try:
@@ -1206,7 +1225,7 @@ def api_get_process_routines(company_id):
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines', methods=['POST'])
-@permission_required('processes', 'create')
+@active_company_permission_required('processes', 'create')
 def api_create_process_routine(company_id):
     """Create a new process routine"""
     if not has_company_full_access(company_id):
@@ -1272,7 +1291,7 @@ def api_create_process_routine(company_id):
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/<int:routine_id>', methods=['PUT'])
-@permission_required('processes', 'edit')
+@active_company_permission_required('processes', 'edit')
 def api_update_process_routine(company_id, routine_id):
     """Update an existing process routine"""
     if not has_company_full_access(company_id):
@@ -1337,14 +1356,13 @@ def api_update_process_routine(company_id, routine_id):
     '/api/companies/<int:company_id>/process-routines/<int:routine_id>/execution-rule',
     methods=['GET'],
 )
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def api_get_routine_execution_rule(company_id, routine_id):
     from services.routine_execution_rule_service import get_execution_rule
 
     try:
         if not has_permission(company_id, 'processes', 'view'):
             return jsonify({"success": False, "message": "Acesso negado."}), 403
-        session['active_company_id'] = company_id
         return jsonify({"success": True, "data": get_execution_rule(company_id, routine_id)})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 404
@@ -1359,7 +1377,7 @@ def api_get_routine_execution_rule(company_id, routine_id):
     '/api/companies/<int:company_id>/process-routines/<int:routine_id>/execution-rule',
     methods=['PUT'],
 )
-@permission_required('processes', 'edit')
+@active_company_permission_required('processes', 'edit')
 def api_save_routine_execution_rule(company_id, routine_id):
     from services.routine_execution_rule_service import save_execution_rule
 
@@ -1367,7 +1385,6 @@ def api_save_routine_execution_rule(company_id, routine_id):
         return jsonify({"success": False, "message": "Acesso negado: somente gestores podem configurar a rotina."}), 403
     try:
         payload = RoutineExecutionRuleInput.model_validate(request.get_json(silent=True) or {}).model_dump()
-        session['active_company_id'] = company_id
         data = save_execution_rule(company_id, routine_id, payload)
         return jsonify({"success": True, "data": data})
     except ValidationError as exc:
@@ -1382,7 +1399,7 @@ def api_save_routine_execution_rule(company_id, routine_id):
 
 
 @processes_bp.route('/api/companies/<int:company_id>/routine-events', methods=['POST'])
-@permission_required('processes', 'create')
+@active_company_permission_required('processes', 'create')
 def api_dispatch_routine_event(company_id):
     from services.routine_execution_rule_service import dispatch_routine_event
 
@@ -1390,7 +1407,6 @@ def api_dispatch_routine_event(company_id):
         if not has_permission(company_id, 'processes', 'create'):
             return jsonify({"success": False, "message": "Acesso negado."}), 403
         payload = RoutineEventDispatchInput.model_validate(request.get_json(silent=True) or {})
-        session['active_company_id'] = company_id
         result = dispatch_routine_event(
             company_id,
             payload.trigger_code,
@@ -1411,14 +1427,13 @@ def api_dispatch_routine_event(company_id):
     '/api/companies/<int:company_id>/routine-trigger-events/<int:event_id>/confirm',
     methods=['POST'],
 )
-@permission_required('processes', 'edit')
+@active_company_permission_required('processes', 'edit')
 def api_confirm_routine_trigger_event(company_id, event_id):
     from services.routine_execution_rule_service import confirm_trigger_event
 
     if not has_company_full_access(company_id):
         return jsonify({"success": False, "message": "Acesso negado."}), 403
     try:
-        session['active_company_id'] = company_id
         return jsonify({"success": True, "data": confirm_trigger_event(company_id, event_id)})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
@@ -1429,7 +1444,7 @@ def api_confirm_routine_trigger_event(company_id, event_id):
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/<int:routine_id>', methods=['DELETE'])
-@permission_required('processes', 'delete')
+@active_company_permission_required('processes', 'delete')
 def api_delete_process_routine(company_id, routine_id):
     """Soft delete a process routine"""
     if not has_company_full_access(company_id):
@@ -1765,7 +1780,7 @@ def api_save_routine_journey_binding(routine_id):
 
 
 @processes_bp.route('/api/companies/<int:company_id>/employees')
-@permission_required('companies', 'view')
+@active_company_permission_required('companies', 'view')
 def api_get_company_employees(company_id):
     """Get all employees for a company"""
     try:
@@ -1786,7 +1801,7 @@ def api_get_company_employees(company_id):
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/companies/<int:company_id>/routines/<routine_id>')
-@permission_required('processes', 'view')
+@active_company_permission_required('processes', 'view')
 def routine_details_page(company_id, routine_id):
     """Routine details/creation page"""
     from flask import abort
