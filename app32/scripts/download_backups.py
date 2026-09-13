@@ -45,8 +45,12 @@ def resolve_default_local_backup_dir():
 
 LOCAL_BACKUP_DIR = resolve_default_local_backup_dir()
 
-# Configuração de retenção
-KEEP_LAST_N_BACKUPS = int(os.getenv("GV_BACKUP_KEEP_LAST", "3"))
+# Retenção GFS: os artefatos recentes preservam alta resolução; os antigos
+# preservam marcos diários e mensais. Os horários são interpretados na zona
+# horária da máquina que executa o backup (America/Bahia no agendador oficial).
+INTRADAY_RETENTION_DAYS = int(os.getenv("GV_BACKUP_INTRADAY_RETENTION_DAYS", "30"))
+DAILY_RETENTION_DAYS = int(os.getenv("GV_BACKUP_DAILY_RETENTION_DAYS", "90"))
+MONTHLY_RETENTION_DAYS = int(os.getenv("GV_BACKUP_MONTHLY_RETENTION_DAYS", "365"))
 
 
 def is_truthy_env(name):
@@ -82,22 +86,36 @@ def backup_sort_key(filename, directory):
     return str(int(os.path.getmtime(os.path.join(directory, filename))))
 
 
-def cleanup_old_backups(directory, pattern, keep_last=KEEP_LAST_N_BACKUPS, protected_files=None):
-    """Remove backups antigos, mantendo os mais recentes por timestamp do nome."""
+def _backup_timestamp(filename, directory):
+    match = re.search(r"(20\d{6})[_-](\d{6})", filename)
+    if match:
+        return datetime.strptime("".join(match.groups()), "%Y%m%d%H%M%S")
+    return datetime.fromtimestamp(os.path.getmtime(os.path.join(directory, filename)))
+
+
+def should_retain_backup(timestamp, now=None):
+    """Aplica GFS: 30d intraday, 90d diário 03h e 365d mensal dia 1 às 03h."""
+    now = now or datetime.now()
+    age_days = (now - timestamp).total_seconds() / 86400
+    if age_days <= INTRADAY_RETENTION_DAYS:
+        return True
+    if age_days <= DAILY_RETENTION_DAYS:
+        return timestamp.hour == 3
+    if age_days <= MONTHLY_RETENTION_DAYS:
+        return timestamp.day == 1 and timestamp.hour == 3
+    return False
+
+
+def cleanup_old_backups(directory, pattern, protected_files=None):
+    """Remove itens fora da política GFS, preservando arquivos protegidos."""
     protected_files = set(protected_files or [])
     try:
         files = [f for f in os.listdir(directory) if pattern in f]
         removable = [f for f in files if f not in protected_files]
-
-        if len(files) <= keep_last:
-            return 0
-
-        files_with_key = [(f, backup_sort_key(f, directory)) for f in removable]
-        files_with_key.sort(key=lambda x: x[1], reverse=True)
-
-        keep_budget = max(keep_last - len(protected_files), 0)
         removed = 0
-        for file, _ in files_with_key[keep_budget:]:
+        for file in removable:
+            if should_retain_backup(_backup_timestamp(file, directory)):
+                continue
             file_path = os.path.join(directory, file)
             os.remove(file_path)
             removed += 1
@@ -224,7 +242,7 @@ def download_database_backups(ssh, scp, required_remote_file=None):
         protected = [PurePosixPath(required_remote_file).name] if required_remote_file else []
         removed = cleanup_old_backups(local_db_dir, "backup_", protected_files=protected)
         if removed > 0:
-            print(f"  🗑️  {removed} backups antigos removidos (mantendo últimos {KEEP_LAST_N_BACKUPS})")
+            print(f"  🗑️  {removed} backups fora da retenção GFS removidos")
         
         sftp.close()
         
@@ -242,14 +260,6 @@ def create_code_snapshot(ssh, scp):
         snapshot_name = f"code_snapshot_{timestamp}.tar.gz"
         remote_snapshot = f"/home/app/{snapshot_name}"
         local_snapshot = os.path.join(local_code_dir, snapshot_name)
-        
-        # Verifica se já existe snapshot de hoje
-        today = datetime.now().strftime("%Y%m%d")
-        existing_snapshots = [f for f in os.listdir(local_code_dir) if f.startswith(f"code_snapshot_{today}")]
-        
-        if existing_snapshots:
-            print(f"  ✅ Snapshot de hoje já existe: {existing_snapshots[0]}")
-            return
         
         print(f"  Compactando código no servidor...")
         # Compacta o código no servidor (excluindo venv, .git, uploads)
@@ -270,7 +280,7 @@ def create_code_snapshot(ssh, scp):
         # Limpa snapshots antigos
         removed = cleanup_old_backups(local_code_dir, "code_snapshot_")
         if removed > 0:
-            print(f"  🗑️  {removed} snapshots antigos removidos (mantendo últimos {KEEP_LAST_N_BACKUPS})")
+            print(f"  🗑️  {removed} snapshots fora da retenção GFS removidos")
         
     except Exception as e:
         print(f"  ❌ Erro ao criar snapshot do código: {e}")

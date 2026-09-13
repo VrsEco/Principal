@@ -67,13 +67,16 @@ class DatabaseBackup:
         print("📦 Iniciando backup PostgreSQL...")
 
         # Parsear DATABASE_URL
-        from urllib.parse import urlparse
+        from urllib.parse import unquote, urlparse
 
         parsed = urlparse(self.database_url)
 
         # Configurar variáveis de ambiente para pg_dump
         env = os.environ.copy()
-        env["PGPASSWORD"] = parsed.password or ""
+        # SQLAlchemy aceita senhas percent-encoded na DATABASE_URL. O pg_dump
+        # recebe PGPASSWORD literalmente, portanto deve receber a senha já
+        # decodificada para não falhar na autenticação.
+        env["PGPASSWORD"] = unquote(parsed.password or "")
 
         # Nome do arquivo
         backup_file = self.backup_dir / self.generate_filename("sql")
