@@ -5,13 +5,29 @@ from datetime import datetime
 from sqlalchemy import or_
 logger = logging.getLogger(__name__)
 from services.incentive_service import IncentiveService
+from services.incentive_access_service import IncentiveAccessService
 from models import Indicator, IncentiveRuleSet, IncentiveCalculation, db
 from datetime import date
 
+
+def _authorized_company(action):
+    """Return the session company only when the actor can use it for ``action``."""
+    company_id = session.get('active_company_id')
+    try:
+        company_id = int(company_id)
+    except (TypeError, ValueError):
+        return None, ({"error": "No company active"}, 400)
+
+    if not IncentiveAccessService.is_allowed(company_id, action):
+        return None, ({"error": "Permission denied"}, 403)
+
+    return company_id, None
+
 class IncentiveIndicatorListResource(Resource):
     def get(self):
-        company_id = session.get('active_company_id')
-        if not company_id: return {"error": "No company active"}, 400
+        company_id, error = _authorized_company('view')
+        if error:
+            return error
         
         indicators = Indicator.query.filter_by(company_id=company_id).all()
         return [
@@ -26,16 +42,23 @@ class IncentiveIndicatorListResource(Resource):
 
 class IncentiveCalculationResource(Resource):
     def post(self):
-        company_id = int(session.get('active_company_id', 0))
-        data = request.get_json()
-        
-        rule_set_id = int(data.get('rule_set_id'))
+        company_id, error = _authorized_company('approve')
+        if error:
+            return error
+
+        data = request.get_json(silent=True) or {}
+        try:
+            rule_set_id = int(data.get('rule_set_id'))
+            start_date = date.fromisoformat(data.get('start_date'))
+            end_date = date.fromisoformat(data.get('end_date'))
+        except (TypeError, ValueError):
+            return {"error": "rule_set_id e período ISO são obrigatórios"}, 400
+
+        if not IncentiveService.get_rule_set(company_id, rule_set_id):
+            # Do not disclose whether a rule set exists in another tenant.
+            return {"error": "Plano de incentivo não encontrado"}, 404
         
         logger.info(f"Triggering calculation for Company {company_id}, Plan {rule_set_id} ({data.get('start_date')} to {data.get('end_date')})")
-        
-        # date strings in ISO format YYYY-MM-DD
-        start_date = date.fromisoformat(data.get('start_date'))
-        end_date = date.fromisoformat(data.get('end_date'))
         
         # Trigger harvesting before calculation
         IncentiveService.harvest_all_modules(company_id, start_date, end_date)
@@ -45,9 +68,9 @@ class IncentiveCalculationResource(Resource):
 
 class IncentiveSpiderWebResource(Resource):
     def get(self):
-        company_id = session.get('active_company_id')
-        if not company_id:
-            return {"error": "No company active"}, 400
+        company_id, error = _authorized_company('view')
+        if error:
+            return error
 
         from services.incentive_spider_web_service import IncentiveSpiderWebService
 
@@ -56,15 +79,25 @@ class IncentiveSpiderWebResource(Resource):
 
 class IncentiveRuleResource(Resource):
     def get(self, rule_set_id):
-        company_id = session.get('active_company_id')
+        company_id, error = _authorized_company('view')
+        if error:
+            return error
         from models import IncentiveRule, Indicator
-        
+
+        if not IncentiveService.get_rule_set(company_id, rule_set_id):
+            return {"error": "Plano de incentivo não encontrado"}, 404
+
         rules = db.session.query(
             IncentiveRule, Indicator.name
         ).join(
             Indicator, Indicator.id == IncentiveRule.indicator_id
         ).filter(
             IncentiveRule.rule_set_id == rule_set_id,
+            or_(
+                IncentiveRule.company_id == company_id,
+                IncentiveRule.company_id.is_(None),
+            ),
+            Indicator.company_id == company_id,
             IncentiveRule.deleted_at.is_(None),
         ).order_by(IncentiveRule.order_index).all()
         
@@ -81,10 +114,14 @@ class IncentiveRuleResource(Resource):
         ]
 
     def post(self, rule_set_id):
-        company_id = session.get('active_company_id')
-        data = request.get_json()
+        company_id, error = _authorized_company('configure')
+        if error:
+            return error
+        data = request.get_json(silent=True) or {}
         rules_data = data.get('rules', [])
-        
+        if not isinstance(rules_data, list):
+            return {"error": "rules deve ser uma lista"}, 400
+
         from models import IncentiveRule, IncentiveRuleSet
         
         # Verify ownership
@@ -94,7 +131,20 @@ class IncentiveRuleResource(Resource):
             IncentiveRuleSet.deleted_at.is_(None),
         ).first()
         if not rs:
-            return {"error": "Unauthorized"}, 403
+            return {"error": "Plano de incentivo não encontrado"}, 404
+
+        try:
+            indicator_ids = [int(rule_data['indicator_id']) for rule_data in rules_data]
+        except (KeyError, TypeError, ValueError):
+            return {"error": "Cada regra exige indicator_id válido"}, 400
+
+        if indicator_ids:
+            owned_indicators = Indicator.query.filter(
+                Indicator.company_id == company_id,
+                Indicator.id.in_(indicator_ids),
+            ).count()
+            if owned_indicators != len(set(indicator_ids)):
+                return {"error": "Indicador não encontrado"}, 404
             
         IncentiveRule.query.filter(
             IncentiveRule.rule_set_id == rule_set_id,
@@ -108,7 +158,7 @@ class IncentiveRuleResource(Resource):
         for idx, r_data in enumerate(rules_data):
             rule = IncentiveRule(
                 rule_set_id=rule_set_id,
-                indicator_id=r_data['indicator_id'],
+                indicator_id=int(r_data['indicator_id']),
                 weight=r_data.get('weight', 1.0),
                 target_value=r_data.get('target'),
                 max_cap=r_data.get('cap'),

@@ -1,6 +1,7 @@
 from datetime import datetime, date
-from flask import Blueprint, render_template, session, redirect, url_for, flash, jsonify, request
+from flask import Blueprint, render_template, session, redirect, url_for, flash, jsonify, request, abort
 from flask_login import login_required, current_user
+from services.incentive_access_service import IncentiveAccessService
 from services.incentive_service import IncentiveService
 from models import Company, IncentiveRuleSet, Employee, IncentiveCalculation, Indicator, IndicatorTree, IncentiveParticipant, UserLog, db
 from utils.permissions import is_administrator
@@ -9,6 +10,55 @@ import json
 
 incentives_bp = Blueprint('incentives', __name__, template_folder='templates')
 logger = logging.getLogger(__name__)
+
+
+_ENDPOINT_ACTION_OVERRIDES = {
+    'incentives.perform_action': 'approve',
+    'incentives.calculate_run': 'approve',
+    'incentives.fact_verify': 'approve',
+    'incentives.trigger_harvest': 'configure',
+    'incentives.seed_mock_data': 'configure',
+    'incentives.webhook_facts': 'create',
+}
+_METHOD_ACTIONS = {
+    'GET': 'view',
+    'POST': 'create',
+    'PATCH': 'edit',
+    'DELETE': 'delete',
+}
+
+
+def _active_company_id():
+    try:
+        company_id = int(session.get('active_company_id'))
+    except (TypeError, ValueError):
+        return None
+    return company_id if company_id > 0 else None
+
+
+@incentives_bp.before_request
+def enforce_incentives_tenant_permission():
+    """Authorize every Incentives route against the active tenant explicitly.
+
+    ``@login_required`` only authenticates the session.  It does not prove the
+    actor can operate on the active company or perform the requested action.
+    """
+    # Preserve Flask-Login's canonical unauthenticated behavior.  The
+    # authorization boundary only applies after an identity is established.
+    if not current_user.is_authenticated:
+        return None
+
+    company_id = _active_company_id()
+    action = _ENDPOINT_ACTION_OVERRIDES.get(
+        request.endpoint,
+        _METHOD_ACTIONS.get(request.method, 'view'),
+    )
+    if IncentiveAccessService.is_allowed(company_id, action):
+        return None
+
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Permission denied'}), 403
+    abort(403)
 
 
 def _log_protected_action(company_id: int, action: str, entity_type: str, entity_id: str, entity_name: str, reason: str):
@@ -66,24 +116,29 @@ def indicator_create():
     code = "PENDING"
     if tree_id:
         from models import IndicatorTree
-        parent_node = IndicatorTree.query.get(tree_id)
-        if parent_node:
-            # Check for existing children in Tree (subgroups)
-            tree_children = IndicatorTree.query.filter_by(parent_id=tree_id).all()
-            # Check for existing children in Indicators (KPIs)
-            indicator_children = Indicator.query.filter_by(tree_id=tree_id).all()
-            
-            indices = []
-            for c in tree_children:
-                last_part = c.code.split('.')[-1]
+        parent_node = IndicatorTree.query.filter_by(
+            id=tree_id,
+            company_id=company_id,
+        ).first()
+        if not parent_node:
+            abort(404)
+
+        # Check for existing children in Tree (subgroups)
+        tree_children = IndicatorTree.query.filter_by(parent_id=tree_id).all()
+        # Check for existing children in Indicators (KPIs)
+        indicator_children = Indicator.query.filter_by(tree_id=tree_id).all()
+
+        indices = []
+        for c in tree_children:
+            last_part = c.code.split('.')[-1]
+            if last_part.isdigit(): indices.append(int(last_part))
+        for i in indicator_children:
+            if i.code:
+                last_part = i.code.split('.')[-1]
                 if last_part.isdigit(): indices.append(int(last_part))
-            for i in indicator_children:
-                if i.code:
-                    last_part = i.code.split('.')[-1]
-                    if last_part.isdigit(): indices.append(int(last_part))
-            
-            next_idx = max(indices) + 1 if indices else 1
-            code = f"{parent_node.code}.{next_idx}"
+
+        next_idx = max(indices) + 1 if indices else 1
+        code = f"{parent_node.code}.{next_idx}"
     else:
         # Fallback to root-like if no tree_id provided (though form now requires it)
         company = Company.query.get(company_id)
@@ -95,6 +150,15 @@ def indicator_create():
             if len(parts) >= 3 and parts[2].isdigit(): indices.append(int(parts[2]))
         next_idx = max(indices) + 1 if indices else 1
         code = f"{prefix}.I.{next_idx}"
+
+    responsible_id = request.form.get('responsible_id')
+    if responsible_id:
+        try:
+            responsible_id = int(responsible_id)
+        except ValueError:
+            abort(404)
+        if not Employee.query.filter_by(id=responsible_id, company_id=company_id).first():
+            abort(404)
 
     ind = Indicator(
         company_id=company_id,
@@ -111,7 +175,7 @@ def indicator_create():
         unit=request.form.get('unit', 'pts'),
         polarity=request.form.get('polarity', 'positive'),
         formula=request.form.get('formula', '').strip() or None,
-        responsible_id=int(request.form.get('responsible_id')) if request.form.get('responsible_id') else None,
+        responsible_id=responsible_id,
         notes=request.form.get('notes', '').strip() or None,
         
         # Sensor intelligent fields
@@ -136,10 +200,10 @@ def indicator_edit(indicator_id):
     if not company_id: return redirect(url_for('auth.portal'))
     company_id = int(company_id)
 
-    ind = Indicator.query.get_or_404(indicator_id)
-    if ind.company_id != company_id:
-        flash('Acesso negado.', 'danger')
-        return redirect(url_for('incentives.indicator_list'))
+    ind = Indicator.query.filter_by(
+        id=indicator_id,
+        company_id=company_id,
+    ).first_or_404()
 
     if request.method == 'POST':
         ind.code = request.form.get('code', ind.code).strip().upper()
@@ -153,10 +217,29 @@ def indicator_edit(indicator_id):
         ind.unit = request.form.get('unit', ind.unit)
         ind.polarity = request.form.get('polarity', ind.polarity)
         ind.formula = request.form.get('formula', '').strip() or None
-        ind.responsible_id = int(request.form.get('responsible_id')) if request.form.get('responsible_id') else None
-        
         tree_id = request.form.get('tree_id')
-        ind.tree_id = int(tree_id) if tree_id and tree_id != 'None' else None
+        if tree_id and tree_id != 'None':
+            try:
+                tree_id = int(tree_id)
+            except ValueError:
+                abort(404)
+            if not IndicatorTree.query.filter_by(id=tree_id, company_id=company_id).first():
+                abort(404)
+            ind.tree_id = tree_id
+        else:
+            ind.tree_id = None
+
+        responsible_id = request.form.get('responsible_id')
+        if responsible_id:
+            try:
+                responsible_id = int(responsible_id)
+            except ValueError:
+                abort(404)
+            if not Employee.query.filter_by(id=responsible_id, company_id=company_id).first():
+                abort(404)
+            ind.responsible_id = responsible_id
+        else:
+            ind.responsible_id = None
         
         ind.notes = request.form.get('notes', '').strip() or None
         
@@ -253,11 +336,9 @@ def dashboard():
                 "available_years": years
             }
         )
-    except Exception as e:
-        import traceback
-        with open('debug_dashboard.txt', 'w') as f:
-            f.write(traceback.format_exc())
-        raise e
+    except Exception:
+        logger.exception("Falha ao montar o painel de incentivos")
+        raise
 
 @incentives_bp.route('/incentives/spider-web')
 @login_required
@@ -326,7 +407,7 @@ def rule_set_update(rule_set_id):
     company_id = int(session.get('active_company_id', 0))
     rs = IncentiveService.get_rule_set(company_id, rule_set_id)
     if not rs:
-        return jsonify({"error": "Acesso negado"}), 403
+        return jsonify({"error": "Plano de incentivo não encontrado"}), 404
 
     data = request.get_json() or {}
     for field in ('name', 'description', 'periodicity', 'valid_from', 'valid_to'):
@@ -353,8 +434,7 @@ def manage_rules(rule_set_id):
     company_id = int(company_id_raw)
     rule_set = IncentiveService.get_rule_set(company_id, rule_set_id)
     if not rule_set:
-        flash("Acesso negado.", "danger")
-        return redirect(url_for('incentives.dashboard'))
+        abort(404)
 
     from models import IncentiveRule, IncentiveParticipant
 
@@ -461,7 +541,7 @@ def participant_add(rule_set_id):
     company_id = int(session.get('active_company_id', 0))
     rule_set = IncentiveService.get_rule_set(company_id, rule_set_id)
     if not rule_set:
-        return jsonify({"error": "Acesso negado"}), 403
+        return jsonify({"error": "Plano de incentivo não encontrado"}), 404
 
     from models import IncentiveParticipant
     data = request.get_json() or request.form
@@ -487,6 +567,13 @@ def participant_add(rule_set_id):
         db.session.commit()
         return jsonify({"ok": True, "participant": existing.to_dict()}), 200
 
+    employee = Employee.query.filter_by(
+        id=employee_id,
+        company_id=company_id,
+    ).first()
+    if not employee:
+        return jsonify({"error": "Colaborador não encontrado"}), 404
+
     p = IncentiveParticipant(
         company_id=company_id,
         rule_set_id=rule_set_id,
@@ -507,10 +594,9 @@ def participant_update(participant_id):
     from models import IncentiveParticipant
     p = IncentiveParticipant.query.filter(
         IncentiveParticipant.id == participant_id,
+        IncentiveParticipant.company_id == company_id,
         IncentiveParticipant.deleted_at.is_(None),
     ).first_or_404()
-    if p.company_id != company_id:
-        return jsonify({"error": "Acesso negado"}), 403
 
     if request.method == 'DELETE':
         deleted, reason = IncentiveService.soft_delete_participant(company_id, p)
@@ -539,7 +625,7 @@ def vetor_add(rule_set_id):
     company_id = int(session.get('active_company_id', 0))
     rule_set = IncentiveService.get_rule_set(company_id, rule_set_id)
     if not rule_set:
-        return jsonify({"error": "Acesso negado"}), 403
+        return jsonify({"error": "Plano de incentivo não encontrado"}), 404
 
     from models import IncentiveRule
     data = request.get_json() or {}
@@ -556,6 +642,8 @@ def vetor_add(rule_set_id):
 
     # Garantir que usamos o company_id do RuleSet para evitar erro de Foreign Key
     actual_company_id = rule_set.company_id
+    if not Indicator.query.filter_by(id=indicator_id, company_id=actual_company_id).first():
+        return jsonify({"error": "Indicador não encontrado"}), 404
 
     try:
         v = IncentiveRule(
@@ -588,13 +676,15 @@ def vetor_add(rule_set_id):
 def vetor_update(vetor_id):
     company_id = int(session.get('active_company_id', 0))
     from models import IncentiveRule
-    v = IncentiveRule.query.filter(
+    v = IncentiveRule.query.join(
+        IncentiveRuleSet,
+        IncentiveRuleSet.id == IncentiveRule.rule_set_id,
+    ).filter(
         IncentiveRule.id == vetor_id,
         IncentiveRule.deleted_at.is_(None),
+        IncentiveRuleSet.company_id == company_id,
+        IncentiveRuleSet.deleted_at.is_(None),
     ).first_or_404()
-    rs = IncentiveService.get_rule_set(company_id, v.rule_set_id)
-    if not rs:
-        return jsonify({"error": "Acesso negado"}), 403
 
     if request.method == 'DELETE':
         deleted, reason = IncentiveService.soft_delete_rule(company_id, v)
@@ -628,13 +718,15 @@ def vetor_range_update(vetor_id):
     """Atualiza um único valor de faixa (color) no ranges_config do vetor."""
     company_id = int(session.get('active_company_id', 0))
     from models import IncentiveRule
-    v = IncentiveRule.query.filter(
+    v = IncentiveRule.query.join(
+        IncentiveRuleSet,
+        IncentiveRuleSet.id == IncentiveRule.rule_set_id,
+    ).filter(
         IncentiveRule.id == vetor_id,
         IncentiveRule.deleted_at.is_(None),
+        IncentiveRuleSet.company_id == company_id,
+        IncentiveRuleSet.deleted_at.is_(None),
     ).first_or_404()
-    rs = IncentiveService.get_rule_set(company_id, v.rule_set_id)
-    if not rs:
-        return jsonify({"error": "Acesso negado"}), 403
 
     data = request.get_json() or {}
     color = data.get('color')
@@ -735,14 +827,6 @@ def closing_report(calc_id):
             flash("Fechamento não encontrado.", "warning")
             return redirect(url_for('incentives.closings_list'))
         
-        # LOG
-        with open('debug_inc_redirect.txt', 'a') as f:
-            f.write(f"ACCESS: Calc {calc_id}, Co {calc.company_id}, Sess {company_id}\n")
-
-        if calc.company_id != company_id:
-            flash(f"Acesso negado. Esta apuração (ID {calc_id}) pertence à empresa ID {calc.company_id}, mas você está na empresa ID {company_id}.", "error")
-            return redirect(url_for('incentives.dashboard'))
-            
         participants = calc.results_payload.get('participants', []) if calc.results_payload else []
         
         return render_template(
@@ -751,11 +835,8 @@ def closing_report(calc_id):
             participants=participants,
             is_protected_admin=is_administrator(company_id)
         )
-    except Exception as e:
-        import traceback
-        err = traceback.format_exc()
-        with open('debug_inc_redirect.txt', 'a') as f:
-            f.write(f"ERROR: {str(e)}\n{err}\n")
+    except Exception:
+        logger.exception("Falha ao abrir fechamento de incentivos")
         flash("Erro interno do servidor. Tente novamente ou contate o suporte.", "danger")
         return redirect(url_for('incentives.reports_selector'))
 @incentives_bp.route('/incentives/closing/<int:calc_id>/<action>')
@@ -872,8 +953,10 @@ def validation_panel():
 def fact_update(fact_id):
     company_id = int(session.get('active_company_id', 0))
     from models import IndicatorData
-    fact = IndicatorData.query.get_or_404(fact_id)
-    if fact.company_id != company_id: return jsonify({"error": "Acesso negado"}), 403
+    fact = IndicatorData.query.filter_by(
+        id=fact_id,
+        company_id=company_id,
+    ).first_or_404()
     
     data = request.get_json()
     if 'value' in data:
@@ -888,8 +971,10 @@ def fact_update(fact_id):
 def fact_verify(fact_id):
     company_id = int(session.get('active_company_id', 0))
     from models import IndicatorData
-    fact = IndicatorData.query.get_or_404(fact_id)
-    if fact.company_id != company_id: return jsonify({"error": "Acesso negado"}), 403
+    fact = IndicatorData.query.filter_by(
+        id=fact_id,
+        company_id=company_id,
+    ).first_or_404()
     
     fact.status = 'verified'
     db.session.commit()
