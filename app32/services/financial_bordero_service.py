@@ -6,7 +6,7 @@ from decimal import Decimal, ROUND_DOWN
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from models import db
-from sqlalchemy import or_
+from sqlalchemy import case, func, or_
 from sqlalchemy.exc import IntegrityError
 from models.financial import (
     FinancialBordero,
@@ -41,7 +41,11 @@ class FinancialBorderoService:
         allowed_company_ids: Optional[Sequence[int]] = None,
         bordero_type: Optional[str] = None,
         status: Optional[str] = None,
-    ) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
+        search: Optional[str] = None,
+        paginated: bool = False,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> Tuple[Optional[Any], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
             return None, scope_error
@@ -54,9 +58,64 @@ class FinancialBorderoService:
             query = query.filter(FinancialBordero.bordero_type == bordero_type)
         if status:
             query = query.filter(FinancialBordero.status == status)
+        if search:
+            pattern = f"%{search.strip()}%"
+            query = query.filter(or_(
+                FinancialBordero.bordero_code.ilike(pattern),
+                FinancialBordero.name.ilike(pattern),
+                FinancialBordero.description.ilike(pattern),
+                FinancialBordero.notes.ilike(pattern),
+            ))
 
-        items = query.order_by(FinancialBordero.id.desc()).all()
-        return [FinancialBorderoService._serialize_bordero(bordero) for bordero in items], None
+        if not paginated:
+            items = query.order_by(FinancialBordero.id.desc()).all()
+            return [FinancialBorderoService._serialize_bordero(bordero) for bordero in items], None
+
+        normalized_page = max(int(page or 1), 1)
+        normalized_per_page = min(max(int(per_page or 50), 1), 100)
+        aggregates = query.with_entities(
+            func.count(FinancialBordero.id),
+            func.coalesce(func.sum(FinancialBordero.total_amount), 0),
+            func.coalesce(func.sum(FinancialBordero.settled_amount), 0),
+            func.coalesce(func.sum(FinancialBordero.open_amount), 0),
+            func.coalesce(func.sum(case(
+                (FinancialBordero.bordero_type == "receivable", FinancialBordero.total_amount),
+                else_=-FinancialBordero.total_amount,
+            )), 0),
+            func.coalesce(func.sum(case(
+                (FinancialBordero.bordero_type == "receivable", FinancialBordero.settled_amount),
+                else_=-FinancialBordero.settled_amount,
+            )), 0),
+            func.coalesce(func.sum(case(
+                (FinancialBordero.bordero_type == "receivable", FinancialBordero.open_amount),
+                else_=-FinancialBordero.open_amount,
+            )), 0),
+        ).one()
+        total = int(aggregates[0] or 0)
+        items = (
+            query.order_by(FinancialBordero.id.desc())
+            .offset((normalized_page - 1) * normalized_per_page)
+            .limit(normalized_per_page)
+            .all()
+        )
+
+        return {
+            "items": [FinancialBorderoService._serialize_bordero(bordero) for bordero in items],
+            "pagination": {
+                "page": normalized_page,
+                "per_page": normalized_per_page,
+                "total": total,
+                "has_more": normalized_page * normalized_per_page < total,
+            },
+            "summary": {
+                "total_amount": float(aggregates[1] or 0),
+                "settled_amount": float(aggregates[2] or 0),
+                "open_amount": float(aggregates[3] or 0),
+                "signed_total_amount": float(aggregates[4] or 0),
+                "signed_settled_amount": float(aggregates[5] or 0),
+                "signed_open_amount": float(aggregates[6] or 0),
+            },
+        }, None
 
     @staticmethod
     def get_bordero_detail(

@@ -1023,10 +1023,15 @@ class FinancialBorderoListResource(Resource):
     @active_company_permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
+        paginated = str(request.args.get("paginated") or "false").strip().lower() == "true"
         result, error = FinancialBorderoService.list_borderos(
             company_id=company_id,
             bordero_type=request.args.get("bordero_type"),
             status=request.args.get("status"),
+            search=request.args.get("search"),
+            paginated=paginated,
+            page=request.args.get("page", 1, type=int) or 1,
+            per_page=request.args.get("per_page", 50, type=int) or 50,
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:
