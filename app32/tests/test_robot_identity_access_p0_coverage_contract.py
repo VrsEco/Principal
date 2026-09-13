@@ -119,7 +119,7 @@ def test_identity_access_p0_routes_are_registered_and_guarded():
         has_auth_guard = (
             is_public_allowed
             or "login_required" in decorators
-            or "permission_required" in decorators
+            or ({"permission_required", "active_company_permission_required"} & decorators)
             or "current_user" in body
             or "is_platform_admin" in body
         )

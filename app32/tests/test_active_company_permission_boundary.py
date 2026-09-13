@@ -204,3 +204,13 @@ def test_company_endpoints_bind_to_active_tenant_and_do_not_use_default_password
     assert "data.get('password', '123456')" not in route_source
     assert "Senha é obrigatória para criar um novo acesso." in route_source
     assert "@active_company_permission_required('companies', 'view')\n    def get(self, company_id):" in resource_source
+
+
+def test_user_employee_routes_scope_direct_employee_ids_to_active_company():
+    source = (Path(__file__).resolve().parents[1] / 'api' / 'user_employee.py').read_text(encoding='utf-8')
+
+    assert "@active_company_permission_required('companies', 'edit')\ndef add_user_to_company" in source
+    assert "@active_company_permission_required('companies', 'view')\ndef get_company_employees" in source
+    assert source.count('id=employee_id,\n            company_id=active_company_id,') == 2
+    assert "else ['phone', 'whatsapp']" in source
+    assert "Apenas administradores podem alterar vínculo de usuário" in source

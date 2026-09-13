@@ -9,7 +9,13 @@ from models import db
 from models.user import User
 from models.company import Company
 from models.employee import Employee
-from utils.permissions import admin_required, can_access_company, is_platform_admin
+from utils.permissions import (
+    active_company_permission_required,
+    admin_required,
+    can_access_company,
+    get_active_company_id,
+    is_platform_admin,
+)
 from services.identity.user_employee_orchestrator_service import (
     UserEmployeeOrchestratorService,
 )
@@ -76,6 +82,7 @@ def register_user_with_company():
 @user_employee_bp.route('/add-to-company', methods=['POST'])
 @login_required
 @admin_required
+@active_company_permission_required('companies', 'edit')
 def add_user_to_company():
     """
     Adiciona um usuário existente como colaborador de uma empresa
@@ -172,6 +179,7 @@ def get_my_activities():
 
 @user_employee_bp.route('/employees/<int:company_id>', methods=['GET'])
 @login_required
+@active_company_permission_required('companies', 'view')
 def get_company_employees(company_id):
     """
     Lista todos os colaboradores de uma empresa
@@ -221,33 +229,48 @@ def update_employee(employee_id):
     }
     """
     try:
-        employee = Employee.query.get(employee_id)
-        
+        active_company_id = get_active_company_id()
+        if not active_company_id:
+            return jsonify({'success': False, 'error': 'Empresa ativa obrigatória.'}), 400
+
+        # O identificador do colaborador não pode selecionar outro tenant.
+        employee = Employee.query.filter_by(
+            id=employee_id,
+            company_id=active_company_id,
+        ).first()
         if not employee:
             return jsonify({
                 'success': False,
                 'error': 'Colaborador não encontrado'
             }), 404
-        
-        # Verificar permissão
-        if not is_platform_admin() and employee.user_id != current_user.id:
+
+        platform_admin = is_platform_admin()
+        if not platform_admin and employee.user_id != current_user.id:
             return jsonify({
                 'success': False,
                 'error': 'Você não tem permissão para editar este colaborador'
             }), 403
-        
-        data = request.get_json()
-        
-        # Atualizar campos permitidos
-        allowed_fields = ['phone', 'whatsapp', 'department', 'status', 'weekly_hours', 'notes']
+
+        data = request.get_json() or {}
+        # O próprio colaborador só pode alterar contatos; atributos organizacionais
+        # e vínculo de identidade exigem administração da plataforma.
+        allowed_fields = (
+            ['phone', 'whatsapp', 'department', 'status', 'weekly_hours', 'notes']
+            if platform_admin
+            else ['phone', 'whatsapp']
+        )
         for field in allowed_fields:
             if field in data:
                 setattr(employee, field, data[field])
-        
-        # Vincular a usuário se fornecido
+
         if 'user_id' in data and data['user_id']:
+            if not platform_admin:
+                return jsonify({
+                    'success': False,
+                    'error': 'Apenas administradores podem alterar vínculo de usuário'
+                }), 403
             link_result = UserEmployeeOrchestratorService.link_existing_user_to_employee(
-                company_id=employee.company_id,
+                company_id=active_company_id,
                 user_id=int(data['user_id']),
                 employee_id=employee_id,
             )
@@ -292,15 +315,21 @@ def link_employee_to_user(employee_id):
                 'error': 'Apenas administradores podem executar esta ação'
             }), 403
         
-        employee = Employee.query.get(employee_id)
-        
+        active_company_id = get_active_company_id()
+        if not active_company_id:
+            return jsonify({'success': False, 'error': 'Empresa ativa obrigatória.'}), 400
+
+        employee = Employee.query.filter_by(
+            id=employee_id,
+            company_id=active_company_id,
+        ).first()
         if not employee:
             return jsonify({
                 'success': False,
                 'error': 'Colaborador não encontrado'
             }), 404
-        
-        data = request.get_json()
+
+        data = request.get_json() or {}
         
         if 'user_id' not in data or not data['user_id']:
             return jsonify({
@@ -318,7 +347,7 @@ def link_employee_to_user(employee_id):
             }), 404
         
         result = UserEmployeeOrchestratorService.link_existing_user_to_employee(
-            company_id=employee.company_id,
+            company_id=active_company_id,
             user_id=user_id,
             employee_id=employee_id,
         )
