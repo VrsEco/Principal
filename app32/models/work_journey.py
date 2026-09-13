@@ -5,7 +5,10 @@ from . import db
 
 class WorkJourneyBlock(db.Model):
     __tablename__ = 'work_journey_blocks'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        db.Index('ix_work_journey_blocks_company_employee_active', 'company_id', 'employee_id', 'is_active'),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id', ondelete='CASCADE'), nullable=False, index=True)
@@ -45,7 +48,10 @@ class WorkJourneyBlock(db.Model):
 
 class WorkJourneyRule(db.Model):
     __tablename__ = 'work_journey_rules'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        db.Index('ix_work_journey_rules_company_employee_active', 'company_id', 'employee_id', 'is_active'),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id', ondelete='CASCADE'), nullable=False, index=True)
@@ -93,6 +99,8 @@ class WorkJourneyItem(db.Model):
     __table_args__ = (
         db.UniqueConstraint('company_id', 'item_type', 'source_id', name='uq_work_journey_items_source'),
         db.UniqueConstraint('company_id', 'rule_id', 'occurrence_date', name='uq_work_journey_items_rule_occurrence'),
+        db.Index('ix_work_journey_items_company_employee_due', 'company_id', 'employee_id', 'due_date'),
+        db.Index('ix_work_journey_items_company_employee_occurrence', 'company_id', 'employee_id', 'occurrence_date'),
         {'extend_existing': True},
     )
 
