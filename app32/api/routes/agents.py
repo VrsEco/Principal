@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from services.agent_conversation_service import AgentConversationService
 from services.cadastro_agent_service import CadastroAgentService
-from utils.permissions import has_company_full_access, is_platform_admin
+from utils.permissions import has_company_full_access
 
 agents_bp = Blueprint('agents', __name__)
 cadastro_service = CadastroAgentService()
@@ -84,6 +84,34 @@ def _has_operational_full_access(company_id=None):
 
 def _is_platform_admin_local():
     return str(getattr(current_user, 'role', '')).strip().lower() in {'admin', 'administrator'}
+
+
+def _active_company_context_or_error():
+    """Resolve exclusivamente o tenant da sessão para operações sensíveis."""
+    from flask import session
+
+    try:
+        company_id = int(session.get('active_company_id'))
+    except (TypeError, ValueError):
+        company_id = None
+    if not company_id or company_id <= 0:
+        return None, (jsonify({"success": False, "error": "Empresa ativa obrigatória."}), 400)
+    return company_id, None
+
+
+def _action_scope_or_error(action):
+    active_company_id, error_response = _active_company_context_or_error()
+    if error_response:
+        return None, error_response
+    if getattr(action, 'company_id', None) not in (None, active_company_id):
+        return None, (jsonify({"success": False, "error": "Ação não pertence à empresa ativa."}), 403)
+    return active_company_id, None
+
+
+def _platform_admin_guard(message="Apenas administradores da plataforma podem executar esta operação."):
+    if not _is_platform_admin_local():
+        return jsonify({"success": False, "error": message}), 403
+    return None
 
 
 def _log_workflow_approval_message(action, message: str, metadata=None):
@@ -1117,6 +1145,9 @@ def get_agents_contacts():
 @agents_bp.route('/api/agents', methods=['GET'])
 @login_required
 def list_agents():
+    guard = _platform_admin_guard()
+    if guard:
+        return guard
     from models.ai_agent import AIAgent
 
     rows = AIAgent.query.order_by(AIAgent.created_at.desc()).all()
@@ -1142,6 +1173,9 @@ def list_agents():
 @agents_bp.route('/api/agents/<string:agent_id>/test', methods=['POST'])
 @login_required
 def test_agent(agent_id):
+    guard = _platform_admin_guard()
+    if guard:
+        return guard
     from models.ai_agent import AIAgent
     from services.ai_service import AIService
 
@@ -1168,12 +1202,7 @@ def test_agent(agent_id):
 
 
 def _menu_admin_guard():
-    if not _is_platform_admin_local():
-        return jsonify({
-            "success": False,
-            "error": "Apenas administradores podem editar o menu de agentes."
-        }), 403
-    return None
+    return _platform_admin_guard("Apenas administradores podem editar o menu de agentes.")
 
 
 def _to_bool(value, default=True):
@@ -1190,23 +1219,22 @@ def list_agent_menu_options():
     from flask import session
     from src.intelligence.menu_engine import list_menu_options
 
-    active_company_id = session.get('active_company_id')
+    active_company_id, error_response = _active_company_context_or_error()
+    if error_response:
+        return error_response
+    requested_company_id = request.args.get('company_id')
+    if requested_company_id is not None:
+        try:
+            if int(requested_company_id) != active_company_id:
+                return jsonify({"success": False, "error": "Empresa da requisição não corresponde à empresa ativa."}), 403
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "error": "company_id invalido"}), 400
     parent_code = request.args.get('parent_code')
     include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
     include_global = request.args.get('include_global', 'true').lower() == 'true'
 
-    # Admin pode consultar menu de qualquer empresa explicitamente
-    company_id_param = request.args.get('company_id')
-    if is_platform_admin() and company_id_param is not None:
-        try:
-            company_id = int(company_id_param)
-        except ValueError:
-            return jsonify({"success": False, "error": "company_id invalido"}), 400
-    else:
-        company_id = active_company_id
-
     options = list_menu_options(
-        company_id=company_id,
+        company_id=active_company_id,
         parent_code=parent_code,
         include_inactive=include_inactive,
         include_global=include_global,
@@ -1238,14 +1266,19 @@ def create_agent_menu_option():
             "error": "Campos obrigatorios: code e title."
         }), 400
 
-    company_id = data.get('company_id', session.get('active_company_id'))
-    if company_id in ('', 'null', 'None'):
+    active_company_id, error_response = _active_company_context_or_error()
+    if error_response:
+        return error_response
+    requested_company_id = data.get('company_id', active_company_id)
+    if requested_company_id in ('', 'null', 'None'):
         company_id = None
-    if company_id is not None:
+    else:
         try:
-            company_id = int(company_id)
+            company_id = int(requested_company_id)
         except (TypeError, ValueError):
             return jsonify({"success": False, "error": "company_id invalido"}), 400
+        if company_id != active_company_id:
+            return jsonify({"success": False, "error": "Empresa da requisição não corresponde à empresa ativa."}), 403
     parent_id = data.get('parent_id')
     parent_code = data.get('parent_code')
 
@@ -1310,12 +1343,31 @@ def update_agent_menu_option(option_id):
     if not option:
         return jsonify({"success": False, "error": "Opcao nao encontrada."}), 404
 
+    active_company_id, error_response = _active_company_context_or_error()
+    if error_response:
+        return error_response
+    if option.company_id not in (None, active_company_id):
+        return jsonify({"success": False, "error": "Opção não pertence à empresa ativa."}), 403
+
     data = request.get_json(silent=True) or {}
+    if 'company_id' in data:
+        requested_company_id = data.get('company_id')
+        if requested_company_id in ('', 'null', 'None'):
+            requested_company_id = None
+        else:
+            try:
+                requested_company_id = int(requested_company_id)
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "error": "company_id invalido"}), 400
+        if requested_company_id not in (None, active_company_id):
+            return jsonify({"success": False, "error": "Empresa da requisição não corresponde à empresa ativa."}), 403
+        if requested_company_id != option.company_id:
+            return jsonify({"success": False, "error": "O escopo da opção não pode ser alterado por edição."}), 400
 
     allowed_fields = {
         'code', 'title', 'action_key', 'description', 'required_fields', 'keywords',
         'confirmation_template', 'execution_template', 'sort_order', 'is_active',
-        'parent_id', 'company_id'
+        'parent_id'
     }
 
     for field, value in data.items():
@@ -1324,14 +1376,6 @@ def update_agent_menu_option(option_id):
 
     if data.get('is_active', None) is not None:
         option.is_active = _to_bool(data.get('is_active'), default=option.is_active)
-
-    if data.get('company_id', None) in ('', 'null', 'None'):
-        option.company_id = None
-    elif data.get('company_id', None) is not None:
-        try:
-            option.company_id = int(data.get('company_id'))
-        except (TypeError, ValueError):
-            return jsonify({"success": False, "error": "company_id invalido"}), 400
 
     if data.get('sort_order', None) is not None:
         try:
@@ -1379,7 +1423,9 @@ def approve_action(action_id):
     if not action:
         return jsonify({"success": False, "error": "Ação não encontrada."}), 404
 
-    active_company_id = session.get('active_company_id')
+    active_company_id, error_response = _action_scope_or_error(action)
+    if error_response:
+        return error_response
 
     if action.type == 'workflow_approval_request':
         if not _has_operational_full_access(active_company_id):
@@ -1407,8 +1453,9 @@ def approve_action(action_id):
         db.session.rollback()
         return jsonify({"success": False, "error": outcome.message}), outcome.http_status
 
-    if active_company_id and action.company_id != active_company_id:
-        return jsonify({"success": False, "error": "Ação não pertence à empresa ativa."}), 403
+    guard = _platform_admin_guard("Apenas administradores da plataforma podem executar reparos de engenharia.")
+    if guard:
+        return guard
 
     success, message = engineering_service.execute_repair(action_id)
 
@@ -1436,7 +1483,9 @@ def revalidate_action(action_id):
     if action.type != 'workflow_approval_request':
         return jsonify({"success": False, "error": "Ação não suporta revalidação operacional."}), 400
 
-    active_company_id = session.get('active_company_id')
+    active_company_id, error_response = _action_scope_or_error(action)
+    if error_response:
+        return error_response
     if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para revalidar esta ação."}), 403
     service = WorkflowApprovalService(resume_executor=execute_approved_resume_payload)
@@ -1464,8 +1513,19 @@ def revalidate_action(action_id):
 @agents_bp.route('/api/agents/actions/rollback/<int:action_id>', methods=['POST'])
 @login_required
 def rollback_action(action_id):
+    from models.agent_action import AgentAction
     from services.engineering_service import engineering_service
-    
+
+    guard = _platform_admin_guard("Apenas administradores da plataforma podem executar rollback de reparo.")
+    if guard:
+        return guard
+    action = AgentAction.query.get(action_id)
+    if not action:
+        return jsonify({"success": False, "error": "Ação não encontrada."}), 404
+    _active_company_id, error_response = _action_scope_or_error(action)
+    if error_response:
+        return error_response
+
     success, message = engineering_service.rollback_repair(action_id)
     
     if success:
@@ -1578,7 +1638,9 @@ def reject_action(action_id):
     if action.type != 'workflow_approval_request':
         return jsonify({"success": False, "error": "Ação não suporta rejeição operacional."}), 400
 
-    active_company_id = session.get('active_company_id')
+    active_company_id, error_response = _action_scope_or_error(action)
+    if error_response:
+        return error_response
     if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para rejeitar esta ação."}), 403
 
