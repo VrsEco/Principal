@@ -20,9 +20,9 @@ def test_plan_resource_requires_company_id_and_tenant_validation():
 def test_okr_resource_write_methods_have_permission_and_company_scope():
     text = _read("okr.py")
 
-    assert "@permission_required('okrs', 'create')\n    def post(self):" in text
-    assert "@permission_required('okrs', 'edit')\n    def put(self, okr_id):" in text
-    assert "@permission_required('okrs', 'delete')\n    def delete(self, okr_id):" in text
+    assert "@active_company_permission_required('okrs', 'create')\n    def post(self):" in text
+    assert "@active_company_permission_required('okrs', 'edit')\n    def put(self, okr_id):" in text
+    assert "@active_company_permission_required('okrs', 'delete')\n    def delete(self, okr_id):" in text
     assert "OKRGlobal.query.filter_by(id=okr_id, company_id=company_id).first_or_404()" in text
     assert "OKRArea.query.filter_by(id=okr_id, company_id=company_id).first_or_404()" in text
     assert "KeyResult.query.join(OKRGlobal" in text
@@ -34,7 +34,7 @@ def test_okr_resource_write_methods_have_permission_and_company_scope():
 def test_indicator_resource_goal_and_data_access_are_company_scoped():
     text = _read("indicator.py")
 
-    assert "@permission_required('indicators', 'edit')\n    def patch(self, goal_id):" in text
+    assert "@active_company_permission_required('indicators', 'edit')\n    def patch(self, goal_id):" in text
     assert "IndicatorGoal.query.filter_by(id=goal_id, company_id=company_id).first_or_404()" in text
     assert "query = IndicatorData.query.filter_by(company_id=company_id)" in text
     assert "IndicatorData.query.filter_by(id=data_id, company_id=company_id).first_or_404()" in text

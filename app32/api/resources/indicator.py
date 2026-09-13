@@ -1,4 +1,4 @@
-from flask import request
+from flask import request, session
 from flask_restful import Resource
 from marshmallow import ValidationError
 import logging
@@ -12,7 +12,7 @@ from schemas.indicator import (
     indicator_entity_link_schema, indicator_entity_links_schema,
 )
 
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 from utils.catalog_sort import sort_catalog_entries
 from utils.indicator_filters import (
     PROCESS_SOURCE_MODULES,
@@ -25,8 +25,6 @@ from utils.indicator_filters import (
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 def get_request_company_id():
-    from flask import session
-    
     def clean(val):
         if val is None: return None
         s = str(val).strip().lower()
@@ -36,7 +34,14 @@ def get_request_company_id():
         except (ValueError, TypeError):
             return None
 
-    # 1. Try Query Arg
+    # The active session is authoritative.  Explicit request values are
+    # checked by ``active_company_permission_required`` before this resource
+    # executes; the fallbacks below keep direct unit calls backward compatible.
+    cid = clean(session.get('active_company_id'))
+    if cid is not None:
+        return cid
+
+    # Legacy fallback for direct, non-request-dispatch consumers only.
     cid = clean(request.args.get('company_id'))
     if cid is not None: return cid
     
@@ -50,9 +55,7 @@ def get_request_company_id():
     except Exception:
         pass
 
-    # 3. Try Session
-    cid = clean(session.get('active_company_id'))
-    return cid
+    return None
 
 
 def _coerce_optional_int(value):
@@ -121,7 +124,7 @@ def _apply_indicator_context_filters(query, process_id=None, project_id=None):
     return query
 
 class IndicatorListResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self):
         company_id = get_request_company_id()
         if not company_id:
@@ -138,7 +141,7 @@ class IndicatorListResource(Resource):
         indicators = sort_catalog_entries(query.all())
         return indicators_schema.dump(indicators), 200
 
-    @permission_required('indicators', 'create')
+    @active_company_permission_required('indicators', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -198,13 +201,13 @@ class IndicatorListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self, indicator_id):
         company_id = get_request_company_id()
         indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first_or_404()
         return indicator_schema.dump(indicator), 200
 
-    @permission_required('indicators', 'edit')
+    @active_company_permission_required('indicators', 'edit')
     def put(self, indicator_id):
         company_id = get_request_company_id()
         indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first_or_404()
@@ -222,7 +225,7 @@ class IndicatorResource(Resource):
             logger.exception("Erro ao atualizar indicador %s", indicator_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('indicators', 'delete')
+    @active_company_permission_required('indicators', 'delete')
     def delete(self, indicator_id):
         company_id = get_request_company_id()
         indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first_or_404()
@@ -250,7 +253,7 @@ class IndicatorResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorGroupListResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self):
         company_id = get_request_company_id()
         if not company_id:
@@ -260,7 +263,7 @@ class IndicatorGroupListResource(Resource):
         groups = sort_catalog_entries(query.all())
         return indicator_groups_schema.dump(groups), 200
 
-    @permission_required('indicators', 'create')
+    @active_company_permission_required('indicators', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -280,7 +283,7 @@ class IndicatorGroupListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorGoalListResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self):
         company_id = get_request_company_id()
         indicator_id = request.args.get('indicator_id')
@@ -291,7 +294,7 @@ class IndicatorGoalListResource(Resource):
         goals = query.order_by(IndicatorGoal.period_start.desc(), IndicatorGoal.created_at.desc()).all()
         return indicator_goals_schema.dump(goals), 200
 
-    @permission_required('indicators', 'create')
+    @active_company_permission_required('indicators', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -346,13 +349,13 @@ class IndicatorGoalListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorGoalResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self, goal_id):
         company_id = get_request_company_id()
         goal = IndicatorGoal.query.filter_by(id=goal_id, company_id=company_id).first_or_404()
         return indicator_goal_schema.dump(goal), 200
 
-    @permission_required('indicators', 'edit')
+    @active_company_permission_required('indicators', 'edit')
     def put(self, goal_id):
         company_id = get_request_company_id()
         goal = IndicatorGoal.query.filter_by(id=goal_id, company_id=company_id).first_or_404()
@@ -396,11 +399,11 @@ class IndicatorGoalResource(Resource):
             logger.exception("Erro ao atualizar meta %s", goal_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('indicators', 'edit')
+    @active_company_permission_required('indicators', 'edit')
     def patch(self, goal_id):
         return self.put(goal_id)
 
-    @permission_required('indicators', 'edit')
+    @active_company_permission_required('indicators', 'edit')
     def delete(self, goal_id):
         company_id = get_request_company_id()
         goal = IndicatorGoal.query.filter_by(id=goal_id, company_id=company_id).first_or_404()
@@ -414,7 +417,7 @@ class IndicatorGoalResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorDataListResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self):
         company_id = get_request_company_id()
         goal_id = request.args.get('goal_id')
@@ -433,7 +436,7 @@ class IndicatorDataListResource(Resource):
         return indicator_data_list_schema.dump(data_records), 200
 
 
-    @permission_required('indicators', 'create')
+    @active_company_permission_required('indicators', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -471,13 +474,13 @@ class IndicatorDataListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorDataResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self, data_id):
         company_id = get_request_company_id()
         record = IndicatorData.query.filter_by(id=data_id, company_id=company_id).first_or_404()
         return indicator_data_schema.dump(record), 200
 
-    @permission_required('indicators', 'edit')
+    @active_company_permission_required('indicators', 'edit')
     def delete(self, data_id):
         company_id = get_request_company_id()
         record = IndicatorData.query.filter_by(id=data_id, company_id=company_id).first_or_404()
@@ -492,7 +495,7 @@ class IndicatorDataResource(Resource):
 
 class IndicatorAuditResource(Resource):
     """Resource para o Sapiens Wizard auditar indicadores sem rotina."""
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self):
         company_id = get_request_company_id()
         if not company_id: return {"error": "Empresa não identificada"}, 400
@@ -503,7 +506,7 @@ class IndicatorAuditResource(Resource):
 
 
 class IndicatorEntityLinkListResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self):
         company_id = get_request_company_id()
         if not company_id:
@@ -531,7 +534,7 @@ class IndicatorEntityLinkListResource(Resource):
         ).all()
         return indicator_entity_links_schema.dump(links), 200
 
-    @permission_required('indicators', 'edit')
+    @active_company_permission_required('indicators', 'edit')
     def post(self):
         company_id = get_request_company_id()
         if not company_id:
@@ -553,7 +556,7 @@ class IndicatorEntityLinkListResource(Resource):
 
 
 class IndicatorEntityLinkResource(Resource):
-    @permission_required('indicators', 'edit')
+    @active_company_permission_required('indicators', 'edit')
     def delete(self, link_id):
         company_id = get_request_company_id()
         link = IndicatorEntityLink.query.filter_by(id=link_id, company_id=company_id).first_or_404()
@@ -568,7 +571,7 @@ class IndicatorEntityLinkResource(Resource):
 
 
 class IndicatorLinkMapResource(Resource):
-    @permission_required('indicators', 'view')
+    @active_company_permission_required('indicators', 'view')
     def get(self):
         company_id = get_request_company_id()
         if not company_id:
@@ -583,7 +586,7 @@ class IndicatorLinkMapResource(Resource):
 
 class IndicatorWizardBatchResource(Resource):
     """Resource para o Sapiens Wizard aplicar vínculos em massa às metas."""
-    @permission_required('indicators', 'edit')
+    @active_company_permission_required('indicators', 'edit')
     def post(self):
         from models import IndicatorGoal
         from services.indicator_service import IndicatorGoalService
@@ -611,7 +614,7 @@ class IndicatorWizardBatchResource(Resource):
         return {"status": "success", "updated": updated_count}, 200
 class IndicatorDataBatchResource(Resource):
     """Resource para salvar múltiplos registros de dados de uma vez (Planilha de Rotina)."""
-    @permission_required('indicators', 'create')
+    @active_company_permission_required('indicators', 'create')
     def post(self):
         try:
             payload = request.get_json()
@@ -625,9 +628,10 @@ class IndicatorDataBatchResource(Resource):
             
             created_records = []
             for entry in entries:
-                # Merge company_id if not present
-                if 'company_id' not in entry:
-                    entry['company_id'] = company_id
+                # The batch body cannot select a tenant per entry.  All
+                # records persist under the same company authorized for this
+                # request.
+                entry['company_id'] = company_id
                 
                 # Check if it has a value (skip empty entries)
                 if entry.get('measured_value') is None or entry.get('measured_value') == '':

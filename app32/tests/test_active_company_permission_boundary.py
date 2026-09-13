@@ -1,0 +1,76 @@
+from flask import Flask, session
+from pathlib import Path
+
+from api.resources import indicator as indicator_resource
+from api.resources import okr as okr_resource
+from api.resources import plan as plan_resource
+from utils import permissions
+
+
+def _app():
+    app = Flask(__name__)
+    app.config['TESTING'] = True
+    app.secret_key = 'test'
+    return app
+
+
+def test_active_company_permission_rejects_request_tenant_mismatch(monkeypatch):
+    app = _app()
+    checked_companies = []
+    monkeypatch.setattr(
+        permissions,
+        'has_permission',
+        lambda company_id, resource, action: checked_companies.append(company_id) or True,
+    )
+
+    @permissions.active_company_permission_required('okrs', 'view')
+    def protected():
+        return {'ok': True}, 200
+
+    with app.test_request_context('/api/okrs-global?company_id=22'):
+        session['active_company_id'] = 9
+        payload, status = protected()
+
+    assert status == 403
+    assert 'não corresponde' in payload['error']
+    assert checked_companies == []
+
+
+def test_active_company_permission_uses_session_company(monkeypatch):
+    app = _app()
+    checked_companies = []
+    monkeypatch.setattr(
+        permissions,
+        'has_permission',
+        lambda company_id, resource, action: checked_companies.append(company_id) or True,
+    )
+
+    @permissions.active_company_permission_required('plans', 'edit')
+    def protected():
+        return {'ok': True}, 200
+
+    with app.test_request_context('/api/plans?company_id=9'):
+        session['active_company_id'] = 9
+        payload, status = protected()
+
+    assert status == 200
+    assert payload == {'ok': True}
+    assert checked_companies == [9]
+
+
+def test_strategy_resources_prefer_active_company_over_client_value():
+    app = _app()
+    with app.test_request_context('/api/indicators?company_id=22'):
+        session['active_company_id'] = 9
+        assert indicator_resource.get_request_company_id() == 9
+        assert okr_resource._get_request_company_id() == 9
+        assert plan_resource._get_request_company_id() == 9
+
+
+def test_indicator_batch_cannot_choose_company_per_entry():
+    source = (
+        Path(__file__).resolve().parents[1] / 'api' / 'resources' / 'indicator.py'
+    ).read_text(encoding='utf-8')
+
+    assert "entry['company_id'] = company_id" in source
+    assert "if 'company_id' not in entry:" not in source

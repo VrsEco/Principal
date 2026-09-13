@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import abort, request
+from flask import abort, request, session
 from flask_login import current_user
 from sqlalchemy import func, or_
 
@@ -220,6 +220,66 @@ def has_permission(company_id, resource, action):
 
     employee = _employee_query(company_id).first()
     return _employee_has_permission(employee, resource, action)
+
+
+def get_active_company_id():
+    """Return the company selected in the authenticated session, if valid."""
+    try:
+        company_id = int(session.get("active_company_id"))
+    except (TypeError, ValueError):
+        return None
+    return company_id if company_id > 0 else None
+
+
+def _requested_company_id():
+    """Read an optional client-supplied tenant only to detect a mismatch."""
+    raw_value = request.args.get("company_id")
+    if raw_value is None and request.is_json:
+        payload = request.get_json(silent=True) or {}
+        raw_value = payload.get("company_id")
+    if raw_value in (None, "", "null", "undefined"):
+        return None
+    try:
+        company_id = int(raw_value)
+    except (TypeError, ValueError):
+        return False
+    return company_id if company_id > 0 else False
+
+
+def active_company_permission_required(resource, action):
+    """Authorize against the active company, never a tenant supplied by HTTP.
+
+    Use this on tenant-scoped API resources.  A ``company_id`` sent by the
+    client may only repeat the active company; it cannot select another tenant
+    or make the permission check diverge from the persistence scope.
+    """
+
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            company_id = get_active_company_id()
+            if not company_id:
+                return {"error": "Empresa ativa obrigatória."}, 400
+
+            requested_company_id = _requested_company_id()
+            if requested_company_id is False or (
+                requested_company_id is not None
+                and requested_company_id != company_id
+            ):
+                return {"error": "Empresa da requisição não corresponde à empresa ativa."}, 403
+
+            if not has_permission(company_id, resource, action):
+                return {"error": f"Permission denied: {action} on {resource}"}, 403
+            return f(*args, **kwargs)
+
+        decorated_function._permission_required = {
+            "resource": resource,
+            "action": action,
+            "active_company_only": True,
+        }
+        return decorated_function
+
+    return decorator
 
 
 def permission_required(resource, action):

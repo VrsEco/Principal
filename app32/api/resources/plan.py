@@ -1,6 +1,6 @@
-from flask import request
+from flask import request, session
 from flask_restful import Resource
-from utils.permissions import permission_required
+from utils.permissions import active_company_permission_required
 from services.plan_service import PlanService
 from schemas.plan import PlanCreate, PlanUpdate, PlanDriverCreate, PlanSectionStatusUpdate, PlanParticipantCreate
 from schemas.plan_implantation import AlignmentSchema, ModelMarketSchema, ExecutionSchema, FinanceSchema
@@ -13,10 +13,14 @@ PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o s
 def _get_request_company_id():
     from api.resources.project import get_request_company_id
 
-    return get_request_company_id()
+    try:
+        active_company_id = int(session.get('active_company_id'))
+    except (TypeError, ValueError):
+        active_company_id = None
+    return active_company_id if active_company_id and active_company_id > 0 else get_request_company_id()
 
 class PlanListResource(Resource):
-    @permission_required('plans', 'view')
+    @active_company_permission_required('plans', 'view')
     def get(self):
         company_id = _get_request_company_id()
                     
@@ -27,7 +31,7 @@ class PlanListResource(Resource):
         plans = PlanService.list_plans(company_id, mode)
         return [p.to_dict() for p in plans], 200
 
-    @permission_required('plans', 'create')
+    @active_company_permission_required('plans', 'create')
     def post(self):
         try:
             data = request.get_json()
@@ -46,7 +50,7 @@ class PlanListResource(Resource):
 
 
 class PlanParticipantListResource(Resource):
-    @permission_required('plans', 'view')
+    @active_company_permission_required('plans', 'view')
     def get(self, plan_id):
         company_id = _get_request_company_id()
         if not company_id:
@@ -54,7 +58,7 @@ class PlanParticipantListResource(Resource):
         participants = PlanService.list_participants(plan_id, company_id)
         return [p.to_dict() for p in participants], 200
 
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def post(self, plan_id):
         try:
             company_id = _get_request_company_id()
@@ -77,7 +81,7 @@ class PlanParticipantListResource(Resource):
 
 
 class PlanParticipantResource(Resource):
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def delete(self, plan_id, participant_id):
         try:
             company_id = _get_request_company_id()
@@ -92,7 +96,7 @@ class PlanParticipantResource(Resource):
 
 
 class PlanResource(Resource):
-    @permission_required('plans', 'view')
+    @active_company_permission_required('plans', 'view')
     def get(self, plan_id):
         company_id = _get_request_company_id()
         if not company_id:
@@ -102,7 +106,7 @@ class PlanResource(Resource):
             return {"error": "Plan not found"}, 404
         return plan.to_dict(), 200
 
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def patch(self, plan_id):
         try:
             company_id = _get_request_company_id()
@@ -132,7 +136,7 @@ class PlanResource(Resource):
 
 
 class PlanDriverResource(Resource):
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def get(self, plan_id):
         from services.plan_service import PlanService
         company_id = _get_request_company_id()
@@ -141,7 +145,7 @@ class PlanDriverResource(Resource):
         drivers = PlanService.list_drivers(plan_id, company_id)
         return [d.to_dict() for d in drivers], 200
 
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def post(self, plan_id):
         try:
             company_id = _get_request_company_id()
@@ -167,7 +171,7 @@ class PlanDriverResource(Resource):
 
 
 class PlanDriverDetailResource(Resource):
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def put(self, plan_id, driver_id):
         try:
             company_id = _get_request_company_id()
@@ -200,7 +204,7 @@ class PlanDriverDetailResource(Resource):
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def delete(self, plan_id, driver_id):
         try:
             company_id = _get_request_company_id()
@@ -225,7 +229,7 @@ class PlanDriverDetailResource(Resource):
 
 
 class PlanSectionStatusResource(Resource):
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def patch(self, plan_id, section_key):
         try:
             company_id = _get_request_company_id()
@@ -246,7 +250,7 @@ class PlanSectionStatusResource(Resource):
 
 
 class PlanImplantationResource(Resource):
-    @permission_required('plans', 'view')
+    @active_company_permission_required('plans', 'view')
     def get(self, plan_id, section_key):
         company_id = _get_request_company_id()
         if not company_id:
@@ -256,7 +260,7 @@ class PlanImplantationResource(Resource):
             return {"content": {}}, 200
         return data.to_dict(), 200
 
-    @permission_required('plans', 'edit')
+    @active_company_permission_required('plans', 'edit')
     def post(self, plan_id, section_key):
         try:
             company_id = _get_request_company_id()
@@ -284,6 +288,3 @@ class PlanImplantationResource(Resource):
             return {"error": "Requisição inválida."}, 400
         except Exception as e:
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
-
-
-
