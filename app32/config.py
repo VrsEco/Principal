@@ -57,6 +57,10 @@ class Config:
     SECURITY_PROXY_FIX_X_PROTO = int(os.environ.get("SECURITY_PROXY_FIX_X_PROTO") or 1)
     SECURITY_PROXY_FIX_X_HOST = int(os.environ.get("SECURITY_PROXY_FIX_X_HOST") or 1)
     DEV_ROUTES_ENABLED = env_flag("DEV_ROUTES_ENABLED", default=False)
+    # Observabilidade de performance: a trilha detalhada por arquivo é opt-in
+    # porque I/O síncrono a cada request degrada o runtime web.
+    REQUEST_DEBUG_LOG_ENABLED = env_flag("REQUEST_DEBUG_LOG_ENABLED", default=False)
+    SLOW_REQUEST_THRESHOLD_MS = int(os.environ.get("SLOW_REQUEST_THRESHOLD_MS") or 1000)
     WEBHOOK_SHARED_SECRET = os.environ.get("WEBHOOK_SHARED_SECRET")
     WHATSAPP_WEBHOOK_SECRET = os.environ.get("WHATSAPP_WEBHOOK_SECRET")
     TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET")

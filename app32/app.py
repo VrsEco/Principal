@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, g, request, jsonify
 from flask_cors import CORS
 from flask_login import LoginManager, login_required
 from flask_restful import Api
 import os
 import shutil
+import time
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -640,15 +641,17 @@ def create_app(config_name=None):
         if app.config.get("DEV_ROUTES_ENABLED"):
             public_endpoints.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
         
-        try:
-            with open(log_path, 'a') as f:
-                safe_path = request.path
-                if safe_path.startswith('/password-reset/') or safe_path.startswith('/auth/password-reset/'):
-                    safe_path = safe_path.rsplit('/', 1)[0] + '/[redacted]'
-                f.write(f"[{datetime.now()}] {request.method} {safe_path}\n")
-                f.write(f"  Auth: {current_user.is_authenticated}, Active Company: {session.get('active_company_id')}\n")
-        except:
-            pass
+        g.request_started_at = time.perf_counter()
+        if app.config.get("REQUEST_DEBUG_LOG_ENABLED", False):
+            try:
+                with open(log_path, 'a') as f:
+                    safe_path = request.path
+                    if safe_path.startswith('/password-reset/') or safe_path.startswith('/auth/password-reset/'):
+                        safe_path = safe_path.rsplit('/', 1)[0] + '/[redacted]'
+                    f.write(f"[{datetime.now()}] {request.method} {safe_path}\n")
+                    f.write(f"  Auth: {current_user.is_authenticated}, Active Company: {session.get('active_company_id')}\n")
+            except OSError:
+                pass
 
         allowed_hosts = app.config.get("SECURITY_ALLOWED_HOSTS") or []
         if allowed_hosts:
@@ -720,6 +723,15 @@ def create_app(config_name=None):
 
     @app.after_request
     def apply_security_headers(response):
+        started_at = getattr(g, "request_started_at", None)
+        if started_at is not None:
+            elapsed_ms = (time.perf_counter() - started_at) * 1000
+            if elapsed_ms >= app.config["SLOW_REQUEST_THRESHOLD_MS"]:
+                safe_path = request.path.rsplit('/', 1)[0] + '/[redacted]' if request.path.startswith(('/password-reset/', '/auth/password-reset/')) else request.path
+                current_app.logger.warning(
+                    "slow_request method=%s path=%s status=%s duration_ms=%.1f",
+                    request.method, safe_path, response.status_code, elapsed_ms,
+                )
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
