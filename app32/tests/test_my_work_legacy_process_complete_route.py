@@ -14,6 +14,7 @@ def test_my_work_legacy_complete_uses_session_active_company(monkeypatch):
     captured = {}
 
     monkeypatch.setattr(my_work_module, "current_user", type("User", (), {"id": 15})())
+    monkeypatch.setattr(my_work_module, "can_access_company", lambda company_id: company_id == 2)
 
     def _fake_complete_process_instance_for_my_work(**kwargs):
         captured.update(kwargs)

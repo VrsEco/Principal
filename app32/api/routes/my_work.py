@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, jsonify, request, send_file, url_f
 from flask_login import login_required, current_user
 from datetime import datetime
 from models import db, User, Company, Employee, Project, ProjectTask, Process, ProcessInstance
-from utils.permissions import can_access_company
+from utils.permissions import can_access_company, get_active_company_id, get_default_company_id
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,35 @@ def _user_has_company_access(company_id: int | None) -> bool:
     if not company_id:
         return False
     return can_access_company(company_id)
+
+
+def _resolve_active_company_context(*requested_company_ids):
+    """Resolve o tenant da sessão e usa dados HTTP apenas para detectar conflito."""
+    active_company_id = get_active_company_id()
+    if not active_company_id:
+        active_company_id = get_default_company_id()
+        if active_company_id:
+            session["active_company_id"] = active_company_id
+
+    if not active_company_id:
+        return None, (jsonify({"success": False, "error": "Empresa ativa obrigatória."}), 400)
+
+    if not can_access_company(active_company_id):
+        return None, (jsonify({"success": False, "error": "Acesso negado à empresa ativa."}), 403)
+
+    for requested_company_id in requested_company_ids:
+        if requested_company_id in (None, "", [], (), set()):
+            continue
+        values = requested_company_id if isinstance(requested_company_id, (list, tuple, set)) else [requested_company_id]
+        for value in values:
+            try:
+                normalized_company_id = int(value)
+            except (TypeError, ValueError):
+                return None, (jsonify({"success": False, "error": "Empresa da requisição é inválida."}), 400)
+            if normalized_company_id != int(active_company_id):
+                return None, (jsonify({"success": False, "error": "Empresa da requisição não corresponde à empresa ativa."}), 403)
+
+    return int(active_company_id), None
 
 
 @my_work_bp.route('/my-work')
@@ -403,8 +432,14 @@ def export_my_work_pdf():
     if responsible_ids or executor_ids:
         query_filters["employee_ids"] = list(set(responsible_ids + executor_ids))
 
-    company_ids = exported_filters.get("company_ids")
-    active_company_id = request.args.get("active_company_id", type=int)
+    requested_company_ids = exported_filters.get("company_ids")
+    active_company_id, error_response = _resolve_active_company_context(
+        requested_company_ids,
+        request.args.get("active_company_id", type=int),
+    )
+    if error_response:
+        return error_response
+    company_ids = [active_company_id]
 
     activities_raw, _scope_counts = get_user_activities_v2(
         user_id=current_user.id,
@@ -602,8 +637,11 @@ def send_project_task_summary(task_id):
 @login_required
 def my_work_filter_options():
     from services.my_work.discovery_service import get_filter_options_v2
+    active_company_id, error_response = _resolve_active_company_context()
+    if error_response:
+        return error_response
     try:
-        data = get_filter_options_v2(current_user.id)
+        data = get_filter_options_v2(current_user.id, active_company_id=active_company_id)
         logger.info(f"📊 Filter Options Response: {len(data.get('companies', []))} companies, {len(data.get('collaborators', []))} collabs, role={data.get('user_role')}")
         return jsonify({
             "success": True,
@@ -632,8 +670,15 @@ def my_work_api_activities():
                 res.append(int(i))
         return res if res else None
 
-    # Parsing filters
-    company_ids = _parse_ints(request.args.get('company_ids'))
+    # Os filtros de empresa podem somente repetir o tenant ativo da sessão.
+    requested_company_ids = _parse_ints(request.args.get('company_ids'))
+    active_company_id, error_response = _resolve_active_company_context(
+        requested_company_ids,
+        request.args.get('active_company_id', type=int),
+    )
+    if error_response:
+        return error_response
+    company_ids = [active_company_id]
 
     # Merge responsible_ids and executor_ids into a single list of employee_ids to filter
     r_ids = _parse_ints(request.args.get('responsible_ids')) or []
@@ -661,8 +706,6 @@ def my_work_api_activities():
         "delivery_tags": delivery_tags_list
     }
 
-
-    active_company_id = request.args.get('active_company_id', type=int)
 
     logger.info(f"📊 API Request: scope={scope}, company_ids={company_ids}, active_company={active_company_id}")
     try:
@@ -696,17 +739,12 @@ def my_work_complete_process_instance_legacy(instance_id: int):
     from services.my_work.process_actions_service import complete_process_instance_for_my_work
 
     payload = request.get_json(silent=True) or {}
-    company_id = (
-        request.args.get('company_id', type=int)
-        or payload.get('company_id')
-        or session.get('active_company_id')
+    company_id, error_response = _resolve_active_company_context(
+        request.args.get('company_id', type=int),
+        payload.get('company_id'),
     )
-
-    if not company_id:
-        return jsonify({
-            "success": False,
-            "error": "Empresa ativa não identificada para concluir a instância.",
-        }), 400
+    if error_response:
+        return error_response
 
     result = complete_process_instance_for_my_work(
         user_id=current_user.id,
@@ -725,16 +763,20 @@ def my_work_occurrences_summary():
     employee_id = get_employee_from_user(current_user.id)
     company_ids_str = request.args.get('company_ids')
     
-    company_ids = None
+    requested_company_ids = None
     if company_ids_str:
-        company_ids = []
+        requested_company_ids = []
         for i in company_ids_str.split(','):
             i = i.strip()
             if i and i.isdigit():
-                company_ids.append(int(i))
-    
+                requested_company_ids.append(int(i))
+
+    active_company_id, error_response = _resolve_active_company_context(requested_company_ids)
+    if error_response:
+        return error_response
+
     try:
-        summary = get_occurrences_summary(employee_id, company_ids=company_ids)
+        summary = get_occurrences_summary(employee_id, company_ids=[active_company_id])
         return jsonify({
             "success": True,
             "data": summary
@@ -749,8 +791,11 @@ def my_work_team_overview():
     
     employee_id = get_employee_from_user(current_user.id)
     company_id_str = request.args.get('company_id')
-    company_id = int(company_id_str) if company_id_str and company_id_str.isdigit() else None
-    
+    requested_company_id = int(company_id_str) if company_id_str and company_id_str.isdigit() else None
+    company_id, error_response = _resolve_active_company_context(requested_company_id)
+    if error_response:
+        return error_response
+
     try:
         data = get_team_overview(employee_id, company_id)
         return jsonify({"success": True, "data": data})
@@ -766,8 +811,11 @@ def my_work_company_overview():
     
     employee_id = get_employee_from_user(current_user.id)
     company_id_str = request.args.get('company_id')
-    company_id = int(company_id_str) if company_id_str and company_id_str.isdigit() else None
-    
+    requested_company_id = int(company_id_str) if company_id_str and company_id_str.isdigit() else None
+    company_id, error_response = _resolve_active_company_context(requested_company_id)
+    if error_response:
+        return error_response
+
     try:
         data = get_company_overview_v2(employee_id, company_id)
         return jsonify({"success": True, "data": data})

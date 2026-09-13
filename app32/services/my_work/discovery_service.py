@@ -68,7 +68,10 @@ def _dedupe_company_ids(companies: List[Dict[str, Any]]) -> List[int]:
     return ordered
 
 
-def get_filter_options_v2(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
+def get_filter_options_v2(
+    user_id: int,
+    active_company_id: Optional[int] = None,
+) -> Dict[str, List[Dict[str, Any]]]:
     """
     Main entry point for filter options, following Architecture v2.0.
     """
@@ -110,6 +113,23 @@ def get_filter_options_v2(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 })
         company_ids = list(seen_ids)
 
+    if active_company_id is not None:
+        active_company_id = safe_int(active_company_id)
+        if not active_company_id or active_company_id not in company_ids:
+            return {
+                "success": True,
+                "user_role": user_role,
+                "companies": [],
+                "collaborators": [],
+                "projects": [],
+                "processes": [],
+            }
+        company_ids = [active_company_id]
+        unique_companies = [
+            company for company in unique_companies
+            if safe_int(company.get("company_id")) == active_company_id
+        ]
+
     result = {
         "success": True,
         "user_role": user_role,
@@ -126,6 +146,8 @@ def get_filter_options_v2(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
         collaborator_rows = []
         seen_employee_ids = set()
         for company in associated:
+            if safe_int(company.get("company_id")) not in company_ids:
+                continue
             employee_id = company.get('employee_id')
             if not employee_id or employee_id in seen_employee_ids:
                 continue
