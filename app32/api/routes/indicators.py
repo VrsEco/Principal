@@ -257,8 +257,7 @@ def indicator_tree_form(node_id=None):
     
     node = None
     if node_id:
-        node = IndicatorTree.query.get_or_404(node_id)
-        if node.company_id != company_id: abort(403)
+        node = IndicatorTree.query.filter_by(id=node_id, company_id=company_id).first_or_404()
 
     # ── TRAVA 1: Bloqueio em GET ──
     # Se o link de "Adicionar Subgrupo" foi clicado para um nó que já possui indicadores, bloqueia.
@@ -380,8 +379,7 @@ def indicator_tree_delete(node_id):
     if not company_id: return jsonify({'error': 'Unauthorized'}), 401
     company_id = int(company_id)
     
-    node = IndicatorTree.query.get_or_404(node_id)
-    if node.company_id != company_id: return jsonify({'error': 'Forbidden'}), 403
+    node = IndicatorTree.query.filter_by(id=node_id, company_id=company_id).first_or_404()
     
     # Travas solicitadas:
     # 1. Tem indicadores associados?
