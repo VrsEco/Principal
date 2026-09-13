@@ -7,6 +7,7 @@ import logging
 from flask_login import current_user
 from flask_restful import Resource
 from marshmallow import ValidationError
+from sqlalchemy import or_
 from utils.permissions import active_company_permission_required, is_platform_admin, permission_required
 from models import db, Company, Employee
 from schemas.company import company_schema, companies_schema
@@ -35,10 +36,22 @@ class CompanyListResource(Resource):
             200: List of companies
         """
         include_all = request.args.get('all', 'false').lower() == 'true'
+        paginated = request.args.get('paginated', 'false').lower() == 'true'
 
         query = Company.query
         if not include_all:
             query = query.filter_by(is_active=True)
+
+        search = (request.args.get('search') or '').strip()
+        segment = (request.args.get('segment') or '').strip()
+        size = (request.args.get('size') or '').strip()
+        if search:
+            pattern = f'%{search}%'
+            query = query.filter(or_(Company.name.ilike(pattern), Company.client_code.ilike(pattern)))
+        if segment:
+            query = query.filter(Company.segment == segment)
+        if size:
+            query = query.filter(Company.size == size)
 
         if current_user.is_authenticated and not is_platform_admin():
             linked_company_ids = [
@@ -56,7 +69,22 @@ class CompanyListResource(Resource):
 
             query = query.filter(Company.id.in_(linked_company_ids))
 
-        companies = query.order_by(Company.name).all()
+        if paginated:
+            page = max(request.args.get('page', 1, type=int) or 1, 1)
+            per_page = min(max(request.args.get('per_page', 50, type=int) or 50, 1), 100)
+            total = query.order_by(None).count()
+            companies = query.order_by(Company.name, Company.id).offset((page - 1) * per_page).limit(per_page).all()
+            return {
+                'items': companies_schema.dump(companies),
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': total,
+                    'has_more': page * per_page < total,
+                },
+            }, 200
+
+        companies = query.order_by(Company.name, Company.id).all()
         return companies_schema.dump(companies), 200
     
     @permission_required('companies', 'create')
