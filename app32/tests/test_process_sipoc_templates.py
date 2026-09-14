@@ -87,6 +87,22 @@ def test_process_architecture_script_supports_macro_sipoc_workflow():
     assert '/sipoc/report' in content
 
 
+def test_macro_process_sipoc_report_template_uses_lane_items_key():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'templates',
+            'reports',
+            'macro_process_sipoc_report_v1.html',
+        )
+    )
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'lane["items"]' in content
+
+
 def test_process_book_template_renders_sipoc_before_flow_section():
     template_path = os.path.abspath(
         os.path.join(

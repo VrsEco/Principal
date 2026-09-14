@@ -67,7 +67,7 @@
     <section class="lanes" aria-label="Matriz SIPOC">
       {% for lane in sipoc.lanes %}
       <article class="lane"><h2>{{ lane.label }}</h2><div class="lane-body">
-        {% for item in lane.items %}<div class="item"><strong>{{ item.title }}</strong>{% if item.description %}<span>{{ item.description }}</span>{% endif %}</div>{% endfor %}
+        {% for item in lane["items"] %}<div class="item"><strong>{{ item.title }}</strong>{% if item.description %}<span>{{ item.description }}</span>{% endif %}</div>{% endfor %}
       </div></article>
       {% endfor %}
     </section>
