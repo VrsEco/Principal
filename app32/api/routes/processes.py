@@ -848,6 +848,28 @@ def macro_process_book(macro_id):
     return render_template('reports/macro_process_book_v1.html', **context)
 
 
+@processes_bp.route('/macro-processes/<int:macro_id>/sipoc/report')
+@permission_required('processes', 'view')
+def macro_process_sipoc_report(macro_id):
+    """Renderiza o SIPOC publicado em layout próprio para impressão/PDF."""
+    from services.macro_process_sipoc_report_service import build_macro_process_sipoc_report_context
+
+    macro = _get_macro_process_with_access(macro_id, action='view')
+    if is_collaborator_in_company(macro.company_id):
+        abort(403, description="Acesso negado: Colaboradores não podem emitir o SIPOC do macroprocesso.")
+
+    try:
+        context = build_macro_process_sipoc_report_context(
+            macro_id=macro.id,
+            company_id=macro.company_id,
+        )
+    except ValueError as exc:
+        current_app.logger.warning('Emissão SIPOC indisponível para macro_id=%s: %s', macro_id, exc)
+        abort(404, description=str(exc))
+
+    return render_template('reports/macro_process_sipoc_report_v1.html', **context)
+
+
 # --- Process Routines Page and APIs ---
 
 @processes_bp.route('/process-routines')

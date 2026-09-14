@@ -285,6 +285,7 @@
                     <select id="macroSipocSelector" class="form-control" style="min-width: 280px;">
                         <option value="">Selecione um macroprocesso...</option>
                     </select>
+                    <a id="macroSipocPdfLink" class="btn btn-primary btn-sm" href="#" target="_blank" rel="noopener" hidden>Emitir PDF</a>
                     <button class="btn btn-secondary btn-sm" type="button" onclick="createMacroSipocDraft()">Criar rascunho</button>
                     <button class="btn btn-secondary btn-sm" type="button" onclick="saveMacroSipocMeta()">Salvar SIPOC</button>
                     <button class="btn btn-primary btn-sm" type="button" onclick="publishMacroSipoc()">Publicar SIPOC</button>
@@ -1277,5 +1278,5 @@
     }
 </style>
 
-<script src="{{ url_for('static', filename='js/process_architecture.js', v='20260911-1') }}"></script>
+<script src="{{ url_for('static', filename='js/process_architecture.js', v='20260914-1') }}"></script>
 {% endblock %}

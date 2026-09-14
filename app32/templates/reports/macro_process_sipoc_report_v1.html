@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIPOC - {{ macro.code }} - {{ macro.name }}</title>
+  <style>
+    :root { --blue:#1d4ed8; --indigo:#4338ca; --ink:#0f172a; --muted:#475569; --line:#d9e4f5; --soft:#f8fbff; }
+    * { box-sizing:border-box; }
+    @page { size:A4 landscape; margin:9mm; }
+    body { margin:0; color:var(--ink); font-family:"Segoe UI", Arial, sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .actions { display:flex; justify-content:center; gap:10px; padding:14px; background:#eef4ff; }
+    .actions a, .actions button { border:0; border-radius:999px; padding:10px 18px; font:700 13px "Segoe UI", Arial, sans-serif; cursor:pointer; text-decoration:none; }
+    .actions a { color:var(--ink); background:#fff; border:1px solid var(--line); }
+    .actions button { color:#fff; background:linear-gradient(135deg,var(--blue),var(--indigo)); }
+    .sheet { max-width:1120px; margin:0 auto; padding:20px; }
+    .hero { position:relative; overflow:hidden; padding:24px 28px; border-radius:20px; color:#fff; background:linear-gradient(135deg,var(--blue),var(--indigo)); }
+    .hero::after { content:""; position:absolute; width:240px; height:240px; top:-110px; right:-70px; border-radius:50%; background:rgba(255,255,255,.12); }
+    .eyebrow, .label { text-transform:uppercase; letter-spacing:.75px; font-weight:800; font-size:10px; }
+    .eyebrow { opacity:.8; }
+    h1 { max-width:850px; margin:7px 0 8px; font-size:30px; line-height:1.1; }
+    .hero p { max-width:900px; margin:0; font-size:13px; line-height:1.45; }
+    .meta { display:flex; flex-wrap:wrap; gap:16px; margin-top:17px; font-size:11px; }
+    .meta strong { display:block; font-size:9px; opacity:.76; text-transform:uppercase; letter-spacing:.55px; }
+    .panel { margin-top:13px; padding:14px 16px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+    .panel h2 { margin:0 0 6px; font-size:16px; }
+    .boundaries { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .boundary, .detail { padding:10px 11px; border:1px solid var(--line); border-radius:10px; background:var(--soft); font-size:11px; line-height:1.35; }
+    .label { display:block; margin-bottom:4px; color:#64748b; }
+    .lanes { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-top:13px; }
+    .lane { overflow:hidden; border:1px solid var(--line); border-radius:14px; background:#fff; }
+    .lane h2 { margin:0; padding:9px 11px; color:#fff; background:var(--blue); font-size:12px; }
+    .lane-body { min-height:240px; padding:4px 11px; }
+    .item { padding:8px 0; border-bottom:1px solid #e8eef8; font-size:10.5px; line-height:1.32; }
+    .item:last-child { border-bottom:0; }
+    .item strong { display:block; }
+    .item span { display:block; margin-top:3px; color:var(--muted); }
+    .details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:13px; }
+    .detail.empty { display:none; }
+    .footer { margin-top:12px; color:#64748b; font-size:9px; text-align:right; }
+    @media print { .actions { display:none; } .sheet { max-width:none; padding:0; } .hero, .panel, .lane { break-inside:avoid; page-break-inside:avoid; } }
+  </style>
+</head>
+<body>
+  <nav class="actions">
+    <a href="{{ url_for('processes.process_map', company_id=company.id) }}">Voltar ao mapa</a>
+    <button type="button" onclick="window.print()">Imprimir / Salvar PDF</button>
+  </nav>
+  <main class="sheet">
+    <header class="hero">
+      <div class="eyebrow">SIPOC DE MACROPROCESSO · GESTÃO VERSUS</div>
+      <h1>{{ macro.code }} - {{ macro.name }}</h1>
+      <p>{{ sipoc.objective }}</p>
+      <div class="meta">
+        <div><strong>Empresa</strong>{{ company.name }}</div>
+        <div><strong>Dono</strong>{{ macro.owner or 'Não informado' }}</div>
+        <div><strong>Versão publicada</strong>v{{ sipoc.version }} · {{ sipoc.published_at }}</div>
+        <div><strong>Emitido em</strong>{{ generated_at }}</div>
+      </div>
+    </header>
+    <section class="panel">
+      <h2>Fronteiras do macroprocesso</h2>
+      <div class="boundaries">
+        {% for label, value in sipoc.boundaries %}<div class="boundary"><span class="label">{{ label }}</span>{{ value }}</div>{% endfor %}
+      </div>
+    </section>
+    <section class="lanes" aria-label="Matriz SIPOC">
+      {% for lane in sipoc.lanes %}
+      <article class="lane"><h2>{{ lane.label }}</h2><div class="lane-body">
+        {% for item in lane.items %}<div class="item"><strong>{{ item.title }}</strong>{% if item.description %}<span>{{ item.description }}</span>{% endif %}</div>{% endfor %}
+      </div></article>
+      {% endfor %}
+    </section>
+    <section class="details">
+      {% for label, value in sipoc.details %}<div class="detail{% if not value %} empty{% endif %}"><span class="label">{{ label }}</span>{{ value or '' }}</div>{% endfor %}
+    </section>
+    <footer class="footer">Documento client-safe gerado pelo APP32 · {{ company.name }}</footer>
+  </main>
+</body>
+</html>
