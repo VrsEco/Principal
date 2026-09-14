@@ -1,4 +1,4 @@
-from flask import Flask, g, request, jsonify
+from flask import Flask, current_app, g, request, jsonify
 from flask_cors import CORS
 from flask_login import LoginManager, login_required
 from flask_restful import Api
