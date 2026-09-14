@@ -124,3 +124,18 @@ def test_existing_artifacts_uses_content_addressed_object_key(tmp_path):
             return {"id": "drive-123"}
 
     assert runner.existing_artifacts(FakeClient(), [artifact]) == {artifact.object_key: {"id": "drive-123"}}
+
+
+def test_upload_records_keep_relative_paths_in_inventory_not_drive_properties(tmp_path):
+    upload_root = tmp_path / "uploads"
+    nested = upload_root / ("long-directory-" * 8)
+    nested.mkdir(parents=True)
+    source = nested / "receipt.pdf"
+    source.write_bytes(b"customer document")
+
+    records, metadata = runner.build_upload_records(upload_root, tmp_path / "uploads.inventory.json")
+
+    asset_record = records[0]
+    assert asset_record["type"] == "uploads"
+    assert "extra_properties" not in asset_record
+    assert metadata["files_count"] == 1

@@ -100,6 +100,26 @@ def create_upload_inventory(upload_root: Path, destination: Path) -> tuple[list[
     return files, total_bytes
 
 
+def build_upload_records(upload_root: Path, inventory_path: Path) -> tuple[list[dict[str, object]], dict[str, object]]:
+    """Cria artefatos content-addressed; os caminhos ficam somente no inventário.
+
+    O Google Drive impõe 124 bytes para a soma das ``appProperties``. Guardar
+    caminhos de uploads nessas propriedades é desnecessário e falha para nomes
+    longos; a restauração usa o inventário assinado da execução.
+    """
+    upload_files, upload_bytes = create_upload_inventory(upload_root, inventory_path)
+    records: list[dict[str, object]] = [
+        {
+            "path": upload_root / str(item["relative_path"]),
+            "type": "uploads",
+            "sha256": str(item["sha256"]),
+        }
+        for item in upload_files
+    ]
+    records.append({"path": inventory_path, "type": "uploads_inventory"})
+    return records, {"files_count": len(upload_files), "total_bytes": upload_bytes, "root": str(upload_root)}
+
+
 def parse_postgres_url(value: str) -> tuple[str, str, str, str, str]:
     parsed = urlparse(value)
     if parsed.scheme not in {"postgres", "postgresql"} or not parsed.path.strip("/"):
@@ -334,23 +354,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         if args.include_uploads:
             upload_root = (Path(args.uploads_root) if args.uploads_root else repo / "uploads").resolve()
             inventory_path = run_dir / "uploads.inventory.json"
-            upload_files, upload_bytes = create_upload_inventory(upload_root, inventory_path)
-            for item in upload_files:
-                source = upload_root / str(item["relative_path"])
-                records.append(
-                    {
-                        "path": source,
-                        "type": "uploads",
-                        "sha256": str(item["sha256"]),
-                        "extra_properties": {"gv_backup_upload_relative_path": str(item["relative_path"])},
-                    }
-                )
-            records.append({"path": inventory_path, "type": "uploads_inventory"})
-            uploads_inventory = {
-                "files_count": len(upload_files),
-                "total_bytes": upload_bytes,
-                "root": str(upload_root),
-            }
+            upload_records, uploads_inventory = build_upload_records(upload_root, inventory_path)
+            records.extend(upload_records)
         manifest = run_dir / "manifest.json"
         manifest.write_text(json.dumps({"schema": 3, "created_at": now.isoformat(), "git_commit": commit,
             "retention_tier": tier, "retain_until": expires.isoformat(),
