@@ -2430,7 +2430,10 @@ class FinancialAutomationService:
         competence_date_to: Optional[str] = None,
         due_date_from: Optional[str] = None,
         due_date_to: Optional[str] = None,
-    ) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
+        paginated: bool = False,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> Tuple[Optional[Any], Optional[str]]:
         scope_error = FinancialAutomationService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
             return None, scope_error
@@ -2461,11 +2464,38 @@ class FinancialAutomationService:
         if due_date_to:
             query = query.filter(FinancialAutomationRecord.due_date <= due_date_to)
 
-        items = query.order_by(FinancialAutomationRecord.created_at.desc(), FinancialAutomationRecord.id.desc()).all()
+        ordered_query = query.order_by(
+            FinancialAutomationRecord.created_at.desc(),
+            FinancialAutomationRecord.id.desc(),
+        )
+        if not paginated:
+            items = ordered_query.all()
+            reconcile_error = FinancialAutomationService._reconcile_generated_records(items)
+            if reconcile_error:
+                return None, reconcile_error
+            return [FinancialAutomationService._serialize_record(item) for item in items], None
+
+        normalized_page = max(int(page or 1), 1)
+        normalized_per_page = min(max(int(per_page or 50), 1), 100)
+        total = query.order_by(None).count()
+        items = (
+            ordered_query
+            .offset((normalized_page - 1) * normalized_per_page)
+            .limit(normalized_per_page)
+            .all()
+        )
         reconcile_error = FinancialAutomationService._reconcile_generated_records(items)
         if reconcile_error:
             return None, reconcile_error
-        return [FinancialAutomationService._serialize_record(item) for item in items], None
+        return {
+            "items": [FinancialAutomationService._serialize_record(item) for item in items],
+            "pagination": {
+                "page": normalized_page,
+                "per_page": normalized_per_page,
+                "total": int(total or 0),
+                "has_more": normalized_page * normalized_per_page < int(total or 0),
+            },
+        }, None
 
     @staticmethod
     def get_record(

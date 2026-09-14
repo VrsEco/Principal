@@ -28,8 +28,26 @@ class PlanListResource(Resource):
             return {"error": "company_id is required"}, 400
         
         mode = request.args.get('mode')
-        plans = PlanService.list_plans(company_id, mode)
-        return [p.to_dict() for p in plans], 200
+        paginated = (request.args.get('paginated') or 'false').strip().lower() == 'true'
+        if not paginated:
+            plans = PlanService.list_plans(company_id, mode)
+            return [p.to_dict() for p in plans], 200
+
+        plans, total, page, per_page = PlanService.list_plans_page(
+            company_id,
+            mode,
+            page=request.args.get('page', 1, type=int),
+            per_page=request.args.get('per_page', 50, type=int),
+        )
+        return {
+            'items': [plan.to_dict() for plan in plans],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'has_more': page * per_page < total,
+            },
+        }, 200
 
     @active_company_permission_required('plans', 'create')
     def post(self):

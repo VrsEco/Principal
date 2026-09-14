@@ -193,6 +193,7 @@ class FinancialAutomationRecord(db.Model):
         db.Index("ix_financial_automation_records_generated_schedule", "generated_financial_schedule_id"),
         db.Index("ix_financial_automation_records_company_group", "company_id", "document_group_key"),
         db.Index("ix_financial_automation_records_company_document_key", "company_id", "document_key"),
+        db.Index("ix_financial_automation_records_company_created_id", "company_id", "created_at", "id"),
     )
 
     id = db.Column(db.Integer, primary_key=True)

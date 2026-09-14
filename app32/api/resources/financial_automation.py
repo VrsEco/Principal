@@ -88,6 +88,9 @@ class FinancialAutomationRecordListResource(Resource):
             competence_date_to=request.args.get("competence_date_to"),
             due_date_from=request.args.get("due_date_from"),
             due_date_to=request.args.get("due_date_to"),
+            paginated=(request.args.get("paginated") or "false").strip().lower() == "true",
+            page=request.args.get("page", 1, type=int),
+            per_page=request.args.get("per_page", 50, type=int),
         )
         if error:
             return {"error": error}, 400

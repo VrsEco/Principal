@@ -9,6 +9,7 @@ class Plan(db.Model):
     """
 
     __tablename__ = "plans"
+    __table_args__ = (db.Index("ix_plans_company_created_id", "company_id", "created_at", "id"),)
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)

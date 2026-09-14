@@ -57,6 +57,7 @@
             <div class="loading-shimmer" style="height: 200px; border-radius: 16px;"></div>
             <div class="loading-shimmer" style="height: 200px; border-radius: 16px;"></div>
         </div>
+        <div id="okrPagination" class="mt-4" style="display:flex;justify-content:center;"></div>
     </div>
 </div>
 
@@ -235,6 +236,7 @@
 <script>
     let currentTab = 'global';
     let okrs = [];
+    let okrPagination = { page: 1, total: 0, has_more: false };
 
     document.addEventListener('DOMContentLoaded', () => {
         fetchOKRs();
@@ -243,14 +245,20 @@
     function switchTab(tab) {
         currentTab = tab;
         document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(tab === 'global' ? 'global' : 'área')));
-        renderOKRs();
+        fetchOKRs();
     }
 
-    async function fetchOKRs() {
+    async function fetchOKRs({ append = false } = {}) {
         try {
             const endpoint = currentTab === 'global' ? '/api/okrs-global' : '/api/okrs-area';
-            const res = await fetch(endpoint);
-            okrs = await res.json();
+            const page = append ? okrPagination.page + 1 : 1;
+            const params = new URLSearchParams({ paginated: 'true', page: String(page), per_page: '50' });
+            const res = await fetch(`${endpoint}?${params.toString()}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const payload = await res.json();
+            const items = Array.isArray(payload) ? payload : (payload.items || []);
+            okrs = append ? okrs.concat(items) : items;
+            okrPagination = payload.pagination || { page, total: okrs.length, has_more: false };
             renderOKRs();
         } catch (err) {
             console.error('Erro ao carregar OKRs:', err);
@@ -259,7 +267,9 @@
 
     function renderOKRs() {
         const list = document.getElementById('okrList');
-        document.getElementById('totalObjectives').textContent = okrs.length;
+        const pagination = document.getElementById('okrPagination');
+        document.getElementById('totalObjectives').textContent = okrPagination.total ?? okrs.length;
+        if (pagination) pagination.innerHTML = '';
 
         if (okrs.length === 0) {
             list.innerHTML = '<div class="text-center p-5 text-tertiary">Nenhum objetivo encontrado para este escopo.</div>';
@@ -301,6 +311,15 @@
                 </div>
             </div>
         `).join('');
+
+        if (okrPagination.has_more && pagination) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-secondary';
+            button.textContent = `Carregar mais (${okrs.length} de ${okrPagination.total})`;
+            button.addEventListener('click', () => fetchOKRs({ append: true }));
+            pagination.appendChild(button);
+        }
     }
 
     function openNewOKRModal() {

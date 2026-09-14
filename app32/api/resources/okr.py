@@ -4,6 +4,22 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from models import db, OKRGlobal, KeyResult, OKRArea, KeyResultArea
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+OKR_LIST_MAX_PER_PAGE = 100
+
+
+def _okr_list_pagination_args():
+    """Resolve paginação opt-in sem alterar o contrato legado das coleções."""
+    paginated = (request.args.get("paginated") or "false").strip().lower() == "true"
+    if not paginated:
+        return False, 1, OKR_LIST_MAX_PER_PAGE
+
+    page = max(request.args.get("page", 1, type=int) or 1, 1)
+    per_page = min(
+        max(request.args.get("per_page", 50, type=int) or 1, 1),
+        OKR_LIST_MAX_PER_PAGE,
+    )
+    return True, page, per_page
+
 
 from schemas.okr import (
     okr_global_schema, okrs_global_schema,
@@ -68,16 +84,33 @@ class OKRGlobalListResource(Resource):
     @active_company_permission_required('okrs', 'view')
     def get(self):
         plan_id = request.args.get('plan_id', type=int)
+        paginated, page, per_page = _okr_list_pagination_args()
         company_id, error = _ensure_company_id()
         if error:
             return error
-        
+
         query = OKRGlobal.query.filter_by(company_id=company_id)
         if plan_id:
             query = query.filter_by(plan_id=plan_id)
-            
-        okrs = query.all()
-        return okrs_global_schema.dump(okrs), 200
+        if paginated:
+            query = query.order_by(OKRGlobal.deadline.asc().nulls_last(), OKRGlobal.id.asc())
+            total = query.order_by(None).count()
+            okrs = query.offset((page - 1) * per_page).limit(per_page).all()
+        else:
+            total = None
+            okrs = query.all()
+        payload = okrs_global_schema.dump(okrs)
+        if paginated:
+            return {
+                "items": payload,
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": int(total or 0),
+                    "has_more": page * per_page < int(total or 0),
+                },
+            }, 200
+        return payload, 200
 
     @active_company_permission_required('okrs', 'create')
     def post(self):
@@ -198,16 +231,33 @@ class OKRAreaListResource(Resource):
     @active_company_permission_required('okrs', 'view')
     def get(self):
         plan_id = request.args.get('plan_id', type=int)
+        paginated, page, per_page = _okr_list_pagination_args()
         company_id, error = _ensure_company_id()
         if error:
             return error
-        
+
         query = OKRArea.query.filter_by(company_id=company_id)
         if plan_id:
             query = query.filter_by(plan_id=plan_id)
-            
-        okrs = query.all()
-        return okrs_area_schema.dump(okrs), 200
+        if paginated:
+            query = query.order_by(OKRArea.deadline.asc().nulls_last(), OKRArea.id.asc())
+            total = query.order_by(None).count()
+            okrs = query.offset((page - 1) * per_page).limit(per_page).all()
+        else:
+            total = None
+            okrs = query.all()
+        payload = okrs_area_schema.dump(okrs)
+        if paginated:
+            return {
+                "items": payload,
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": int(total or 0),
+                    "has_more": page * per_page < int(total or 0),
+                },
+            }, 200
+        return payload, 200
 
     @active_company_permission_required('okrs', 'create')
     def post(self):

@@ -464,6 +464,28 @@ class PlanService:
         return query.order_by(Plan.created_at.desc()).all()
 
     @staticmethod
+    def list_plans_page(
+        company_id: int,
+        mode: Optional[str] = None,
+        page: int = 1,
+        per_page: int = 50,
+    ) -> Tuple[List[Plan], int, int, int]:
+        """Lista planos em janela tenant-safe para o contrato paginado opt-in."""
+        normalized_page = max(int(page or 1), 1)
+        normalized_per_page = min(max(int(per_page or 50), 1), 100)
+        query = Plan.query.filter_by(company_id=company_id)
+        if mode:
+            query = query.filter_by(mode=mode)
+        total = query.order_by(None).count()
+        plans = (
+            query.order_by(Plan.created_at.desc(), Plan.id.desc())
+            .offset((normalized_page - 1) * normalized_per_page)
+            .limit(normalized_per_page)
+            .all()
+        )
+        return plans, int(total or 0), normalized_page, normalized_per_page
+
+    @staticmethod
     def update_plan(plan_id: int, company_id: int, data: Dict[str, Any]) -> Optional[Plan]:
         """Update a plan's basic information."""
         plan = PlanService.get_plan(plan_id, company_id)

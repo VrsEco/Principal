@@ -6,6 +6,7 @@ class OKRGlobal(db.Model):
     """Global OKR model"""
 
     __tablename__ = "okrs_global"
+    __table_args__ = (db.Index("ix_okrs_global_company_deadline_id", "company_id", "deadline", "id"),)
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
