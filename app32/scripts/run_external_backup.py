@@ -53,6 +53,53 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def create_upload_inventory(upload_root: Path, destination: Path) -> tuple[list[dict[str, object]], int]:
+    """Gera inventário verificável dos binários de uploads, sem alterar a fonte.
+
+    O inventário é a referência de restauração: cada arquivo aponta para um
+    objeto imutável identificado pelo seu SHA-256. Links simbólicos não entram
+    no backup para impedir que a rotina saia da árvore autorizada de uploads.
+    """
+    if upload_root.is_symlink():
+        raise BackupRunError(f"Diretório de uploads inválido ou ausente: {upload_root}")
+    root = upload_root.resolve()
+    if not root.is_dir():
+        raise BackupRunError(f"Diretório de uploads inválido ou ausente: {upload_root}")
+
+    files: list[dict[str, object]] = []
+    total_bytes = 0
+    for candidate in sorted(root.rglob("*")):
+        if candidate.is_symlink() or not candidate.is_file():
+            continue
+        resolved = candidate.resolve()
+        if root not in resolved.parents:
+            raise BackupRunError(f"Arquivo de upload fora da raiz autorizada: {candidate}")
+        size = candidate.stat().st_size
+        files.append(
+            {
+                "relative_path": candidate.relative_to(root).as_posix(),
+                "sha256": sha256_file(candidate),
+                "size": size,
+            }
+        )
+        total_bytes += size
+
+    destination.write_text(
+        json.dumps(
+            {
+                "schema": 1,
+                "artifact": "uploads_inventory",
+                "files_count": len(files),
+                "total_bytes": total_bytes,
+                "files": files,
+            },
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+    return files, total_bytes
+
+
 def parse_postgres_url(value: str) -> tuple[str, str, str, str, str]:
     parsed = urlparse(value)
     if parsed.scheme not in {"postgres", "postgresql"} or not parsed.path.strip("/"):
@@ -188,14 +235,32 @@ def create_drive_client(env_file: Path) -> GoogleDriveBackupClient:
     )
 
 
-def upload_artifacts(client: GoogleDriveBackupClient, artifacts: list[BackupArtifact], remote_folder: str) -> list[dict[str, object]]:
+def existing_artifacts(client: GoogleDriveBackupClient, artifacts: list[BackupArtifact]) -> dict[str, dict[str, object]]:
+    """Consulta o Drive antes do envio para calcular somente bytes inéditos."""
+    matches: dict[str, dict[str, object]] = {}
+    for artifact in artifacts:
+        existing = client.find_existing_artifact(artifact.object_key)
+        if existing:
+            matches[artifact.object_key] = existing
+    return matches
+
+
+def upload_artifacts(
+    client: GoogleDriveBackupClient,
+    artifacts: list[BackupArtifact],
+    remote_folder: str,
+    *,
+    existing: dict[str, dict[str, object]] | None = None,
+) -> list[dict[str, object]]:
     parent_id = client.ensure_folder_path(["GV-Backups", *remote_folder.split("/")])
     results = []
     for artifact in artifacts:
-        existing = client.find_existing_artifact(artifact.object_key)
+        match = (existing or {}).get(artifact.object_key)
+        if match is None:
+            match = client.find_existing_artifact(artifact.object_key)
         results.append(
-            {"status": "already_present", "name": artifact.path.name, "drive_file_id": existing["id"]}
-            if existing else {"status": "uploaded", **client.upload_new_artifact(artifact, parent_id)}
+            {"status": "already_present", "name": artifact.path.name, "drive_file_id": match["id"]}
+            if match else {"status": "uploaded", **client.upload_new_artifact(artifact, parent_id)}
         )
     return results
 
@@ -206,6 +271,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dotenv", default=str(SCRIPT_DIR.parent / ".env"))
     parser.add_argument("--staging-dir", default=os.getenv("GV_BACKUP_STAGING_DIR", DEFAULT_STAGING))
     parser.add_argument("--drive-env-file", default=os.getenv("GV_GOOGLE_DRIVE_ENV_FILE", DEFAULT_ENV_FILE))
+    parser.add_argument(
+        "--uploads-root",
+        default=os.getenv("GV_BACKUP_UPLOADS_ROOT"),
+        help="Raiz canônica dos anexos. Exige --include-uploads para ser usada.",
+    )
+    parser.add_argument(
+        "--include-uploads",
+        action="store_true",
+        help="Inclui uploads como objetos incrementais. Não é habilitado pelo cron atual.",
+    )
     parser.add_argument("--upload", action="store_true", help="Permite envio externo ao Google Drive.")
     parser.add_argument("--dry-run", action="store_true", help="Mostra o plano sem criar ou enviar artefatos.")
     return parser.parse_args(argv)
@@ -241,6 +316,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         records = [
             {"path": dump, "type": "database"},
         ]
+        uploads_inventory: dict[str, object] | None = None
         code_reference: dict[str, object] | None = None
         if existing_code:
             props = existing_code.get("appProperties", {})
@@ -255,15 +331,41 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             bundle = run_dir / "source.bundle"
             create_code_bundle(repo, bundle)
             records.append({"path": bundle, "type": "code", "extra_properties": {"gv_backup_git_commit": commit}})
+        if args.include_uploads:
+            upload_root = (Path(args.uploads_root) if args.uploads_root else repo / "uploads").resolve()
+            inventory_path = run_dir / "uploads.inventory.json"
+            upload_files, upload_bytes = create_upload_inventory(upload_root, inventory_path)
+            for item in upload_files:
+                source = upload_root / str(item["relative_path"])
+                records.append(
+                    {
+                        "path": source,
+                        "type": "uploads",
+                        "sha256": str(item["sha256"]),
+                        "extra_properties": {"gv_backup_upload_relative_path": str(item["relative_path"])},
+                    }
+                )
+            records.append({"path": inventory_path, "type": "uploads_inventory"})
+            uploads_inventory = {
+                "files_count": len(upload_files),
+                "total_bytes": upload_bytes,
+                "root": str(upload_root),
+            }
         manifest = run_dir / "manifest.json"
-        manifest.write_text(json.dumps({"schema": 2, "created_at": now.isoformat(), "git_commit": commit,
+        manifest.write_text(json.dumps({"schema": 3, "created_at": now.isoformat(), "git_commit": commit,
             "retention_tier": tier, "retain_until": expires.isoformat(),
-            "artifacts": [{"name": x["path"].name, "type": x["type"], "sha256": sha256_file(x["path"]), "size": x["path"].stat().st_size} for x in records],
+            "artifacts": [{"name": x["path"].name, "type": x["type"], "sha256": x.get("sha256") or sha256_file(x["path"]), "size": x["path"].stat().st_size} for x in records],
             "code_reference": code_reference}, indent=2) + "\n", encoding="utf-8")
+        if uploads_inventory:
+            manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+            manifest_payload["uploads_inventory"] = uploads_inventory
+            manifest.write_text(json.dumps(manifest_payload, indent=2) + "\n", encoding="utf-8")
         records.append({"path": manifest, "type": "manifest"})
-        artifacts = [BackupArtifact(item["path"], sha256_file(item["path"]), item["type"], item.get("extra_properties", {})) for item in records]
-        assert_drive_capacity(client.storage_quota(), sum(item.path.stat().st_size for item in artifacts), minimum_free_bytes())
-        results = upload_artifacts(client, artifacts, remote_folder)
+        artifacts = [BackupArtifact(item["path"], item.get("sha256") or sha256_file(item["path"]), item["type"], item.get("extra_properties", {})) for item in records]
+        existing = existing_artifacts(client, artifacts)
+        required_bytes = sum(item.path.stat().st_size for item in artifacts if item.object_key not in existing)
+        assert_drive_capacity(client.storage_quota(), required_bytes, minimum_free_bytes())
+        results = upload_artifacts(client, artifacts, remote_folder, existing=existing)
         if code_reference:
             results.append({"status": "reused", "name": code_reference["name"], "type": "code", "git_commit": commit})
         elif (bundle := run_dir / "source.bundle").is_file():

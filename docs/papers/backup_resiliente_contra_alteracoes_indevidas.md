@@ -1,7 +1,7 @@
 # Paper — Backup resiliente contra alterações indevidas
 
 **Classe:** Paper  
-**Status:** Fase 1 validada; agendamento recorrente ainda não ativado — 2026-09-13
+**Status:** Banco e código em rotina recorrente; fase de anexos preparada e ainda não ativada — 2026-09-13
 
 ## Tese
 Backups devem permitir recuperar dados e código após erro humano, automação indevida ou comprometimento do servidor. A primeira camada externa será o Google Drive dedicado; a rotina deve partir diretamente do Configr, sem depender de um computador local.
@@ -28,7 +28,9 @@ sobrescrita nem exclusão remota.
 
 Em 2026-09-13 foi executada uma cópia controlada de produção: dump PostgreSQL
 de 19,7 MB, bundle de código de 455,9 MB e manifesto. Os hashes locais e os
-tamanhos remotos foram conferidos. Ainda não há job recorrente.
+tamanhos remotos foram conferidos. O cron recorrente foi então instalado para
+03h, 07h, 12h, 18h e 22h (America/Bahia); a primeira execução automática às
+22h foi validada de ponta a ponta.
 
 ## Capacidade e retenção operacional
 O Drive é append-only nesta fase. Portanto, o GFS externo é **metadado de
@@ -44,8 +46,25 @@ commit, reduzindo as cópias repetidas. Uma mudança de commit ainda gera um nov
 bundle integral; por isso a quota deve ser acompanhada antes de ativar os cinco
 horários.
 
+## Anexos e documentos
+Os anexos binários não fazem parte do dump PostgreSQL: o banco preserva seus
+metadados e referências, não os bytes. A arquitetura evoluiu para inventário de
+uploads por caminho relativo, tamanho e SHA-256, com envio somente de conteúdo
+inédito. Isso evita reenviar todo o acervo em cada um dos cinco horários e
+mantém referência suficiente para restauração.
+
+A transmissão permanece deliberadamente desativada até confirmação específica,
+pois amplia o escopo de dados de clientes enviados ao Drive dedicado. O
+inventário inicial apontou 423 arquivos (aproximadamente 72 MB) na raiz
+canônica. Também revelou que documentos históricos da automação financeira têm
+165 registros ativos no banco (18,9 MB declarados), mas seus 255 caminhos
+binários não estão no storage local e não há GCS configurado. Nenhum mecanismo
+de backup pode preservar bytes que já não estão disponíveis; a recuperação dessa
+fonte precisa ser conduzida antes da ativação dos anexos.
+
 ## Evolução necessária
-1. Agendamento recorrente somente após aprovação da capacidade e do cron.
-2. PostgreSQL PITR com WAL.
-3. Storage imutável em projeto cloud separado, com credencial de escrita sem exclusão.
-4. Mirror Git, tags de deploy e exercício trimestral de recuperação.
+1. Localizar a fonte ou cópia histórica dos documentos ausentes da automação.
+2. Confirmar a primeira transmissão incremental dos uploads ao Drive.
+3. PostgreSQL PITR com WAL.
+4. Storage imutável em projeto cloud separado, com credencial de escrita sem exclusão.
+5. Mirror Git, tags de deploy e exercício trimestral de recuperação.

@@ -1,7 +1,7 @@
 # SPEC — Backup externo inicial no Google Drive
 
 **Classe:** SPEC  
-**Status:** Em implantação — primeira cópia produtiva validada; cron pendente de aprovação
+**Status:** Produção recorrente ativa para banco e código; uploads preparados, porém desativados até confirmação explícita
 **Owner:** Engenharia Versus
 
 ## Objetivo
@@ -10,7 +10,8 @@ Criar cópia externa diretamente do Configr para a conta dedicada `versusconsult
 ## Escopo da fase 1
 - banco PostgreSQL: dump lógico comprimido + checksum + manifesto;
 - código: `git bundle`/snapshot vinculado ao commit e à tag de deploy;
-- uploads de aplicação: evolução posterior, fora do primeiro cron;
+- uploads de aplicação: inventário incremental por SHA-256 pronto, mas fora do
+  cron até autorização explícita para a primeira transmissão de anexos;
 - execução diária às 03h, 07h, 12h, 18h e 22h, no fuso America/Bahia.
 
 ## Retenção GFS
@@ -48,11 +49,38 @@ permissão 0600. Em 2026-09-13 foi enviado com sucesso um manifesto de validaç�
 109 bytes, sem dados de clientes, para `GV-Backups/validation`. O upload criou
 somente objetos novos e não executou exclusão ou sobrescrita remota.
 
-## Pendências para entrada em produção recorrente
-1. Aprovar e instalar o agendamento nos cinco horários previstos, com fuso
-   `America/Bahia`, trava contra execução concorrente e alerta de falha/espaço.
-2. Exercício documentado de restauração isolada de banco e código.
-3. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
+O cron foi instalado em `America/Bahia` para 03h, 07h, 12h, 18h e 22h. A
+primeira execução automática, às 22h de 2026-09-13, concluiu banco, código e
+manifesto com validação de tamanhos e hashes no Drive. O bundle Git já existente
+é reutilizado quando o commit não muda.
+
+## Uploads e documentos — fase controlada
+`run_external_backup.py --include-uploads` constrói um inventário da raiz
+canônica de uploads e envia somente bytes ainda não presentes no Drive, por
+`SHA-256`. O inventário registra o caminho relativo, hash e tamanho de cada
+arquivo; links simbólicos e caminhos fora da raiz são recusados. Assim, cada
+snapshot pode ser reconstruído sem reenviar todo o acervo a cada horário.
+
+Essa opção **não está no cron atual**. A ativação requer confirmação explícita,
+pois transmite anexos de clientes para a conta Drive dedicada. O backup do banco
+preserva registros e metadados, mas não substitui os binários de anexos.
+
+No inventário de 2026-09-13, a raiz canônica continha 423 arquivos (cerca de
+72 MB). A árvore legada `app32/uploads` contém 421 deles, com o mesmo conteúdo,
+e por isso não deve ser tratada como segunda fonte. Foram encontrados 165
+registros ativos da automação financeira com cerca de 18,9 MB declarados, mas
+nenhum dos 255 caminhos binários referenciados estava presente na raiz canônica;
+GCS também não está configurado. Esses documentos históricos não podem entrar em
+um novo backup antes de localizar uma fonte íntegra, devendo ser tratados como
+incidente de recuperação separado.
+
+## Pendências
+1. Localizar e recuperar, se possível, os binários históricos da automação
+   financeira ausentes do storage canônico.
+2. Confirmar a primeira transmissão dos uploads existentes e então incluir
+   `--include-uploads` no cron.
+3. Exercício documentado de restauração isolada de banco, código e anexos.
+4. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
 
 ## Componentes implementados
 - `app32/scripts/google_drive_backup.py`: uploader direto do Configr, append-only,
@@ -63,7 +91,9 @@ somente objetos novos e não executou exclusão ou sobrescrita remota.
   PostgreSQL em formato custom, `git bundle`, manifesto SHA-256 e só permite envio
   quando invocado explicitamente com `--upload`; o modo `--dry-run` não acessa
   banco, Git nem Drive. Classifica GFS, falha fechada na quota, reutiliza bundle
-  de código do mesmo commit e limpa apenas staging local vencido.
+  de código do mesmo commit e limpa apenas staging local vencido. A opção
+  `--include-uploads` acrescenta inventário e artefatos incrementais de anexos,
+  mas permanece desligada no cron.
 
 ## Fora do escopo
 Não usar cópia local como requisito, não gravar credenciais no `.env`, não executar limpeza remota automática e não substituir backup/PITR por snapshot de provedor.

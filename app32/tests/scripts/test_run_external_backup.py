@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -85,3 +86,41 @@ def test_prune_local_staging_removes_only_expired_manifest_runs(tmp_path):
     assert not expired.exists()
     assert retained.exists()
     assert legacy.exists()
+
+
+def test_upload_inventory_is_relative_hashed_and_ignores_symlinks(tmp_path):
+    upload_root = tmp_path / "uploads"
+    (upload_root / "financial").mkdir(parents=True)
+    source = upload_root / "financial" / "receipt.pdf"
+    source.write_bytes(b"customer document")
+    inventory_path = tmp_path / "uploads.inventory.json"
+
+    files, total_bytes = runner.create_upload_inventory(upload_root, inventory_path)
+
+    assert total_bytes == len(b"customer document")
+    assert files == [{
+        "relative_path": "financial/receipt.pdf",
+        "sha256": runner.sha256_file(source),
+        "size": len(b"customer document"),
+    }]
+    payload = json.loads(inventory_path.read_text(encoding="utf-8"))
+    assert payload["files_count"] == 1
+    assert payload["total_bytes"] == total_bytes
+
+
+def test_upload_inventory_rejects_missing_root(tmp_path):
+    with pytest.raises(runner.BackupRunError, match="Diretório de uploads"):
+        runner.create_upload_inventory(tmp_path / "missing", tmp_path / "inventory.json")
+
+
+def test_existing_artifacts_uses_content_addressed_object_key(tmp_path):
+    artifact_file = tmp_path / "asset.bin"
+    artifact_file.write_bytes(b"same content")
+    artifact = runner.BackupArtifact(artifact_file, runner.sha256_file(artifact_file), "uploads")
+
+    class FakeClient:
+        def find_existing_artifact(self, object_key):
+            assert object_key == artifact.object_key
+            return {"id": "drive-123"}
+
+    assert runner.existing_artifacts(FakeClient(), [artifact]) == {artifact.object_key: {"id": "drive-123"}}
