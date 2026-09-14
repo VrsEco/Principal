@@ -1,5 +1,7 @@
 
+from datetime import datetime
 from flask import request
+from sqlalchemy import or_
 from flask_restful import Resource
 from marshmallow import ValidationError
 from models import db, Occurrence, Company, Employee
@@ -86,10 +88,14 @@ class OccurrenceListResource(Resource):
         if not company_id:
             return [], 200
             
-        process_id = request.args.get('process_id')
-        project_id = request.args.get('project_id')
-        employee_id = request.args.get('employee_id')
-        type_filter = request.args.get('type')
+        process_id = request.args.get('process_id', type=int)
+        project_id = request.args.get('project_id', type=int)
+        employee_id = request.args.get('employee_id', type=int)
+        type_filter = (request.args.get('type') or '').strip()
+        search = (request.args.get('search') or '').strip()
+        date_start = request.args.get('date_start', type=str)
+        date_end = request.args.get('date_end', type=str)
+        paginated = (request.args.get('paginated') or 'false').lower() == 'true'
 
         query = Occurrence.query.filter_by(company_id=company_id)
         employee = None
@@ -105,14 +111,37 @@ class OccurrenceListResource(Resource):
             query = query.filter_by(project_id=project_id)
         if employee_id:
             query = query.filter_by(employee_id=employee_id)
-        if type_filter:
+        if type_filter == 'positive':
+            query = query.filter(or_(Occurrence.score > 0, Occurrence.type.in_(['positive', 'compliment', 'improvement', 'idea'])))
+        elif type_filter == 'negative':
+            query = query.filter(or_(Occurrence.score < 0, Occurrence.type.in_(['negative', 'incident', 'complaint'])))
+        elif type_filter:
             query = query.filter_by(type=type_filter)
+        if search:
+            pattern = f'%{search}%'
+            query = query.filter(or_(Occurrence.title.ilike(pattern), Occurrence.description.ilike(pattern)))
+        for raw_date, comparator in ((date_start, 'start'), (date_end, 'end')):
+            if not raw_date:
+                continue
+            try:
+                parsed = datetime.fromisoformat(raw_date)
+            except ValueError:
+                continue
+            query = query.filter(Occurrence.created_at >= parsed if comparator == 'start' else Occurrence.created_at < parsed.replace(hour=23, minute=59, second=59, microsecond=999999))
 
         occurrences = query.order_by(Occurrence.created_at.desc()).all()
 
+        if employee_id:
+            occurrences = [occ for occ in occurrences if _occurrence_visible_to_employee(occ, employee_id)]
         if employee and not has_company_full_access(company_id):
             occurrences = [occ for occ in occurrences if _occurrence_visible_to_employee(occ, employee.id)]
 
+        if paginated:
+            page = max(request.args.get('page', 1, type=int) or 1, 1)
+            per_page = min(max(request.args.get('per_page', 50, type=int) or 50, 1), 100)
+            total = len(occurrences)
+            items = occurrences[(page - 1) * per_page: page * per_page]
+            return {'items': occurrences_schema.dump(items), 'pagination': {'page': page, 'per_page': per_page, 'total': total, 'has_more': page * per_page < total}}, 200
         return occurrences_schema.dump(occurrences), 200
 
     @active_company_permission_required('processes', 'create')

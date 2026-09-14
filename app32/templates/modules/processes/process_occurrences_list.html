@@ -26,6 +26,7 @@
     <div class="loading-shimmer" style="height: 100px; border-radius: 12px;"></div>
     <div class="loading-shimmer" style="height: 100px; border-radius: 12px;"></div>
 </div>
+<div id="occurrencesPagination" style="display:flex;justify-content:center;margin-top:1rem;"></div>
 
 <!-- Modal: Nova Ocorrência -->
 <div class="custom-modal-overlay" id="occurrenceModal">
@@ -116,7 +117,9 @@
     let allOccurrences = [];
     let processes = [];
     let projects = [];
-    let employees = [];
+let employees = [];
+let occurrencesPagination = { page: 1, total: 0, has_more: false };
+let occurrencesFilterTimer = null;
 
     async function init() {
         await Promise.all([
@@ -164,12 +167,19 @@
         if (filterCollab) filterCollab.innerHTML = '<option value="">Todos</option>' + employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
     }
 
-    async function loadOccurrences() {
+async function loadOccurrences({ append = false } = {}) {
         try {
-            const res = await fetch(`/api/occurrences?company_id=${companyId}`);
+            const page = append ? occurrencesPagination.page + 1 : 1;
+            const params = new URLSearchParams({ company_id: companyId, paginated: 'true', page: String(page), per_page: '50' });
+            const mappings = [['filterType', 'type'], ['filterProcess', 'process_id'], ['filterProject', 'project_id'], ['filterCollaborator', 'employee_id'], ['filterDateStart', 'date_start'], ['filterDateEnd', 'date_end'], ['searchInput', 'search']];
+            mappings.forEach(([id, key]) => { const value = document.getElementById(id)?.value?.trim(); if (value) params.set(key, value); });
+            const res = await fetch(`/api/occurrences?${params.toString()}`);
             if (res.ok) {
-                allOccurrences = await res.json();
-                applyFilters(); // Initial render with filters
+                const payload = await res.json();
+                allOccurrences = append ? allOccurrences.concat(payload.items || []) : (payload.items || []);
+                occurrencesPagination = payload.pagination || { page, total: allOccurrences.length, has_more: false };
+                renderOccurrences(allOccurrences);
+                updateScoreCard(allOccurrences);
             }
         } catch (err) {
             console.error('Erro ao carregar ocorrências:', err);
@@ -283,7 +293,10 @@
         } catch (e) { console.error(e); alert('Erro de conexão'); }
     }
 
-    function applyFilters() {
+function applyFilters() {
+        window.clearTimeout(occurrencesFilterTimer);
+        occurrencesFilterTimer = window.setTimeout(() => loadOccurrences(), 250);
+        return;
         const type = document.getElementById('filterType').value;
         const process = document.getElementById('filterProcess') ? document.getElementById('filterProcess').value : '';
         const project = document.getElementById('filterProject') ? document.getElementById('filterProject').value : '';
@@ -352,11 +365,13 @@
         if (document.getElementById('filterDateStart')) document.getElementById('filterDateStart').value = '';
         if (document.getElementById('filterDateEnd')) document.getElementById('filterDateEnd').value = '';
         if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
-        applyFilters();
+        loadOccurrences();
     }
 
-    function renderOccurrences(data) {
+function renderOccurrences(data) {
         const grid = document.getElementById('occurrencesGrid');
+        const pagination = document.getElementById('occurrencesPagination');
+        if (pagination) pagination.innerHTML = '';
         if (!data || data.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state" style="padding: 4rem;">
@@ -467,6 +482,13 @@
             </div>
             `;
         }).join('');
+        if (occurrencesPagination.has_more && pagination) {
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'btn btn-secondary';
+            button.textContent = `Carregar mais (${data.length} de ${occurrencesPagination.total})`;
+            button.addEventListener('click', () => loadOccurrences({ append: true }));
+            pagination.appendChild(button);
+        }
     }
 
     async function deleteOccurrence(id) {
