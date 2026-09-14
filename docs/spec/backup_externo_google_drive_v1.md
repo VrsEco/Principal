@@ -1,7 +1,7 @@
 # SPEC — Backup externo inicial no Google Drive
 
 **Classe:** SPEC  
-**Status:** Produção recorrente ativa para banco e código; uploads preparados, porém desativados até confirmação explícita
+**Status:** Produção recorrente ativa para banco, código e uploads canônicos
 **Owner:** Engenharia Versus
 
 ## Objetivo
@@ -10,8 +10,8 @@ Criar cópia externa diretamente do Configr para a conta dedicada `versusconsult
 ## Escopo da fase 1
 - banco PostgreSQL: dump lógico comprimido + checksum + manifesto;
 - código: `git bundle`/snapshot vinculado ao commit e à tag de deploy;
-- uploads de aplicação: inventário incremental por SHA-256 pronto, mas fora do
-  cron até autorização explícita para a primeira transmissão de anexos;
+- uploads de aplicação: inventário incremental por SHA-256 da raiz canônica
+  `www/uploads`, com envio somente de conteúdo ainda não presente no Drive;
 - execução diária às 03h, 07h, 12h, 18h e 22h, no fuso America/Bahia.
 
 ## Retenção GFS
@@ -61,9 +61,11 @@ canônica de uploads e envia somente bytes ainda não presentes no Drive, por
 arquivo; links simbólicos e caminhos fora da raiz são recusados. Assim, cada
 snapshot pode ser reconstruído sem reenviar todo o acervo a cada horário.
 
-Essa opção **não está no cron atual**. A ativação requer confirmação explícita,
-pois transmite anexos de clientes para a conta Drive dedicada. O backup do banco
-preserva registros e metadados, mas não substitui os binários de anexos.
+Após autorização explícita do titular, a primeira cópia foi concluída em
+2026-09-13 às 22:31 BRT: 423 arquivos, 71.977.208 bytes, inventário e manifesto
+foram enviados e verificados no Drive. O cron passou a usar
+`--include-uploads --uploads-root .../www/uploads`. O backup do banco preserva
+registros e metadados, mas não substitui os binários de anexos.
 
 No inventário de 2026-09-13, a raiz canônica continha 423 arquivos (cerca de
 72 MB). A árvore legada `app32/uploads` contém 421 deles, com o mesmo conteúdo,
@@ -77,10 +79,8 @@ incidente de recuperação separado.
 ## Pendências
 1. Localizar e recuperar, se possível, os binários históricos da automação
    financeira ausentes do storage canônico.
-2. Confirmar a primeira transmissão dos uploads existentes e então incluir
-   `--include-uploads` no cron.
-3. Exercício documentado de restauração isolada de banco, código e anexos.
-4. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
+2. Exercício documentado de restauração isolada de banco, código e anexos.
+3. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
 
 ## Componentes implementados
 - `app32/scripts/google_drive_backup.py`: uploader direto do Configr, append-only,
@@ -92,8 +92,8 @@ incidente de recuperação separado.
   quando invocado explicitamente com `--upload`; o modo `--dry-run` não acessa
   banco, Git nem Drive. Classifica GFS, falha fechada na quota, reutiliza bundle
   de código do mesmo commit e limpa apenas staging local vencido. A opção
-  `--include-uploads` acrescenta inventário e artefatos incrementais de anexos,
-  mas permanece desligada no cron.
+  `--include-uploads` acrescenta inventário e artefatos incrementais de anexos;
+  essa opção está ativa no cron produtivo.
 
 ## Fora do escopo
 Não usar cópia local como requisito, não gravar credenciais no `.env`, não executar limpeza remota automática e não substituir backup/PITR por snapshot de provedor.

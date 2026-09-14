@@ -1,7 +1,7 @@
 # Paper — Backup resiliente contra alterações indevidas
 
 **Classe:** Paper  
-**Status:** Banco e código em rotina recorrente; fase de anexos preparada e ainda não ativada — 2026-09-13
+**Status:** Banco, código e uploads canônicos em rotina recorrente — 2026-09-13
 
 ## Tese
 Backups devem permitir recuperar dados e código após erro humano, automação indevida ou comprometimento do servidor. A primeira camada externa será o Google Drive dedicado; a rotina deve partir diretamente do Configr, sem depender de um computador local.
@@ -53,10 +53,10 @@ uploads por caminho relativo, tamanho e SHA-256, com envio somente de conteúdo
 inédito. Isso evita reenviar todo o acervo em cada um dos cinco horários e
 mantém referência suficiente para restauração.
 
-A transmissão permanece deliberadamente desativada até confirmação específica,
-pois amplia o escopo de dados de clientes enviados ao Drive dedicado. O
-inventário inicial apontou 423 arquivos (aproximadamente 72 MB) na raiz
-canônica. Também revelou que documentos históricos da automação financeira têm
+Após confirmação específica do titular, a transmissão foi ativada no cron. A
+primeira execução enviou e verificou os 423 arquivos da raiz canônica
+(71.977.208 bytes), o inventário e o manifesto; nas próximas execuções, somente
+conteúdo inédito é transmitido. Também revelou que documentos históricos da automação financeira têm
 165 registros ativos no banco (18,9 MB declarados), mas seus 255 caminhos
 binários não estão no storage local e não há GCS configurado. Nenhum mecanismo
 de backup pode preservar bytes que já não estão disponíveis; a recuperação dessa
@@ -64,7 +64,6 @@ fonte precisa ser conduzida antes da ativação dos anexos.
 
 ## Evolução necessária
 1. Localizar a fonte ou cópia histórica dos documentos ausentes da automação.
-2. Confirmar a primeira transmissão incremental dos uploads ao Drive.
-3. PostgreSQL PITR com WAL.
-4. Storage imutável em projeto cloud separado, com credencial de escrita sem exclusão.
-5. Mirror Git, tags de deploy e exercício trimestral de recuperação.
+2. PostgreSQL PITR com WAL.
+3. Storage imutável em projeto cloud separado, com credencial de escrita sem exclusão.
+4. Mirror Git, tags de deploy e exercício trimestral de recuperação.
