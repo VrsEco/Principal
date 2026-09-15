@@ -203,7 +203,9 @@ def _user_can_approve_due_date_change(company_id, project_id, task):
     project = Project.query.filter_by(id=project_id, company_id=company_id).first()
     if not project:
         return False
-    return ProjectTaskDueDateChangeService.user_can_approve(project, company_id)
+    return ProjectTaskDueDateChangeService.user_can_apply_due_date_change(
+        task, project, company_id
+    )
 
 
 def _resolve_due_date_change_company_id(project_id, task_id):
@@ -673,7 +675,7 @@ class ProjectTaskDueDateChangeRequestListResource(Resource):
         company_id = _resolve_due_date_change_company_id(project_id, task_id)
         if not company_id:
             return {"error": "Contexto da empresa não identificado para a atividade."}, 400
-        _, project, project_error = ProjectTaskDueDateChangeService.get_task_or_error(
+        task, project, project_error = ProjectTaskDueDateChangeService.get_task_or_error(
             company_id=company_id,
             project_id=project_id,
             task_id=task_id,
@@ -681,8 +683,11 @@ class ProjectTaskDueDateChangeRequestListResource(Resource):
         if project_error:
             return {"error": project_error}, 404
 
-        can_request = _user_can_update_task(company_id, project_id, task_id)
-        can_approve = ProjectTaskDueDateChangeService.user_can_approve(project, company_id)
+        can_apply_directly = ProjectTaskDueDateChangeService.user_can_apply_due_date_change(
+            task, project, company_id
+        )
+        can_request = _user_can_update_task(company_id, project_id, task_id) or can_apply_directly
+        can_approve = can_apply_directly
         if not can_request and not can_approve:
             return {"error": "Permission denied: edit on projects"}, 403
 
@@ -699,6 +704,7 @@ class ProjectTaskDueDateChangeRequestListResource(Resource):
             "permissions": {
                 "can_request": can_request,
                 "can_approve": can_approve,
+                "can_apply_directly": can_apply_directly,
             },
             "project_owner_name": getattr(project, "owner", None) if project else None,
         }, 200
@@ -708,21 +714,32 @@ class ProjectTaskDueDateChangeRequestListResource(Resource):
         company_id = _resolve_due_date_change_company_id(project_id, task_id)
         if not company_id:
             return {"error": "Contexto da empresa não identificado para a atividade."}, 400
-        if not _user_can_update_task(company_id, project_id, task_id):
-            return {"error": "Permission denied: edit on projects"}, 403
 
         data = request.get_json() or {}
-        request_obj, error = ProjectTaskDueDateChangeService.create_request(
+        request_obj, task, applied_directly, error = (
+            ProjectTaskDueDateChangeService.create_or_apply_request(
             company_id=company_id,
             project_id=project_id,
             task_id=task_id,
             requested_due_date=data.get("requested_due_date"),
             reason=data.get("reason"),
+            )
         )
         if error:
-            return {"error": error}, 400
+            status = 404 if error == "Atividade não encontrada." or "contexto informado" in error else 400
+            return {"error": error}, status
+        if applied_directly:
+            return {
+                "request": request_obj.to_dict(),
+                "task": _serialize_task(
+                    task,
+                    include_backlog_human_gate=_should_include_backlog_human_gate(project_id),
+                    company_id=company_id,
+                ),
+                "applied_directly": True,
+            }, 201
 
-        return {"request": request_obj.to_dict()}, 201
+        return {"request": request_obj.to_dict(), "applied_directly": False}, 201
 
 
 class ProjectTaskDueDateChangeRequestDecisionResource(Resource):
@@ -741,7 +758,7 @@ class ProjectTaskDueDateChangeRequestDecisionResource(Resource):
 
         if not _user_can_approve_due_date_change(company_id, project_id, task):
             return {
-                "error": "Somente o responsável do projeto pode aprovar ou rejeitar adiamentos."
+                "error": "Você não possui autorização para efetivar este adiamento."
             }, 403
 
         data = request.get_json() or {}

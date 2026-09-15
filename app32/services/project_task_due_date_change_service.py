@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from flask import has_request_context, request
 from flask_login import current_user
+from utils.permissions import has_permission
 
 from models import (
     CompanyPerformanceSettings,
@@ -133,12 +134,19 @@ class ProjectTaskDueDateChangeService:
         return task, project, None
 
     @staticmethod
-    def user_can_approve(project: Optional[Project], company_id: Optional[int]) -> bool:
+    def user_can_apply_due_date_change(
+        task: Optional[ProjectTask], project: Optional[Project], company_id: Optional[int]
+    ) -> bool:
+        """Indica se o usuário pode efetivar o prazo sem fluxo de aprovação."""
         if not current_user.is_authenticated:
             return False
 
-        if not project or not project.owner:
+        if not task or not project or not company_id:
             return False
+
+        # Permissão explícita de edição do domínio vence o fluxo de solicitação.
+        if has_permission(company_id, "projects", "edit"):
+            return True
 
         current_names = {
             ProjectTaskDueDateChangeService._normalize_name(
@@ -157,8 +165,23 @@ class ProjectTaskDueDateChangeService:
                 ProjectTaskDueDateChangeService._normalize_name(employee.name)
             )
 
-        owner_name = ProjectTaskDueDateChangeService._normalize_name(project.owner)
-        return owner_name != "" and owner_name in current_names
+        owner_name = ProjectTaskDueDateChangeService._normalize_name(
+            getattr(project, "owner", None)
+        )
+        if owner_name != "" and owner_name in current_names:
+            return True
+
+        # O responsável da própria atividade pode reprogramá-la diretamente.
+        return bool(employee and getattr(task, "employee_id", None) == employee.id)
+
+    @staticmethod
+    def user_can_approve(
+        project: Optional[Project], company_id: Optional[int], task: Optional[ProjectTask] = None
+    ) -> bool:
+        """Compatibilidade semântica para aprovação e efetivação de prazo."""
+        return ProjectTaskDueDateChangeService.user_can_apply_due_date_change(
+            task, project, company_id
+        )
 
     @staticmethod
     def create_request(
@@ -251,6 +274,46 @@ class ProjectTaskDueDateChangeService:
         return request_obj, None
 
     @staticmethod
+    def create_or_apply_request(
+        *, company_id: int, project_id: int, task_id: int, requested_due_date: Any, reason: str
+    ) -> tuple[
+        Optional[ProjectTaskDueDateChangeRequest], Optional[ProjectTask], bool, Optional[str]
+    ]:
+        """Cria a solicitação ou efetiva-a quando o ator tiver autorização."""
+        task, project, error = ProjectTaskDueDateChangeService.get_task_or_error(
+            company_id=company_id,
+            project_id=project_id,
+            task_id=task_id,
+        )
+        if error or not task or not project:
+            return None, task, False, error or "Atividade não encontrada."
+
+        request_obj, error = ProjectTaskDueDateChangeService.create_request(
+            company_id=company_id,
+            project_id=project_id,
+            task_id=task_id,
+            requested_due_date=requested_due_date,
+            reason=reason,
+        )
+        if error or not request_obj:
+            return None, task, False, error
+
+        if not ProjectTaskDueDateChangeService.user_can_apply_due_date_change(
+            task, project, company_id
+        ):
+            return request_obj, task, False, None
+
+        request_obj, error = ProjectTaskDueDateChangeService.decide_request(
+            company_id=company_id,
+            project_id=project_id,
+            task_id=task_id,
+            request_id=request_obj.id,
+            action="approve",
+            approved_due_date=requested_due_date,
+        )
+        return request_obj, task, True, error
+
+    @staticmethod
     def decide_request(
         *,
         company_id: int,
@@ -285,8 +348,10 @@ class ProjectTaskDueDateChangeService:
         if request_obj.status != "pending":
             return None, "A solicitação informada não está mais pendente."
 
-        if not ProjectTaskDueDateChangeService.user_can_approve(project, company_id):
-            return None, "Somente o responsável do projeto pode aprovar ou rejeitar adiamentos."
+        if not ProjectTaskDueDateChangeService.user_can_apply_due_date_change(
+            task, project, company_id
+        ):
+            return None, "Você não possui autorização para efetivar este adiamento."
 
         note_text = str(approval_note or "").strip() or None
         approved_date = ProjectTaskDueDateChangeService._safe_date(approved_due_date)

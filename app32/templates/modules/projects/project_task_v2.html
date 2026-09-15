@@ -2,6 +2,10 @@
 
 {% block title %}Atividade: {{ task.what }} | Versus{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css', v=static_asset_version('css/my-work.css')) }}">
+{% endblock %}
+
 {% block breadcrumb %}
 <a href="/my-work">Meu Trabalho</a>
 <span class="sep">/</span>
@@ -225,8 +229,8 @@
     <div id="dueDateChangeRequestModal" class="modal-overlay" style="display: none;">
     <div class="modal-content surface-card due-date-change-modal" style="max-width: 560px; width: 92%;">
         <div class="modal-header mb-4">
-            <h2 class="text-h3">📝 Solicitar Alteração de Prazo</h2>
-            <p class="text-secondary">O prazo atual só será alterado após aprovação formal.</p>
+            <h2 class="text-h3" id="dueDateChangeRequestModalTitle">📝 Solicitar Alteração de Prazo</h2>
+            <p class="text-secondary" id="dueDateChangeRequestModalDescription">O prazo atual só será alterado após aprovação formal.</p>
         </div>
         <div class="form-group mb-3">
             <label class="form-label">Prazo Atual</label>
@@ -242,7 +246,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeDueDateChangeRequestModal()">Cancelar</button>
-            <button type="button" class="btn btn-primary" onclick="submitDueDateChangeRequest()">Solicitar</button>
+            <button type="button" class="btn btn-primary" id="dueDateChangeSubmitButton" onclick="submitDueDateChangeRequest()">Solicitar</button>
         </div>
     </div>
 </div>
@@ -766,7 +770,7 @@
     let diaryLogs = [];
     let currentLogId = null;
     let dueDateChangeRequests = [];
-    let dueDateChangePermissions = { can_request: false, can_approve: false };
+    let dueDateChangePermissions = { can_request: false, can_approve: false, can_apply_directly: false };
     let projectOwnerName = "{{ project.owner if project else '' }}";
     let selectedPendingDueDateChangeRequest = null;
 
@@ -811,7 +815,7 @@
                 throw new Error(data.error || 'Erro ao carregar histórico de adiamentos.');
             }
             dueDateChangeRequests = data.requests || [];
-            dueDateChangePermissions = data.permissions || { can_request: false, can_approve: false };
+            dueDateChangePermissions = data.permissions || { can_request: false, can_approve: false, can_apply_directly: false };
             projectOwnerName = data.project_owner_name || projectOwnerName || 'Sem responsável';
             renderDueDateChangeUI();
         } catch (error) {
@@ -864,7 +868,8 @@
         if (actionsEl) {
             const actionButtons = [];
             if (dueDateChangePermissions.can_request && taskData.stage !== 'completed') {
-                actionButtons.push(`<button type="button" class="btn btn-outline btn-sm" onclick="openDueDateChangeRequestModal()">Solicitar adiamento</button>`);
+                const label = dueDateChangePermissions.can_apply_directly ? 'Adiar' : 'Solicitar adiamento';
+                actionButtons.push(`<button type="button" class="btn btn-outline btn-sm" onclick="openDueDateChangeRequestModal()">${label}</button>`);
             }
             if (pendingRequest && dueDateChangePermissions.can_approve) {
                 actionButtons.push(`<button type="button" class="btn btn-primary btn-sm" onclick="openDueDateChangeApproveModal(${pendingRequest.id})">Aprovar</button>`);
@@ -1016,9 +1021,17 @@
     };
 
     function openDueDateChangeRequestModal() {
+        const appliesDirectly = Boolean(dueDateChangePermissions.can_apply_directly);
         document.getElementById('dueDateChangeCurrentDueDate').value = formatDatePtBr(taskData.due_date) || 'Sem prazo';
         document.getElementById('dueDateChangeRequestedDate').value = taskData.due_date || '';
         document.getElementById('dueDateChangeReason').value = '';
+        document.getElementById('dueDateChangeRequestModalTitle').textContent = appliesDirectly
+            ? '📅 Adiar Prazo'
+            : '📝 Solicitar Alteração de Prazo';
+        document.getElementById('dueDateChangeRequestModalDescription').textContent = appliesDirectly
+            ? 'Você tem autorização para reprogramar este prazo agora.'
+            : 'O prazo atual só será alterado após aprovação formal.';
+        document.getElementById('dueDateChangeSubmitButton').textContent = appliesDirectly ? 'Adiar' : 'Solicitar';
         document.getElementById('dueDateChangeRequestModal').style.display = 'flex';
     }
 
@@ -1046,9 +1059,16 @@
             if (!res.ok) {
                 throw new Error(data.error || 'Erro ao solicitar adiamento.');
             }
+            if (data.task) {
+                taskData = data.task;
+                const currentDueDateEl = document.getElementById('taskDueDateValue');
+                if (currentDueDateEl) {
+                    currentDueDateEl.textContent = formatDatePtBr(taskData.due_date) || '—';
+                }
+            }
             closeDueDateChangeRequestModal();
             await loadDueDateChangeRequests();
-            showToast('Solicitação de adiamento registrada.', 'success');
+            showToast(data.applied_directly ? 'Prazo adiado com sucesso.' : 'Solicitação de adiamento registrada.', 'success');
         } catch (error) {
             console.error(error);
             alert(error.message);
