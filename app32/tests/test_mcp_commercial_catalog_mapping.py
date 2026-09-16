@@ -27,6 +27,7 @@ def test_commercial_mcp_registrar_exposes_new_billing_and_dashboard_tools():
     assert {
         "get_commercial_dashboard",
         "get_commercial_product_service_readiness",
+        "list_commercial_offer_process_candidates",
         "update_commercial_offer_contract",
         "build_commercial_billing_review",
         "generate_commercial_billing_batch",
@@ -65,6 +66,7 @@ def test_tool_first_catalog_maps_commercial_finance_work_journey_and_mcp_governa
     commercial_tools = {tool["name"] for tool in domains["commercial_contracts"]["published_tools"]}
     assert "get_commercial_dashboard" in commercial_tools
     assert "get_commercial_product_service_readiness" in commercial_tools
+    assert "list_commercial_offer_process_candidates" in commercial_tools
     assert "update_commercial_offer_contract" in commercial_tools
     assert "generate_commercial_financial_titles_for_billing" in commercial_tools
     assert domains["commercial_contracts"]["summary"]["published_mcp_tools"] >= 40

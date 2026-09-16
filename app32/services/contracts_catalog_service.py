@@ -424,6 +424,37 @@ class ContractsCatalogService:
         return filtered
 
     @staticmethod
+    def list_commercial_offer_process_candidates(company_id: int) -> list[dict]:
+        """Lista somente processos do tenant aptos a serem vinculados à oferta.
+
+        A seleção é deliberadamente uma leitura MCP-first: o consultor e os
+        squads escolhem ids reais do mapa de processos, em vez de inferi-los a
+        partir de nomes ou preencher chaves manuais no contrato operacional.
+        """
+        processes = (
+            Process.query.filter(Process.company_id == company_id)
+            .order_by(Process.is_active.desc(), Process.code.asc(), Process.name.asc())
+            .all()
+        )
+        candidates = []
+        for process in processes:
+            macro = getattr(process, "macro", None)
+            area = getattr(macro, "area", None) if macro else None
+            candidates.append(
+                {
+                    "id": process.id,
+                    "code": process.code,
+                    "name": process.name,
+                    "is_active": bool(process.is_active),
+                    "responsible": process.responsible,
+                    "owner_employee_id": process.owner_employee_id,
+                    "macroprocess": getattr(macro, "name", None),
+                    "process_area": getattr(area, "name", None),
+                }
+            )
+        return candidates
+
+    @staticmethod
     def get_item(company_id: int, item_id: int) -> Optional[ContractCatalogItem]:
         return ContractCatalogItem.query.filter(
             ContractCatalogItem.id == item_id,

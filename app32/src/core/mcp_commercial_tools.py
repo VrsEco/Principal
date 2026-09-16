@@ -265,6 +265,20 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(item=item.to_dict(), readiness=readiness)
 
     @mcp.tool()
+    def list_commercial_offer_process_candidates(company_id: int) -> dict:
+        """Lista processos reais do tenant para vincular à venda, entrega e revisão da oferta."""
+        from services.contracts_catalog_service import ContractsCatalogService
+
+        try:
+            items = _run_action(
+                ContractsCatalogService.list_commercial_offer_process_candidates,
+                company_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(items=items, count=len(items))
+
+    @mcp.tool()
     def update_commercial_offer_contract(
         company_id: int,
         item_id: int,
