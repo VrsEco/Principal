@@ -551,14 +551,20 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
 
 
 def build_oauth_user_mcp_server(name: str = "GestaoVersus OAuth User MCP") -> Any:
-    """Monta a surface ``user`` OAuth com o mesmo registry do Bearer/stdio.
+    """Monta a coorte remota OAuth na superfície ``user`` mínima.
 
-    OAuth muda apenas o transporte e a identidade. Catálogo, capabilities e
-    policy continuam canônicos; cada chamada revalida o principal grant, o
-    ``company_id`` e a interseção com o RBAC do APP32.
+    OAuth substitui apenas o transporte de identidade; não transforma o
+    conector remoto em atalho para domínios sensíveis. A seleção reaproveita o
+    registry e a policy canônicos, mas publica somente o subconjunto revisado
+    de operações tenant-safe. Cada chamada ainda revalida principal, grant e
+    ``company_id``.
+
+    Finance, administração e análise privilegiada exigem a surface própria e
+    o respectivo contrato de gate; não podem ser promovidos pela role de um
+    usuário nem por uma ``mcp_permissions`` vazia.
     """
 
-    return build_user_mcp_server(name=name)
+    return build_pilot_user_mcp_server(name=name)
 
 
 def build_admin_mcp_server(name: str = "GestaoVersus Admin MCP") -> Any:

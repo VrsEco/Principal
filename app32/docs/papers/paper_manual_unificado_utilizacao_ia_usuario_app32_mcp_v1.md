@@ -474,6 +474,32 @@ Por isso, o manual unificado deve ensinar que:
 - outras podem ser executadas via MCP, desde que a surface permita;
 - sensibilidade financeira, administrativa e de governança depende da surface correta.
 
+### 9.1. Tese de operação unificada por identidade
+
+O usuário não ganha uma segunda identidade de negócio ao abrir um CLI. O
+modelo sustentável é uma mesma identidade APP32 operando por três contratos
+complementares:
+
+1. **Usuário ↔ APP32:** cadastro, vínculo de empresa e permissões do papel
+   permanecem a fonte de verdade.
+2. **CLI ↔ usuário:** OAuth/OIDC com Authorization Code + PKCE prova a
+   identidade humana para o cliente, sem copiar senha ou token para prompt.
+3. **CLI ↔ APP32:** o resource server valida o token, resolve o principal e
+   revalida o `PrincipalCompanyGrant`, `company_id`, surface e policy em cada
+   chamada.
+
+OAuth é transporte de identidade, não um segundo RBAC. A equivalência desejada
+entre APP e CLI é de **semântica de autorização**: o mesmo usuário continua
+sujeito aos mesmos vínculos empresariais, permissões e auditoria. Ela não é uma
+licença para publicar, em uma surface remota de menor privilégio, toda tool que
+exista no APP ou no stdio.
+
+O padrão de produto é: catálogo mínimo na surface `user`; dados e operações
+financeiras, administrativas ou analíticas sensíveis em surface/fluxo próprio,
+com política e gate compatíveis. O cliente pode orientar, preparar e validar
+uma operação; a execução só ocorre no canal que possua capability e aprovação
+servidor válidas.
+
 ### Princípio MCP First
 
 Quando a IA precisar consultar estado operacional real do sistema, o caminho preferencial deve ser:

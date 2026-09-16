@@ -20,8 +20,8 @@ client público desta jornada.
 
 ## Pré-requisitos de entrada
 
-1. O caso de uso é leitura operacional e cabe na surface `user`; não inclui
-   `finance` sensível, `admin`, `analytics` ou `ops`.
+1. O caso de uso cabe no catálogo revisado da surface `user`; não inclui
+   `finance` sensível, mutação financeira, `admin`, `analytics` ou `ops`.
 2. Há responsável de negócio, usuário humano identificável, empresa(s) alvo e
    runtime MCP compatível com OAuth remoto.
 3. O cliente OAuth e seus redirect URIs foram revisados. Para CLI/desktop,
@@ -49,11 +49,18 @@ client público desta jornada.
 - Issuer: `https://id.gestaoversus.com.br/realms/app32`.
 - Audience: `app32-mcp-resource`.
 - Scopes mínimos: `mcp:access` e `mcp:user`.
-- Catálogo piloto: `list_user_app32_capabilities`, `get_company_profile`,
-  `list_meetings`, `list_projects` e `list_project_tasks_secure`.
+- Catálogo remoto `user`: `list_user_app32_capabilities`,
+  `get_company_profile`, `list_meetings`, `list_projects` e
+  `list_project_tasks_secure`.
 
 Esses parâmetros não concedem acesso sozinhos. O `company_id` requerido pela
 tool é revalidado contra o grant do principal a cada chamada.
+
+As permissões APP32 do usuário são resolvidas no runtime. Quando existir,
+`PrincipalCompanyGrant.mcp_permissions` atua somente como teto: lista vazia não
+eleva nada; lista preenchida reduz por interseção. Esse mecanismo não promove
+tools financeiras para `user` e não substitui o contrato de uma surface
+privilegiada.
 
 ## Conector Codex no APP32
 

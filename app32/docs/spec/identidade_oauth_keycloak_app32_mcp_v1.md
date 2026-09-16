@@ -9,6 +9,29 @@
 
 ## 1. Limites e conclusão
 
+### Decisão oficial de unificação RBAC — 2026-09-16
+
+`mcp-versus` é o nome público do conector remoto OAuth. OAuth/OIDC autentica o
+usuário, mas não cria um catálogo paralelo nem concede permissões de negócio.
+Para cada `tools/call`, o APP32 resolve o vínculo externo, o
+`PrincipalCompanyGrant` ativo, o `company_id` solicitado e as permissões
+efetivas do papel APP32. O campo opcional `PrincipalCompanyGrant.mcp_permissions`
+é exclusivamente um **teto restritivo**: vazio significa “sem teto adicional”;
+preenchido significa interseção com o RBAC APP32; jamais amplia uma permissão.
+
+Essa unificação não altera a segregação de surfaces. A rota pública OAuth
+`/mcp/pilot/user/` publica somente o catálogo revisado, tenant-safe e de menor
+privilégio. Ela não expõe `finance` sensível, mutação financeira, `admin` ou
+`analytics`, mesmo que o usuário tenha uma permissão equivalente no APP32 ou
+no transporte legado. Esses casos exigem uma surface/contrato próprio, policy
+canônica, auditoria e gate humano quando aplicável. `tools/list` é conveniência;
+o controle definitivo continua em cada chamada com `company_id` explícito.
+
+O modelo operacional passa a ser: **Usuário ↔ APP32** (papel e memberships),
+**CLI ↔ usuário** (Authorization Code + PKCE) e **CLI ↔ APP32** (JWT, grant,
+surface, capability, tenant e gate). Nenhuma credencial OAuth, senha ou token
+é copiada para configuração, prompt, card ou log.
+
 ### Atualização de produção — 2026-09-10
 
 As conclusões AS-IS abaixo permanecem como contexto histórico da auditoria. A

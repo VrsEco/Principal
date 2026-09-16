@@ -7,6 +7,23 @@ Classe documental: Harness. Escopo: ambiente isolado local/homologação; nunca 
 Validar o contrato OAuth do resource server MCP após R05, sem ampliar coorte,
 publicar listener, reutilizar identidade real ou registrar segredo/token.
 
+## Extensão de aceite — RBAC unificado (2026-09-16)
+
+Além da autenticação, o ensaio deve demonstrar que OAuth não eleva RBAC:
+
+1. Com `mcp_permissions` vazio, confirmar que permissões são derivadas do
+   papel APP32 apenas para tools publicadas na surface.
+2. Com teto não vazio, confirmar a interseção e a negação da permission
+   removida.
+3. Confirmar que `tools/list` da rota OAuth `user` contém somente
+   `get_company_profile`, `list_meetings`, `list_project_tasks_secure`,
+   `list_projects` e `list_user_app32_capabilities`.
+4. Confirmar que uma tool financeira/admin/analytics não é descoberta e não é
+   executável pela surface `user`, mesmo se houver permissão equivalente no
+   papel APP32.
+5. Confirmar leitura positiva no `company_id` concedido e negativa para outro
+   tenant, sem registrar segredo nas evidências.
+
 ## Matriz de clientes e decisão
 
 | Cliente | Fluxo contratado | Situação R06 | Limite |

@@ -58,6 +58,19 @@ def test_pilot_user_server_exposes_only_the_reviewed_tenant_safe_catalog():
     }
 
 
+def test_oauth_user_server_keeps_the_same_reviewed_remote_catalog():
+    server = registry.build_oauth_user_mcp_server()
+    tools = asyncio.run(server.list_tools())
+
+    assert {tool.name for tool in tools} == {
+        *registry.PILOT_USER_TOOL_NAMES,
+        "list_user_app32_capabilities",
+    }
+    assert not {
+        *registry.PILOT_USER_FINANCE_READ_TOOL_NAMES,
+    }.intersection({tool.name for tool in tools})
+
+
 def test_pilot_finance_read_tools_are_discovered_only_with_grant(monkeypatch):
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
     assert registry._pilot_user_visible_tool_names() == registry.PILOT_USER_TOOL_NAMES
