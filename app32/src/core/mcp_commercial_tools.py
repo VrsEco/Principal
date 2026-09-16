@@ -279,6 +279,21 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(items=items, count=len(items))
 
     @mcp.tool()
+    def get_commercial_offer_contract_guidance(company_id: int, item_id: int) -> dict:
+        """Consolida prontidão, processos reais e roteiro para estruturar uma oferta com governança."""
+        from services.contracts_catalog_service import ContractsCatalogService
+
+        try:
+            guidance = _run_action(
+                ContractsCatalogService.get_commercial_offer_contract_guidance,
+                company_id,
+                item_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(**guidance)
+
+    @mcp.tool()
     def update_commercial_offer_contract(
         company_id: int,
         item_id: int,

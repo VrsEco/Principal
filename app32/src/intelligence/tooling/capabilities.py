@@ -1180,6 +1180,7 @@ for _tool_name, _action in (
     ("list_commercial_products_services", "read"),
     ("get_commercial_product_service_readiness", "read"),
     ("list_commercial_offer_process_candidates", "read"),
+    ("get_commercial_offer_contract_guidance", "read"),
     ("update_commercial_offer_contract", "update"),
     ("create_commercial_product_service", "create"),
     ("update_commercial_product_service", "update"),

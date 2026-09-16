@@ -234,6 +234,7 @@ class ToolFirstCatalogService:
                 "list_commercial_products_services",
                 "get_commercial_product_service_readiness",
                 "list_commercial_offer_process_candidates",
+                "get_commercial_offer_contract_guidance",
                 "update_commercial_offer_contract",
                 "create_commercial_product_service",
                 "update_commercial_product_service",

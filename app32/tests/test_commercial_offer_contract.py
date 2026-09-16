@@ -282,3 +282,37 @@ def test_commercial_process_candidates_are_limited_to_company(monkeypatch):
             "process_area": "Finalísticos",
         }
     ]
+
+
+def test_commercial_offer_guidance_does_not_invent_processes_or_approvals(monkeypatch):
+    class _FakeItem:
+        id = 31
+        company_id = 9
+        metadata_json = {"commercial_contract_v1": {"status": "draft"}}
+
+        @staticmethod
+        def to_dict():
+            return {"id": 31, "company_id": 9, "name": "Oferta em estruturação"}
+
+    monkeypatch.setattr(ContractsCatalogService, "get_item", lambda company_id, item_id: _FakeItem())
+    monkeypatch.setattr(ContractsCatalogService, "_is_selectable_level", lambda item: True)
+    monkeypatch.setattr(
+        ContractsCatalogService,
+        "get_commercial_contract_readiness",
+        lambda item: {"status": "missing", "ready_for_activation": False, "reasons": ["Contrato ausente."]},
+    )
+    monkeypatch.setattr(
+        ContractsCatalogService,
+        "list_commercial_offer_process_candidates",
+        lambda company_id: [{"id": 10, "name": "Gerir Vendas"}],
+    )
+
+    guidance = ContractsCatalogService.get_commercial_offer_contract_guidance(9, 31)
+
+    assert guidance["process_candidates"] == [{"id": 10, "name": "Gerir Vendas"}]
+    assert guidance["next_action"]["key"] == "build_draft_with_human_evidence"
+    assert guidance["current_contract"] == {"status": "draft"}
+    assert {section["key"] for section in guidance["required_sections"]} == {
+        "positioning", "scope", "execution", "evidence", "governance"
+    }
+    assert "decisão humana" in guidance["human_gate"]
