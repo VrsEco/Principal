@@ -188,7 +188,7 @@ def test_runtime_enforces_server_side_principal_grant_when_feature_flag_enabled(
     assert context.employee_id == 23
     assert context.company_id == 9
     assert context.role == "cliente"
-    assert context.permissions == ()
+    assert context.permissions == ("finance", "finance.write")
     assert context.metadata["principal_id"] == 71
     assert context.metadata["principal_grant_enforced"] is True
     assert context.metadata["company_resolution_source"] == "principal_company_grant"
@@ -247,7 +247,7 @@ def test_runtime_principal_grant_mode_never_inherits_legacy_user_or_permissions(
     assert context.company_id == 9
 
 
-def test_runtime_principal_grant_uses_only_persisted_mcp_permissions(monkeypatch):
+def test_runtime_principal_grant_uses_persisted_mcp_permissions_as_ceiling(monkeypatch):
     class _GrantDecision:
         allowed = True
         company_id = 9
@@ -267,7 +267,13 @@ def test_runtime_principal_grant_uses_only_persisted_mcp_permissions(monkeypatch
     )
     monkeypatch.setattr(
         "src.core.mcp_runtime.resolve_runtime_identity",
-        lambda **kwargs: pytest.fail(f"runtime legado não deve ser resolvido: {kwargs}"),
+        lambda **kwargs: {
+            "company_id": 9,
+            "employee_id": 23,
+            "role": "cliente",
+            "permissions": {"financial": ["view", "create"]},
+            "accessible_company_ids": [9],
+        },
     )
     tokens = set_http_request_context(
         App32McpHttpIdentity(
@@ -294,7 +300,7 @@ def test_runtime_principal_grant_uses_only_persisted_mcp_permissions(monkeypatch
         reset_http_request_context(tokens)
 
     assert context.role == "cliente"
-    assert context.permissions == ("financial.view",)
+    assert context.permissions == ("financial", "financial.view")
 
 
 def test_runtime_never_reads_principal_id_from_tool_payload(monkeypatch):

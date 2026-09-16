@@ -131,6 +131,25 @@ def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
     return (str(raw_permissions).strip().lower(),) if str(raw_permissions).strip() else ()
 
 
+def _resolve_oauth_effective_permissions(
+    runtime_permissions: Any,
+    grant_permission_ceiling: Any,
+) -> tuple[str, ...]:
+    """Calcula a interseção OAuth com o RBAC canônico do APP32.
+
+    O principal/grant continua sendo a barreira de identidade e tenant. Já as
+    permissões vêm do mesmo papel de Employee usado pelo APP32/Bearer. Quando
+    o grant contém ``mcp_permissions``, ele só pode reduzir esse conjunto —
+    nunca conceder uma permissão ausente no APP32.
+    """
+
+    resolved_runtime = _normalize_permissions(runtime_permissions)
+    ceiling = _normalize_permissions(grant_permission_ceiling)
+    if not ceiling:
+        return resolved_runtime
+    return tuple(permission for permission in resolved_runtime if permission in set(ceiling))
+
+
 @dataclass(frozen=True)
 class MCPExecutionContext:
     user_id: int | None
@@ -211,6 +230,7 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         # do processo ou headers. SERVICE/AGENT continuam sem user sintético.
         user_id = _coerce_optional_int(getattr(grant_decision.principal, "user_id", None))
         resolved_company_id = grant_decision.company_id
+        trusted_runtime_identity: dict[str, Any] = {}
         if user_id is not None:
             trusted_runtime_identity = resolve_runtime_identity(
                 user_id=user_id,
@@ -221,9 +241,10 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         disable_company_fallback = True
         company_resolution_source = "principal_company_grant"
         role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
-        # OAuth não herda permissões do runtime legado. Usa somente o grant
-        # MCP persistido para este principal e esta empresa.
-        permissions = _normalize_permissions(getattr(grant_decision, "mcp_permissions", ()))
+        permissions = _resolve_oauth_effective_permissions(
+            trusted_runtime_identity.get("permissions"),
+            getattr(grant_decision, "mcp_permissions", ()),
+        )
         principal_grant_enforced = True
     else:
         if user_id:

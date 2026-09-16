@@ -550,6 +550,17 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
     return mcp
 
 
+def build_oauth_user_mcp_server(name: str = "GestaoVersus OAuth User MCP") -> Any:
+    """Monta a surface ``user`` OAuth com o mesmo registry do Bearer/stdio.
+
+    OAuth muda apenas o transporte e a identidade. Catálogo, capabilities e
+    policy continuam canônicos; cada chamada revalida o principal grant, o
+    ``company_id`` e a interseção com o RBAC do APP32.
+    """
+
+    return build_user_mcp_server(name=name)
+
+
 def build_admin_mcp_server(name: str = "GestaoVersus Admin MCP") -> Any:
     if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
