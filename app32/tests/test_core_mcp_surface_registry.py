@@ -58,6 +58,21 @@ def test_pilot_user_server_exposes_only_the_reviewed_tenant_safe_catalog():
     }
 
 
+def test_pilot_finance_read_tools_are_discovered_only_with_grant(monkeypatch):
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
+    assert registry._pilot_user_visible_tool_names() == registry.PILOT_USER_TOOL_NAMES
+
+    monkeypatch.setattr(
+        registry,
+        "_has_authenticated_mcp_permission",
+        lambda permission: permission == "financial.view",
+    )
+    assert set(registry._pilot_user_visible_tool_names()) == {
+        *registry.PILOT_USER_TOOL_NAMES,
+        *registry.PILOT_USER_FINANCE_READ_TOOL_NAMES,
+    }
+
+
 @dataclass
 class _FakeTool:
     name: str

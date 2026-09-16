@@ -221,10 +221,9 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         disable_company_fallback = True
         company_resolution_source = "principal_company_grant"
         role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
-        # Permissões legadas não são evidência de autorização do principal. A
-        # policy recebe apenas o papel/grant até a interseção explícita com
-        # capabilities e scopes ser introduzida na próxima entrega.
-        permissions: tuple[str, ...] = ()
+        # OAuth não herda permissões do runtime legado. Usa somente o grant
+        # MCP persistido para este principal e esta empresa.
+        permissions = _normalize_permissions(getattr(grant_decision, "mcp_permissions", ()))
         principal_grant_enforced = True
     else:
         if user_id:

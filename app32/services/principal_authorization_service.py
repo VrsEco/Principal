@@ -33,6 +33,23 @@ class PrincipalAuthorizationDecision:
     def role(self) -> str | None:
         return self.grant.role if self.allowed and self.grant is not None else None
 
+    @property
+    def mcp_permissions(self) -> tuple[str, ...]:
+        """Permissões MCP do grant já limitado ao principal e à empresa."""
+
+        if not self.allowed or self.grant is None:
+            return ()
+        raw_permissions = getattr(self.grant, "mcp_permissions", ()) or ()
+        if isinstance(raw_permissions, str):
+            raw_permissions = raw_permissions.split(",")
+        if not isinstance(raw_permissions, (list, tuple, set, frozenset)):
+            return ()
+        return tuple(
+            permission
+            for permission in (str(item).strip().lower() for item in raw_permissions)
+            if permission
+        )
+
 
 @dataclass(frozen=True)
 class ExternalPrincipalResolution:

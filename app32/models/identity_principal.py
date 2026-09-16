@@ -124,6 +124,10 @@ class PrincipalCompanyGrant(db.Model):
     )
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     role = db.Column(db.String(64), nullable=False, default="colaborador")
+    # Permissões MCP adicionais, sempre avaliadas junto do papel-base e do
+    # escopo da empresa. Não armazena capabilities: somente grants atômicos
+    # (ex.: ``financial.view``) que a policy canônica compreende.
+    mcp_permissions = db.Column(db.JSON, nullable=False, default=list, server_default="[]")
     status = db.Column(db.String(16), nullable=False, default="active")
     starts_at = db.Column(db.DateTime, nullable=True)
     expires_at = db.Column(db.DateTime, nullable=True)

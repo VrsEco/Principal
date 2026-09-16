@@ -247,6 +247,56 @@ def test_runtime_principal_grant_mode_never_inherits_legacy_user_or_permissions(
     assert context.company_id == 9
 
 
+def test_runtime_principal_grant_uses_only_persisted_mcp_permissions(monkeypatch):
+    class _GrantDecision:
+        allowed = True
+        company_id = 9
+        role = "cliente"
+        mcp_permissions = ("financial.view",)
+        principal = type("Principal", (), {"user_id": None})()
+
+    class _PrincipalAuthorizationService:
+        def resolve_for_company(self, *, principal_id, company_id):
+            assert (principal_id, company_id) == (71, 9)
+            return _GrantDecision()
+
+    monkeypatch.setenv("APP32_MCP_USE_PRINCIPAL_GRANTS", "1")
+    monkeypatch.setattr(
+        "services.principal_authorization_service.principal_authorization_service",
+        _PrincipalAuthorizationService(),
+    )
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda **kwargs: pytest.fail(f"runtime legado não deve ser resolvido: {kwargs}"),
+    )
+    tokens = set_http_request_context(
+        App32McpHttpIdentity(
+            token="token-permission-grant",
+            user_id=3,
+            company_id=9,
+            fallback_role="administrador",
+            allowed_surfaces=("user",),
+            principal_id=71,
+        ),
+        {
+            "user_id": 3,
+            "company_id": 9,
+            "principal_id": 71,
+            "surface": "user",
+            "transport": "streamable_http",
+            "auth_method": "oauth_oidc_bearer",
+        },
+    )
+
+    try:
+        context = resolve_mcp_execution_context({})
+    finally:
+        reset_http_request_context(tokens)
+
+    assert context.role == "cliente"
+    assert context.permissions == ("financial.view",)
+
+
 def test_runtime_never_reads_principal_id_from_tool_payload(monkeypatch):
     class _UnexpectedPrincipalAuthorizationService:
         def resolve_for_company(self, **kwargs):  # pragma: no cover - não deve ser chamado

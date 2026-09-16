@@ -34,6 +34,64 @@ PILOT_USER_TOOL_NAMES: tuple[str, ...] = (
     "list_projects",
 )
 
+# O catálogo OAuth pode publicar leituras financeiras somente quando o
+# principal autenticado possui ``financial.view`` no grant da empresa. As
+# ferramentas permanecem registradas para o FastMCP, mas nunca são anunciadas
+# para o restante da coorte e o wrapper revalida tenant + RBAC em toda chamada.
+PILOT_USER_FINANCE_READ_TOOL_NAMES: tuple[str, ...] = (
+    "list_financial_automation_rules",
+    "list_financial_catalog_items",
+    "list_financial_classification_rules",
+    "list_financial_entries",
+)
+
+
+def _has_authenticated_mcp_permission(permission: str) -> bool:
+    """Verifica discovery por principal, sem aceitar permissão do cliente."""
+
+    try:
+        from flask import has_app_context
+        from src.core.mcp_http_auth import get_http_request_identity
+
+        identity = get_http_request_identity()
+        principal_id = getattr(identity, "principal_id", None)
+        if not isinstance(principal_id, int) or principal_id <= 0:
+            return False
+
+        def _load() -> bool:
+            from models.identity_principal import PrincipalCompanyGrant
+
+            grants = PrincipalCompanyGrant.query.filter_by(
+                principal_id=principal_id,
+                status="active",
+            ).all()
+            return any(
+                grant.is_active and permission in {
+                    str(item).strip().lower()
+                    for item in (getattr(grant, "mcp_permissions", ()) or ())
+                }
+                for grant in grants
+            )
+
+        if has_app_context():
+            return _load()
+        from app import create_app
+
+        app = create_app()
+        with app.app_context():
+            return _load()
+    except Exception:
+        # Discovery não pode se transformar em bypass se o contexto OAuth ou o
+        # banco não estiver disponível.
+        return False
+
+
+def _pilot_user_visible_tool_names() -> tuple[str, ...]:
+    names = list(PILOT_USER_TOOL_NAMES)
+    if _has_authenticated_mcp_permission("financial.view"):
+        names.extend(PILOT_USER_FINANCE_READ_TOOL_NAMES)
+    return tuple(names)
+
 
 def normalize_surface(surface: McpSurface | str) -> McpSurface:
     normalized = str(surface).strip().lower()
@@ -234,12 +292,14 @@ def _build_policy_fast_mcp(
     surface: McpSurface | str,
     *,
     exposed_tool_names: Sequence[str] | None = None,
+    conditional_tool_names: Sequence[str] | None = None,
 ) -> Any:
     """Cria servidor cujo tools/list reflete a policy efetiva da requisição."""
     if FastMCP is None:  # pragma: no cover
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
     normalized_surface = normalize_surface(surface)
     static_tool_names = frozenset(exposed_tool_names or ())
+    conditional_names = frozenset(conditional_tool_names or ())
     if not hasattr(FastMCP, "list_tools"):
         return FastMCP(name)
 
@@ -251,6 +311,8 @@ def _build_policy_fast_mcp(
                 # ainda não existe ``company_id`` para avaliar o grant. Cada
                 # execução é protegida novamente pelo wrapper tenant-safe.
                 allowed_names = set(static_tool_names)
+                if conditional_names and _has_authenticated_mcp_permission("financial.view"):
+                    allowed_names.update(conditional_names)
             else:
                 manifest = _get_surface_manifest_in_app_context(
                     normalized_surface,
@@ -350,9 +412,11 @@ def register_mcp_surface_tools(
     include_shared_registrars: bool = True,
     include_admin_diagnostics: bool = False,
     tool_names: Sequence[str] | None = None,
+    conditional_tool_names: Sequence[str] | None = None,
 ) -> None:
     normalized_surface = normalize_surface(surface)
     allowed_names = set(tool_names or iter_surface_tool_names(normalized_surface))
+    allowed_names.update(conditional_tool_names or ())
     tools_by_name = _tool_map()
 
     for tool_name in sorted(allowed_names):
@@ -389,7 +453,10 @@ def register_mcp_surface_tools(
         # Só a coorte usa filtro estático: manter o contrato de descoberta da
         # surface user normal inalterado.
         if tool_names is not None:
-            manifest_kwargs["tool_names"] = tuple(sorted(allowed_names))
+            visible_names = set(tool_names)
+            if conditional_tool_names and _has_authenticated_mcp_permission("financial.view"):
+                visible_names.update(conditional_tool_names)
+            manifest_kwargs["tool_names"] = tuple(sorted(visible_names))
             manifest_kwargs["public_scopes"] = get_surface_scope_filter(normalized_surface)
         return manifest_loader(normalized_surface, **manifest_kwargs)
 
@@ -470,6 +537,7 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
         name,
         "user",
         exposed_tool_names=PILOT_USER_TOOL_NAMES,
+        conditional_tool_names=PILOT_USER_FINANCE_READ_TOOL_NAMES,
     )
     register_mcp_surface_tools(
         mcp,
@@ -477,6 +545,7 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
         include_shared_registrars=False,
         include_admin_diagnostics=False,
         tool_names=PILOT_USER_TOOL_NAMES,
+        conditional_tool_names=PILOT_USER_FINANCE_READ_TOOL_NAMES,
     )
     return mcp
 
