@@ -34,16 +34,19 @@ PILOT_USER_TOOL_NAMES: tuple[str, ...] = (
     "list_projects",
 )
 
-# O catálogo OAuth pode publicar leituras financeiras somente quando o
-# principal autenticado possui ``financial.view`` no grant da empresa. As
-# ferramentas permanecem registradas para o FastMCP, mas nunca são anunciadas
-# para o restante da coorte e o wrapper revalida tenant + RBAC em toda chamada.
-PILOT_USER_FINANCE_READ_TOOL_NAMES: tuple[str, ...] = (
+# Leituras financeiras são uma coorte OAuth privilegiada e exclusiva da
+# surface ``analytics``. A lista é deliberadamente pequena: cada tool exige
+# ``company_id`` e a policy revalida principal/grant/RBAC por chamada.
+PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES: tuple[str, ...] = (
     "list_financial_automation_rules",
     "list_financial_catalog_items",
     "list_financial_classification_rules",
     "list_financial_entries",
 )
+
+# Compatibilidade interna temporária para imports de testes/integrações antigas.
+# A rota OAuth user não consome esta constante.
+PILOT_USER_FINANCE_READ_TOOL_NAMES = PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES
 
 
 def _has_authenticated_mcp_permission(permission: str) -> bool:
@@ -537,7 +540,6 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
         name,
         "user",
         exposed_tool_names=PILOT_USER_TOOL_NAMES,
-        conditional_tool_names=PILOT_USER_FINANCE_READ_TOOL_NAMES,
     )
     register_mcp_surface_tools(
         mcp,
@@ -545,7 +547,6 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
         include_shared_registrars=False,
         include_admin_diagnostics=False,
         tool_names=PILOT_USER_TOOL_NAMES,
-        conditional_tool_names=PILOT_USER_FINANCE_READ_TOOL_NAMES,
     )
     return mcp
 
@@ -565,6 +566,33 @@ def build_oauth_user_mcp_server(name: str = "GestaoVersus OAuth User MCP") -> An
     """
 
     return build_pilot_user_mcp_server(name=name)
+
+
+def build_oauth_analytics_finance_mcp_server(
+    name: str = "GestaoVersus OAuth Analytics Finance MCP",
+) -> Any:
+    """Monta a coorte financeira OAuth, estritamente de leitura/análise.
+
+    A surface ``analytics`` conserva a policy canônica que bloqueia mutações.
+    O allowlist impede a descoberta acidental de todo o catálogo analítico e
+    não depende de permissão declarada pelo cliente OAuth.
+    """
+
+    if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    mcp = _build_policy_fast_mcp(
+        name,
+        "analytics",
+        exposed_tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+    )
+    register_mcp_surface_tools(
+        mcp,
+        "analytics",
+        include_shared_registrars=False,
+        include_admin_diagnostics=False,
+        tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+    )
+    return mcp
 
 
 def build_admin_mcp_server(name: str = "GestaoVersus Admin MCP") -> Any:

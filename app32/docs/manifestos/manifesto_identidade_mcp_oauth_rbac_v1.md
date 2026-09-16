@@ -24,6 +24,8 @@ responsabilidade permanecem as mesmas.
    gates, auditoria ou autorização do servidor.
 7. O nome público é `mcp-versus`; client OAuth, role e tenant são conceitos
    distintos e nunca devem ser confundidos.
+8. Leitura financeira só ocorre em conexão analítica privilegiada, segregada
+   da surface `user` e incapaz de executar mutações.
 
 ## Resultado esperado
 

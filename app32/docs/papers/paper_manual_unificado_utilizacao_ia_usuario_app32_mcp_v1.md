@@ -500,6 +500,14 @@ com política e gate compatíveis. O cliente pode orientar, preparar e validar
 uma operação; a execução só ocorre no canal que possua capability e aprovação
 servidor válidas.
 
+### 9.2. Leitura financeira privilegiada
+
+Consulta financeira por IA é uma jornada analítica, não extensão da surface
+`user`. Ela deve usar uma conexão OAuth separada para `analytics`, com
+`company_id` explícito, grant ativo e RBAC `financial.read`. O catálogo é
+allowlisted e somente leitura; preparar ou importar dados não autoriza criar,
+editar, liquidar ou excluir lançamentos.
+
 ### Princípio MCP First
 
 Quando a IA precisar consultar estado operacional real do sistema, o caminho preferencial deve ser:

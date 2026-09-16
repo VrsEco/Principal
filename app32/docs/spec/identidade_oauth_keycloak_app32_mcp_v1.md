@@ -32,6 +32,15 @@ O modelo operacional passa a ser: **Usuário ↔ APP32** (papel e memberships),
 surface, capability, tenant e gate). Nenhuma credencial OAuth, senha ou token
 é copiada para configuração, prompt, card ou log.
 
+### Decisão de leitura financeira OAuth — 2026-09-16
+
+Quando habilitada por coorte, a leitura financeira remota usa exclusivamente
+`/mcp/pilot/analytics/`, scopes `mcp:access` e `mcp:analytics`, e catálogo
+allowlisted de regras de automação, catálogo, regras de classificação e
+lançamentos. A surface `analytics` é somente leitura/análise; mutação financeira
+continua fora desta coorte. O usuário precisa de grant da empresa e permissão
+APP32 `financial.read`; `mcp_permissions`, se presente, apenas restringe.
+
 ### Atualização de produção — 2026-09-10
 
 As conclusões AS-IS abaixo permanecem como contexto histórico da auditoria. A

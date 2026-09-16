@@ -115,3 +115,11 @@ CLI; não substitui o client OAuth `app32-mcp-pilot` e não altera grants,
   deve ser anunciado como OAuth remoto.
 - Este playbook não autoriza habilitar nova rota, client, redirect URI, grant
   produtivo ou deploy sem card, revisão e autorização operacional apropriados.
+
+## Complemento: coorte financeira analytics
+
+Para consulta financeira aprovada, usar conexão separada
+`mcp-versus-analytics` para `https://app.gestaoversus.com.br/mcp/pilot/analytics/`.
+Ela requer `mcp:access`, `mcp:analytics`, grant explícito e `financial.read` no
+APP32. O catálogo é somente leitura; não usar esta conexão para criar, editar,
+importar, liquidar ou excluir dados financeiros.

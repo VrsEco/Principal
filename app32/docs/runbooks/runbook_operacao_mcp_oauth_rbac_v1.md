@@ -40,3 +40,10 @@
 `mcp_permissions` é teto opcional e não mecanismo de elevação. `user` não
 publica finance sensível ou mutações; esse acesso precisa de entrega/surface
 própria com policy, auditoria e gate aprovados.
+
+## Coorte analytics financeira
+
+Antes de habilitar, validar o usuário, `financial.read`, o grant para cada
+empresa e o escopo `mcp:analytics`. Após conectar, validar uma leitura permitida,
+uma empresa sem grant e a ausência de tools mutáveis. O nome de conexão é
+`mcp-versus-analytics`; não substituir nem reconfigurar `mcp-versus` user.

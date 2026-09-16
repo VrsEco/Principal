@@ -24,6 +24,13 @@ Além da autenticação, o ensaio deve demonstrar que OAuth não eleva RBAC:
 5. Confirmar leitura positiva no `company_id` concedido e negativa para outro
    tenant, sem registrar segredo nas evidências.
 
+### Coorte analytics financeira
+
+Validar `tools/list` contendo apenas as quatro leituras financeiras
+allowlisted e `list_analytics_app32_capabilities`; exigir `mcp:analytics`,
+`financial.read` e grant do tenant. Toda tentativa de mutação deve ser negada
+pela surface, mesmo com payload de confirmação.
+
 ## Matriz de clientes e decisão
 
 | Cliente | Fluxo contratado | Situação R06 | Limite |

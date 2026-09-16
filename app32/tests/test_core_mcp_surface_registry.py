@@ -71,19 +71,28 @@ def test_oauth_user_server_keeps_the_same_reviewed_remote_catalog():
     }.intersection({tool.name for tool in tools})
 
 
-def test_pilot_finance_read_tools_are_discovered_only_with_grant(monkeypatch):
-    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
-    assert registry._pilot_user_visible_tool_names() == registry.PILOT_USER_TOOL_NAMES
+def test_oauth_analytics_finance_server_exposes_only_reviewed_read_catalog():
+    server = registry.build_oauth_analytics_finance_mcp_server()
+    tools = asyncio.run(server.list_tools())
 
+    assert {tool.name for tool in tools} == {
+        *registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+        "list_analytics_app32_capabilities",
+    }
+
+
+def test_pilot_user_finance_tools_are_never_discovered_even_if_grant_has_permission(monkeypatch):
     monkeypatch.setattr(
         registry,
         "_has_authenticated_mcp_permission",
         lambda permission: permission == "financial.view",
     )
-    assert set(registry._pilot_user_visible_tool_names()) == {
-        *registry.PILOT_USER_TOOL_NAMES,
-        *registry.PILOT_USER_FINANCE_READ_TOOL_NAMES,
-    }
+    server = registry.build_pilot_user_mcp_server()
+    tools = asyncio.run(server.list_tools())
+
+    assert not set(registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES).intersection(
+        {tool.name for tool in tools}
+    )
 
 
 @dataclass
