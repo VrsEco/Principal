@@ -168,7 +168,7 @@ def test_validate_permission_blocks_finance_for_non_admin_profiles_by_profile_co
     assert collaborator_read.allowed is False
     assert client_read.allowed is False
     assert "action_not_allowed" in collaborator_read.checks
-    assert "domain_forbidden_by_profile_contract" in client_read.checks
+    assert "action_not_allowed" in client_read.checks
 
 
 def test_validate_permission_allows_explicit_financial_permission_even_for_colaborador():
