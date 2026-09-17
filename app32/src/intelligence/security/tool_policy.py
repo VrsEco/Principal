@@ -506,7 +506,11 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
         if str(permission).strip()
     }
     explicit_permission_match = bool(
-        explicit_permissions and explicit_permissions.issubset(set(principal.permissions))
+        explicit_permissions
+        and (
+            "*" in principal.permissions
+            or explicit_permissions.issubset(set(principal.permissions))
+        )
     )
 
     delegated_finance_analytics_read = _is_explicit_client_finance_analytics_read_delegation(

@@ -6,7 +6,12 @@ from models.company import Company
 from models.employee import Employee
 from models.user import User
 from utils.company_access import get_accessible_company_ids
-from utils.permissions import get_access_profile, is_platform_admin
+from utils.permissions import (
+    PROFILE_ADMINISTRATOR,
+    PROFILE_CLIENT,
+    get_access_profile,
+    is_platform_admin,
+)
 
 
 def _load_runtime_user(user_id: int) -> User | None:
@@ -44,10 +49,19 @@ def resolve_runtime_identity(*, user_id: int, company_id: int | None) -> dict[st
     if employee and employee.role and isinstance(getattr(employee.role, 'permissions', None), dict):
         permissions = dict(employee.role.permissions)
 
+    # O MCP precisa refletir a mesma semântica de autorização do APP32, não
+    # apenas o JSON bruto do cargo. No APP32, administrador e cliente possuem
+    # acesso integral à empresa vinculada (``has_permission``). O marcador
+    # interno abaixo é consumido somente pelo resolvedor MCP e ainda passa por
+    # scope OAuth, surface, capability, tenant e gate humano.
+    access_profile = get_access_profile(resolved_company_id, user=runtime_user)
+    has_full_app32_permissions = access_profile in {PROFILE_ADMINISTRATOR, PROFILE_CLIENT}
+
     return {
         'company_id': resolved_company_id,
         'employee_id': getattr(employee, 'id', None),
-        'role': get_access_profile(resolved_company_id, user=runtime_user),
+        'role': access_profile,
         'permissions': permissions,
+        'has_full_app32_permissions': has_full_app32_permissions,
         'accessible_company_ids': accessible_company_ids,
     }

@@ -1,5 +1,9 @@
 # Manifesto — Identidade única e operação MCP governada
 
+> **Evolução 2026-09-17:** CLI e APP32 compartilham a autorização efetiva da
+> pessoa. Um grant OAuth restringe ou revoga acesso, mas jamais duplica ou
+> eleva permissões de negócio.
+
 **Classe documental:** Manifesto  
 **Status:** vigente  
 **Data:** 2026-09-16

@@ -187,7 +187,9 @@ def test_runtime_enforces_server_side_principal_grant_when_feature_flag_enabled(
     assert context.user_id == 44
     assert context.employee_id == 23
     assert context.company_id == 9
-    assert context.role == "cliente"
+    # A role efetiva vem do APP32 no instante da chamada; o grant só vincula
+    # tenant e pode impor teto de permissão, sem congelar o perfil do usuário.
+    assert context.role == "administrador"
     assert context.permissions == ("finance", "finance.write")
     assert context.metadata["principal_id"] == 71
     assert context.metadata["principal_grant_enforced"] is True
@@ -253,7 +255,7 @@ def test_runtime_principal_grant_uses_persisted_mcp_permissions_as_ceiling(monke
         company_id = 9
         role = "cliente"
         mcp_permissions = ("financial.view",)
-        principal = type("Principal", (), {"user_id": None})()
+        principal = type("Principal", (), {"user_id": 44})()
 
     class _PrincipalAuthorizationService:
         def resolve_for_company(self, *, principal_id, company_id):
@@ -301,6 +303,106 @@ def test_runtime_principal_grant_uses_persisted_mcp_permissions_as_ceiling(monke
 
     assert context.role == "cliente"
     assert context.permissions == ("financial", "financial.view")
+
+
+def test_runtime_principal_grant_uses_live_app32_permissions_when_ceiling_is_empty(monkeypatch):
+    class _GrantDecision:
+        allowed = True
+        company_id = 9
+        role = "administrador"
+        mcp_permissions = ()
+        principal = type("Principal", (), {"user_id": 44})()
+
+    class _PrincipalAuthorizationService:
+        def resolve_for_company(self, *, principal_id, company_id):
+            assert (principal_id, company_id) == (71, 9)
+            return _GrantDecision()
+
+    monkeypatch.setenv("APP32_MCP_USE_PRINCIPAL_GRANTS", "1")
+    monkeypatch.setattr(
+        "services.principal_authorization_service.principal_authorization_service",
+        _PrincipalAuthorizationService(),
+    )
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda **kwargs: {
+            "company_id": 9,
+            "employee_id": 23,
+            "role": "colaborador",
+            "permissions": {"financial": ["view"]},
+            "accessible_company_ids": [9],
+        },
+    )
+    tokens = set_http_request_context(
+        App32McpHttpIdentity(
+            token="token-live-permissions",
+            user_id=3,
+            company_id=9,
+            fallback_role="administrador",
+            allowed_surfaces=("user",),
+            principal_id=71,
+        ),
+        {
+            "user_id": 3,
+            "company_id": 9,
+            "principal_id": 71,
+            "surface": "user",
+            "transport": "streamable_http",
+            "auth_method": "oauth_oidc_bearer",
+        },
+    )
+
+    try:
+        context = resolve_mcp_execution_context({})
+    finally:
+        reset_http_request_context(tokens)
+
+    assert context.role == "colaborador"
+    assert context.permissions == ("financial", "financial.view")
+
+
+def test_runtime_principal_grant_rejects_stale_app32_company_membership(monkeypatch):
+    class _GrantDecision:
+        allowed = True
+        company_id = 9
+        principal = type("Principal", (), {"user_id": 44})()
+
+    class _PrincipalAuthorizationService:
+        def resolve_for_company(self, **kwargs):
+            return _GrantDecision()
+
+    monkeypatch.setenv("APP32_MCP_USE_PRINCIPAL_GRANTS", "1")
+    monkeypatch.setattr(
+        "services.principal_authorization_service.principal_authorization_service",
+        _PrincipalAuthorizationService(),
+    )
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda **kwargs: {
+            "company_id": 9,
+            "employee_id": None,
+            "role": None,
+            "permissions": {},
+            "accessible_company_ids": [],
+        },
+    )
+    tokens = set_http_request_context(
+        App32McpHttpIdentity(
+            token="stale-grant",
+            user_id=3,
+            company_id=9,
+            fallback_role="colaborador",
+            allowed_surfaces=("user",),
+            principal_id=71,
+        ),
+        {"company_id": 9, "principal_id": 71, "surface": "user", "transport": "streamable_http"},
+    )
+
+    try:
+        with pytest.raises(PermissionError, match="sem vínculo ativo"):
+            resolve_mcp_execution_context({})
+    finally:
+        reset_http_request_context(tokens)
 
 
 def test_runtime_never_reads_principal_id_from_tool_payload(monkeypatch):

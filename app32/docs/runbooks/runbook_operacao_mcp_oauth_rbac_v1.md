@@ -1,5 +1,9 @@
 # Runbook — Operação e diagnóstico do MCP OAuth/RBAC
 
+> **Diagnóstico obrigatório — 2026-09-17:** validar a projeção APP32 → MCP
+> removendo em homologação um vínculo ou permissão e repetindo a chamada sem
+> renovar o token. A negativa confirma que OAuth não mantém RBAC paralelo.
+
 **Classe documental:** Runbook  
 **Escopo:** `mcp-versus` remoto OAuth, produção controlada  
 **Data:** 2026-09-16

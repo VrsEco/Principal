@@ -176,6 +176,28 @@ def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
     return (str(raw_permissions).strip().lower(),) if str(raw_permissions).strip() else ()
 
 
+def _intersect_mcp_permission_ceiling(
+    app32_permissions: tuple[str, ...],
+    grant_permissions: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Aplica o teto opcional do grant sem nunca elevar o RBAC do APP32.
+
+    ``*`` representa somente a semântica já existente do APP32 para os perfis
+    cliente/administrador dentro de empresa vinculada. Não elimina nenhuma
+    outra barreira MCP; se o grant declarar um teto, o curinga é reduzido aos
+    átomos explicitamente permitidos.
+    """
+
+    app32 = tuple(dict.fromkeys(app32_permissions))
+    ceiling = tuple(dict.fromkeys(grant_permissions))
+    if not ceiling:
+        return app32
+    if "*" in app32:
+        return ceiling
+    allowed = set(app32)
+    return tuple(permission for permission in ceiling if permission in allowed)
+
+
 @dataclass(frozen=True)
 class MCPExecutionContext:
     user_id: int | None
@@ -256,23 +278,39 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         # do processo ou headers. SERVICE/AGENT continuam sem user sintético.
         user_id = _coerce_optional_int(getattr(grant_decision.principal, "user_id", None))
         resolved_company_id = grant_decision.company_id
+        trusted_runtime_identity: dict[str, Any] = {}
         if user_id is not None:
             trusted_runtime_identity = resolve_runtime_identity(
                 user_id=user_id,
                 company_id=resolved_company_id,
             )
+            if resolved_company_id not in _coerce_optional_int_list(
+                trusted_runtime_identity.get("accessible_company_ids")
+            ):
+                raise PermissionError(
+                    "principal grant negado: usuário APP32 sem vínculo ativo com a empresa"
+                )
             employee_id = _coerce_optional_int(trusted_runtime_identity.get("employee_id"))
         accessible_company_ids = (resolved_company_id,) if resolved_company_id is not None else ()
         disable_company_fallback = True
         company_resolution_source = "principal_company_grant"
-        role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
-        # Em OAuth, as permissões vêm exclusivamente do grant persistido da
-        # empresa solicitada. Nunca herdamos permissões da sessão web, de
-        # variáveis do processo ou do payload da tool. Isso torna
-        # ``mcp_permissions`` o teto explícito e tenant-bound da sessão MCP.
-        permissions = _normalize_permissions(
-            getattr(grant_decision, "mcp_permissions", ())
-        )
+        # Para USER, APP32 é a fonte de verdade de role e permissões a cada
+        # chamada. O grant OAuth apenas vincula/revoga o tenant e, quando
+        # preenchido, restringe o acesso por interseção; ele jamais o amplia.
+        if user_id is not None:
+            role = str(trusted_runtime_identity.get("role") or "colaborador").strip().lower() or "colaborador"
+            app32_permissions = _normalize_permissions(trusted_runtime_identity.get("permissions"))
+            if bool(trusted_runtime_identity.get("has_full_app32_permissions")):
+                app32_permissions = ("*", *app32_permissions)
+            permissions = _intersect_mcp_permission_ceiling(
+                app32_permissions,
+                _normalize_permissions(getattr(grant_decision, "mcp_permissions", ())),
+            )
+        else:
+            # SERVICE/AGENT não possuem RBAC humano a espelhar. Para eles o
+            # grant explícito continua sendo a autoridade de permissões.
+            role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
+            permissions = _normalize_permissions(getattr(grant_decision, "mcp_permissions", ()))
         principal_grant_enforced = True
     else:
         if user_id:

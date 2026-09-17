@@ -515,7 +515,7 @@ def validate_permission(
     checks = ["normalize_domain", "normalize_action"]
     profile_contract = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile(normalized_role)
 
-    if required and required.issubset(principal.permissions):
+    if required and ("*" in principal.permissions or required.issubset(principal.permissions)):
         return PermissionDecision(
             allowed=True,
             principal=principal,

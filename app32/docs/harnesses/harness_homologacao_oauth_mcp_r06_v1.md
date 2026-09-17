@@ -1,5 +1,10 @@
 # Harness — Homologação OAuth MCP R06
 
+> **Regressão obrigatória — 2026-09-17:** cobrir permissão APP32 concedida,
+> teto opcional do grant, grant vazio, remoção de vínculo com token ainda
+> válido e negativa cross-tenant. Escrita financeira só entra após contrato de
+> `company_id` explícito, idempotência e aprovação humana consumível.
+
 Classe documental: Harness. Escopo: ambiente isolado local/homologação; nunca produção.
 
 ## Objetivo

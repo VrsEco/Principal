@@ -198,6 +198,34 @@ def test_validate_permission_allows_explicit_financial_permission_even_for_colab
     assert "explicit_permissions_match" in create_decision.checks
 
 
+def test_validate_permission_accepts_app32_full_access_marker_only_for_explicit_capability():
+    """Cliente/admin do APP32 espelha permissões vivas sem ignorar a capability."""
+
+    principal = PrincipalContext(
+        user_id=3,
+        company_id=12,
+        role="cliente",
+        permissions=frozenset({"*"}),
+    )
+
+    allowed = validate_permission(
+        principal,
+        domain="finance",
+        action="create",
+        required_permissions=("financial.create",),
+    )
+    unknown = validate_permission(
+        principal,
+        domain="unknown_domain",
+        action="create",
+    )
+
+    assert allowed.allowed is True
+    assert "explicit_permissions_match" in allowed.checks
+    assert unknown.allowed is False
+    assert "unknown_domain_rejected" in unknown.checks
+
+
 def test_resolve_identity_context_normalizes_permission_mapping_to_resource_actions():
     principal = resolve_identity_context(
         {

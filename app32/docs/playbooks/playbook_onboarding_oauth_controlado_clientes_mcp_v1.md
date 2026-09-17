@@ -1,5 +1,10 @@
 # Playbook — Onboarding OAuth controlado para clientes MCP
 
+> **Gate adicional — 2026-09-17:** antes de aprovar uma coorte, testar a
+> revogação no APP32 com o mesmo token OAuth ainda válido. A remoção de vínculo
+> ou permissão deve negar a próxima chamada MCP; `mcp_permissions` não pode
+> restaurar esse acesso.
+
 **Classe documental:** Playbook
 **Status:** vigente para coortes controladas
 **Data:** 2026-09-11

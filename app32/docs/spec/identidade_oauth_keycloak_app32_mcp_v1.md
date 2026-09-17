@@ -1,5 +1,12 @@
 # SPEC — Identidade OAuth/OIDC e implantação Keycloak APP32/MCP
 
+> **Correção normativa — 2026-09-17:** para principais `USER`, role e
+> permissões são projetados da identidade APP32 viva por `company_id` em cada
+> chamada. `mcp_permissions` vazio preserva essa projeção; preenchido é teto
+> por interseção. Grant não sobrevive a vínculo APP32 removido. Mutações
+> financeiras continuam dependentes de surface contratada, `company_id`
+> explícito, idempotência, pré-validação e aprovação humana persistida.
+
 **Classe:** SPEC
 **Data:** 2026-09-07
 **Status:** arquitetura-alvo implantada em coorte produtiva controlada; expansão de clientes permanece governada

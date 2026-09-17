@@ -1,5 +1,10 @@
 # Paper — Manual Unificado de Utilização do APP32 por IA e Usuário via APP e MCP v1
 
+> **Nota de evolução OAuth — 2026-09-17:** OAuth autentica, mas não cria um
+> segundo RBAC. Em toda chamada MCP de um usuário humano, o APP32 reavalia
+> vínculo, perfil e permissões na empresa solicitada. O grant OAuth só pode
+> restringir, suspender ou revogar; nunca ampliar a autorização de negócio.
+
 Status: em evolução  
 Classe: Paper
 
