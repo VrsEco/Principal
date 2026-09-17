@@ -162,7 +162,17 @@ def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
                     normalized.append(permission_key)
         return tuple(normalized)
     if isinstance(raw_permissions, (list, tuple, set, frozenset)):
-        return tuple(str(item).strip().lower() for item in raw_permissions if str(item).strip())
+        normalized: list[str] = []
+        for item in raw_permissions:
+            permission = str(item).strip().lower()
+            if not permission:
+                continue
+            resource = permission.split(".", 1)[0]
+            if resource and resource not in normalized:
+                normalized.append(resource)
+            if permission not in normalized:
+                normalized.append(permission)
+        return tuple(normalized)
     return (str(raw_permissions).strip().lower(),) if str(raw_permissions).strip() else ()
 
 
@@ -256,10 +266,13 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         disable_company_fallback = True
         company_resolution_source = "principal_company_grant"
         role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
-        # Permissões legadas não são evidência de autorização do principal. A
-        # policy recebe apenas o papel/grant até a interseção explícita com
-        # capabilities e scopes ser introduzida na próxima entrega.
-        permissions: tuple[str, ...] = ()
+        # Em OAuth, as permissões vêm exclusivamente do grant persistido da
+        # empresa solicitada. Nunca herdamos permissões da sessão web, de
+        # variáveis do processo ou do payload da tool. Isso torna
+        # ``mcp_permissions`` o teto explícito e tenant-bound da sessão MCP.
+        permissions = _normalize_permissions(
+            getattr(grant_decision, "mcp_permissions", ())
+        )
         principal_grant_enforced = True
     else:
         if user_id:

@@ -626,6 +626,17 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("finance", "read", "executive"),
         "required_context": (TOOL_CONTEXT_COMPANY,),
     },
+    # Esta leitura integra a coorte OAuth de analytics. Declarar o contrato
+    # evita depender da inferência do registrar legado e mantém tools/list e
+    # o manifesto de capabilities no mesmo catálogo canônico.
+    "list_financial_catalog_items": {
+        "domain": "finance",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("financial.view",),
+        "tags": ("finance", "read", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
     "update_user_contacts": {
         "domain": "identity_self_service",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

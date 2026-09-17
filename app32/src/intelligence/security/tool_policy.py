@@ -37,6 +37,7 @@ RISK_ORDER = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 MUTATING_ACTIONS = {"create", "update", "delete", "approve", "review"}
 DESTRUCTIVE_ACTIONS = {"delete", "approve"}
 ADMIN_DOMAINS = {"admin", "diagnostics", "identity_admin"}
+READ_ONLY_ACTIONS = {"discover", "read", "list", "search", "analyze", "audit", "export"}
 
 # Scopes OAuth não são ToolScope/capabilities do catálogo. Este contrato é uma
 # fronteira independente: concede somente a surface MCP que o resource server
@@ -193,6 +194,36 @@ def _deny(request: ToolPolicyRequest, principal: PrincipalContext, surface: str,
 
 def _allow(request: ToolPolicyRequest, principal: PrincipalContext, surface: str, risk: str, company_id: Optional[int], checks: Sequence[str]) -> ToolPolicyDecision:
     return ToolPolicyDecision(True, request, principal, surface, risk, company_id, "ok", tuple(checks))
+
+
+def _is_explicit_client_finance_analytics_read_delegation(
+    *,
+    profile: str,
+    surface: str,
+    domain: str | None,
+    action: str | None,
+    risk: str,
+    explicit_permissions: set[str],
+    explicit_permission_match: bool,
+) -> bool:
+    """Permite somente a delegação financeira de leitura, por grant empresarial.
+
+    O perfil ``cliente`` continua sem acesso genérico a analytics. A exceção é
+    deliberadamente estreita: requer a capability canônica ``financial.view``,
+    grant efetivo da empresa (validado antes) e uma ação somente leitura de
+    baixo risco. Mutações, outros domínios e permissões implícitas continuam
+    bloqueados.
+    """
+
+    return bool(
+        profile == "cliente"
+        and surface == "analytics"
+        and domain == "finance"
+        and action in READ_ONLY_ACTIONS
+        and risk == "low"
+        and explicit_permissions == {"financial.view"}
+        and explicit_permission_match
+    )
 
 
 def _normalize_required_context(required_context: Sequence[str] | None) -> tuple[str, ...]:
@@ -463,7 +494,26 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
         )
         checks.append("tenant_scope_not_required")
 
-    if surface not in profile_contract.allowed_surfaces:
+    explicit_permissions = {
+        str(permission).strip().lower()
+        for permission in (request.required_permissions or ())
+        if str(permission).strip()
+    }
+    explicit_permission_match = bool(
+        explicit_permissions and explicit_permissions.issubset(set(principal.permissions))
+    )
+
+    delegated_finance_analytics_read = _is_explicit_client_finance_analytics_read_delegation(
+        profile=profile_contract.profile,
+        surface=surface,
+        domain=domain,
+        action=action,
+        risk=risk,
+        explicit_permissions=explicit_permissions,
+        explicit_permission_match=explicit_permission_match,
+    )
+
+    if surface not in profile_contract.allowed_surfaces and not delegated_finance_analytics_read:
         return _deny(
             request,
             principal,
@@ -474,16 +524,9 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
             (*checks, "surface_not_allowed_for_profile"),
         )
 
-    explicit_permissions = {
-        str(permission).strip().lower()
-        for permission in (request.required_permissions or ())
-        if str(permission).strip()
-    }
-    explicit_permission_match = bool(
-        explicit_permissions and explicit_permissions.issubset(set(principal.permissions))
-    )
-
-    if domain and domain in set(profile_contract.forbidden_domains) and not explicit_permission_match:
+    if domain and domain in set(profile_contract.forbidden_domains) and not (
+        explicit_permission_match or delegated_finance_analytics_read
+    ):
         return _deny(
             request,
             principal,

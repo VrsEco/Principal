@@ -220,6 +220,54 @@ def test_tool_policy_blocks_cliente_from_admin_surface() -> None:
     assert "surface_not_allowed_for_profile" in decision.checks
 
 
+def test_tool_policy_allows_cliente_finance_analytics_only_with_explicit_company_grant() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "user_id": 3,
+            "company_id": 7,
+            "role": "cliente",
+            "permissions": ("financial.view",),
+            "issuer": "https://id.gestaoversus.com.br/realms/app32",
+            "subject": "oauth-user-3",
+            "auth_method": "oauth_oidc_bearer",
+            "token_scopes": ("mcp:access", "mcp:analytics"),
+        },
+        ToolPolicyRequest(
+            tool_name="list_financial_entries",
+            surface="analytics",
+            domain="finance",
+            action="read",
+            risk="low",
+            requested_company_id=7,
+            required_permissions=("financial.view",),
+            required_context=("company",),
+        ),
+    )
+
+    assert decision.allowed is True
+    assert decision.resolved_surface == "analytics"
+
+
+def test_tool_policy_keeps_cliente_analytics_denied_without_explicit_financial_view() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 3, "company_id": 7, "role": "cliente"},
+        ToolPolicyRequest(
+            tool_name="list_financial_entries",
+            surface="analytics",
+            domain="finance",
+            action="read",
+            risk="low",
+            requested_company_id=7,
+            required_permissions=("financial.view",),
+            required_context=("company",),
+        ),
+    )
+
+    assert decision.allowed is False
+    assert decision.reason == "surface analytics não permitida para o perfil cliente"
+    assert "surface_not_allowed_for_profile" in decision.checks
+
+
 def test_tool_policy_allows_admin_tecnico_on_ops_surface() -> None:
     decision = evaluate_tool_policy(
         {"user_id": 4, "company_id": 7, "role": "admin_tecnico"},

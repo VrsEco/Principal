@@ -116,6 +116,36 @@ def test_oauth_analytics_registers_allowlisted_direct_registrars_only(monkeypatc
     assert "create_financial_entry" not in mcp.registered
 
 
+def test_oauth_analytics_manifest_matches_the_allowlisted_finance_catalog_for_delegated_client(monkeypatch):
+    """Evita drift entre tool registrada e capability devolvida ao conector."""
+
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=44,
+            company_id=1,
+            employee_id=None,
+            role="cliente",
+            channel="codex",
+            thread_id=None,
+            accessible_company_ids=(1,),
+            permissions=("financial.view",),
+            metadata={"surface": "analytics", "transport": "streamable_http"},
+        ),
+    )
+
+    manifest = registry.get_surface_manifest(
+        "analytics",
+        tool_names=registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+        public_scopes=registry.get_surface_scope_filter("analytics"),
+    )
+
+    assert {tool["name"] for tool in manifest["tools"]} == set(
+        registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES
+    )
+
+
 def test_pilot_user_finance_tools_are_never_discovered_even_if_grant_has_permission(monkeypatch):
     monkeypatch.setattr(
         registry,
