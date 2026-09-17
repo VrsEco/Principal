@@ -658,3 +658,13 @@ O P0 de trilha OAuth/policy foi aplicado em produção em 17/09/2026 na revision
 `InternalAuditFinancialAnalyzer` consulta exclusivamente registros da empresa solicitada e limita o escopo a liquidações postadas de contas a pagar. O contrato possui duas etapas separadas: `analyze(company_id)` retorna candidatos sem escrita; `materialize_points(company_id)` persiste novos `AuditPoint` com `origin_type=analyzer`, `source_module=audit_financial_analyzer` e fingerprint no metadata.
 
 Regras entregues: divergência de classificação por destinatário; pagamento de colaborador marcado no metadata da contraparte fora de salário/folha, viagem/diária/reembolso; e referência de pagamento repetida em uma mesma conta bancária com classificações distintas. Ausência de vínculo explícito de colaborador não é inferida por nome, CPF ou IA. Nenhuma regra altera registros financeiros, cria achado, envia comunicação ou fecha ponto; todas exigem triagem humana posterior.
+
+## 18. Cruzamentos de Auditoria Configurados
+
+O produto deverá manter um catálogo tenant-scoped de regras configuráveis para análise de Auditoria Interna. O catálogo é uma evolução da P2 e não substitui o analisador determinístico já entregue. Cada configuração exige `company_id`, versão, status, responsável, escopo de fontes/campos aprovados, condição/limite, janela temporal, severidade sugerida, periodicidade e estratégia de fingerprint/deduplicação.
+
+Estados permitidos para a configuração: `draft`, `validated`, `active`, `suspended`, `retired`. Somente configuração `active`, homologada por usuário autorizado, pode gerar candidatos. A execução deve registrar versão da regra, período, contagens de entrada/saída, parâmetros efetivos, duração, resultado e referências de evidência. A execução pode ser manual, agendada ou solicitada por IA/CLI via OAuth, mas o caminho IA/CLI deve respeitar capability, RBAC, policy, `company_id` e aprovação humana quando houver materialização.
+
+A regra configurada só pode ler fontes declaradas e permitidas no contrato; é proibido DDL/DML nas fontes financeiras, contábeis, de processos ou pessoas. Ela produz candidato ou Ponto de Auditoria; não cria achado, projeto, atividade, reunião, relatório ou follow-up automaticamente. Alterações de parâmetros, fontes, condição ou severidade abrem nova versão, preservando a anterior e seu histórico de execuções.
+
+Critérios de aceite da evolução: simulação sem escrita; segregação cross-tenant negada; validação de campos e operadores; materialização idempotente; trilha de execução; suspensão imediata; e triagem humana antes da conversão para achado.

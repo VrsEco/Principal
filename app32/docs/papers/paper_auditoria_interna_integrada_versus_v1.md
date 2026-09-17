@@ -527,3 +527,37 @@ Regras iniciais:
 - mesma referência bancária na mesma conta, repetida com classificações divergentes.
 
 Cada candidato carrega referência de liquidação, contrapartes/classes envolvidas e fingerprint. A materialização é idempotente por fingerprint e `company_id`; não recria ponto já identificado, nem reabre/edita decisão anterior do auditor. As regras são hipóteses de auditoria, não declaração automática de irregularidade.
+
+## 19. Cruzamentos de auditoria configurados
+
+Além das regras nativas, a plataforma evoluirá para um catálogo de **Cruzamentos Configurados**: regras criadas ou ajustadas por empresa sem necessidade de alterar o motor-base. Cada cruzamento será uma hipótese verificável, nunca uma conclusão automática.
+
+### Contrato de configuração
+
+Cada regra deve registrar, no mínimo:
+
+- nome, objetivo, domínio de origem e `company_id` custodiante;
+- fontes e campos permitidos, chaves de relacionamento e período analisado;
+- condições, agregações, tolerâncias, limites e severidade sugerida;
+- parâmetros versionados, responsável, status (rascunho, homologado, ativo, suspenso) e periodicidade;
+- evidência produzida, política de retenção e regra de deduplicação/fingerprint;
+- destino operacional: somente candidato ou criação de Ponto de Auditoria sob aprovação humana.
+
+### Ciclo seguro
+
+```text
+solicitação do cruzamento
+→ desenho e validação dos dados
+→ simulação em escopo controlado
+→ homologação humana
+→ ativação por empresa
+→ execução monitorada
+→ candidato/ponto de auditoria
+→ triagem, papel de trabalho e achado quando aplicável
+```
+
+Regras configuradas não podem usar dados de outra empresa, alterar registros de origem, inferir vínculo sensível apenas por nome ou gerar achado/ação corretiva sem auditor. Mudanças de parâmetro criam nova versão; a evidência de cada execução mantém o identificador da versão, período, entradas resumidas e resultado.
+
+### Evolução de implantação
+
+A P2 atual fornece regras determinísticas nativas. A próxima evolução introduzirá registro persistido de configuração, execução sob demanda/agendada, simulação e governança de aprovação. Uma solicitação em linguagem de negócio será traduzida para este contrato, revisada tecnicamente e só então publicada como cruzamento configurado.
