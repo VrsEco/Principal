@@ -50,6 +50,7 @@ from src.core.mcp_surface_registry import (  # noqa: E402
     build_analytics_mcp_server,
     build_oauth_analytics_finance_mcp_server,
     build_oauth_finance_mcp_server,
+    build_oauth_unified_mcp_server,
     build_ops_mcp_server,
     build_oauth_user_mcp_server,
     build_user_mcp_server,
@@ -130,6 +131,10 @@ def _pilot_finance_mount_enabled() -> bool:
     return _env_flag("APP32_MCP_OIDC_FINANCE_ROUTE_ENABLED", False)
 
 
+def _pilot_unified_mount_enabled() -> bool:
+    return _env_flag("APP32_MCP_OIDC_UNIFIED_ROUTE_ENABLED", False)
+
+
 def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, mount_path: str | None = None):
     """
     Constrói uma app Starlette montável em `/mcp/<surface>`.
@@ -186,6 +191,36 @@ def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, m
     return app
 
 
+def build_unified_http_app():
+    """Monta o endpoint público único, mantendo as surfaces por tool."""
+    mcp = build_oauth_unified_mcp_server(name="GestaoVersus OAuth MCP")
+    mcp.settings.host = DEFAULT_HOST
+    mcp.settings.port = DEFAULT_PORT
+    transport_security = _build_transport_security_settings()
+    if transport_security is not None:
+        mcp.settings.transport_security = transport_security
+    mcp.settings.streamable_http_path = "/"
+    mcp.settings.mount_path = "/"
+    mcp.settings.stateless_http = DEFAULT_STATELESS_HTTP
+    public_path = "/mcp/pilot"
+    # O transporte autentica a conexão como user; wrappers de tool aplicam
+    # analytics/finance e os respectivos scopes antes da execução.
+    mcp.settings.auth = build_auth_settings(
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{public_path}",
+        surface="user",
+        oauth_enabled=True,
+    )
+    mcp._token_verifier = App32MCPTokenVerifier(surface="user", oauth_enabled=True)  # noqa: SLF001
+    app = mcp.streamable_http_app()
+    app.add_middleware(
+        App32MCPRequestContextMiddleware,
+        surface="user",
+        oauth_enabled=True,
+        resource_path=public_path,
+    )
+    return app
+
+
 async def _healthz(_: Request) -> JSONResponse:
     oauth_preparation = build_oauth_preparation(base_url=DEFAULT_PUBLIC_BASE_URL)
     return JSONResponse(
@@ -199,6 +234,7 @@ async def _healthz(_: Request) -> JSONResponse:
                 "admin": _surface_mount_path("admin"),
                 "analytics": _surface_mount_path("analytics"),
                 **({"pilot_finance": "/mcp/pilot/finance"} if _pilot_finance_mount_enabled() else {}),
+                **({"pilot": "/mcp/pilot"} if _pilot_unified_mount_enabled() else {}),
                 "ops": _surface_mount_path("ops"),
                 **({"pilot_user": "/mcp/pilot/user"} if _pilot_user_mount_enabled() else {}),
                 **({"pilot_analytics": "/mcp/pilot/analytics"} if _pilot_analytics_mount_enabled() else {}),
@@ -315,6 +351,27 @@ async def _pilot_finance_oauth_protected_resource(_: Request) -> JSONResponse:
                          "bearer_methods_supported": ["header"]})
 
 
+async def _pilot_unified_oauth_protected_resource(_: Request) -> JSONResponse:
+    if not _pilot_unified_mount_enabled():
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    pilot_path = "/mcp/pilot"
+    auth_settings = build_auth_settings(
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{pilot_path}",
+        surface="user",
+        oauth_enabled=True,
+    )
+    if auth_settings is None:  # pragma: no cover
+        return JSONResponse({"error": "oauth_configuration_error"}, status_code=503)
+    return JSONResponse(
+        {
+            "resource": str(auth_settings.resource_server_url),
+            "authorization_servers": [str(auth_settings.issuer_url)],
+            "scopes_supported": ["mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"],
+            "bearer_methods_supported": ["header"],
+        }
+    )
+
+
 def create_http_app() -> Starlette:
     user_app = build_surface_http_app("user")
     admin_app = build_surface_http_app("admin")
@@ -327,6 +384,7 @@ def create_http_app() -> Starlette:
         else None
     )
     pilot_finance_app = build_surface_http_app("finance", oauth_enabled=True, mount_path="/mcp/pilot/finance") if _pilot_finance_mount_enabled() else None
+    pilot_unified_app = build_unified_http_app() if _pilot_unified_mount_enabled() else None
 
     @asynccontextmanager
     async def lifespan(app: Starlette):
@@ -342,6 +400,8 @@ def create_http_app() -> Starlette:
                 surface_apps += (pilot_analytics_app,)
             if pilot_finance_app is not None:
                 surface_apps += (pilot_finance_app,)
+            if pilot_unified_app is not None:
+                surface_apps += (pilot_unified_app,)
             for surface_app in surface_apps:
                 await stack.enter_async_context(surface_app.router.lifespan_context(surface_app))
             yield
@@ -370,6 +430,7 @@ def create_http_app() -> Starlette:
             else []
         ),
         *([Route("/.well-known/oauth-protected-resource/mcp/pilot/finance", endpoint=_pilot_finance_oauth_protected_resource)] if pilot_finance_app is not None else []),
+        *([Route("/.well-known/oauth-protected-resource/mcp/pilot", endpoint=_pilot_unified_oauth_protected_resource)] if pilot_unified_app is not None else []),
         Mount(_surface_mount_path("user"), app=user_app),
         Mount(_surface_mount_path("admin"), app=admin_app),
         Mount(_surface_mount_path("analytics"), app=analytics_app),
@@ -377,6 +438,7 @@ def create_http_app() -> Starlette:
         *([Mount("/mcp/pilot/user", app=pilot_user_app)] if pilot_user_app is not None else []),
         *([Mount("/mcp/pilot/analytics", app=pilot_analytics_app)] if pilot_analytics_app is not None else []),
         *([Mount("/mcp/pilot/finance", app=pilot_finance_app)] if pilot_finance_app is not None else []),
+        *([Mount("/mcp/pilot", app=pilot_unified_app)] if pilot_unified_app is not None else []),
     ]
     return Starlette(debug=False, routes=routes, lifespan=lifespan)
 

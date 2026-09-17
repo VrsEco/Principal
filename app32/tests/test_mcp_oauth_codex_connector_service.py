@@ -37,3 +37,17 @@ def test_connector_accepts_explicit_connection_name_without_changing_client_id(m
     assert payload["server_name"] == "mcp-versus"
     assert payload["client_id"] == "app32-mcp-codex"
     assert payload["add_command"].startswith("codex mcp add mcp-versus ")
+
+
+def test_connector_uses_unified_endpoint_and_requests_all_tool_scopes(monkeypatch):
+    monkeypatch.setenv("APP32_MCP_OAUTH_CODEX_CONNECTOR_ENABLED", "1")
+    monkeypatch.setenv("APP32_MCP_OAUTH_CODEX_CLIENT_ID", "mcp-versus-codex")
+    monkeypatch.setenv("MCP_VERSUS_OAUTH_UNIFIED_ENABLED", "1")
+
+    payload = McpOAuthCodexConnectorService().build_config()
+
+    assert payload["server_name"] == "mcp-versus"
+    assert payload["mcp_url"].endswith("/mcp/pilot/")
+    assert payload["login_command"] == (
+        "codex mcp login mcp-versus --scopes mcp:access,mcp:user,mcp:analytics,mcp:finance"
+    )

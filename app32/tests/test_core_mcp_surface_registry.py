@@ -91,6 +91,22 @@ def test_oauth_finance_server_exposes_only_the_canonical_operational_catalog():
     }
 
 
+def test_oauth_unified_server_keeps_user_tools_and_adds_privileged_tools_only_when_allowed(monkeypatch):
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
+    denied_server = registry.build_oauth_unified_mcp_server()
+    denied_tools = {tool.name for tool in asyncio.run(denied_server.list_tools())}
+
+    assert set(registry.PILOT_USER_TOOL_NAMES).issubset(denied_tools)
+    assert not set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).intersection(denied_tools)
+
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: permission == "financial.view")
+    allowed_server = registry.build_oauth_unified_mcp_server()
+    allowed_tools = {tool.name for tool in asyncio.run(allowed_server.list_tools())}
+
+    assert set(registry.PILOT_USER_TOOL_NAMES).issubset(allowed_tools)
+    assert set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).issubset(allowed_tools)
+
+
 def test_oauth_analytics_registers_allowlisted_direct_registrars_only(monkeypatch):
     """Uma tool fora de tools/list não pode ficar invocável por nome conhecido."""
 

@@ -45,6 +45,10 @@ PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES: tuple[str, ...] = (
     "list_financial_entries",
 )
 PILOT_FINANCE_OPERATIONAL_TOOL_NAMES: tuple[str, ...] = ("create_financial_entry",)
+PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES: tuple[str, ...] = (
+    *PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+    *PILOT_FINANCE_OPERATIONAL_TOOL_NAMES,
+)
 
 # Compatibilidade interna temporária para imports de testes/integrações antigas.
 # A rota OAuth user não consome esta constante.
@@ -65,18 +69,38 @@ def _has_authenticated_mcp_permission(permission: str) -> bool:
 
         def _load() -> bool:
             from models.identity_principal import PrincipalCompanyGrant
+            from src.intelligence.security.runtime_identity import resolve_runtime_identity
 
             grants = PrincipalCompanyGrant.query.filter_by(
                 principal_id=principal_id,
                 status="active",
             ).all()
-            return any(
-                grant.is_active and permission in {
+            for grant in grants:
+                if not grant.is_active:
+                    continue
+                ceiling = {
                     str(item).strip().lower()
                     for item in (getattr(grant, "mcp_permissions", ()) or ())
                 }
-                for grant in grants
-            )
+                # Um teto explícito só restringe; vazio não cria uma segunda
+                # matriz de RBAC paralela ao APP32.
+                if ceiling and permission not in ceiling and "financial" not in ceiling:
+                    continue
+                user_id = getattr(getattr(grant, "principal", None), "user_id", None)
+                if not user_id:
+                    continue
+                runtime = resolve_runtime_identity(user_id=int(user_id), company_id=int(grant.company_id))
+                if bool(runtime.get("has_full_app32_permissions")):
+                    return True
+                permissions = runtime.get("permissions") or {}
+                flattened = set()
+                for resource, actions in permissions.items():
+                    flattened.add(str(resource).strip().lower())
+                    for action in actions if isinstance(actions, (list, tuple, set)) else [actions]:
+                        flattened.add(f"{str(resource).strip().lower()}.{str(action).strip().lower()}")
+                if permission in flattened or "financial" in flattened:
+                    return True
+            return False
 
         if has_app_context():
             return _load()
@@ -334,24 +358,30 @@ def _tool_map() -> dict[str, Any]:
     return {getattr(tool, "name", str(tool)): tool for tool in catalog.get_langchain_tools()}
 
 
-def _register_tool(mcp: Any, tool: Any) -> None:
+def _register_tool(mcp: Any, tool: Any, *, policy_surface: str | None = None) -> None:
     if hasattr(tool, "func"):
-        mcp.tool(name=tool.name, description=tool.description)(wrap_mcp_callable(tool.func))
+        mcp.tool(name=tool.name, description=tool.description)(
+            wrap_mcp_callable(tool.func, policy_surface=policy_surface)
+        )
         return
 
     def make_wrapper(current_tool: Any):
-        @mcp.tool(name=current_tool.name, description=current_tool.description)
-        @wrap_mcp_callable
         def mcp_tool_wrapper(*args, **kwargs):
             payload = kwargs if kwargs else args[0] if args else {}
             return current_tool.invoke(payload)
 
-        return mcp_tool_wrapper
+        wrapped = wrap_mcp_callable(mcp_tool_wrapper, policy_surface=policy_surface)
+        return mcp.tool(name=current_tool.name, description=current_tool.description)(wrapped)
 
     make_wrapper(tool)
 
 
-def _register_shared_registrars(mcp: Any, *, tool_names: set[str] | None = None) -> None:
+def _register_shared_registrars(
+    mcp: Any,
+    *,
+    tool_names: set[str] | None = None,
+    policy_surface: str | None = None,
+) -> None:
     """Registra tools diretas do catálogo, opcionalmente por allowlist.
 
     Registrars legados usam ``@mcp.tool()`` e não pertencem a
@@ -373,7 +403,7 @@ def _register_shared_registrars(mcp: Any, *, tool_names: set[str] | None = None)
                 tool_name = explicit_name or getattr(func, "__name__", "unknown_tool")
                 if self._allowed_names is not None and tool_name not in self._allowed_names:
                     return func
-                wrapped = wrap_mcp_callable(func)
+                wrapped = wrap_mcp_callable(func, policy_surface=policy_surface)
                 setattr(wrapped, "__app32_tool_name__", tool_name)
                 return decorator(wrapped)
 
@@ -440,12 +470,13 @@ def register_mcp_surface_tools(
         tool = tools_by_name.get(tool_name)
         if tool is None:
             continue
-        _register_tool(mcp, tool)
+        _register_tool(mcp, tool, policy_surface=normalized_surface)
 
     if include_shared_registrars:
         _register_shared_registrars(
             mcp,
             tool_names=(set(shared_registrar_tool_names) if shared_registrar_tool_names is not None else None),
+            policy_surface=normalized_surface,
         )
 
     def list_surface_capabilities(
@@ -629,6 +660,50 @@ def build_oauth_finance_mcp_server(name: str = "GestaoVersus OAuth Finance MCP")
     register_mcp_surface_tools(mcp, "finance", include_shared_registrars=True,
                                include_admin_diagnostics=False, tool_names=PILOT_FINANCE_OPERATIONAL_TOOL_NAMES,
                                shared_registrar_tool_names=PILOT_FINANCE_OPERATIONAL_TOOL_NAMES)
+    return mcp
+
+
+def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
+    """Servidor público único: ``mcp-versus`` sem promover finance a user.
+
+    A descoberta começa pelas tools user e acrescenta as privilegiadas somente
+    quando a identidade APP32/grant permite. Cada wrapper privilegiado mantém
+    sua própria surface na policy, independentemente da URL única.
+    """
+    if FastMCP is None:  # pragma: no cover
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    mcp = _build_policy_fast_mcp(
+        name,
+        "user",
+        exposed_tool_names=PILOT_USER_TOOL_NAMES,
+        conditional_tool_names=PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES,
+    )
+    register_mcp_surface_tools(
+        mcp,
+        "user",
+        include_shared_registrars=False,
+        include_admin_diagnostics=False,
+        tool_names=PILOT_USER_TOOL_NAMES,
+    )
+    tools_by_name = _tool_map()
+    for tool_name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES:
+        tool = tools_by_name.get(tool_name)
+        if tool is not None:
+            _register_tool(mcp, tool, policy_surface="analytics")
+    for tool_name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES:
+        tool = tools_by_name.get(tool_name)
+        if tool is not None:
+            _register_tool(mcp, tool, policy_surface="finance")
+    _register_shared_registrars(
+        mcp,
+        tool_names=set(PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES),
+        policy_surface="analytics",
+    )
+    _register_shared_registrars(
+        mcp,
+        tool_names=set(PILOT_FINANCE_OPERATIONAL_TOOL_NAMES),
+        policy_surface="finance",
+    )
     return mcp
 
 

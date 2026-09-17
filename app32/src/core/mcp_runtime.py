@@ -399,7 +399,17 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
     )
 
 
-def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
+def wrap_mcp_callable(
+    callback: Callable[..., Any],
+    *,
+    policy_surface: str | None = None,
+) -> Callable[..., Any]:
+    """Envolve uma tool preservando a surface efetiva da capability.
+
+    Um conector público pode agregar tools de superfícies distintas. O nome do
+    conector não é uma autorização: a policy continua sendo avaliada na
+    surface da própria tool, passada exclusivamente pelo registry do servidor.
+    """
     @wraps(callback)
     def _wrapped(*args: Any, **kwargs: Any) -> Any:
         from app import create_app
@@ -444,7 +454,7 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
             # de consumir um registro persistido exatamente vinculado à ação.
             policy_request = ToolPolicyRequest(
                 tool_name=tool_name,
-                surface=str(execution_context.metadata.get("surface") or "user"),
+                surface=str(policy_surface or execution_context.metadata.get("surface") or "user"),
                 domain=getattr(capability, "domain", None),
                 action=action,
                 risk=getattr(getattr(capability, "risk", None), "value", "medium"),
