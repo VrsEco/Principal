@@ -31,6 +31,8 @@ responsabilidade permanecem as mesmas.
 8. Leitura financeira analítica ocorre em `analytics`; operações financeiras
    usam a surface privilegiada `finance`, segregada de `user`, com `company_id`
    explícito e gate humano persistido para mutações.
+9. Surfaces qualificam a execução no servidor. Elas não fragmentam a identidade
+   do produto: o nome público da conexão continua `mcp-versus`.
 
 ## Resultado esperado
 

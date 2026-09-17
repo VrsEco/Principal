@@ -48,15 +48,17 @@ própria com policy, auditoria e gate aprovados.
 ## Coorte analytics financeira
 
 Antes de habilitar, validar o usuário, `financial.read`, o grant para cada
-empresa e o escopo `mcp:analytics`. Após conectar, validar uma leitura permitida,
-uma empresa sem grant e a ausência de tools mutáveis. O nome de conexão é
-`mcp-versus-analytics`; não substituir nem reconfigurar `mcp-versus` user.
+empresa e o escopo `mcp:analytics`. Após conectar, validar uma leitura
+permitida, uma empresa sem grant e a ausência de tools mutáveis. O nome público
+continua `mcp-versus`; `analytics` é uma surface interna e nunca uma marca de
+conector para o usuário.
 
 ## Coorte financeira operacional
 
-Usar `mcp-versus-finance` em `https://app.gestaoversus.com.br/mcp/pilot/finance/`
-somente para usuário APP32 já autorizado, com scope `mcp:finance` e `company_id`
-explícito. Para mutar: executar a chamada uma primeira vez, aprovar a solicitação
-persistida exibida no APP32 e repetir **o mesmo payload**. Não passar booleano de
-confirmação, não alterar o payload após a aprovação e não repetir operação com
-outro `company_id`.
+Usar a surface `https://app.gestaoversus.com.br/mcp/pilot/finance/` somente
+para usuário APP32 já autorizado, com scope `mcp:finance` e `company_id`
+explícito. O nome público do conector é `mcp-versus`; não criar aliases como
+`mcp-versus-finance`. Para mutar: executar a chamada uma primeira vez, aprovar
+a solicitação persistida exibida no APP32 e repetir **o mesmo payload**. Não
+passar booleano de confirmação, não alterar o payload após a aprovação e não
+repetir operação com outro `company_id`.

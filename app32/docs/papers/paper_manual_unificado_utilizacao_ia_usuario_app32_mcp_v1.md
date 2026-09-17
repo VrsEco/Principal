@@ -1387,3 +1387,17 @@ Este paper cumpre seu papel quando gerar, no mínimo:
 4. um caminho explícito para consumo por IA e por MCP.
 
 Quando isso acontecer, o tema deixa de estar apenas em amadurecimento conceitual e passa a exigir congelamento formal da estrutura oficial.
+
+## 19. Hipótese de experiência — um conector, autorização composta
+
+Para a pessoa que opera o APP32, o conector chama-se `mcp-versus`,
+independentemente de ela estar consultando projetos, processos ou finanças. A
+especialização deve permanecer no servidor: cada tool declara seu domínio,
+surface, risco, `company_id` e gate; o cliente não vira um mosaico de nomes
+como `mcp-versus-finance`.
+
+A hipótese ainda exige uma entrega própria: um resource endpoint canônico deve
+compor apenas as tools autorizadas ao principal, sem transformar `user` em
+surface financeira e sem perder scopes, auditoria ou isolamento cross-tenant.
+Até essa comprovação, aliases por domínio são apenas artefatos técnicos de
+homologação e não instrução para usuários.

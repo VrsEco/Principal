@@ -19,10 +19,12 @@ OAuth, client OAuth permitido, scopes, surface, `PrincipalCompanyGrant` e policy
 da tool. O piloto produtivo usa somente a surface `user` em
 `/mcp/pilot/user`.
 
-Para caso de uso financeiro, há coorte distinta em `/mcp/pilot/finance/`, com
-scope `mcp:finance`, `company_id` explícito e aprovação humana persistida antes
-de qualquer mutação. A coorte financeira não amplia o perfil APP32: apenas
-projeta no MCP as permissões efetivas já existentes para o mesmo usuário.
+Para caso de uso financeiro, há coorte controlada em `/mcp/pilot/finance/`,
+com scope `mcp:finance`, `company_id` explícito e aprovação humana persistida
+antes de qualquer mutação. A coorte financeira não amplia o perfil APP32:
+apenas projeta no MCP as permissões efetivas já existentes para o mesmo
+usuário. Ela não recebe nome público próprio: o nome exibido ao usuário é
+sempre `mcp-versus`.
 
 Este playbook é para **USER + Authorization Code com PKCE S256**. SERVICE e
 AGENT exigem entrega e playbook próprios; não reutilizam conta humana nem o
@@ -128,8 +130,9 @@ CLI; não substitui o client OAuth `app32-mcp-pilot` e não altera grants,
 
 ## Complemento: coorte financeira analytics
 
-Para consulta financeira aprovada, usar conexão separada
-`mcp-versus-analytics` para `https://app.gestaoversus.com.br/mcp/pilot/analytics/`.
-Ela requer `mcp:access`, `mcp:analytics`, grant explícito e `financial.read` no
-APP32. O catálogo é somente leitura; não usar esta conexão para criar, editar,
-importar, liquidar ou excluir dados financeiros.
+Para consulta financeira aprovada, a coorte usa
+`https://app.gestaoversus.com.br/mcp/pilot/analytics/`. Ela requer
+`mcp:access`, `mcp:analytics`, grant explícito e `financial.read` no APP32. O
+catálogo é somente leitura; não usar esta coorte para criar, editar, importar,
+liquidar ou excluir dados financeiros. Não instruir usuários a criar aliases
+como `mcp-versus-analytics`: `mcp-versus` é o nome público canônico.
