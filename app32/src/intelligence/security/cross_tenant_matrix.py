@@ -14,7 +14,7 @@ class CrossTenantDomainRequirement:
 
 
 REQUIRED_PROFILES = ("colaborador", "cliente", "administrador", "administrador_tecnico")
-REQUIRED_SURFACES = ("user", "admin", "analytics", "ops")
+REQUIRED_SURFACES = ("user", "admin", "analytics", "finance", "ops")
 REQUIRED_ASSERTS = (
     "tenant_deny_cross_company",
     "tenant_allow_same_company",

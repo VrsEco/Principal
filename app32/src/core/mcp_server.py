@@ -19,7 +19,7 @@ def run_mcp_server():
         sys.exit(1)
 
     requested_surface = (os.environ.get("APP32_MCP_SURFACE") or "user").strip().lower()
-    if requested_surface in {"user", "admin", "analytics", "ops"}:
+    if requested_surface in {"user", "admin", "analytics", "finance", "ops"}:
         if requested_surface == "user":
             from src.core.mcp_server_user import run_user_mcp_server
 
@@ -36,6 +36,12 @@ def run_mcp_server():
             from src.core.mcp_server_ops import run_ops_mcp_server
 
             run_ops_mcp_server()
+            return
+
+        if requested_surface == "finance":
+            from src.core.mcp_server_finance import run_finance_mcp_server
+
+            run_finance_mcp_server()
             return
 
         from src.core.mcp_server_admin import run_admin_mcp_server

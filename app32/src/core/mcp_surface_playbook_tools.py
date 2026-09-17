@@ -43,7 +43,7 @@ def register_surface_playbook_tools(mcp: Any) -> None:
     def describe_app32_surface_playbooks_tool(surface: Optional[str] = None) -> dict[str, Any]:
         """
         Descreve como agentes devem interagir com o APP32 por surface MCP:
-        user, admin, analytics e ops.
+        user, admin, analytics, finance e ops.
         """
         if not surface:
             return _success(
@@ -52,7 +52,7 @@ def register_surface_playbook_tools(mcp: Any) -> None:
             )
 
         normalized = surface.strip().lower()
-        if normalized not in {"user", "admin", "analytics", "ops"}:
+        if normalized not in {"user", "admin", "analytics", "finance", "ops"}:
             return _error(
                 "surface_playbooks.describe",
                 f"Surface MCP inválida: {surface}.",

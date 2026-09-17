@@ -37,9 +37,9 @@ def test_external_ai_onboarding_manifest_covers_surfaces_and_phases():
     assert manifest.version == "app32.ai-mcp.external-ai-onboarding.v1"
     assert manifest.tenant_scope_required is True
     assert manifest.sql_freeform_allowed is False
-    assert {"user", "admin", "analytics", "ops"} <= surfaces
+    assert {"user", "admin", "analytics", "finance", "ops"} <= surfaces
     assert {"intake", "access_design", "registration", "validation", "operation"} <= phases
-    assert "AI_MCP_EXTERNAL_ONBOARDING_OK 4 5" in manifest.go_live_smokes
+    assert "AI_MCP_EXTERNAL_ONBOARDING_OK 5 5" in manifest.go_live_smokes
 
 
 def test_external_ai_onboarding_surface_boundaries():
@@ -83,7 +83,7 @@ def test_external_ai_onboarding_doc_contains_smoke_and_forbidden_patterns():
     assert "Manual de Onboarding de IAs Externas via MCP" in text
     assert "APP32_EXTERNAL_AI_ONBOARDING_MANIFEST" in text
     assert "describe_app32_external_ai_onboarding_tool" in text
-    assert "AI_MCP_EXTERNAL_ONBOARDING_OK 4 5" in text
+    assert "AI_MCP_EXTERNAL_ONBOARDING_OK 5 5" in text
     assert "Não liberar SQL livre" in text
     assert "Não compartilhar tokens" in text
 

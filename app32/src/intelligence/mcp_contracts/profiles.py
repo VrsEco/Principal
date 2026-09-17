@@ -33,7 +33,7 @@ MCPOverlayName = Literal[
     "dba_engenharia",
     "qa_automation_engenharia",
 ]
-MCPAllowedSurface = Literal["user", "admin", "analytics", "ops"]
+MCPAllowedSurface = Literal["user", "admin", "analytics", "finance", "ops"]
 MCPMutationRisk = Literal["low", "medium", "high", "critical"]
 
 
@@ -63,8 +63,11 @@ class MCPProfileContract(_StrictModel):
             surface in {"admin", "analytics", "ops"} for surface in self.allowed_surfaces
         ):
             raise ValueError("Perfis não administrativos não podem acessar surfaces privilegiadas.")
-        if self.can_execute_financial_mutations and self.profile not in {"administrador", "admin_tecnico"}:
-            raise ValueError("Mutações financeiras ficam restritas a perfis administrativos.")
+        if self.can_execute_financial_mutations and self.profile not in {"administrador", "admin_tecnico", "cliente"}:
+            raise ValueError("Mutações financeiras MCP exigem perfil administrativo ou cliente na surface finance.")
+        if self.profile == "cliente" and self.can_execute_financial_mutations:
+            if "finance" not in self.allowed_surfaces or "finance" not in self.allowed_domains:
+                raise ValueError("Cliente financeiro exige surface finance e domínio finance explícitos.")
         if self.can_access_ops and self.profile != "admin_tecnico":
             raise ValueError("Surface ops fica restrita ao perfil admin_tecnico.")
         return self
@@ -544,16 +547,15 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                     "meetings",
                     "strategy",
                     "consultive",
-                    "finance",
                     "identity_self_service",
                 ],
-                forbidden_domains=["governance", "admin", "analytics", "operations", "workload", "identity_admin"],
+                forbidden_domains=["governance", "admin", "analytics", "operations", "workload", "identity_admin", "finance"],
                 max_risk_without_human_gate="medium",
                 can_execute_mutations=True,
             ),
             MCPProfileContract(
                 profile="cliente",
-                allowed_surfaces=["user"],
+                allowed_surfaces=["user", "finance"],
                 default_surface="user",
                 allowed_domains=[
                     "routine",
@@ -562,15 +564,17 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                     "meetings",
                     "strategy",
                     "consultive",
+                    "finance",
                     "identity_self_service",
                 ],
-                forbidden_domains=["finance", "governance", "admin", "analytics", "operations", "workload", "identity_admin"],
+                forbidden_domains=["governance", "admin", "analytics", "operations", "workload", "identity_admin"],
                 max_risk_without_human_gate="low",
-                can_execute_mutations=False,
+                can_execute_mutations=True,
+                can_execute_financial_mutations=True,
             ),
             MCPProfileContract(
                 profile="administrador",
-                allowed_surfaces=["user", "admin", "analytics"],
+                allowed_surfaces=["user", "admin", "analytics", "finance"],
                 default_surface="admin",
                 allowed_domains=[
                     "routine",

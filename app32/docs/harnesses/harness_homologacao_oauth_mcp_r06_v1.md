@@ -4,6 +4,9 @@
 > teto opcional do grant, grant vazio, remoção de vínculo com token ainda
 > válido e negativa cross-tenant. Escrita financeira só entra após contrato de
 > `company_id` explícito, idempotência e aprovação humana consumível.
+> **Incremento finance — 2026-09-17:** homologar a surface `finance` em fluxo
+> completo: criação da aprovação persistida, aprovação pelo APP32, consumo único
+> com payload idêntico e negativa cross-tenant antes de qualquer promoção.
 
 Classe documental: Harness. Escopo: ambiente isolado local/homologação; nunca produção.
 

@@ -97,7 +97,15 @@ class ProfilePermissionSurfaceMatrix(_StrictModel):
         if self.profile == "cliente":
             for rule in self.domains:
                 if any(action in rule.allowed_actions for action in {"create", "update", "delete", "audit"}):
-                    raise ValueError("Cliente não pode receber ações de mutação/auditoria na matriz.")
+                    finance_exception = (
+                        self.surface == "finance"
+                        and rule.domain == "finance"
+                        and set(rule.allowed_actions).issubset({"discover", "read", "create", "update", "analyze"})
+                        and rule.requires_explicit_company_id
+                        and {"create", "update"}.issubset(set(rule.human_gate_for_actions))
+                    )
+                    if not finance_exception:
+                        raise ValueError("Cliente só pode receber mutação financeira na surface finance com gate humano.")
         if self.profile == "colaborador" and self.surface != "user":
             raise ValueError("Colaborador fica restrito à surface user na matriz.")
         if self.surface == "analytics":
@@ -597,7 +605,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 profile="colaborador",
                 surface="user",
                 title="Matriz de permissões MCP - Colaborador / User",
-                summary="Colaborador atua na surface user com foco operacional e pode receber tools financeiras permission-aware quando a senha já libera a mesma ação no APP32.",
+                summary="Colaborador atua na surface user com foco operacional; o domínio financeiro permanece em surface privilegiada dedicada.",
                 default_scope="active_company",
                 domains=[
                     _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Pode operar rotina do tenant ativo sem bypass de escopo."]),
@@ -605,7 +613,6 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Projetos e tarefas seguem surface user e trilha auditável do sistema."]),
                     _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Reuniões permitem preparação e atualização operacional."]),
                     _rule("strategy", ["discover", "read", "analyze", "review"], denied=["create", "update", "delete", "audit"], human_gate_for_actions=["review"], notes=["Estratégia para colaborador fica restrita à leitura, análise assistida e revisão human-gate de maturação S1-S2."]),
-                    _rule("finance", ["discover", "read", "create", "update"], denied=["delete", "audit"], requires_explicit_company_id=True, notes=["Financeiro na surface user é permission-aware: só aparece quando a senha do colaborador já possui a permissão web equivalente no APP32."]),
                 ],
             ),
             ProfilePermissionSurfaceMatrix(
@@ -624,6 +631,24 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 ],
             ),
             ProfilePermissionSurfaceMatrix(
+                profile="cliente",
+                surface="finance",
+                title="Matriz de permissões MCP - Cliente / Finance",
+                summary="Cliente opera somente capabilities financeiras explicitamente autorizadas no APP32, por empresa e sob gate humano persistido.",
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule(
+                        "finance",
+                        ["discover", "read", "create", "update", "analyze"],
+                        denied=["delete", "audit"],
+                        max_risk_without_human_gate="low",
+                        requires_explicit_company_id=True,
+                        human_gate_for_actions=["create", "update"],
+                        notes=["O RBAC do APP32 é reavaliado a cada chamada; mutações exigem aprovação persistida e idempotência."],
+                    ),
+                ],
+            ),
+            ProfilePermissionSurfaceMatrix(
                 profile="administrador",
                 surface="user",
                 title="Matriz de permissões MCP - Administrador / User",
@@ -636,7 +661,22 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("meetings", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Reuniões seguem fluxo operacional comum."]),
                     _rule("strategy", ["discover", "read", "create", "update", "analyze", "review"], denied=["delete"], human_gate_for_actions=["review"], notes=["Mudanças estratégicas sensíveis podem exigir redirecionamento para admin; revisão de maturação S1-S2 mantém human-gate."]),
                     _rule("consultive", ["discover", "read", "create", "update", "analyze", "review"], denied=["delete"], human_gate_for_actions=["create", "update", "review"], notes=["Admin pode registrar análise/validação/decisão consultiva com gate humano e trilha auditável."]),
-                    _rule("finance", ["discover", "read", "create", "update", "analyze"], denied=["delete"], requires_explicit_company_id=True, notes=["Administrador pode operar finanças pela surface user quando o fluxo funcional bastar e a permissão web equivalente estiver presente."]),
+                ],
+            ),
+            ProfilePermissionSurfaceMatrix(
+                profile="administrador",
+                surface="finance",
+                title="Matriz de permissões MCP - Administrador / Finance",
+                summary="Administrador opera o domínio financeiro na surface dedicada, com RBAC APP32 vivo, tenant explícito e gate persistido.",
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule(
+                        "finance",
+                        ["discover", "read", "create", "update", "delete", "analyze", "audit"],
+                        requires_explicit_company_id=True,
+                        human_gate_for_actions=["create", "update", "delete"],
+                        notes=["Mutações financeiras devem consumir uma aprovação humana persistida e vinculada ao payload exato."],
+                    ),
                 ],
             ),
             ProfilePermissionSurfaceMatrix(

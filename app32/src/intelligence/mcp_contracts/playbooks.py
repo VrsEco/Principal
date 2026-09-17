@@ -8,7 +8,7 @@ from .base import MCPSuccessEnvelope, _StrictModel
 from .profiles import MCPOverlayName
 
 
-PlaybookSurface = Literal["user", "admin", "analytics", "ops"]
+PlaybookSurface = Literal["user", "admin", "analytics", "finance", "ops"]
 PlaybookRole = Literal["colaborador", "cliente", "administrador", "admin_tecnico"]
 
 
@@ -98,7 +98,6 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                     "strategy",
                     "consultive",
                     "knowledge",
-                    "finance",
                     "identity_self_service",
                 ],
                 default_scope="active_company",
@@ -106,7 +105,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 startup_checklist=[
                     "Confirmar company_id ativo antes de qualquer leitura ou mutação.",
                     "Consultar as capabilities da surface user e o contrato CRUD do domínio alvo.",
-                    "Quando o domínio for finance, depender apenas das tools efetivamente liberadas pelas permissões web do usuário na empresa ativa.",
+                    "Encaminhar domínio financeiro para a surface finance, que exige company_id explícito e aprovação persistida quando houver mutação.",
                     "Se houver ambiguidade de escopo, pedir confirmação ao usuário antes de agir.",
                 ],
                 interaction_rules=[
@@ -121,7 +120,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 ],
                 forbidden_actions=[
                     "Não acessar tools exclusivas de admin, analytics ou ops.",
-                    "Não executar ação financeira fora das permissões web equivalentes do usuário, do company_id ativo e do tenant autorizado.",
+                    "Não acessar ferramentas financeiras; usar a surface finance dedicada para esse domínio sensível.",
                 ],
                 example_flows=[
                     SurfaceExampleFlow(
@@ -313,6 +312,44 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                         recommended_actions=["discover", "read", "analyze", "audit", "update"],
                         escalation_rules=["Escalar boundary para Arquiteto.", "Escalar incidente runtime para Coordenador/ops."],
                     ),
+                ],
+            ),
+            SurfacePlaybook(
+                surface="finance",
+                title="Playbook MCP Finance",
+                objective="Executar operações financeiras do próprio usuário com tenant explícito, autorização APP32 viva, idempotência e confirmação humana persistida.",
+                actor_roles=["cliente", "administrador"],
+                allowed_domains=["finance"],
+                default_scope="explicit_company_id",
+                discovery_tools=["list_finance_app32_capabilities"],
+                startup_checklist=[
+                    "Confirmar company_id explícito e vínculo ativo do usuário no APP32.",
+                    "Validar a capability financeira, a permissão APP32 e o escopo mcp:finance.",
+                    "Para mutação, apresentar prévia, idempotency key e aguardar aprovação humana persistida.",
+                ],
+                interaction_rules=[
+                    SurfaceInteractionRule(
+                        rule="Nunca aceitar company_id apenas dentro de payload financeiro.",
+                        rationale="A autorização de tenant ocorre antes da service financeira.",
+                    ),
+                    SurfaceInteractionRule(
+                        rule="Executar uma mutação aprovada no máximo uma vez para o mesmo payload e chave de idempotência.",
+                        rationale="Evita duplicidade causada por retry de CLI, rede ou modelo.",
+                    ),
+                ],
+                forbidden_actions=[
+                    "Não executar delete, liquidação, conciliação ou importação sem contrato específico e gate correspondente.",
+                    "Não usar finance como atalho para admin, analytics ou SQL livre.",
+                ],
+                example_flows=[
+                    SurfaceExampleFlow(
+                        title="Incluir lançamento financeiro com aprovação",
+                        steps=[
+                            "Consultar referências e validar o payload para company_id explícito.",
+                            "Gerar prévia e registrar a solicitação de aprovação no APP32.",
+                            "Após aprovação persistida, executar uma vez e registrar auditoria.",
+                        ],
+                    )
                 ],
             ),
             SurfacePlaybook(

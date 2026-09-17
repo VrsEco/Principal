@@ -19,6 +19,11 @@ OAuth, client OAuth permitido, scopes, surface, `PrincipalCompanyGrant` e policy
 da tool. O piloto produtivo usa somente a surface `user` em
 `/mcp/pilot/user`.
 
+Para caso de uso financeiro, há coorte distinta em `/mcp/pilot/finance/`, com
+scope `mcp:finance`, `company_id` explícito e aprovação humana persistida antes
+de qualquer mutação. A coorte financeira não amplia o perfil APP32: apenas
+projeta no MCP as permissões efetivas já existentes para o mesmo usuário.
+
 Este playbook é para **USER + Authorization Code com PKCE S256**. SERVICE e
 AGENT exigem entrega e playbook próprios; não reutilizam conta humana nem o
 client público desta jornada.

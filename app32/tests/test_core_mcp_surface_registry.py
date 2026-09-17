@@ -81,6 +81,16 @@ def test_oauth_analytics_finance_server_exposes_only_reviewed_read_catalog():
     }
 
 
+def test_oauth_finance_server_exposes_only_the_canonical_operational_catalog():
+    server = registry.build_oauth_finance_mcp_server()
+    tools = asyncio.run(server.list_tools())
+
+    assert {tool.name for tool in tools} == {
+        *registry.PILOT_FINANCE_OPERATIONAL_TOOL_NAMES,
+        "list_finance_app32_capabilities",
+    }
+
+
 def test_oauth_analytics_registers_allowlisted_direct_registrars_only(monkeypatch):
     """Uma tool fora de tools/list não pode ficar invocável por nome conhecido."""
 

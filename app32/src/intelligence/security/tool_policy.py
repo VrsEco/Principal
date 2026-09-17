@@ -228,10 +228,6 @@ def _is_explicit_client_finance_analytics_read_delegation(
     )
 
 
-def _is_explicit_client_finance_operation_delegation(*, profile, surface, domain, action, explicit_permissions, explicit_permission_match) -> bool:
-    return bool(profile == "cliente" and surface == "finance" and domain == "finance" and action in {"create", "update"} and explicit_permissions in ({"financial.create"}, {"financial.edit"}) and explicit_permission_match)
-
-
 def _normalize_required_context(required_context: Sequence[str] | None) -> tuple[str, ...]:
     normalized: list[str] = []
     for item in required_context or ():
@@ -522,9 +518,7 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
         explicit_permissions=explicit_permissions,
         explicit_permission_match=explicit_permission_match,
     )
-    delegated_finance_operation = _is_explicit_client_finance_operation_delegation(profile=profile_contract.profile, surface=surface, domain=domain, action=action, explicit_permissions=explicit_permissions, explicit_permission_match=explicit_permission_match)
-
-    if surface not in profile_contract.allowed_surfaces and not (delegated_finance_analytics_read or delegated_finance_operation):
+    if surface not in profile_contract.allowed_surfaces and not delegated_finance_analytics_read:
         return _deny(
             request,
             principal,
@@ -536,7 +530,7 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
         )
 
     if domain and domain in set(profile_contract.forbidden_domains) and not (
-        explicit_permission_match or delegated_finance_analytics_read or delegated_finance_operation
+        explicit_permission_match or delegated_finance_analytics_read
     ):
         return _deny(
             request,

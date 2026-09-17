@@ -4,6 +4,11 @@
 > segundo RBAC. Em toda chamada MCP de um usuário humano, o APP32 reavalia
 > vínculo, perfil e permissões na empresa solicitada. O grant OAuth só pode
 > restringir, suspender ou revogar; nunca ampliar a autorização de negócio.
+>
+> **Evolução de surface financeira — 2026-09-17:** o espelhamento do APP32
+> não transforma a surface `user` em atalho financeiro. Operações financeiras
+> ocorrem na surface `finance`, com `company_id` explícito, RBAC reavaliado em
+> cada chamada e gate humano persistido para mutações.
 
 Status: em evolução  
 Classe: Paper

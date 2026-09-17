@@ -21,7 +21,7 @@ class ExternalAIOnboardingStep(_StrictModel):
 
 
 class ExternalAISurfaceAccessRule(_StrictModel):
-    surface: Literal["user", "admin", "analytics", "ops"]
+    surface: Literal["user", "admin", "analytics", "finance", "ops"]
     allowed_provider_types: list[ExternalAIProviderType] = Field(default_factory=list, min_length=1)
     allowed_profiles: list[str] = Field(default_factory=list, min_length=1)
     required_discovery_tools: list[str] = Field(default_factory=list, min_length=1)
@@ -32,7 +32,7 @@ class ExternalAISurfaceAccessRule(_StrictModel):
     def _validate_surface_access(self):
         if not self.tenant_scope_required:
             raise ValueError("Onboarding de IA externa exige tenant_scope_required=True.")
-        if self.surface in {"admin", "ops"} and not self.human_approval_required:
+        if self.surface in {"admin", "finance", "ops"} and not self.human_approval_required:
             raise ValueError("Surfaces privilegiadas exigem aprovação humana.")
         if self.surface == "user" and "admin_tecnico" in self.allowed_profiles:
             raise ValueError("Surface user não deve ser onboarding padrão de admin_tecnico.")
@@ -58,8 +58,8 @@ class ExternalAIOnboardingManifest(_StrictModel):
         if self.sql_freeform_allowed:
             raise ValueError("Manual de onboarding IA externa não pode liberar SQL livre.")
         surfaces = {rule.surface for rule in self.surface_access_rules}
-        if not {"user", "admin", "analytics", "ops"}.issubset(surfaces):
-            raise ValueError("Manual deve cobrir user, admin, analytics e ops.")
+        if not {"user", "admin", "analytics", "finance", "ops"}.issubset(surfaces):
+            raise ValueError("Manual deve cobrir user, admin, analytics, finance e ops.")
         phases = {step.phase for step in self.steps}
         if not {"intake", "access_design", "registration", "validation", "operation"}.issubset(phases):
             raise ValueError("Manual deve cobrir todas as fases de onboarding.")
@@ -105,6 +105,12 @@ def build_external_ai_onboarding_manifest() -> ExternalAIOnboardingManifest:
                 allowed_provider_types=["custom_agent", "internal_agent"],
                 allowed_profiles=["administrador", "admin_tecnico"],
                 required_discovery_tools=["list_analytics_app32_capabilities", "describe_app32_allowed_analyses_tool"],
+            ),
+            ExternalAISurfaceAccessRule(
+                surface="finance",
+                allowed_provider_types=["chatgpt", "claude", "gemini", "custom_agent", "internal_agent"],
+                allowed_profiles=["cliente", "administrador"],
+                required_discovery_tools=["list_finance_app32_capabilities", "describe_app32_surface_playbooks_tool"],
             ),
             ExternalAISurfaceAccessRule(
                 surface="ops",
@@ -154,7 +160,7 @@ def build_external_ai_onboarding_manifest() -> ExternalAIOnboardingManifest:
             "MCP_USER_ADMIN_RUNBOOK_SMOKE_OK True True",
             "AI_MCP_RELEASE_CHECKLIST_OK 7 3",
             "AI_MCP_TOOL_FREEZE_OK 7 4",
-            "AI_MCP_EXTERNAL_ONBOARDING_OK 4 5",
+            "AI_MCP_EXTERNAL_ONBOARDING_OK 5 5",
         ],
         forbidden_patterns=[
             "Não liberar SQL livre para IA externa.",

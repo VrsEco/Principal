@@ -64,7 +64,7 @@ OperationalReadinessEnvelope = MCPSuccessEnvelope[
 def build_operational_readiness_manifest() -> OperationalReadinessManifest:
     return OperationalReadinessManifest(
         readiness_scope=[
-            "surfaces user/admin/analytics/ops prontas para uso controlado",
+            "surfaces user/admin/analytics/finance/ops prontas para uso controlado",
             "agentes externos onboarding-safe",
             "runtime oficial e contratos MCP coerentes",
             "monitoramento, freeze e rollback operacionalizados",
@@ -73,7 +73,7 @@ def build_operational_readiness_manifest() -> OperationalReadinessManifest:
             "MCP_USER_ADMIN_RUNBOOK_SMOKE_OK True True",
             "AI_MCP_RELEASE_CHECKLIST_OK 7 3",
             "AI_MCP_TOOL_FREEZE_OK 7 4",
-            "AI_MCP_EXTERNAL_ONBOARDING_OK 4 5",
+            "AI_MCP_EXTERNAL_ONBOARDING_OK 5 5",
             "AI_MCP_CONTRACT_DRIFT_SUITE_OK 6 True",
         ],
         mandatory_discovery_tools=[

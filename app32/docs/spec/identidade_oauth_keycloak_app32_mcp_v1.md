@@ -48,6 +48,17 @@ lançamentos. A surface `analytics` é somente leitura/análise; mutação finan
 continua fora desta coorte. O usuário precisa de grant da empresa e permissão
 APP32 `financial.read`; `mcp_permissions`, se presente, apenas restringe.
 
+### Decisão de operação financeira OAuth — 2026-09-17
+
+Operações financeiras com a mesma autorização efetiva do usuário APP32 usam a
+surface canônica `/mcp/pilot/finance/`, scope `mcp:finance` e capability
+canônica. `company_id` é obrigatório na assinatura da tool, a identidade e o
+vínculo APP32 são reavaliados a cada chamada e `mcp_permissions` continua sendo
+somente teto restritivo. Mutações não aceitam confirmação do cliente: a primeira
+tentativa cria (ou reutiliza) um `AgentAction` persistido, vinculado ao principal,
+tenant, tool e digest do payload; após aprovação humana no APP32, a mesma chamada
+é executada uma única vez. A surface `user` não publica domínio financeiro.
+
 ### Atualização de produção — 2026-09-10
 
 As conclusões AS-IS abaixo permanecem como contexto histórico da auditoria. A

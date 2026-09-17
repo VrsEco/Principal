@@ -843,7 +843,7 @@ def test_wrap_mcp_callable_never_accepts_human_gate_boolean_from_payload(monkeyp
     assert result["approval_confirmed"] is True
 
 
-def test_wrap_mcp_callable_denies_forged_boolean_when_no_persisted_approval(monkeypatch):
+def test_wrap_mcp_callable_creates_persisted_request_when_no_approval_exists(monkeypatch):
     execution_context = SimpleNamespace(
         user_id=3,
         principal_id=71,
@@ -889,15 +889,27 @@ def test_wrap_mcp_callable_denies_forged_boolean_when_no_persisted_approval(monk
             )
         ),
     )
+    requested = {}
+    monkeypatch.setattr(
+        "services.tool_approval_service.tool_approval_request_service",
+        SimpleNamespace(
+            request=lambda binding, **kwargs: requested.update(
+                {"binding": binding, **kwargs}
+            ) or SimpleNamespace(approval_request_id=321, reused_existing=False)
+        ),
+    )
     monkeypatch.setattr(
         "src.core.mcp_runtime.require_tool_policy",
         lambda source, request: pytest.fail("policy final não deve rodar sem aprovação"),
     )
 
-    with pytest.raises(PermissionError, match="aprovação persistida vigente não encontrada"):
+    with pytest.raises(PermissionError, match="solicitação #321"):
         wrap_mcp_callable(gated_tool)(confirmed_mutation=True)
 
     assert callback_calls == []
+    assert requested["binding"].principal_id == 71
+    assert requested["binding"].company_id == 9
+    assert requested["reason"] == "mutação de alto risco exige confirmação explícita"
 
 
 def test_runtime_rehydrates_http_request_context_from_current_mcp_request(monkeypatch):

@@ -14,7 +14,7 @@ def test_cross_tenant_matrix_covers_core_ai_mcp_domains() -> None:
 
     assert {"routine", "process", "project", "meeting", "strategy", "finance", "admin", "analytics", "diagnostics"}.issubset(domains)
     assert REQUIRED_PROFILES == ("colaborador", "cliente", "administrador", "administrador_tecnico")
-    assert REQUIRED_SURFACES == ("user", "admin", "analytics", "ops")
+    assert REQUIRED_SURFACES == ("user", "admin", "analytics", "finance", "ops")
 
 
 def test_finance_domain_has_full_strict_requirements() -> None:

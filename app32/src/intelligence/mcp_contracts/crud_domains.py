@@ -10,7 +10,7 @@ from .base import MCPSuccessEnvelope, _StrictModel
 CRUDDomain = Literal["routine", "projects", "processes", "meetings", "finance", "strategy", "governance"]
 CRUDAction = Literal["create", "read", "update", "delete", "list", "analyze", "execute"]
 CRUDRole = Literal["colaborador", "cliente", "administrador", "admin_tecnico"]
-CRUDSurface = Literal["mcp_user", "mcp_admin", "mcp_analytics", "mcp_ops"]
+CRUDSurface = Literal["mcp_user", "mcp_admin", "mcp_analytics", "mcp_finance", "mcp_ops"]
 CRUDImplementationStatus = Literal["contract", "implemented", "partial"]
 CRUDRisk = Literal["low", "medium", "high", "critical"]
 
@@ -49,8 +49,10 @@ class CRUDOperationContract(_StrictModel):
         if self.domain == "finance" and self.action in {"create", "update"}:
             if self.risk not in {"medium", "high", "critical"}:
                 raise ValueError("Mutações financeiras via MCP exigem ao menos risco medium.")
-            if "cliente" in self.allowed_roles:
-                raise ValueError("Cliente não deve receber mutação financeira direta via MCP.")
+            if "cliente" in self.allowed_roles and self.surface != "mcp_finance":
+                raise ValueError("Cliente financeiro só pode operar pela surface mcp_finance.")
+            if "cliente" in self.allowed_roles and not self.human_gate_required:
+                raise ValueError("Mutação financeira de cliente exige human_gate_required=True.")
         if self.domain == "finance" and self.action in {"delete", "execute"}:
             if not self.human_gate_required:
                 raise ValueError("Delete/execute financeiro exigem gate humano.")

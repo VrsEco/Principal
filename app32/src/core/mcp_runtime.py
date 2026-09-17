@@ -460,7 +460,12 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                 _emit_mcp_policy_audit(policy_source, policy_request, payload,
                                        allowed=False, reason=initial_decision.reason)
             if _policy_requires_persisted_approval(initial_decision):
-                from services.tool_approval_service import ToolApprovalBinding, ToolApprovalBindingError, tool_approval_service
+                from services.tool_approval_service import (
+                    ToolApprovalBinding,
+                    ToolApprovalBindingError,
+                    tool_approval_request_service,
+                    tool_approval_service,
+                )
 
                 try:
                     approval_binding = ToolApprovalBinding.from_execution(
@@ -474,9 +479,37 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                     raise PermissionError(f"aprovação persistida indisponível: {exc}") from exc
                 approval_decision = tool_approval_service.authorize_and_consume(approval_binding)
                 if not approval_decision.allowed:
+                    # O MCP não pode aceitar confirmação enviada pelo CLI. A
+                    # primeira tentativa cria (ou reaproveita) uma aprovação
+                    # persistida no APP32, vinculada ao payload exato. Após a
+                    # aprovação humana, o usuário repete a mesma chamada.
+                    try:
+                        approval_request = tool_approval_request_service.request(
+                            approval_binding,
+                            reason=initial_decision.reason,
+                            channel=execution_context.channel,
+                            thread_id=execution_context.thread_id,
+                        )
+                    except Exception as exc:
+                        _emit_mcp_policy_audit(
+                            policy_source,
+                            policy_request,
+                            payload,
+                            allowed=False,
+                            reason="falha ao registrar aprovação humana persistida",
+                        )
+                        raise PermissionError("falha ao registrar aprovação humana persistida") from exc
                     _emit_mcp_policy_audit(policy_source, policy_request, payload,
-                                           allowed=False, reason=approval_decision.reason)
-                    raise PermissionError(approval_decision.reason)
+                                           allowed=False,
+                                           reason=(
+                                               f"aprovação humana necessária: solicitação "
+                                               f"#{approval_request.approval_request_id}"
+                                           ))
+                    raise PermissionError(
+                        f"aprovação humana necessária no APP32: solicitação "
+                        f"#{approval_request.approval_request_id}. "
+                        "Após aprová-la, repita exatamente a mesma chamada."
+                    )
                 policy_request = ToolPolicyRequest(
                     **{
                         **policy_request.__dict__,

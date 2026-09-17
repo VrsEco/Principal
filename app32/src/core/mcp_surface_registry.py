@@ -448,13 +448,6 @@ def register_mcp_surface_tools(
             tool_names=(set(shared_registrar_tool_names) if shared_registrar_tool_names is not None else None),
         )
 
-    @mcp.tool(
-        name=f"list_{normalized_surface}_app32_capabilities",
-        description=(
-            "Lista as capacidades e metadados de segurança do catálogo MCP/Sapiens "
-            f"do APP32 para a superfície {normalized_surface}."
-        ),
-    )
     def list_surface_capabilities(
         domain: str | None = None,
         include_tools: bool = True,
@@ -479,6 +472,22 @@ def register_mcp_surface_tools(
             manifest_kwargs["tool_names"] = tuple(sorted(visible_names))
             manifest_kwargs["public_scopes"] = get_surface_scope_filter(normalized_surface)
         return manifest_loader(normalized_surface, **manifest_kwargs)
+
+    # FastMCP 1.x ainda chama ``issubclass`` sobre a annotation recebida. Como
+    # este módulo usa postponed annotations, normalizar a assinatura antes de
+    # registrar evita que ``str | None`` textual derrube o tools/list.
+    list_surface_capabilities.__annotations__ = {
+        "domain": str,
+        "include_tools": bool,
+        "return": dict,
+    }
+    mcp.tool(
+        name=f"list_{normalized_surface}_app32_capabilities",
+        description=(
+            "Lista as capacidades e metadados de segurança do catálogo MCP/Sapiens "
+            f"do APP32 para a superfície {normalized_surface}."
+        ),
+    )(list_surface_capabilities)
 
     if normalized_surface == "admin" and include_admin_diagnostics:
         _register_admin_diagnostics(mcp)
@@ -656,6 +665,12 @@ def run_user_mcp_server() -> None:
 def run_analytics_mcp_server() -> None:
     mcp = build_analytics_mcp_server()
     print("Iniciando MCP Analytics Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
+    mcp.run()
+
+
+def run_finance_mcp_server() -> None:
+    mcp = build_oauth_finance_mcp_server()
+    print("Iniciando MCP Finance Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
     mcp.run()
 
 

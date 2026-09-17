@@ -25,7 +25,7 @@ class _FakeMCP:
 
 def test_surface_playbooks_cover_all_surfaces():
     surfaces = {playbook.surface for playbook in APP32_SURFACE_PLAYBOOKS_MANIFEST.playbooks}
-    assert surfaces == {"user", "admin", "analytics", "ops"}
+    assert surfaces == {"user", "admin", "analytics", "finance", "ops"}
 
 
 def test_describe_surface_playbook_returns_expected_surface_contract():
@@ -33,7 +33,7 @@ def test_describe_surface_playbook_returns_expected_surface_contract():
     register_surface_playbook_tools(mcp)
     tool = mcp.registered["describe_app32_surface_playbooks_tool"]
 
-    for surface in ("user", "admin", "analytics", "ops"):
+    for surface in ("user", "admin", "analytics", "finance", "ops"):
         payload = tool(surface)
         assert payload["success"] is True
         assert payload["meta"]["operation"] == "surface_playbooks.describe"
@@ -62,7 +62,7 @@ def test_surface_contract_rules_and_crud_coherence():
     assert admin_playbook is not None
     assert ops_playbook is not None
 
-    assert "finance" in user_playbook.allowed_domains
+    assert "finance" not in user_playbook.allowed_domains
     assert any("nunca mutar dados" in item.lower() for item in analytics_playbook.forbidden_actions)
     assert any("gate humano" in rule.rule.lower() or "confirmação humana" in rule.rule.lower() for rule in admin_playbook.interaction_rules)
     assert "finance" not in ops_playbook.allowed_domains
