@@ -208,7 +208,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 title="Playbook de Finanças",
                 objective="Guiar leituras e ações financeiras com rastreabilidade, company_id explícito e aderência às mesmas permissões que a senha do usuário já possui no APP32.",
                 allowed_surfaces=["admin", "analytics", "finance"],
-                allowed_profiles=["cliente", "administrador"],
+                allowed_profiles=["colaborador", "cliente", "administrador"],
                 allowed_role_overlays=["admfin_cliente", "coordenador_versus", "strategist_versus", "pmo_controller_versus", "finance_versus", "auditor_versus"],
                 canonical_tools=["describe_app32_crud_contracts_tool", "describe_app32_allowed_analyses_tool"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.analysis_catalog", "src.intelligence.security.tool_policy"],

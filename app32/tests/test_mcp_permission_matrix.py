@@ -37,7 +37,7 @@ def test_permission_matrix_manifest_covers_main_profiles_and_surfaces():
     assert manifest.version == "app32.ai-mcp.permission-matrix.v1"
     assert {"colaborador", "cliente", "administrador", "admin_tecnico"} <= profiles
     assert surfaces == {"user", "admin", "analytics", "finance", "ops"}
-    assert len(manifest.matrices) == 9
+    assert len(manifest.matrices) == 10
     assert len(manifest.overlay_matrices) == 23
 
 
@@ -67,7 +67,9 @@ def test_permission_matrix_boundaries_for_cliente_and_finance():
     cliente_finance_rule = next(rule for rule in cliente_finance.domains if rule.domain == "finance")
     assert cliente_finance_rule.requires_explicit_company_id is True
     assert {"create", "update"} <= set(cliente_finance_rule.human_gate_for_actions)
-    assert all(rule.domain != "finance" for rule in collaborator_user.domains)
+    collaborator_finance = [matrix for matrix in APP32_PERMISSION_MATRIX_MANIFEST.get_profile("colaborador") if matrix.surface == "finance"][0]
+    assert collaborator_finance.domains[0].domain == "finance"
+    assert {"create", "update"} <= set(collaborator_finance.domains[0].human_gate_for_actions)
     assert all(
         not any(action in rule.allowed_actions for action in {"create", "update", "delete"})
         for rule in admin_analytics.domains

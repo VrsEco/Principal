@@ -24,7 +24,7 @@ Documento operacional da **AA.J.31.1325 — Organização IA/MCP - Grupo 08 - Cr
 | `user` | ChatGPT, Claude, Gemini, custom, internal | colaborador, cliente, administrador | menor privilégio; não publica finanças |
 | `admin` | custom, internal | administrador, admin_tecnico | exige aprovação humana |
 | `analytics` | custom, internal | administrador, admin_tecnico | somente read models/catálogo |
-| `finance` | ChatGPT, Claude, Gemini, custom, internal | cliente, administrador | `company_id` explícito e gate persistido para mutação |
+| `finance` | ChatGPT, Claude, Gemini, custom, internal | colaborador, cliente, administrador | `company_id` explícito e gate persistido para mutação |
 | `ops` | internal | admin_tecnico | uso técnico e incidentes |
 
 ## Discovery obrigatório

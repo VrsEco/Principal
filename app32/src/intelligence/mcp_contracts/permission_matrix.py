@@ -106,8 +106,6 @@ class ProfilePermissionSurfaceMatrix(_StrictModel):
                     )
                     if not finance_exception:
                         raise ValueError("Cliente só pode receber mutação financeira na surface finance com gate humano.")
-        if self.profile == "colaborador" and self.surface != "user":
-            raise ValueError("Colaborador fica restrito à surface user na matriz.")
         if self.surface == "analytics":
             for rule in self.domains:
                 if any(action in rule.allowed_actions for action in {"create", "update", "delete", "review"}):
@@ -645,6 +643,23 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                         requires_explicit_company_id=True,
                         human_gate_for_actions=["create", "update"],
                         notes=["O RBAC do APP32 é reavaliado a cada chamada; mutações exigem aprovação persistida e idempotência."],
+                    ),
+                ],
+            ),
+            ProfilePermissionSurfaceMatrix(
+                profile="colaborador",
+                surface="finance",
+                title="Matriz de permissões MCP - Colaborador / Finance",
+                summary="Colaborador usa a surface financeira dedicada somente quando sua permissão APP32 efetiva autorizar a ação.",
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule(
+                        "finance",
+                        ["discover", "read", "create", "update", "analyze"],
+                        denied=["delete", "audit"],
+                        requires_explicit_company_id=True,
+                        human_gate_for_actions=["create", "update"],
+                        notes=["A policy revalida RBAC APP32 e consome aprovação persistida antes de mutações."],
                     ),
                 ],
             ),

@@ -64,13 +64,14 @@ def test_cliente_is_restricted_to_user_read_or_limited_actions():
     assert "identity_admin" in cliente.forbidden_domains
 
 
-def test_colaborador_does_not_expose_finance_on_user_surface():
+def test_colaborador_uses_dedicated_finance_surface_when_app32_permissions_allow_it():
     colaborador = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile("colaborador")
 
     assert colaborador is not None
-    assert colaborador.allowed_surfaces == ["user"]
-    assert "finance" not in colaborador.allowed_domains
-    assert "finance" in colaborador.forbidden_domains
+    assert colaborador.allowed_surfaces == ["user", "finance"]
+    assert "finance" in colaborador.allowed_domains
+    assert "finance" not in colaborador.forbidden_domains
+    assert colaborador.can_execute_financial_mutations is True
 
 
 def test_administrador_and_admin_tecnico_surface_matrix():

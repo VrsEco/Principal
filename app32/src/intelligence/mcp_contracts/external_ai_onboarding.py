@@ -109,7 +109,7 @@ def build_external_ai_onboarding_manifest() -> ExternalAIOnboardingManifest:
             ExternalAISurfaceAccessRule(
                 surface="finance",
                 allowed_provider_types=["chatgpt", "claude", "gemini", "custom_agent", "internal_agent"],
-                allowed_profiles=["cliente", "administrador"],
+                allowed_profiles=["colaborador", "cliente", "administrador"],
                 required_discovery_tools=["list_finance_app32_capabilities", "describe_app32_surface_playbooks_tool"],
             ),
             ExternalAISurfaceAccessRule(

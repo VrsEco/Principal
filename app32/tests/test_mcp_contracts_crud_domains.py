@@ -37,7 +37,9 @@ def test_finance_contract_is_permission_aware_for_create_update_and_keeps_delete
 
     assert create_update
     assert delete_ops
-    assert all(operation.human_gate_required is False for operation in create_update)
+    assert finance.surface == "mcp_finance"
+    assert all(operation.surface == "mcp_finance" for operation in create_update)
+    assert all(operation.human_gate_required is True for operation in create_update)
     assert all(operation.risk == "medium" for operation in create_update)
     assert all("colaborador" in operation.allowed_roles for operation in create_update)
     assert all(operation.human_gate_required is True for operation in delete_ops)

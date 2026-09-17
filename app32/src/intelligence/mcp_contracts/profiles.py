@@ -63,9 +63,9 @@ class MCPProfileContract(_StrictModel):
             surface in {"admin", "analytics", "ops"} for surface in self.allowed_surfaces
         ):
             raise ValueError("Perfis não administrativos não podem acessar surfaces privilegiadas.")
-        if self.can_execute_financial_mutations and self.profile not in {"administrador", "admin_tecnico", "cliente"}:
-            raise ValueError("Mutações financeiras MCP exigem perfil administrativo ou cliente na surface finance.")
-        if self.profile == "cliente" and self.can_execute_financial_mutations:
+        if self.can_execute_financial_mutations and self.profile not in {"administrador", "admin_tecnico", "cliente", "colaborador"}:
+            raise ValueError("Mutações financeiras MCP exigem perfil autorizado na surface finance.")
+        if self.profile in {"cliente", "colaborador"} and self.can_execute_financial_mutations:
             if "finance" not in self.allowed_surfaces or "finance" not in self.allowed_domains:
                 raise ValueError("Cliente financeiro exige surface finance e domínio finance explícitos.")
         if self.can_access_ops and self.profile != "admin_tecnico":
@@ -538,7 +538,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
         profiles=[
             MCPProfileContract(
                 profile="colaborador",
-                allowed_surfaces=["user"],
+                allowed_surfaces=["user", "finance"],
                 default_surface="user",
                 allowed_domains=[
                     "routine",
@@ -547,11 +547,13 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                     "meetings",
                     "strategy",
                     "consultive",
+                    "finance",
                     "identity_self_service",
                 ],
-                forbidden_domains=["governance", "admin", "analytics", "operations", "workload", "identity_admin", "finance"],
+                forbidden_domains=["governance", "admin", "analytics", "operations", "workload", "identity_admin"],
                 max_risk_without_human_gate="medium",
                 can_execute_mutations=True,
+                can_execute_financial_mutations=True,
             ),
             MCPProfileContract(
                 profile="cliente",
