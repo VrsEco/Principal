@@ -300,19 +300,6 @@ async def _pilot_analytics_oauth_protected_resource(_: Request) -> JSONResponse:
     )
 
 
-def create_http_app() -> Starlette:
-    user_app = build_surface_http_app("user")
-    admin_app = build_surface_http_app("admin")
-    analytics_app = build_surface_http_app("analytics")
-    ops_app = build_surface_http_app("ops")
-    pilot_user_app = build_surface_http_app("user", oauth_enabled=True, mount_path="/mcp/pilot/user") if _pilot_user_mount_enabled() else None
-    pilot_analytics_app = (
-        build_surface_http_app("analytics", oauth_enabled=True, mount_path="/mcp/pilot/analytics")
-        if _pilot_analytics_mount_enabled()
-        else None
-    )
-
-
 async def _pilot_finance_oauth_protected_resource(_: Request) -> JSONResponse:
     if not _pilot_finance_mount_enabled():
         return JSONResponse({"error": "not_found"}, status_code=404)
@@ -326,6 +313,19 @@ async def _pilot_finance_oauth_protected_resource(_: Request) -> JSONResponse:
                          "authorization_servers": [str(auth_settings.issuer_url)],
                          "scopes_supported": ["mcp:access", "mcp:finance"],
                          "bearer_methods_supported": ["header"]})
+
+
+def create_http_app() -> Starlette:
+    user_app = build_surface_http_app("user")
+    admin_app = build_surface_http_app("admin")
+    analytics_app = build_surface_http_app("analytics")
+    ops_app = build_surface_http_app("ops")
+    pilot_user_app = build_surface_http_app("user", oauth_enabled=True, mount_path="/mcp/pilot/user") if _pilot_user_mount_enabled() else None
+    pilot_analytics_app = (
+        build_surface_http_app("analytics", oauth_enabled=True, mount_path="/mcp/pilot/analytics")
+        if _pilot_analytics_mount_enabled()
+        else None
+    )
     pilot_finance_app = build_surface_http_app("finance", oauth_enabled=True, mount_path="/mcp/pilot/finance") if _pilot_finance_mount_enabled() else None
 
     @asynccontextmanager
