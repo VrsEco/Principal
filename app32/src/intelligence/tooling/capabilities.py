@@ -84,6 +84,30 @@ class ToolCapability:
 
 
 _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
+    "get_internal_audit_summary": {
+        "domain": "audit",
+        "scopes": (ToolScope.MCP_ANALYTICS.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("audit.read",),
+        "tags": ("read", "summary", "tenant_safe", "audit"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
+    "list_internal_audit_points": {
+        "domain": "audit",
+        "scopes": (ToolScope.MCP_ANALYTICS.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("audit.read",),
+        "tags": ("read", "points", "tenant_safe", "audit"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
+    "list_internal_audit_findings": {
+        "domain": "audit",
+        "scopes": (ToolScope.MCP_ANALYTICS.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("audit.read",),
+        "tags": ("read", "findings", "tenant_safe", "audit"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
     "answer_product_help": {
         "domain": "knowledge",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

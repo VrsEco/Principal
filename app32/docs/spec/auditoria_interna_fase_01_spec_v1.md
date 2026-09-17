@@ -646,3 +646,9 @@ Sem configuração explícita, o gate retorna `ready=false`. Em 17/09/2026, as c
 O cliente `mcp-versus` concluiu Authorization Code com PKCE e Dynamic Client Registration no IdP público. Em seguida, o Codex CLI executou exclusivamente `list_user_app32_capabilities`, após aprovação humana limitada à chamada, sem acesso a shell, arquivos ou mutações. Resultado: 4 capabilities, 3 domínios e scope efetivo `mcp_user`.
 
 Critério comprovado: login interativo, emissão/uso de bearer pelo cliente sem revelar credencial, sessão MCP remota e catálogo autenticado de leitura. Critério ainda pendente: rollout do writer/schema v2 e comprovação em produção da trilha `ai_mcp_audit_events`; portanto, a evidência não encerra o P0 nem autoriza ampliar a coorte.
+
+## 16. P1 MCP — leituras de Auditoria Interna
+
+As capabilities `get_internal_audit_summary`, `list_internal_audit_points` e `list_internal_audit_findings` adotam domínio canônico `audit`, risco baixo, `company_id` obrigatório, `audit.read` e limite de retorno entre 1 e 100. A publicação inicial é exclusiva de `mcp_analytics` e `mcp_admin`; `mcp_user`, inclusive a coorte OAuth piloto, permanece sem estas tools. As tools não criam, atualizam, convertem ou encerram nenhum registro; mutações continuam pelo serviço/UI e exigem o fluxo humano já definido nesta SPEC.
+
+O P0 de trilha OAuth/policy foi aplicado em produção em 17/09/2026 na revision `20260917_1000`. P1 deve manter o rollout separado: só poderá ser publicado após validar catálogo por surface, grant `company_id`, permissão `audit.read` e negação cross-tenant.

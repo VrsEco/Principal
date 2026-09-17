@@ -30,6 +30,7 @@ from src.core.mcp_external_ai_onboarding_tools import register_external_ai_onboa
 from src.core.mcp_external_llm_factory_tools import register_external_llm_factory_tools
 from src.core.mcp_financial_tools import register_financial_mcp_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
+from src.core.mcp_internal_audit_tools import register_internal_audit_mcp_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
 from src.core.mcp_knowledge_tools import register_knowledge_tools
@@ -260,6 +261,9 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
+    SimpleNamespace(name="get_internal_audit_summary", description="Retorna os totais tenant-safe da Auditoria Interna."),
+    SimpleNamespace(name="list_internal_audit_points", description="Lista pontos de Auditoria Interna do tenant com filtro de status."),
+    SimpleNamespace(name="list_internal_audit_findings", description="Lista achados de Auditoria Interna do tenant com filtro de status."),
     SimpleNamespace(name="strategic_tree_list", description="Lista Árvores Estratégicas autorizadas do tenant."),
     SimpleNamespace(name="strategic_tree_get", description="Obtém a estrutura de uma Árvore Estratégica do tenant."),
     SimpleNamespace(name="strategic_tree_get_branch", description="Lê ramo e contribuições autorizadas de uma Árvore Estratégica."),
@@ -735,6 +739,7 @@ catalog = ToolCatalog(
         register_financial_mcp_tools,
         register_implantation_persona_profile_tools,
         register_incentive_tools,
+        register_internal_audit_mcp_tools,
         register_integration_request_tools,
         register_instruction_registry_tools,
         register_knowledge_tools,

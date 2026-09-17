@@ -98,6 +98,12 @@ DOMAIN_MATRIX = {
         "administrador": {"discover", "read", "list", "search", "analyze"},
         "administrador_tecnico": {"discover", "read", "list", "search", "analyze"},
     },
+    "audit": {
+        "colaborador": set(),
+        "cliente": set(),
+        "administrador": {"discover", "read", "list", "search", "analyze", "audit"},
+        "administrador_tecnico": {"discover", "read", "list", "search", "analyze", "audit"},
+    },
     "workload": {
         "colaborador": set(),
         "cliente": set(),
