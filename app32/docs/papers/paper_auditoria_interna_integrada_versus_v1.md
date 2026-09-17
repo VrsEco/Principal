@@ -515,3 +515,15 @@ Na sequência, o Codex CLI concluiu Authorization Code com PKCE e Dynamic Client
 O primeiro catálogo MCP do módulo é deliberadamente restrito a leitura: resumo, pontos de auditoria e achados. As três capabilities usam o domínio canônico `audit`, exigem `company_id`, filtro tenant-safe e limite máximo de 100 registros. Elas são publicadas apenas nas surfaces `analytics` e `admin`; a surface `user`/piloto não recebe dados de auditoria, pois podem expor contexto financeiro, evidências e conclusões sensíveis. Criação, triagem, conversão em achado, relatório e follow-up continuam exclusivamente pela interface oficial e sob julgamento humano.
 
 O P0 foi promovido em 17/09/2026 com a merge migration `20260917_1000`, reinício dos runtimes web/MCP e validação de health, schema e OAuth negativo. P1 não amplia a coorte OAuth nem cria mutações: sua promoção dependerá de teste de catálogo e autorização por `audit.read` em tenant controlado.
+
+## 18. P2 — cruzamentos financeiros determinísticos
+
+A P2 introduz analisadores determinísticos e tenant-safe sobre liquidações `posted` de contas a pagar. Eles não alteram lançamentos, não concluem auditorias e não geram achados: produzem candidatos e, quando acionada a materialização, criam somente **Pontos de Auditoria** novos com origem `analyzer`. A triagem, o papel de trabalho e a conversão em achado permanecem humanos.
+
+Regras iniciais:
+
+- destinatário com pagamentos em mais de uma classificação contábil/financeira;
+- colaborador explicitamente vinculado ao cadastro da contraparte (`metadata.employee_id`) pago fora das famílias salário/folha, viagem/diária ou reembolso;
+- mesma referência bancária na mesma conta, repetida com classificações divergentes.
+
+Cada candidato carrega referência de liquidação, contrapartes/classes envolvidas e fingerprint. A materialização é idempotente por fingerprint e `company_id`; não recria ponto já identificado, nem reabre/edita decisão anterior do auditor. As regras são hipóteses de auditoria, não declaração automática de irregularidade.

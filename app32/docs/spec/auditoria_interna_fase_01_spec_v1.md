@@ -652,3 +652,9 @@ Critério comprovado: login interativo, emissão/uso de bearer pelo cliente sem 
 As capabilities `get_internal_audit_summary`, `list_internal_audit_points` e `list_internal_audit_findings` adotam domínio canônico `audit`, risco baixo, `company_id` obrigatório, `audit.read` e limite de retorno entre 1 e 100. A publicação inicial é exclusiva de `mcp_analytics` e `mcp_admin`; `mcp_user`, inclusive a coorte OAuth piloto, permanece sem estas tools. As tools não criam, atualizam, convertem ou encerram nenhum registro; mutações continuam pelo serviço/UI e exigem o fluxo humano já definido nesta SPEC.
 
 O P0 de trilha OAuth/policy foi aplicado em produção em 17/09/2026 na revision `20260917_1000`. P1 deve manter o rollout separado: só poderá ser publicado após validar catálogo por surface, grant `company_id`, permissão `audit.read` e negação cross-tenant.
+
+## 17. P2 — analisador financeiro e pontos gerados
+
+`InternalAuditFinancialAnalyzer` consulta exclusivamente registros da empresa solicitada e limita o escopo a liquidações postadas de contas a pagar. O contrato possui duas etapas separadas: `analyze(company_id)` retorna candidatos sem escrita; `materialize_points(company_id)` persiste novos `AuditPoint` com `origin_type=analyzer`, `source_module=audit_financial_analyzer` e fingerprint no metadata.
+
+Regras entregues: divergência de classificação por destinatário; pagamento de colaborador marcado no metadata da contraparte fora de salário/folha, viagem/diária/reembolso; e referência de pagamento repetida em uma mesma conta bancária com classificações distintas. Ausência de vínculo explícito de colaborador não é inferida por nome, CPF ou IA. Nenhuma regra altera registros financeiros, cria achado, envia comunicação ou fecha ponto; todas exigem triagem humana posterior.
