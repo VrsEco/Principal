@@ -81,6 +81,41 @@ def test_oauth_analytics_finance_server_exposes_only_reviewed_read_catalog():
     }
 
 
+def test_oauth_analytics_registers_allowlisted_direct_registrars_only(monkeypatch):
+    """Uma tool fora de tools/list não pode ficar invocável por nome conhecido."""
+
+    class _FinanceRegistrarCatalog:
+        langchain_tools = ()
+
+        @staticmethod
+        def _register_finance_tools(mcp):
+            @mcp.tool()
+            def list_financial_entries(company_id: int):
+                return {"company_id": company_id}
+
+            @mcp.tool()
+            def create_financial_entry(payload: dict):
+                return payload
+
+        mcp_registrars = (_register_finance_tools,)
+
+        @staticmethod
+        def get_langchain_tools():
+            return []
+
+    monkeypatch.setattr(registry, "catalog", _FinanceRegistrarCatalog())
+    mcp = _FakeMCP()
+    registry.register_mcp_surface_tools(
+        mcp,
+        "analytics",
+        tool_names=("list_financial_entries",),
+        shared_registrar_tool_names=("list_financial_entries",),
+    )
+
+    assert "list_financial_entries" in mcp.registered
+    assert "create_financial_entry" not in mcp.registered
+
+
 def test_pilot_user_finance_tools_are_never_discovered_even_if_grant_has_permission(monkeypatch):
     monkeypatch.setattr(
         registry,

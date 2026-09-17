@@ -349,10 +349,19 @@ def _register_tool(mcp: Any, tool: Any) -> None:
     make_wrapper(tool)
 
 
-def _register_shared_registrars(mcp: Any) -> None:
+def _register_shared_registrars(mcp: Any, *, tool_names: set[str] | None = None) -> None:
+    """Registra tools diretas do catálogo, opcionalmente por allowlist.
+
+    Registrars legados usam ``@mcp.tool()`` e não pertencem a
+    ``langchain_tools``. A coorte OAuth reduzida deve filtrá-los no registro,
+    e não apenas em ``tools/list``: uma tool oculta da descoberta ainda seria
+    invocável por um cliente que conhecesse o nome.
+    """
+
     class _WrappedMCPProxy:
-        def __init__(self, target: Any):
+        def __init__(self, target: Any, allowed_names: set[str] | None):
             self._target = target
+            self._allowed_names = allowed_names
 
         def tool(self, *args, **kwargs):
             decorator = self._target.tool(*args, **kwargs)
@@ -360,6 +369,8 @@ def _register_shared_registrars(mcp: Any) -> None:
 
             def _decorate(func):
                 tool_name = explicit_name or getattr(func, "__name__", "unknown_tool")
+                if self._allowed_names is not None and tool_name not in self._allowed_names:
+                    return func
                 wrapped = wrap_mcp_callable(func)
                 setattr(wrapped, "__app32_tool_name__", tool_name)
                 return decorator(wrapped)
@@ -371,7 +382,7 @@ def _register_shared_registrars(mcp: Any) -> None:
         def __getattr__(self, item):
             return getattr(self._target, item)
 
-    proxy = _WrappedMCPProxy(mcp)
+    proxy = _WrappedMCPProxy(mcp, tool_names)
     for registrar in getattr(catalog, "mcp_registrars", ()):
         registrar(proxy)
 
@@ -416,6 +427,7 @@ def register_mcp_surface_tools(
     include_admin_diagnostics: bool = False,
     tool_names: Sequence[str] | None = None,
     conditional_tool_names: Sequence[str] | None = None,
+    shared_registrar_tool_names: Sequence[str] | None = None,
 ) -> None:
     normalized_surface = normalize_surface(surface)
     allowed_names = set(tool_names or iter_surface_tool_names(normalized_surface))
@@ -429,7 +441,10 @@ def register_mcp_surface_tools(
         _register_tool(mcp, tool)
 
     if include_shared_registrars:
-        _register_shared_registrars(mcp)
+        _register_shared_registrars(
+            mcp,
+            tool_names=(set(shared_registrar_tool_names) if shared_registrar_tool_names is not None else None),
+        )
 
     @mcp.tool(
         name=f"list_{normalized_surface}_app32_capabilities",
@@ -588,9 +603,10 @@ def build_oauth_analytics_finance_mcp_server(
     register_mcp_surface_tools(
         mcp,
         "analytics",
-        include_shared_registrars=False,
+        include_shared_registrars=True,
         include_admin_diagnostics=False,
         tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+        shared_registrar_tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
     )
     return mcp
 
