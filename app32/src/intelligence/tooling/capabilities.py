@@ -19,6 +19,7 @@ class ToolScope(str, Enum):
     MCP_USER = "mcp_user"
     MCP_ADMIN = "mcp_admin"
     MCP_ANALYTICS = "mcp_analytics"
+    MCP_FINANCE = "mcp_finance"
     MCP_OPS = "mcp_ops"
 
 
@@ -636,6 +637,16 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "permissions": ("financial.view",),
         "tags": ("finance", "read", "tenant_safe"),
         "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
+    "create_financial_entry": {
+        "domain": "finance",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_FINANCE.value),
+        "risk": ToolRiskLevel.HIGH,
+        "permissions": ("financial.create",),
+        "human_gate": True,
+        "human_gate_reason": "Inclusão financeira por MCP exige confirmação humana persistida.",
+        "tags": ("finance", "mutation", "tenant_safe", "human_gate"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "update_user_contacts": {
         "domain": "identity_self_service",

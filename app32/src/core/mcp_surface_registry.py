@@ -14,11 +14,12 @@ try:  # pragma: no cover - dependência opcional em ambiente de teste
 except ImportError:  # pragma: no cover - fallback quando o pacote não está instalado
     FastMCP = None
 
-McpSurface = Literal["user", "admin", "analytics", "ops"]
+McpSurface = Literal["user", "admin", "analytics", "finance", "ops"]
 
 _SURFACE_SCOPE_FILTERS: dict[McpSurface, tuple[str, ...]] = {
     "user": (ToolScope.MCP_USER.value,),
     "analytics": (ToolScope.MCP_ANALYTICS.value,),
+    "finance": (ToolScope.MCP_FINANCE.value,),
     "ops": (ToolScope.MCP_OPS.value,),
     "admin": (ToolScope.MCP_ADMIN.value,),
 }
@@ -43,6 +44,7 @@ PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES: tuple[str, ...] = (
     "list_financial_classification_rules",
     "list_financial_entries",
 )
+PILOT_FINANCE_OPERATIONAL_TOOL_NAMES: tuple[str, ...] = ("create_financial_entry",)
 
 # Compatibilidade interna temporária para imports de testes/integrações antigas.
 # A rota OAuth user não consome esta constante.
@@ -608,6 +610,16 @@ def build_oauth_analytics_finance_mcp_server(
         tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
         shared_registrar_tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
     )
+    return mcp
+
+
+def build_oauth_finance_mcp_server(name: str = "GestaoVersus OAuth Finance MCP") -> Any:
+    if FastMCP is None:  # pragma: no cover
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    mcp = _build_policy_fast_mcp(name, "finance", exposed_tool_names=PILOT_FINANCE_OPERATIONAL_TOOL_NAMES)
+    register_mcp_surface_tools(mcp, "finance", include_shared_registrars=True,
+                               include_admin_diagnostics=False, tool_names=PILOT_FINANCE_OPERATIONAL_TOOL_NAMES,
+                               shared_registrar_tool_names=PILOT_FINANCE_OPERATIONAL_TOOL_NAMES)
     return mcp
 
 

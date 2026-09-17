@@ -63,7 +63,7 @@ McpSurface = str
 
 def normalize_surface(surface: McpSurface | str) -> str:
     normalized = str(surface).strip().lower()
-    if normalized not in {"user", "admin", "analytics", "ops"}:
+    if normalized not in {"user", "admin", "analytics", "finance", "ops"}:
         raise ValueError(f"Surface MCP inválida: {surface!r}")
     return normalized
 
@@ -161,7 +161,7 @@ def _infer_surface_from_request(request: Request) -> str | None:
             if mcp_index + 1 < len(segments):
                 return normalize_surface(segments[mcp_index + 1])
         for segment in reversed(segments):
-            if segment in {"user", "admin", "analytics", "ops"}:
+            if segment in {"user", "admin", "analytics", "finance", "ops"}:
                 return normalize_surface(segment)
     except Exception:
         return None
@@ -195,7 +195,7 @@ def _resolve_identity_from_current_request(
         candidate_surfaces.append(preferred_surface)
     candidate_surfaces.extend(
         surface
-        for surface in ("user", "admin", "analytics", "ops")
+        for surface in ("user", "admin", "analytics", "finance", "ops")
         if surface not in candidate_surfaces
     )
 
