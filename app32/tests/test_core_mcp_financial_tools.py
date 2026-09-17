@@ -91,7 +91,7 @@ def test_create_financial_entry_serializes_inside_app_context(monkeypatch):
     fake_service_module.FinancialService = _FakeFinancialService
     monkeypatch.setitem(sys.modules, "services.financial_service", fake_service_module)
 
-    response = mcp.registered["create_financial_entry"]({"company_id": 10, "entry_code": "LCT-000033"})
+    response = mcp.registered["create_financial_entry"](10, {"entry_code": "LCT-000033"})
 
     assert response == {
         "success": True,
@@ -107,6 +107,21 @@ def test_create_financial_entry_serializes_inside_app_context(monkeypatch):
     assert payload["created_by_agent"] == "web"
     assert payload["metadata_json"]["audit"]["actor"]["agent"] == "web"
     assert payload["metadata_json"]["audit"]["channel"] == "web"
+
+
+def test_create_financial_entry_rejects_payload_company_different_from_explicit_tenant():
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_entry"](
+        10,
+        {"company_id": 11, "entry_code": "LCT-TENANT-MISMATCH"},
+    )
+
+    assert response == {
+        "success": False,
+        "error": "company_id do payload diverge do tenant da requisição",
+    }
 
 
 def test_create_financial_schedule_attaches_agent_audit_context(monkeypatch):

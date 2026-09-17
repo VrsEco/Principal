@@ -763,12 +763,31 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         return {"success": True, "item": entry}
 
     @mcp.tool()
-    def create_financial_entry(payload: dict) -> dict:
+    def create_financial_entry(company_id: int, payload: dict) -> dict:
         """
         Cria um lançamento financeiro no ledger.
-        Espera payload compatível com FinancialEntryCreateInput.
+
+        ``company_id`` é deliberadamente explícito na assinatura MCP para que
+        a policy OAuth valide o tenant antes da service. Se o payload também
+        o informar, ambos devem coincidir; o cliente nunca escolhe um tenant
+        diferente do contexto autorizado.
         """
         from services.financial_service import FinancialService
+
+        if isinstance(company_id, bool) or not isinstance(company_id, int) or company_id <= 0:
+            return {"success": False, "error": "company_id válido é obrigatório"}
+        normalized_payload = dict(payload or {})
+        payload_company_id = normalized_payload.get("company_id")
+        if payload_company_id not in (None, ""):
+            try:
+                if int(payload_company_id) != company_id:
+                    return {
+                        "success": False,
+                        "error": "company_id do payload diverge do tenant da requisição",
+                    }
+            except (TypeError, ValueError):
+                return {"success": False, "error": "company_id do payload é inválido"}
+        normalized_payload["company_id"] = company_id
 
         def _create_and_serialize_entry(*, payload: dict):
             entry, error = FinancialService.create_entry(payload=payload)
@@ -778,7 +797,7 @@ def register_financial_mcp_tools(mcp: Any) -> None:
 
         entry, error = _run_financial_action(
             _create_and_serialize_entry,
-            payload=_attach_mcp_audit_payload(payload),
+            payload=_attach_mcp_audit_payload(normalized_payload),
         )
         if error:
             return {"success": False, "error": error}
