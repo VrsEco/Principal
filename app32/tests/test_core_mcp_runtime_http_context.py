@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from contextlib import nullcontext
 from typing import Optional
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 from starlette.requests import Request
@@ -11,6 +12,20 @@ from starlette.requests import Request
 import src.core.mcp_http_auth as auth
 from src.core.mcp_http_auth import App32McpHttpIdentity, reset_http_request_context, set_http_request_context
 from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
+
+
+def _stub_flask_app_factory(monkeypatch, app_instance):
+    """Evita boot completo do Flask em testes unitários do wrapper MCP."""
+
+    fake_app_module = ModuleType("app")
+    fake_app_module.create_app = lambda: app_instance
+    monkeypatch.setitem(sys.modules, "app", fake_app_module)
+
+
+def _stub_tool_catalog(monkeypatch, catalog_instance):
+    fake_catalog_module = ModuleType("src.intelligence.tool_catalog")
+    fake_catalog_module.catalog = catalog_instance
+    monkeypatch.setitem(sys.modules, "src.intelligence.tool_catalog", fake_catalog_module)
 
 
 def test_runtime_prefers_http_request_context(monkeypatch):
@@ -760,12 +775,9 @@ def test_wrap_mcp_callable_denies_unregistered_capability_before_callback(monkey
     def unregistered_tool():
         callback_calls.append(True)
 
-    monkeypatch.setattr("app.create_app", lambda: _App())
+    _stub_flask_app_factory(monkeypatch, _App())
     monkeypatch.setattr("src.core.mcp_runtime.resolve_mcp_execution_context", lambda payload: execution_context)
-    monkeypatch.setattr(
-        "src.intelligence.tool_catalog.catalog",
-        SimpleNamespace(get_tool_capability=lambda tool_name: None),
-    )
+    _stub_tool_catalog(monkeypatch, SimpleNamespace(get_tool_capability=lambda tool_name: None))
 
     with pytest.raises(PermissionError, match="sem capability canônica: unregistered_tool"):
         wrap_mcp_callable(unregistered_tool)()
@@ -803,12 +815,9 @@ def test_wrap_mcp_callable_never_accepts_human_gate_boolean_from_payload(monkeyp
     def gated_tool(**kwargs):
         return kwargs
 
-    monkeypatch.setattr("app.create_app", lambda: _App())
+    _stub_flask_app_factory(monkeypatch, _App())
     monkeypatch.setattr("src.core.mcp_runtime.resolve_mcp_execution_context", lambda payload: execution_context)
-    monkeypatch.setattr(
-        "src.intelligence.tool_catalog.catalog",
-        SimpleNamespace(get_tool_capability=lambda tool_name: capability),
-    )
+    _stub_tool_catalog(monkeypatch, SimpleNamespace(get_tool_capability=lambda tool_name: capability))
     def _evaluate(source, request):
         captured["policy_principal_id"] = source["principal_id"]
         return SimpleNamespace(allowed=False, reason="mutação de alto risco exige confirmação explícita")
@@ -864,12 +873,9 @@ def test_wrap_mcp_callable_denies_forged_boolean_when_no_persisted_approval(monk
     def gated_tool(**kwargs):
         callback_calls.append(kwargs)
 
-    monkeypatch.setattr("app.create_app", lambda: _App())
+    _stub_flask_app_factory(monkeypatch, _App())
     monkeypatch.setattr("src.core.mcp_runtime.resolve_mcp_execution_context", lambda payload: execution_context)
-    monkeypatch.setattr(
-        "src.intelligence.tool_catalog.catalog",
-        SimpleNamespace(get_tool_capability=lambda tool_name: capability),
-    )
+    _stub_tool_catalog(monkeypatch, SimpleNamespace(get_tool_capability=lambda tool_name: capability))
     monkeypatch.setattr(
         "src.core.mcp_runtime.evaluate_tool_policy",
         lambda source, request: SimpleNamespace(allowed=False, reason="mutação de alto risco exige confirmação explícita"),
