@@ -7,30 +7,6 @@ Classe documental: Harness. Escopo: ambiente isolado local/homologação; nunca 
 Validar o contrato OAuth do resource server MCP após R05, sem ampliar coorte,
 publicar listener, reutilizar identidade real ou registrar segredo/token.
 
-## Extensão de aceite — RBAC unificado (2026-09-16)
-
-Além da autenticação, o ensaio deve demonstrar que OAuth não eleva RBAC:
-
-1. Com `mcp_permissions` vazio, confirmar que permissões são derivadas do
-   papel APP32 apenas para tools publicadas na surface.
-2. Com teto não vazio, confirmar a interseção e a negação da permission
-   removida.
-3. Confirmar que `tools/list` da rota OAuth `user` contém somente
-   `get_company_profile`, `list_meetings`, `list_project_tasks_secure`,
-   `list_projects` e `list_user_app32_capabilities`.
-4. Confirmar que uma tool financeira/admin/analytics não é descoberta e não é
-   executável pela surface `user`, mesmo se houver permissão equivalente no
-   papel APP32.
-5. Confirmar leitura positiva no `company_id` concedido e negativa para outro
-   tenant, sem registrar segredo nas evidências.
-
-### Coorte analytics financeira
-
-Validar `tools/list` contendo apenas as quatro leituras financeiras
-allowlisted e `list_analytics_app32_capabilities`; exigir `mcp:analytics`,
-`financial.read` e grant do tenant. Toda tentativa de mutação deve ser negada
-pela surface, mesmo com payload de confirmação.
-
 ## Matriz de clientes e decisão
 
 | Cliente | Fluxo contratado | Situação R06 | Limite |
@@ -40,7 +16,7 @@ pela surface, mesmo com payload de confirmação.
 | `app32-mcp-service-smoke` Keycloak | Client Credentials, SERVICE | pronto para smoke com client/grant efêmeros | não cria `user_id` sintético |
 | Claude Desktop | `stdio`/proxy + bearer legado atual | fora da evidência OAuth R06 | não suporta concluir OAuth pelo proxy legado |
 | Claude.ai | MCP remoto HTTPS + OAuth | bloqueado no loopback | requer URL pública, redirect e aprovação explícita de homologação |
-| Codex desktop/CLI | depende de suporte OAuth/redirect confirmado | não selecionado até registrar versão e mecanismo | não inferir compatibilidade pelo suporte MCP genérico |
+| Codex desktop/CLI | Authorization Code + PKCE, DCR e MCP remoto HTTPS | confirmado em smoke autenticado read-only | exigir aprovação pontual; não registrar token nem selecionar aprovação permanente |
 
 ## Pré-condições fail-closed
 
@@ -97,3 +73,40 @@ inclui expiração, `iss`/`aud`, scopes, grants inativos/expirados, JWKS
 indisponível, ausência de fallback OAuth e política de reconexão de leitura.
 Com os smokes USER e SERVICE, a R06 local está concluída. A promoção R07 não é
 automatizável: exige autorização de produção e ambiente HTTPS público aprovado.
+
+## Incremento local de auditoria P0 — 16/09/2026
+
+Regressão focada: `test_tool_approval_service`, `test_intelligence_audit_persistence_plan`, `test_ai_audit_persistence` e `test_mcp_policy_audit`: 27 passed. Executar com `PYTHONPATH` apontando para `app32` e `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`.
+
+Cobertura nova: tenant/usuário/status/tipo da aprovação, arrays e logs redigidos, persistência obrigatória de mutações, best-effort de leitura e callback negado quando a trilha está indisponível. A suíte ampla de contexto não concluiu no ambiente por import do app; não é evidência de aprovação da regressão completa.
+
+Este incremento não substitui os smokes USER/SERVICE. Antes de fechar P0, repetir OAuth autenticado, grant revogado/cross-tenant, concorrência e replay com PostgreSQL real, persistência de eventos e rollout controlado.
+
+Validação adicional: 13 testes de contexto HTTP sem wrapper aprovados. Os 4 testes de wrapper também passaram com módulos `app` e `tool_catalog` isolados por stubs, conforme fronteiras já mockadas pelos testes; isso não valida bootstrap Flask nem catálogo real. Total: 44 cenários aprovados nas execuções focalizadas e isoladas.
+
+Incremento schema v2: 30 testes focados aprovados, adicionando `test_ai_audit_schema_v2.py`. Cobertura: migration/contrato de índices e colunas, preservação de legado/downgrade, campos OAuth/policy e INSERT sem DDL em transação independente. São testes contratuais com stubs, não execução Alembic em PostgreSQL. Não há listener local em `127.0.0.1:5432` nem executáveis PostgreSQL/Docker encontrados no PATH desta sessão; homologação de banco permanece pendente.
+
+## Evidência PostgreSQL real P0 — 16/09/2026
+
+Provisionado laboratório portátil com [binários da EDB](https://www.enterprisedb.com/download-postgresql-binaries), PostgreSQL 16.15. Nenhum serviço instalado e nenhum dado/tenant de produção acessado. O hash do arquivo baixado foi registrado no diretório ignorado; isso é integridade local, não checksum publicado pelo fornecedor.
+
+`test_audit_p0_postgresql_integration.py`: 9 passed em 3,54 s. Regressão focalizada: 30 passed em 3,34 s. O primeiro ensaio teve falha sem logs visíveis e o segundo reteve pipes no `pg_ctl`; ambos os clusters foram encerrados. O runner foi corrigido para logs em arquivos e a execução final retornou `suite_exit_code=0`, `listener_stopped=true`, `synthetic_only`, `production_access=false`.
+
+Cobertura real: 11 testes em PostgreSQL 16.15, incluindo revision em schemas novo/legado, idempotência, colunas/índices, preservação/downgrade, redação, concorrência/replay, tenant/usuário/payload/expiração, busca da chave exata com 21 aprovações não relacionadas e transação própria da trilha. O replay de implantação carregou o APP32 e executou `flask db upgrade` dos heads `20260913_1500` e `20260916_1000` para o head único `20260917_1000` em banco sintético.
+
+O smoke OAuth usa chave RSA efêmera e access JWT realmente assinado; valida assinatura, issuer, audience, client, scopes, vínculo `issuer/sub`, grant tenant-safe, cross-tenant, revogação do principal e persistência da decisão na trilha. Não usa token de produção nem rede externa.
+
+Foi acrescentado o gate de rollout `check_oauth_mcp_rollout_readiness.py`. Cinco cenários contratuais validam piloto isolado, prevenção de corte acidental da surface `user`, HTTPS obrigatório, coorte explícita e alerta de Dynamic Client Registration. Na estação atual, o preflight real retornou `ready=false` e exit code `2`, sem revelar valores, porque grants/rota piloto e configuração externa do IdP não estão injetados. Este é o comportamento esperado antes da homologação autorizada.
+
+O gate agora cobre sete cenários e aceita `--live` para discovery/JWKS/RFC 9728 sem token. Um teste adicional iniciou servidor JWKS HTTPS somente em loopback, com certificado/CA efêmeros, e comprovou fetch real pelo verifier e negativa de audience incompatível. A regressão focalizada acumulada passou em 60 cenários.
+
+Em 17/09/2026, o preflight live read-only contra os endpoints públicos produtivos retornou `ready=true`, com discovery, JWKS e protected-resource metadata coerentes. A rota `/mcp/pilot/user/` sem bearer respondeu `401 invalid_token` e `WWW-Authenticate` com o metadata canônico. Nenhum token ou dado empresarial foi enviado. Naquele estágio, permaneciam pendentes o smoke autenticado e o rollout do código deste incremento.
+
+O smoke seguinte confirmou o cliente real: `codex mcp login` concluiu Authorization Code com PKCE e Dynamic Client Registration sem expor credenciais. Em sessão read-only, e após aprovação humana apenas para a chamada corrente, `list_user_app32_capabilities` retornou 4 capabilities distribuídas em 3 domínios, com scope `mcp_user`. Não houve shell, leitura de arquivos, mutação nem aprovação permanente. A prova fecha a compatibilidade Codex CLI ↔ OAuth/MCP público, mas não a versão P0, ainda não promovida.
+
+Diagnóstico adicional: a cadeia histórica desde banco vazio falha antes deste incremento, em `20260205_2000`, por FK de `portfolios` para `companies` sem baseline Alembic correspondente. Essa dívida deve ser saneada em entrega própria; o P0 não deve reescrever revision histórica. O IdP/JWKS HTTPS externo e o cliente Codex CLI já foram comprovados; ainda falta rollout controlado do código/migration P0 e validação pós-deploy, portanto o P0 permanece aberto.
+
+
+
+
+No preflight final de 17/09/2026, a integração com `origin/main` revelou colisão do identificador inicialmente proposto `20260916_1000` com a migration de permissões MCP já publicada. O release foi corrigido sem reescrever histórico: a trilha de auditoria tornou-se a merge revision `20260917_1000`, dependente dos heads `20260913_1500` e `20260916_1000`. Novo laboratório: 11 testes PostgreSQL aprovados, `flask db upgrade` alcançou head único `20260917_1000` e o listener foi encerrado.

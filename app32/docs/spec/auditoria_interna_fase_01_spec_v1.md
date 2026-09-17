@@ -593,3 +593,56 @@ Implementar em três ondas:
 - resolução e encerramento exigem validação textual do auditor;
 - saída A4 permite impressão ou salvamento em PDF;
 - entrega auditável por e-mail/WhatsApp permanece evolução subsequente.
+
+## 15. Incremento P0 IA/OAuth/CLI — 16/09/2026
+
+Arquitetura-alvo preservada: plataforma única para auditoria sistêmica/interna e trabalho externo; `AuditEngagement` delimita empresa custodiante (`company_id`), auditado, objetivo, período, programa e equipe. `AuditRun` registra execução e linhagem; candidato gerado por IA/analyzer exige triagem humana antes do ponto. Estes agregados ainda são evolução planejada, não implementação desta entrega.
+
+Contrato do incremento local:
+
+- capability ausente é negada; não há inferência financeira por nome;
+- aprovação é um registro persistido, nunca um booleano do payload;
+- `ToolApprovalService` revalida status, tipo, tenant e usuário do registro, além de principal/tool/digest e expiração;
+- `mcp.tool_policy.allowed/blocked` usa identidade resolvida pelo servidor e metadata estruturada, sem copiar payload ou subject;
+- metadata contém principal, auth_method, client_id, scopes, surface, motivo, approval_request_id e payload_digest;
+- mutação autorizada exige persistência durável antes do callback; falha produz `AIExecutionAuditPersistenceError`;
+- leituras e eventos negados permanecem best-effort;
+- logger, retorno e persistência redigem segredos recursivamente, inclusive arrays.
+
+Aceite desse incremento local: 27 testes focados aprovados, incluindo callback não executado sem trilha durável. Naquele estágio, permaneciam pendentes smoke OAuth autenticado end-to-end, concorrência e replay em PostgreSQL, migração da tabela de eventos e rollout. As subseções seguintes registram o fechamento técnico dos três primeiros itens; o rollout continua pendente. Metadata JSONB não equivale a novos campos/indexes estruturados no banco.
+
+### 15.1 Schema de auditoria v2 — implementação local
+
+- merge migration `20260917_1000`, sobre os heads `20260913_1500` e `20260916_1000`, assume a tabela legada sem apagar histórico;
+- colunas: `principal_id`, `auth_method`, `client_id`, `surface`, `token_scopes` (JSONB), `policy_allowed`, `policy_reason`, `approval_request_id`, `payload_digest`;
+- índices novos iniciam por `company_id` e cobrem principal/tempo, policy/tempo e aprovação;
+- eventos legados não são reinterpretados a partir de metadata livre; campos novos podem permanecer nulos;
+- schema version: `2026-09-16.v2`;
+- writer faz apenas INSERT em transação própria de `db.engine.begin()`, sem DDL e sem commit/rollback da sessão da tool;
+- downgrade preserva tabela, colunas e índices por serem aditivos e conterem evidência; remoção exige decisão específica de retenção;
+- aplicar migration antes de promover o writer; schema ausente/incompatível bloqueia mutação pela regra fail-closed;
+- contrato daquele estágio: 30 testes aprovados; PostgreSQL real, concorrência/replay e OAuth ponta a ponta ainda eram pendentes e foram tratados nas subseções seguintes.
+
+### 15.2 Homologação PostgreSQL isolada
+
+Em 16/09/2026, 11 testes reais em PostgreSQL 16.15 passaram: schema novo/idempotência, schema legado/histórico/downgrade preservador, campos v2/segredos redigidos, consumo concorrente com exatamente um vencedor, replay, tenant/usuário/digest/expiração e transação independente. A consulta exige `payload.approval_key` exata no banco antes de `FOR UPDATE`; validações de binding permanecem no service.
+
+O smoke OAuth local usa JWT RS256 assinado e valida de forma integrada issuer, audience, client allowlist, scopes, vínculo persistido `issuer/sub`, grant explícito de `company_id`, negação cross-tenant, principal revogado e evento `ai_mcp_audit_events` com identidade/policy estruturadas. Tokens inválidos ou principals revogados falham sem fallback para bearer legado.
+
+A evidência aplica a revision diretamente com Operations Alembic em schemas descartáveis. Complementarmente, o comando real `flask db upgrade`, com bootstrap de schema/runtime desligado e banco sintético marcado nos heads `20260913_1500` e `20260916_1000`, carregou o APP32, executou `20260917_1000` e alcançou o head esperado. O ORM concorrente do ensaio representa a fronteira de AgentAction usada pelo service.
+
+Banco totalmente vazio não é um gate válido deste incremento: a cadeia histórica falha antes do P0 em `20260205_2000`, pois `portfolios.company_id` referencia `companies` sem revision baseline que crie essa tabela. Corrigir o bootstrap integral é dívida arquitetural separada e não autoriza alterar ou mascarar migrations históricas durante o rollout do P0. A homologação posterior com IdP externo/redirect real está registrada em 15.4; ainda falta rollout controlado, portanto o P0 não está encerrado.
+
+### 15.3 Gate de rollout OAuth
+
+`services/oauth_mcp_rollout_readiness_service.py` é a decisão pura e `scripts/qa/check_oauth_mcp_rollout_readiness.py` é o adaptador operacional read-only. O modo `pilot` exige grants ativos e rota piloto, preserva a surface `user` legada e rejeita issuer/JWKS/base pública sem HTTPS. O modo `cohort` exige ativação global e lista explícita de surfaces. Ambos exigem algoritmo assimétrico e `mcp:access`; CA customizada precisa existir. Ausência de allowlist de clients gera alerta explícito, aceitável apenas para Dynamic Client Registration aprovado.
+
+Com `--live`, o preflight consulta apenas endpoints públicos, sem bearer: discovery deve devolver issuer/JWKS idênticos à configuração; JWKS deve conter chaves com `kid` e `kty`; metadata RFC 9728 deve apontar para `/mcp/pilot/user` e para o authorization server contratado. Resposta acima de 1 MiB, TLS inválido, drift ou indisponibilidade bloqueiam a promoção.
+
+Sem configuração explícita, o gate retorna `ready=false`. Em 17/09/2026, as configurações públicas foram injetadas apenas no processo read-only e `--live` retornou `ready=true`: discovery, JWKS e metadata RFC 9728 corresponderam ao contrato. A rota piloto anônima respondeu `401` com `WWW-Authenticate` apontando para o metadata correto. Não houve alteração de flags, credenciais ou dados em produção.
+
+### 15.4 Smoke autenticado Codex CLI
+
+O cliente `mcp-versus` concluiu Authorization Code com PKCE e Dynamic Client Registration no IdP público. Em seguida, o Codex CLI executou exclusivamente `list_user_app32_capabilities`, após aprovação humana limitada à chamada, sem acesso a shell, arquivos ou mutações. Resultado: 4 capabilities, 3 domínios e scope efetivo `mcp_user`.
+
+Critério comprovado: login interativo, emissão/uso de bearer pelo cliente sem revelar credencial, sessão MCP remota e catálogo autenticado de leitura. Critério ainda pendente: rollout do writer/schema v2 e comprovação em produção da trilha `ai_mcp_audit_events`; portanto, a evidência não encerra o P0 nem autoriza ampliar a coorte.

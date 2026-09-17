@@ -7,7 +7,7 @@ from functools import wraps
 from typing import Any, Callable, Mapping, get_type_hints
 
 from src.intelligence.security.runtime_identity import resolve_runtime_identity
-from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy, require_tool_policy
+from src.intelligence.security.tool_policy import MUTATING_ACTIONS, ToolPolicyRequest, evaluate_tool_policy, require_tool_policy
 from src.intelligence.tool_context import (
     reset_legacy_tool_context,
     reset_sapiens_context,
@@ -70,6 +70,41 @@ def _policy_requires_persisted_approval(decision: Any) -> bool:
     return "confirmação explícita" in reason or "human gate" in reason
 
 
+def _emit_mcp_policy_audit(source: Mapping[str, Any], request: ToolPolicyRequest,
+                           payload: dict[str, Any], *, allowed: bool, reason: str) -> None:
+    from services.tool_approval_service import canonical_payload_digest
+    from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
+
+    # Não copiar payload, prompt, token ou subject para metadata livre.
+    metadata = {key: source.get(key) for key in (
+        "principal_id", "subject_type", "client_id", "auth_method", "token_scopes", "correlation_id",
+    ) if source.get(key) is not None}
+    metadata.update({
+        "surface": request.surface,
+        "policy_allowed": allowed,
+        "policy_reason": reason,
+        "risk": request.risk,
+        "payload_digest": canonical_payload_digest(payload),
+        "approval_request_id": (request.metadata or {}).get("approved_human_gate_request_id"),
+    })
+    record = build_ai_execution_audit_record(
+        event_type="mcp.tool_policy.allowed" if allowed else "mcp.tool_policy.blocked",
+        runtime="mcp", status="allowed" if allowed else "blocked",
+        domain=request.domain, operation=request.action, tool_name=request.tool_name,
+        scope=request.surface, company_id=request.requested_company_id,
+        user_id=source.get("user_id"), thread_id=source.get("thread_id"),
+        trace_id=source.get("correlation_id"), metadata=metadata,
+        principal_id=source.get("principal_id"), auth_method=source.get("auth_method"),
+        client_id=source.get("client_id"), surface=request.surface,
+        token_scopes=source.get("token_scopes") or (), policy_allowed=allowed,
+        policy_reason=reason, approval_request_id=metadata["approval_request_id"],
+        payload_digest=metadata["payload_digest"],
+    )
+    emit_ai_execution_audit_event(
+        record, require_persistence=allowed and request.action in MUTATING_ACTIONS,
+    )
+
+
 def extract_mcp_payload(args: tuple[Any, ...], kwargs: Mapping[str, Any]) -> dict[str, Any]:
     if kwargs:
         return dict(kwargs)
@@ -129,25 +164,6 @@ def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
     if isinstance(raw_permissions, (list, tuple, set, frozenset)):
         return tuple(str(item).strip().lower() for item in raw_permissions if str(item).strip())
     return (str(raw_permissions).strip().lower(),) if str(raw_permissions).strip() else ()
-
-
-def _resolve_oauth_effective_permissions(
-    runtime_permissions: Any,
-    grant_permission_ceiling: Any,
-) -> tuple[str, ...]:
-    """Calcula a interseção OAuth com o RBAC canônico do APP32.
-
-    O principal/grant continua sendo a barreira de identidade e tenant. Já as
-    permissões vêm do mesmo papel de Employee usado pelo APP32/Bearer. Quando
-    o grant contém ``mcp_permissions``, ele só pode reduzir esse conjunto —
-    nunca conceder uma permissão ausente no APP32.
-    """
-
-    resolved_runtime = _normalize_permissions(runtime_permissions)
-    ceiling = _normalize_permissions(grant_permission_ceiling)
-    if not ceiling:
-        return resolved_runtime
-    return tuple(permission for permission in resolved_runtime if permission in set(ceiling))
 
 
 @dataclass(frozen=True)
@@ -230,7 +246,6 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         # do processo ou headers. SERVICE/AGENT continuam sem user sintético.
         user_id = _coerce_optional_int(getattr(grant_decision.principal, "user_id", None))
         resolved_company_id = grant_decision.company_id
-        trusted_runtime_identity: dict[str, Any] = {}
         if user_id is not None:
             trusted_runtime_identity = resolve_runtime_identity(
                 user_id=user_id,
@@ -241,10 +256,10 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         disable_company_fallback = True
         company_resolution_source = "principal_company_grant"
         role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
-        permissions = _resolve_oauth_effective_permissions(
-            trusted_runtime_identity.get("permissions"),
-            getattr(grant_decision, "mcp_permissions", ()),
-        )
+        # Permissões legadas não são evidência de autorização do principal. A
+        # policy recebe apenas o papel/grant até a interseção explícita com
+        # capabilities e scopes ser introduzida na próxima entrega.
+        permissions: tuple[str, ...] = ()
         principal_grant_enforced = True
     else:
         if user_id:
@@ -390,6 +405,9 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                 metadata=dict(execution_context.metadata or {}),
             )
             initial_decision = evaluate_tool_policy(policy_source, policy_request)
+            if not initial_decision.allowed:
+                _emit_mcp_policy_audit(policy_source, policy_request, payload,
+                                       allowed=False, reason=initial_decision.reason)
             if _policy_requires_persisted_approval(initial_decision):
                 from services.tool_approval_service import ToolApprovalBinding, ToolApprovalBindingError, tool_approval_service
 
@@ -405,6 +423,8 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                     raise PermissionError(f"aprovação persistida indisponível: {exc}") from exc
                 approval_decision = tool_approval_service.authorize_and_consume(approval_binding)
                 if not approval_decision.allowed:
+                    _emit_mcp_policy_audit(policy_source, policy_request, payload,
+                                           allowed=False, reason=approval_decision.reason)
                     raise PermissionError(approval_decision.reason)
                 policy_request = ToolPolicyRequest(
                     **{
@@ -417,6 +437,7 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                     }
                 )
             require_tool_policy(policy_source, policy_request)
+            _emit_mcp_policy_audit(policy_source, policy_request, payload, allowed=True, reason="ok")
             sapiens_token = set_sapiens_context(
                 user_id=execution_context.user_id,
                 company_id=execution_context.company_id,

@@ -37,7 +37,10 @@ def _approval(binding: ToolApprovalBinding, **payload_overrides):
         "approval_expires_at": (NOW + timedelta(minutes=5)).isoformat(),
     }
     payload.update(payload_overrides)
-    return SimpleNamespace(id=321, status="approved", payload=payload)
+    return SimpleNamespace(
+        id=321, status="approved", type="workflow_approval_request",
+        company_id=binding.company_id, user_id=binding.user_id, payload=payload,
+    )
 
 
 def test_approval_consumption_requires_exact_persisted_binding_and_is_single_use():
@@ -90,3 +93,19 @@ def test_binding_requires_principal_tenant_and_canonical_json_payload():
     assert canonical_payload_digest({"a": 1, "b": [True, None]}) == canonical_payload_digest(
         {"b": [True, None], "a": 1}
     )
+
+
+@pytest.mark.parametrize("field,value", [
+    ("company_id", 10), ("user_id", 4), ("status", "executed"),
+    ("status", "rejected"), ("type", "technical_fix"),
+])
+def test_approval_service_defensively_rechecks_record_scope(field, value):
+    binding = _binding()
+    action = _approval(binding)
+    setattr(action, field, value)
+    service = ToolApprovalService(
+        now_provider=lambda: NOW,
+        approved_actions_lookup=lambda candidate: [action],
+        consume_approval=lambda *args: pytest.fail("registro fora do escopo não pode ser consumido"),
+    )
+    assert service.authorize_and_consume(binding).allowed is False

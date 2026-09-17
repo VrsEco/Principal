@@ -55,7 +55,7 @@ def test_persistable_payload_uses_metadata_json_and_schema_version() -> None:
 
     payload = build_persistable_ai_execution_audit_payload(record)
 
-    assert payload["schema_version"].startswith("2026-04-10")
+    assert payload["schema_version"] == "2026-09-16.v2"
     assert "metadata" not in payload
     assert payload["metadata_json"] == {"authorization": "[REDACTED]", "rows": 3}
     assert payload["company_id"] == 31
