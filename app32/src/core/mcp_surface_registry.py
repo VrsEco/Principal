@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import logging
 from dataclasses import replace
 from typing import Any, Literal, Sequence
 
@@ -95,10 +96,9 @@ def _has_authenticated_mcp_permission(permission: str) -> bool:
                 permissions = runtime.get("permissions") or {}
                 flattened = set()
                 for resource, actions in permissions.items():
-                    flattened.add(str(resource).strip().lower())
                     for action in actions if isinstance(actions, (list, tuple, set)) else [actions]:
                         flattened.add(f"{str(resource).strip().lower()}.{str(action).strip().lower()}")
-                if permission in flattened or "financial" in flattened:
+                if permission in flattened:
                     return True
             return False
 
@@ -109,7 +109,8 @@ def _has_authenticated_mcp_permission(permission: str) -> bool:
         app = create_app()
         with app.app_context():
             return _load()
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).warning("MCP permission discovery failed (%s)", type(exc).__name__)
         # Discovery não pode se transformar em bypass se o contexto OAuth ou o
         # banco não estiver disponível.
         return False
@@ -123,31 +124,52 @@ def _pilot_user_visible_tool_names() -> tuple[str, ...]:
 
 
 def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
-    """Filtra discovery unificada por RBAC APP32 **e** scopes do token.
-
-    A ausência de scope não pode apenas falhar na invocação: a tool não deve
-    aparecer no catálogo do conector. Fora de um request autenticado (testes
-    unitários/stdio), preservamos a lista estática para não alterar contratos
-    que não representam discovery remoto.
-    """
-    if not _has_authenticated_mcp_permission("financial.view"):
-        return set()
+    """Discovery uses each capability's permission and its OAuth surface scope."""
     try:
         from src.core.mcp_http_auth import get_http_request_identity
-
         identity = get_http_request_identity()
-        token_scopes = set(getattr(identity, "scopes", ()) or ()) if identity is not None else set()
+        token_scopes = set(getattr(identity, "scopes", ()) or ())
     except Exception:
-        token_scopes = set()
-    if not token_scopes:
-        return set(requested_names)
-
-    visible: set[str] = set()
-    if "mcp:analytics" in token_scopes:
-        visible.update(set(PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES).intersection(requested_names))
-    if "mcp:finance" in token_scopes:
-        visible.update(set(PILOT_FINANCE_OPERATIONAL_TOOL_NAMES).intersection(requested_names))
+        return set()
+    if identity is None:
+        # Offline registry only; permission resolver still denies without a principal.
+        token_scopes = {"mcp:access", "mcp:analytics", "mcp:finance"}
+    if "mcp:access" not in token_scopes:
+        return set()
+    visible = set()
+    permission_results: dict[str, bool] = {}
+    for name in sorted(requested_names):
+        capability = catalog.get_tool_capability(name)
+        scope = "mcp:finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else "mcp:analytics"
+        if capability is not None and scope in token_scopes:
+            for permission in capability.permissions:
+                if permission not in permission_results:
+                    permission_results[permission] = _has_authenticated_mcp_permission(permission)
+            if all(permission_results[p] for p in capability.permissions):
+                visible.add(name)
     return visible
+
+
+def get_unified_manifest(domain: str | None = None, include_tools: bool = True) -> dict[str, Any]:
+    """Same discovery set as tools/list; execution is always revalidated per tenant."""
+    names = set(PILOT_USER_TOOL_NAMES)
+    names.update(_visible_privileged_tool_names(frozenset(PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES)))
+    capabilities = []
+    for name in sorted(names):
+        capability = catalog.get_tool_capability(name)
+        if capability is None:
+            continue
+        surface = ("finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else
+                   "analytics" if name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES else "user")
+        capabilities.append(replace(capability, scopes=get_surface_scope_filter(surface)))
+    manifest = build_capability_manifest(capabilities, domain=domain, include_tools=include_tools)
+    manifest["discovery"] = {
+        "connector": "mcp-versus", "surface": "unified",
+        "authorization": "revalidated_per_call_and_company",
+        "human_approval": "required_for_gated_mutations",
+        "scope_meaning": "catalog_scopes_not_oauth_token_scopes",
+    }
+    return manifest
 
 
 def normalize_surface(surface: McpSurface | str) -> McpSurface:
@@ -217,6 +239,13 @@ def get_surface_capability_status(
 
     decision = evaluate_tool_policy(
         {
+            "principal_id": getattr(context, "principal_id", None),
+            "issuer": getattr(context, "issuer", None),
+            "subject": getattr(context, "subject", None),
+            "subject_type": getattr(context, "subject_type", "USER"),
+            "client_id": getattr(context, "client_id", None),
+            "auth_method": getattr(context, "auth_method", None),
+            "token_scopes": getattr(context, "token_scopes", ()),
             "user_id": context.user_id,
             "company_id": context.company_id,
             "employee_id": context.employee_id,
@@ -488,6 +517,7 @@ def register_mcp_surface_tools(
     tool_names: Sequence[str] | None = None,
     conditional_tool_names: Sequence[str] | None = None,
     shared_registrar_tool_names: Sequence[str] | None = None,
+    unified_discovery: bool = False,
 ) -> None:
     normalized_surface = normalize_surface(surface)
     allowed_names = set(tool_names or iter_surface_tool_names(normalized_surface))
@@ -512,6 +542,9 @@ def register_mcp_surface_tools(
         include_tools: bool = True,
     ) -> dict[str, Any]:
         """Manifesto consultável por agentes para descoberta de capacidades."""
+
+        if unified_discovery:
+            return get_unified_manifest(domain=domain, include_tools=include_tools)
 
         manifest_loader = (
             _get_surface_manifest_in_app_context
@@ -544,7 +577,8 @@ def register_mcp_surface_tools(
         name=f"list_{normalized_surface}_app32_capabilities",
         description=(
             "Lista as capacidades e metadados de segurança do catálogo MCP/Sapiens "
-            f"do APP32 para a superfície {normalized_surface}."
+            + ("do conector unificado mcp-versus, com autorização revalidada por empresa na execução."
+               if unified_discovery else f"do APP32 para a superfície {normalized_surface}.")
         ),
     )(list_surface_capabilities)
 
@@ -712,6 +746,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         include_shared_registrars=False,
         include_admin_diagnostics=False,
         tool_names=PILOT_USER_TOOL_NAMES,
+        unified_discovery=True,
     )
     tools_by_name = _tool_map()
     for tool_name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES:

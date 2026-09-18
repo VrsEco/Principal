@@ -137,3 +137,12 @@ Para consulta financeira aprovada, a coorte usa
 catálogo é somente leitura; não usar esta coorte para criar, editar, importar,
 liquidar ou excluir dados financeiros. Não instruir usuários a criar aliases
 como `mcp-versus-analytics`: `mcp-versus` é o nome público canônico.
+
+
+### Correção de discovery unificada — AA.J.21.332 (2026-09-18)
+
+- No endpoint `/mcp/pilot/`, `list_user_app32_capabilities` mantém o nome por compatibilidade, mas descreve as ferramentas publicadas pelo conector unificado, incluindo o filtro `domain=finance`. Nos endpoints segmentados seu significado permanece restrito à respectiva surface.
+- `tools/list` e manifesto compartilham a seleção de ferramentas privilegiadas por scope OAuth e permissão específica da capability. `financial.view` não equivale a `financial.create`.
+- O catálogo indica discovery, não autorização definitiva: cada execução revalida empresa/grant/RBAC e mutações com human gate exigem aprovação persistida. Scopes do manifesto são metadados do catálogo, não os claims do token.
+- Critério de regressão: igualdade entre tools expostas e manifesto (exceto a própria tool de capabilities), filtro financeiro com leitura versus criação, token sem scope, teto de grant e isolamento tenant.
+- Não declarar paridade integral com todas as funções do APP32: a publicação remota continua limitada à coorte revisada. Homologação real da sessão cliente permanece obrigatória; testes simulados não a substituem.

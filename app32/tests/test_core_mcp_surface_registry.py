@@ -99,7 +99,7 @@ def test_oauth_unified_server_keeps_user_tools_and_adds_privileged_tools_only_wh
     assert set(registry.PILOT_USER_TOOL_NAMES).issubset(denied_tools)
     assert not set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).intersection(denied_tools)
 
-    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: permission == "financial.view")
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: permission in {"financial.view", "financial.create"})
     allowed_server = registry.build_oauth_unified_mcp_server()
     allowed_tools = {tool.name for tool in asyncio.run(allowed_server.list_tools())}
 
@@ -1020,3 +1020,66 @@ def test_user_surface_discovers_gated_consultive_reviews_without_session_company
     assert "consultive_register_assisted_analysis" in names
     assert "consultive_register_squad_validation" in names
     assert "consultive_register_consultant_decision" not in names
+
+
+@pytest.mark.parametrize("permissions,scopes,expected", [
+    ({"financial.view", "financial.create"}, ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 5),
+    ({"financial.view"}, ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 4),
+    ({"financial.create"}, ("mcp:access", "mcp:user", "mcp:finance"), 1),
+    ({"financial.view", "financial.create"}, ("mcp:access", "mcp:user"), 0),
+    ({"financial.view", "financial.create"}, (), 0),
+    (set(), ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 0),
+])
+def test_unified_manifest_matches_tools_list_and_finance_filter(monkeypatch, permissions, scopes, expected):
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda p: p in permissions)
+    monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=scopes))
+    server = registry.build_oauth_unified_mcp_server()
+    exposed = {t.name for t in asyncio.run(server.list_tools())}
+    manifest = registry.get_unified_manifest()
+    assert {t["name"] for t in manifest["tools"]} == exposed - {"list_user_app32_capabilities"}
+    financial = registry.get_unified_manifest(domain="finance")
+    assert financial["summary"]["capabilities"] == expected
+    if expected in (1, 5):
+        create = next(t for t in financial["tools"] if t["name"] == "create_financial_entry")
+        assert create["permissions"] == ["financial.create"]
+        assert create["human_gate"] is True
+        assert create["scopes"] == ["mcp_finance"]
+
+
+def test_unified_existing_capability_tool_uses_unified_manifest(monkeypatch):
+    fake = _FakeMCP()
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda p: True)
+    monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(
+        scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance")))
+    registry.register_mcp_surface_tools(fake, "user", include_shared_registrars=False,
+                                       tool_names=registry.PILOT_USER_TOOL_NAMES, unified_discovery=True)
+    result = fake.registered["list_user_app32_capabilities"]["callable"](domain="finance")
+    assert result["summary"]["capabilities"] == 5
+    assert result["discovery"]["authorization"] == "revalidated_per_call_and_company"
+    assert "tools" not in registry.get_unified_manifest(include_tools=False)
+
+
+@pytest.mark.parametrize("actions,ceiling,full,expected", [
+    (["view"], [], False, False),
+    (["create"], [], False, True),
+    (["create"], ["financial.view"], False, False),
+    ([], [], True, True),
+])
+def test_permission_resolver_does_not_promote_read_to_create(monkeypatch, isolated_app_factory, actions, ceiling, full, expected):
+    grant = SimpleNamespace(is_active=True, mcp_permissions=ceiling,
+                            principal=SimpleNamespace(user_id=44), company_id=1)
+    class Query:
+        def filter_by(self, **kwargs):
+            assert kwargs == {"principal_id": 12, "status": "active"}
+            return self
+        def all(self):
+            return [grant]
+    monkeypatch.setitem(sys.modules, "models.identity_principal", SimpleNamespace(
+        PrincipalCompanyGrant=SimpleNamespace(query=Query())))
+    monkeypatch.setitem(sys.modules, "src.intelligence.security.runtime_identity", SimpleNamespace(
+        resolve_runtime_identity=lambda **kwargs: {"permissions": {"financial": actions},
+                                                  "has_full_app32_permissions": full}))
+    monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity",
+                        lambda: SimpleNamespace(principal_id=12))
+    with isolated_app_factory.app_context():
+        assert registry._has_authenticated_mcp_permission("financial.create") is expected
