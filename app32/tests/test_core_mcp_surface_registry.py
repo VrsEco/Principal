@@ -107,6 +107,21 @@ def test_oauth_unified_server_keeps_user_tools_and_adds_privileged_tools_only_wh
     assert set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).issubset(allowed_tools)
 
 
+def test_unified_privileged_discovery_respects_oauth_scope_per_tool_surface(monkeypatch):
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics")),
+    )
+
+    visible = registry._visible_privileged_tool_names(
+        frozenset(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES)
+    )
+
+    assert visible == set(registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES)
+    assert "create_financial_entry" not in visible
+
+
 def test_oauth_analytics_registers_allowlisted_direct_registrars_only(monkeypatch):
     """Uma tool fora de tools/list não pode ficar invocável por nome conhecido."""
 

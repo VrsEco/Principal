@@ -122,6 +122,34 @@ def _pilot_user_visible_tool_names() -> tuple[str, ...]:
     return tuple(names)
 
 
+def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
+    """Filtra discovery unificada por RBAC APP32 **e** scopes do token.
+
+    A ausência de scope não pode apenas falhar na invocação: a tool não deve
+    aparecer no catálogo do conector. Fora de um request autenticado (testes
+    unitários/stdio), preservamos a lista estática para não alterar contratos
+    que não representam discovery remoto.
+    """
+    if not _has_authenticated_mcp_permission("financial.view"):
+        return set()
+    try:
+        from src.core.mcp_http_auth import get_http_request_identity
+
+        identity = get_http_request_identity()
+        token_scopes = set(getattr(identity, "scopes", ()) or ()) if identity is not None else set()
+    except Exception:
+        token_scopes = set()
+    if not token_scopes:
+        return set(requested_names)
+
+    visible: set[str] = set()
+    if "mcp:analytics" in token_scopes:
+        visible.update(set(PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES).intersection(requested_names))
+    if "mcp:finance" in token_scopes:
+        visible.update(set(PILOT_FINANCE_OPERATIONAL_TOOL_NAMES).intersection(requested_names))
+    return visible
+
+
 def normalize_surface(surface: McpSurface | str) -> McpSurface:
     normalized = str(surface).strip().lower()
     if normalized not in _SURFACE_SCOPE_FILTERS:
@@ -340,8 +368,8 @@ def _build_policy_fast_mcp(
                 # ainda não existe ``company_id`` para avaliar o grant. Cada
                 # execução é protegida novamente pelo wrapper tenant-safe.
                 allowed_names = set(static_tool_names)
-                if conditional_names and _has_authenticated_mcp_permission("financial.view"):
-                    allowed_names.update(conditional_names)
+                if conditional_names:
+                    allowed_names.update(_visible_privileged_tool_names(conditional_names))
             else:
                 manifest = _get_surface_manifest_in_app_context(
                     normalized_surface,
