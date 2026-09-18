@@ -33,6 +33,8 @@ responsabilidade permanecem as mesmas.
    explícito e gate humano persistido para mutações.
 9. Surfaces qualificam a execução no servidor. Elas não fragmentam a identidade
    do produto: o nome público da conexão continua `mcp-versus`.
+10. O endpoint canônico é único; descoberta e execução filtram scopes e RBAC
+    por tool, sem publicar finance a quem não o possui no APP32.
 
 ## Resultado esperado
 

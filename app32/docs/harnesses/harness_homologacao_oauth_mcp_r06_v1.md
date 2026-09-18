@@ -119,10 +119,9 @@ Diagnóstico adicional: a cadeia histórica desde banco vazio falha antes deste 
 
 No preflight final de 17/09/2026, a integração com `origin/main` revelou colisão do identificador inicialmente proposto `20260916_1000` com a migration de permissões MCP já publicada. O release foi corrigido sem reescrever histórico: a trilha de auditoria tornou-se a merge revision `20260917_1000`, dependente dos heads `20260913_1500` e `20260916_1000`. Novo laboratório: 11 testes PostgreSQL aprovados, `flask db upgrade` alcançou head único `20260917_1000` e o listener foi encerrado.
 
-## Critério pendente — endpoint canônico `mcp-versus`
+## Endpoint canônico `mcp-versus` — ativado em 18/09/2026
 
-Antes de substituir as coortes de URL por um único endpoint público, o harness
-deve comprovar: (1) `tools/list` só publica tools permitidas ao principal;
+O harness comprova: (1) `tools/list` só publica tools permitidas ao principal;
 (2) cada chamada aplica a surface e o scope próprios da tool, e não uma
 surface implícita do conector; (3) `company_id` sem grant continua negado;
 (4) finance não é publicado ao perfil sem permissão APP32; (5) uma mutação

@@ -16,8 +16,8 @@
 O acesso remoto não é aberto por URL, token compartilhado ou `company_id`
 informado pelo cliente. Cada conexão é autorizada pela interseção de identidade
 OAuth, client OAuth permitido, scopes, surface, `PrincipalCompanyGrant` e policy
-da tool. O piloto produtivo usa somente a surface `user` em
-`/mcp/pilot/user`.
+da tool. O conector produtivo usa o endpoint canônico `/mcp/pilot/`, com
+catálogo calculado por principal, permissões APP32, grant e scopes OAuth.
 
 Para caso de uso financeiro, há coorte controlada em `/mcp/pilot/finance/`,
 com scope `mcp:finance`, `company_id` explícito e aprovação humana persistida
@@ -56,11 +56,12 @@ client público desta jornada.
 
 ## Parâmetros do piloto atual
 
-- URL MCP: `https://app.gestaoversus.com.br/mcp/pilot/user/`.
-- Discovery do recurso: `/.well-known/oauth-protected-resource/mcp/pilot/user`.
+- URL MCP: `https://app.gestaoversus.com.br/mcp/pilot/`.
+- Discovery do recurso: `/.well-known/oauth-protected-resource/mcp/pilot`.
 - Issuer: `https://id.gestaoversus.com.br/realms/app32`.
 - Audience: `app32-mcp-resource`.
-- Scopes mínimos: `mcp:access` e `mcp:user`.
+- Scopes: `mcp:access`, `mcp:user`; adicionar `mcp:analytics` e/ou
+  `mcp:finance` somente quando o caso de uso e o RBAC APP32 exigirem.
 - Catálogo remoto `user`: `list_user_app32_capabilities`,
   `get_company_profile`, `list_meetings`, `list_projects` e
   `list_project_tasks_secure`.

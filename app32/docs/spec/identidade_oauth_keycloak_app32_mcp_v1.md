@@ -462,7 +462,7 @@ Próxima entrega técnica: R01. Não iniciar R05 por haver verifier e 95 testes 
 
 ## 15. Decisão operacional — conector público `mcp-versus`
 
-A partir de 2026-09-12, `mcp-versus` é o único nome público do servidor MCP remoto da Gestão Versus. Ele não é `client_id`, tenant nem papel de autorização. A instalação padrão conecta-se ao resource server `https://app.gestaoversus.com.br/mcp/pilot/user/`; coortes privilegiadas permanecem internas/controladas até a entrega do endpoint canônico único. A resolução de `company_id` continua posterior ao login e depende do grant persistido do principal.
+A partir de 2026-09-18, `mcp-versus` é o único nome público do servidor MCP remoto da Gestão Versus. Ele não é `client_id`, tenant nem papel de autorização. A instalação padrão conecta-se ao resource server canônico `https://app.gestaoversus.com.br/mcp/pilot/`; a resolução de `company_id` continua posterior ao login e depende do grant persistido do principal.
 
 Clientes OAuth públicos são separados somente para restringir redirects e facilitar revogação por plataforma:
 
@@ -479,14 +479,11 @@ O client legado `app32-mcp-pilot` permanece apenas para compatibilidade da coort
 definem catálogo, scope, RBAC, tenant e gate por tool; não são produtos nem
 nomes de conectores para o cliente.
 
-Enquanto o runtime remoto mantiver URLs de surface separadas, um mesmo perfil
-local de Claude/Codex só pode apontar `mcp-versus` para uma delas por vez. É
-proibido resolver essa limitação renomeando uma conexão para
-`mcp-versus-finance` ou agregando finance à surface `user`. A evolução correta
-é um endpoint canônico único, com catálogo e policy avaliados por tool/surface
-no servidor, precedido de SPEC, matriz de autorização e homologação
-cross-tenant. Até essa entrega, surfaces privilegiadas permanecem em coortes
-controladas e não são anunciadas na instalação padrão.
+O endpoint canônico `/mcp/pilot/` aplica catálogo e policy por tool/surface no
+servidor. É proibido resolver permissões renomeando conexão para
+`mcp-versus-finance` ou agregando finance à surface `user`: leitura financeira
+exige `mcp:analytics`; mutação exige `mcp:finance`, RBAC APP32, `company_id` e
+gate humano persistido. URLs antigas permanecem apenas para compatibilidade.
 
 ## 16. Redefinição de senha local — resposta P0 a comprometimento
 

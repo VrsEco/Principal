@@ -13,7 +13,7 @@
 1. No APP32, confirmar usuário ativo, empresa correta, papel e
    `PrincipalCompanyGrant` ativo.
 2. No cliente, conectar `mcp-versus` em
-   `https://app.gestaoversus.com.br/mcp/pilot/user/` e concluir OAuth/PKCE.
+   `https://app.gestaoversus.com.br/mcp/pilot/` e concluir OAuth/PKCE.
 3. Executar `tools/list`, uma leitura da empresa concedida e uma negativa
    cross-tenant. Não registrar token, cookie, código ou senha na evidência.
 4. Para mutação, confirmar que a tool está na surface correta e que a policy

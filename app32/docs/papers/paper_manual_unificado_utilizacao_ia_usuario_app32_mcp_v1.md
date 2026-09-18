@@ -1396,8 +1396,8 @@ especialização deve permanecer no servidor: cada tool declara seu domínio,
 surface, risco, `company_id` e gate; o cliente não vira um mosaico de nomes
 como `mcp-versus-finance`.
 
-A hipótese ainda exige uma entrega própria: um resource endpoint canônico deve
-compor apenas as tools autorizadas ao principal, sem transformar `user` em
-surface financeira e sem perder scopes, auditoria ou isolamento cross-tenant.
-Até essa comprovação, aliases por domínio são apenas artefatos técnicos de
-homologação e não instrução para usuários.
+A entrega foi materializada em 18/09/2026 no endpoint canônico
+`/mcp/pilot/`: ele compõe apenas as tools autorizadas ao principal, sem
+transformar `user` em surface financeira e sem perder scopes, auditoria ou
+isolamento cross-tenant. Aliases por domínio continuam artefatos técnicos de
+compatibilidade, nunca instrução para usuários.
