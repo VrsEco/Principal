@@ -36,7 +36,13 @@
   const settlementStatusLabel = (value) => ({ posted: 'Postado', cancelled: 'Cancelado' }[value] || value || '-');
 
   async function fetchJson(url, options) {
+    const writing = options && !['GET', 'HEAD'].includes(String(options.method || 'GET').toUpperCase());
+    if (writing) mutation.sent = true;
     const response = await fetch(url, options);
+    if (writing && response.ok) {
+      mutation.confirmed = true;
+      loadStatus.textContent = 'Gravação confirmada. Atualizando a tela…';
+    }
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'Falha na operação de borderô.');
     return payload;
@@ -300,6 +306,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    mutation.redirecting = true;
     window.location.href = `/financial/borderos/${created.id}?company_id=${companyId}`;
   }
 
@@ -370,34 +377,111 @@
     await fetchJson(`/api/financial/borderos/${borderoId}?company_id=${companyId}`, {
       method: 'DELETE',
     });
+    mutation.redirecting = true;
     window.location.href = '/financial/borderos';
   }
 
-  async function init() {
+  let initializationPending = false;
+  let dataReady = false;
+  const mutation = { locked: false, sent: false, confirmed: false, redirecting: false };
+  const loadStatus = $('bordero-load-status');
+  const loadRetry = $('bordero-load-retry');
+  const loadGuards = () => document.querySelectorAll('[data-bordero-load-guard]');
+
+  async function initializeData() {
+    if (initializationPending || mutation.locked) return;
+    dataReady = false;
+    initializationPending = true;
+    loadRetry.hidden = true;
+    loadRetry.classList.add('hidden');
+    loadStatus.textContent = 'Carregando dados do borderô. Aguarde para operar.';
+    loadGuards().forEach((element) => {
+      element.inert = true;
+      element.setAttribute('aria-busy', 'true');
+    });
     try {
-      await Promise.all([loadBankAccounts(), loadSchedules()]);
+      // Await both reads before allowing a retry: no old request can overwrite it.
+      const results = await Promise.allSettled([loadBankAccounts(), loadSchedules()]);
+      const failure = results.find((result) => result.status === 'rejected');
+      if (failure) throw failure.reason;
+      if (borderoId) {
+        await loadDetail();
+      } else {
+        ensureCreatedDateValue();
+        applyType(state.selectedType || '');
+      }
+      loadGuards().forEach((element) => {
+        element.inert = false;
+        element.setAttribute('aria-busy', 'false');
+      });
+      dataReady = true;
+      loadStatus.textContent = 'Dados carregados. Borderô pronto para operar.';
+    } catch (error) {
+      loadStatus.textContent = 'Não foi possível carregar os dados. As operações continuam bloqueadas. Tente carregar novamente.';
+      loadRetry.hidden = false;
+      loadRetry.classList.remove('hidden');
+    } finally {
+      initializationPending = false;
+    }
+  }
+
+  async function runFinancialAction(action) {
+    if (!dataReady || initializationPending || mutation.locked) return;
+    Object.assign(mutation, { locked: true, sent: false, confirmed: false, redirecting: false });
+    loadGuards().forEach((element) => {
+      element.inert = true;
+      element.setAttribute('aria-busy', 'true');
+    });
+    loadStatus.textContent = 'Processando operação. Aguarde, sem repetir o envio.';
+    try {
+      await action();
+      loadStatus.textContent = mutation.confirmed
+        ? (mutation.redirecting ? 'Gravação confirmada. Abrindo a tela…' : 'Operação concluída. Dados atualizados.')
+        : 'Nenhuma operação enviada.';
+      mutation.locked = mutation.redirecting;
+    } catch (error) {
+      if (mutation.sent) {
+        // A missing/failed response is NOT evidence that the write was rolled back.
+        loadStatus.textContent = mutation.confirmed
+          ? 'Gravação confirmada, mas a atualização da tela falhou. Consulte os registros antes de outra operação. Não repita o envio.'
+          : 'Não foi possível confirmar o resultado do envio. Consulte os registros antes de outra operação. Não repita o envio.';
+      } else {
+        mutation.locked = false;
+        loadStatus.textContent = error.message || 'Revise os dados antes de enviar.';
+      }
+    } finally {
+      if (!mutation.locked) {
+        loadGuards().forEach((element) => {
+          element.inert = false;
+          element.setAttribute('aria-busy', 'false');
+        });
+      }
+    }
+  }
+
+  function init() {
+      // Bind once; retrying reads must never duplicate mutation handlers.
+      loadRetry?.addEventListener('click', initializeData);
       $('bordero-schedule-search')?.addEventListener('input', renderEligibleSchedules);
       $('bordero-refresh-schedules')?.addEventListener('click', loadSchedules);
       $('settlement-amount')?.addEventListener('input', (event) => {
         event.target.value = formatCurrencyFromDigits(event.target.value);
       });
       saveButton?.addEventListener('click', async () => {
-        try { await saveBordero(); alert('Borderô atualizado com sucesso.'); } catch (error) { alert(error.message); }
+        await runFinancialAction(saveBordero);
       });
       createButton?.addEventListener('click', async () => {
-        try { await createBordero(); } catch (error) { alert(error.message); }
+        await runFinancialAction(createBordero);
       });
       settlementButton?.addEventListener('click', async () => {
-        try {
-          if (state.editingSettlementId) await updateSettlement();
-          else await createSettlement();
-        } catch (error) { alert(error.message); }
+        await runFinancialAction(() => state.editingSettlementId ? updateSettlement() : createSettlement());
       });
       settlementCancelButton?.addEventListener('click', () => resetSettlementForm());
       deleteButton?.addEventListener('click', async () => {
-        try { await deleteBordero(); } catch (error) { alert(error.message); }
+        await runFinancialAction(deleteBordero);
       });
       $('bordero-settlements-body')?.addEventListener('click', async (event) => {
+        if (!dataReady || mutation.locked) return;
         const editButton = event.target.closest('button[data-bordero-settlement-edit]');
         if (editButton) {
           const settlement = (state.bordero?.settlements || []).find((item) => Number(item.id) === Number(editButton.dataset.borderoSettlementEdit));
@@ -406,20 +490,11 @@
         }
         const deleteSettlementButton = event.target.closest('button[data-bordero-settlement-delete]');
         if (deleteSettlementButton) {
-          try { await deleteSettlement(Number(deleteSettlementButton.dataset.borderoSettlementDelete)); } catch (error) { alert(error.message); }
+          await runFinancialAction(() => deleteSettlement(Number(deleteSettlementButton.dataset.borderoSettlementDelete)));
         }
       });
 
-      if (borderoId) {
-        await loadDetail();
-      } else {
-        ensureCreatedDateValue();
-        applyType(state.selectedType || '');
-      }
-    } catch (error) {
-      banner.textContent = error.message;
-      if (!borderoId) $('bordero-schedule-body').innerHTML = `<tr><td colspan="6" class="empty-state">${error.message}</td></tr>`;
-    }
+      initializeData();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

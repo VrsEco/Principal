@@ -26,6 +26,8 @@ from models.financial import (
     IMPORT_ROW_STATUS_VALUES,
     IMPORT_SOURCE_VALUES,
     CLASSIFICATION_OPERATOR_VALUES,
+    RECONCILIATION_PLAYBOOK_ACTION_VALUES,
+    RECONCILIATION_PLAYBOOK_CONFIRMATION_VALUES,
     DOMAIN_SOURCE_KIND_VALUES,
     MOVEMENT_NATURE_VALUES,
     RECONCILIATION_STATUS_VALUES,
@@ -1128,6 +1130,47 @@ class FinancialClassificationRuleUpdateInput(BaseModel):
     process_instance_id: Optional[int] = None
     routine_id: Optional[int] = None
     counterparty_hint: Optional[str] = Field(None, max_length=255)
+    notes: Optional[str] = None
+    metadata_json: Optional[Dict[str, Any]] = None
+
+
+class FinancialReconciliationPlaybookInput(BaseModel):
+    """Contrato tenant-safe para um padrão operacional, sem executar a ação."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    playbook_code: str = Field(..., min_length=3, max_length=50)
+    name: str = Field(..., min_length=3, max_length=120)
+    priority: int = Field(default=100, ge=0)
+    is_active: bool = True
+    source_type: Optional[str] = Field(None, pattern=_choices_pattern(IMPORT_SOURCE_VALUES))
+    field_name: str = Field(..., min_length=2, max_length=50)
+    operator: str = Field(default="contains", pattern=_choices_pattern(CLASSIFICATION_OPERATOR_VALUES))
+    match_value: str = Field(..., min_length=1, max_length=255)
+    action_type: str = Field(..., pattern=_choices_pattern(RECONCILIATION_PLAYBOOK_ACTION_VALUES))
+    confirmation_policy: str = Field(default="always", pattern=_choices_pattern(RECONCILIATION_PLAYBOOK_CONFIRMATION_VALUES))
+    action_payload_json: Dict[str, Any] = Field(default_factory=dict)
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+    created_by_user_id: Optional[int] = None
+    created_by_agent: Optional[str] = Field(None, max_length=50)
+
+
+class FinancialReconciliationPlaybookUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    playbook_code: Optional[str] = Field(None, min_length=3, max_length=50)
+    name: Optional[str] = Field(None, min_length=3, max_length=120)
+    priority: Optional[int] = Field(None, ge=0)
+    is_active: Optional[bool] = None
+    source_type: Optional[str] = Field(None, pattern=_choices_pattern(IMPORT_SOURCE_VALUES))
+    field_name: Optional[str] = Field(None, min_length=2, max_length=50)
+    operator: Optional[str] = Field(None, pattern=_choices_pattern(CLASSIFICATION_OPERATOR_VALUES))
+    match_value: Optional[str] = Field(None, min_length=1, max_length=255)
+    action_type: Optional[str] = Field(None, pattern=_choices_pattern(RECONCILIATION_PLAYBOOK_ACTION_VALUES))
+    confirmation_policy: Optional[str] = Field(None, pattern=_choices_pattern(RECONCILIATION_PLAYBOOK_CONFIRMATION_VALUES))
+    action_payload_json: Optional[Dict[str, Any]] = None
     notes: Optional[str] = None
     metadata_json: Optional[Dict[str, Any]] = None
 

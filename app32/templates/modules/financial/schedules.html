@@ -16,6 +16,8 @@
 
 {% block workspace_content %}
 <div class="sched-page sched-page--form" data-company-id="{{ company_id or '' }}" data-schedule-id="{{ schedule_id or '' }}" data-entry-type="" data-initial-entry-type="{{ initial_entry_type or '' }}">
+    <div id="schedule-load-status" role="status" aria-live="polite">Carregando dados do título. Aguarde para operar.</div>
+    <button type="button" id="schedule-load-retry" class="btn btn-secondary hidden" hidden>Tentar carregar novamente</button>
     <header class="sched-header">
         <div>
             <h1>{{ 'Editar Título Financeiro' if schedule_id else 'Novo Título Financeiro' }}</h1>
@@ -23,7 +25,7 @@
         </div>
     </header>
 
-    <section class="sched-shell sched-shell--form">
+    <section class="sched-shell sched-shell--form" data-schedule-load-guard inert aria-busy="true">
         <main class="sched-main">
             <section class="sched-card">
                 <div class="sched-tabs">
@@ -309,7 +311,7 @@
                 </svg>
             </button>
         </div>
-        <form id="settlement-composition-form" class="modal-form settlement-composition-form">
+        <form id="settlement-composition-form" data-schedule-load-guard inert class="modal-form settlement-composition-form">
             <input type="hidden" id="settlement-schedule-id">
             <div class="modal-body settlement-modal-body">
                 <section class="settlement-panel settlement-panel--status">
@@ -445,6 +447,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260616-rateio-native-filter') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v=static_asset_version('js/financial_schedules.js')) }}"></script>
 {% endblock %}
 

@@ -2297,13 +2297,31 @@
     });
   }
 
-  document.addEventListener('DOMContentLoaded', async () => {
+  let scheduleInitializationPending = false;
+  const scheduleLoadStatus = $('schedule-load-status');
+  const scheduleLoadRetry = $('schedule-load-retry');
+  const scheduleLoadGuards = () => document.querySelectorAll('[data-schedule-load-guard]');
+
+  async function initializeSchedulePage() {
+    if (scheduleInitializationPending) return;
+    scheduleInitializationPending = true;
+    let modalAttempted = false;
+    if (scheduleLoadRetry) {
+      scheduleLoadRetry.hidden = true;
+      scheduleLoadRetry.classList.add('hidden');
+    }
+    if (scheduleLoadStatus) scheduleLoadStatus.textContent = 'Carregando dados do título. Aguarde para operar.';
+    scheduleLoadGuards().forEach((element) => {
+      element.inert = true;
+      element.setAttribute('aria-busy', 'true');
+    });
     try {
       await loadOptions();
       if (isFormMode) {
         if (initialScheduleId) {
           await window.selectSchedule(initialScheduleId);
           if (autoOpenSettlement && selectedSchedule?.id) {
+            modalAttempted = true;
             await openSettlementCompositionModal(selectedSchedule);
           }
         } else {
@@ -2314,8 +2332,30 @@
       }
       window.toggleRepeatFields();
       updateFinancialTotals();
+      scheduleLoadGuards().forEach((element) => {
+        element.inert = false;
+        element.setAttribute('aria-busy', 'false');
+      });
+      if (scheduleLoadStatus) scheduleLoadStatus.textContent = 'Dados carregados. Título pronto para operar.';
     } catch (error) {
-      alert(error.message);
+      // A failed automatic simulation must not hide the retry UI behind a modal.
+      if (modalAttempted) window.closeSettlementCompositionModal();
+      if (scheduleLoadStatus) {
+        scheduleLoadStatus.textContent = 'Não foi possível carregar os dados do título. As operações continuam bloqueadas. Tente novamente.';
+      } else {
+        alert(error.message);
+      }
+      if (scheduleLoadRetry) {
+        scheduleLoadRetry.hidden = false;
+        scheduleLoadRetry.classList.remove('hidden');
+      }
+    } finally {
+      scheduleInitializationPending = false;
     }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    scheduleLoadRetry?.addEventListener('click', initializeSchedulePage);
+    initializeSchedulePage();
   });
 })();

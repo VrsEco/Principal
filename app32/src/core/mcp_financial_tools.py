@@ -1357,6 +1357,34 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         return {"success": True, **result}
 
     @mcp.tool()
+    def list_financial_reconciliation_playbooks(company_id: int) -> dict:
+        """Lista os playbooks de conciliação ativos/inativos da empresa."""
+        from services.financial_reconciliation_playbook_service import FinancialReconciliationPlaybookService
+        result, error = _run_financial_action(FinancialReconciliationPlaybookService.list_playbooks, company_id=company_id)
+        return {"success": False, "error": error} if error else {"success": True, "items": result, "count": len(result)}
+
+    @mcp.tool()
+    def create_financial_reconciliation_playbook(payload: dict) -> dict:
+        """Cria um playbook operacional de conciliação. Não executa movimentação financeira."""
+        from services.financial_reconciliation_playbook_service import FinancialReconciliationPlaybookService
+        result, error = _run_financial_action(FinancialReconciliationPlaybookService.create_playbook, payload=_attach_mcp_audit_payload(payload))
+        return {"success": False, "error": error} if error else {"success": True, "item": result}
+
+    @mcp.tool()
+    def update_financial_reconciliation_playbook(company_id: int, playbook_id: int, payload: dict) -> dict:
+        """Atualiza um playbook operacional de conciliação da empresa."""
+        from services.financial_reconciliation_playbook_service import FinancialReconciliationPlaybookService
+        result, error = _run_financial_action(FinancialReconciliationPlaybookService.update_playbook, company_id=company_id, playbook_id=playbook_id, payload=payload)
+        return {"success": False, "error": error} if error else {"success": True, "item": result}
+
+    @mcp.tool()
+    def suggest_financial_reconciliation_playbook(company_id: int, import_row_id: int) -> dict:
+        """Sugere playbooks para uma linha bancária; a execução continua dependente de confirmação."""
+        from services.financial_reconciliation_playbook_service import FinancialReconciliationPlaybookService
+        result, error = _run_financial_action(FinancialReconciliationPlaybookService.suggest_for_row, company_id=company_id, import_row_id=import_row_id)
+        return {"success": False, "error": error} if error else {"success": True, **result}
+
+    @mcp.tool()
     def list_financial_budget_versions(company_id: int) -> dict:
         """
         Lista versões do orçamento matricial financeiro da empresa.

@@ -3,6 +3,8 @@ import os
 import sys
 from datetime import date
 from decimal import Decimal
+import pytest
+from sqlalchemy.orm import Session
 
 from flask import Flask
 from werkzeug.datastructures import FileStorage
@@ -12,6 +14,17 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import services.financial_service as financial_module
 import services.financial_bordero_service as bordero_module
 from services.financial_service import FinancialService
+
+
+@pytest.fixture(autouse=True)
+def isolated_unit_session(monkeypatch):
+    """Unbound session: unit doubles never resolve Flask's scoped session."""
+    session = Session()
+    monkeypatch.setattr(financial_module.db, "session", session)
+    # Real PostgreSQL lock semantics are covered by the integration suite.
+    monkeypatch.setattr(FinancialService, "_try_lock_settlement_numbering", lambda company_id: True)
+    yield session
+    session.close()
 
 
 class _Column:
@@ -39,6 +52,12 @@ class _QueryStub:
         self._result = result
 
     def filter(self, *args, **kwargs):
+        return self
+
+    def populate_existing(self):
+        return self
+
+    def with_for_update(self, **kwargs):
         return self
 
     def order_by(self, *args, **kwargs):
@@ -1036,7 +1055,7 @@ def test_delete_settlement_allows_bordero_child_even_when_title_originated_from_
     assert captured["committed"] is True
 
 
-def test_delete_settlement_allows_bordero_child_even_when_title_is_contract_managed(monkeypatch):
+def test_delete_settlement_allows_contract_managed_title_without_bordero(monkeypatch):
     captured = {"added": []}
     schedule = type(
         "Schedule",
@@ -1073,11 +1092,7 @@ def test_delete_settlement_allows_bordero_child_even_when_title_is_contract_mana
             "financial_entry_id": 21,
             "reconciliation_status": "pending",
             "settlement_date": date(2026, 6, 1),
-            "metadata_json": {
-                "reconcile_via_bordero": True,
-                "bordero_id": 36,
-                "bordero_settlement_id": 12,
-            },
+            "metadata_json": {},
         },
     )()
 
@@ -1150,57 +1165,12 @@ def test_delete_settlement_allows_bordero_child_even_when_title_is_contract_mana
         settlement_id=31,
         company_id=7,
         allowed_company_ids=[7],
-        allow_bordero_child_delete=True,
     )
 
     assert error is None
     assert result["id"] == 31
     assert settlement.deleted_at is not None
     assert captured["committed"] is True
-
-
-def test_delete_settlement_rejects_contract_managed_title_outside_bordero_context(monkeypatch):
-    schedule = type(
-        "Schedule",
-        (),
-        {"id": 44, "company_id": 7, "deleted_at": None, "metadata_json": {"managed_by_contract_billing": True}},
-    )()
-    entry = type(
-        "Entry",
-        (),
-        {"id": 21, "company_id": 7, "financial_schedule_id": 44, "deleted_at": None, "metadata_json": {}},
-    )()
-    settlement = type(
-        "Settlement",
-        (),
-        {"id": 31, "company_id": 7, "deleted_at": None, "financial_entry_id": 21, "reconciliation_status": "pending"},
-    )()
-
-    monkeypatch.setattr(
-        financial_module,
-        "FinancialSettlement",
-        type("SettlementStub", (), {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "query": _QueryStub(settlement)}),
-    )
-    monkeypatch.setattr(
-        financial_module,
-        "FinancialEntry",
-        type("EntryStub", (), {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "query": _QueryStub(entry)}),
-    )
-    monkeypatch.setattr(
-        financial_module,
-        "FinancialSchedule",
-        type("ScheduleStub", (), {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "query": _QueryStub(schedule)}),
-    )
-    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
-
-    result, error = FinancialService.delete_settlement(
-        settlement_id=31,
-        company_id=7,
-        allowed_company_ids=[7],
-    )
-
-    assert result is None
-    assert "Título gerido pelo faturamento contratual" in error
 
 
 def test_delete_entry_whole_flow_soft_deletes_active_settlement(monkeypatch):

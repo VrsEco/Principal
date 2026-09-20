@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from services.financial_transaction import financial_commit, abort_owned_financial_operation
+
 import calendar
 import logging
 import os
@@ -908,7 +910,7 @@ class FinancialScheduleService:
                     )
 
                 if auto_commit:
-                    db.session.commit()
+                    financial_commit(db.session)
                 else:
                     db.session.flush()
                 return FinancialScheduleService._serialize_schedule(root_schedule), None
@@ -924,7 +926,7 @@ class FinancialScheduleService:
                 db.session.add(schedule)
                 try:
                     if auto_commit:
-                        db.session.commit()
+                        financial_commit(db.session)
                     else:
                         db.session.flush()
                     return FinancialScheduleService._serialize_schedule(schedule), None
@@ -1104,7 +1106,7 @@ class FinancialScheduleService:
                 db.session.rollback()
                 return None, sync_error
             if auto_commit:
-                db.session.commit()
+                financial_commit(db.session)
             else:
                 db.session.flush()
             return FinancialScheduleService._serialize_schedule(schedule), None
@@ -1146,7 +1148,7 @@ class FinancialScheduleService:
 
         try:
             schedule.status = status
-            db.session.commit()
+            financial_commit(db.session)
             return FinancialScheduleService._serialize_schedule(schedule), None
         except Exception as exc:
             db.session.rollback()
@@ -1239,7 +1241,7 @@ class FinancialScheduleService:
                     "deleted_with_direct_entry_flow": True,
                     "deleted_via": "financial_schedule_service.delete_schedule",
                 }
-            db.session.commit()
+            financial_commit(db.session)
             return {"message": "Título Financeiro removido com sucesso.", "id": schedule_id}, None
         except Exception as exc:
             db.session.rollback()
@@ -1306,7 +1308,7 @@ class FinancialScheduleService:
             )
             if allocation_error:
                 return None, allocation_error
-            db.session.commit()
+            financial_commit(db.session)
             return {"entry": FinancialService.serialize_entry(existing), "created": False}, None
 
         entry_payload = FinancialScheduleService._build_entry_payload(
@@ -1335,7 +1337,7 @@ class FinancialScheduleService:
         schedule.last_generated_entry_id = entry.id
         if schedule.status == "draft":
             schedule.status = "active"
-        db.session.commit()
+        financial_commit(db.session)
         return {"entry": FinancialService.serialize_entry(entry), "created": True}, None
 
     @staticmethod
@@ -1410,6 +1412,8 @@ class FinancialScheduleService:
                 )
             except Exception as exc:
                 logger.exception("Erro ao aplicar motor de satélites do contrato no título %s", schedule.id)
+                if abort_owned_financial_operation(db.session):
+                    return None, 'Falha no processamento contratual associado; operação financeira cancelada integralmente.'
                 satellite_execution = {"executed": 0, "error": str(exc)}
 
         return {
@@ -1512,7 +1516,7 @@ class FinancialScheduleService:
                         break
                     schedule.next_due_date = next_due
 
-            db.session.commit()
+            financial_commit(db.session)
             return {
                 "company_id": company_id,
                 "run_until": run_until.isoformat(),
@@ -1577,7 +1581,7 @@ class FinancialScheduleService:
         attachments.append(attachment)
         metadata["attachments"] = attachments
         schedule.metadata_json = metadata
-        db.session.commit()
+        financial_commit(db.session)
         return attachment, None
 
     @staticmethod
@@ -1620,7 +1624,7 @@ class FinancialScheduleService:
 
         metadata["attachments"] = remaining
         schedule.metadata_json = metadata
-        db.session.commit()
+        financial_commit(db.session)
 
         stored_name = removed.get("stored_name")
         if stored_name:
