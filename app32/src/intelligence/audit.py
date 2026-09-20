@@ -7,7 +7,7 @@ from typing import Any, Mapping
 
 from flask import has_app_context
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 
 
 class _StrictModel(BaseModel):
@@ -30,6 +30,15 @@ class AIExecutionAuditRecord(_StrictModel):
     execution_id: str | None = Field(default=None, min_length=1, max_length=120)
     request_id: str | None = Field(default=None, min_length=1, max_length=120)
     trace_id: str | None = Field(default=None, min_length=1, max_length=120)
+    principal_id: int | None = Field(default=None, gt=0)
+    auth_method: str | None = Field(default=None, max_length=40)
+    client_id: str | None = Field(default=None, max_length=200)
+    surface: str | None = Field(default=None, max_length=40)
+    token_scopes: list[str] = Field(default_factory=list)
+    policy_allowed: bool | None = None
+    policy_reason: str | None = Field(default=None, max_length=500)
+    approval_request_id: int | None = Field(default=None, gt=0)
+    payload_digest: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     metadata: dict[str, Any] = Field(default_factory=dict)
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -55,6 +64,15 @@ def build_ai_execution_audit_record(
     execution_id: str | None = None,
     request_id: str | None = None,
     trace_id: str | None = None,
+    principal_id: int | None = None,
+    auth_method: str | None = None,
+    client_id: str | None = None,
+    surface: str | None = None,
+    token_scopes: list[str] | tuple[str, ...] = (),
+    policy_allowed: bool | None = None,
+    policy_reason: str | None = None,
+    approval_request_id: int | None = None,
+    payload_digest: str | None = None,
     metadata: Mapping[str, Any] | None = None,
 ) -> AIExecutionAuditRecord:
     return AIExecutionAuditRecord(
@@ -71,12 +89,16 @@ def build_ai_execution_audit_record(
         execution_id=execution_id,
         request_id=request_id,
         trace_id=trace_id,
+        principal_id=principal_id, auth_method=auth_method, client_id=client_id,
+        surface=surface, token_scopes=list(token_scopes), policy_allowed=policy_allowed,
+        policy_reason=policy_reason, approval_request_id=approval_request_id,
+        payload_digest=payload_digest,
         metadata=dict(metadata or {}),
     )
 
 
 AI_MCP_AUDIT_RETENTION_DAYS = 180
-AI_MCP_AUDIT_SCHEMA_VERSION = "2026-04-10.v1"
+AI_MCP_AUDIT_SCHEMA_VERSION = "2026-09-16.v2"
 AI_MCP_AUDIT_REDACTED_METADATA_KEYS = frozenset(
     {
         "api_key",
@@ -85,6 +107,11 @@ AI_MCP_AUDIT_REDACTED_METADATA_KEYS = frozenset(
         "password",
         "secret",
         "token",
+        "access_token",
+        "refresh_token",
+        "id_token",
+        "client_secret",
+        "set-cookie",
     }
 )
 
@@ -101,6 +128,9 @@ class AIExecutionAuditPersistencePlan(_StrictModel):
         "ix_ai_mcp_audit_events_user_occurred_at",
         "ix_ai_mcp_audit_events_runtime_tool_occurred_at",
         "ix_ai_mcp_audit_events_trace_id",
+        "ix_ai_mcp_audit_events_company_principal_time",
+        "ix_ai_mcp_audit_events_company_policy_time",
+        "ix_ai_mcp_audit_events_company_approval",
     )
     required_columns: tuple[str, ...] = (
         "id",
@@ -121,6 +151,8 @@ class AIExecutionAuditPersistencePlan(_StrictModel):
         "metadata_json",
         "occurred_at",
         "created_at",
+        "principal_id", "auth_method", "client_id", "surface", "token_scopes",
+        "policy_allowed", "policy_reason", "approval_request_id", "payload_digest",
     )
     redacted_metadata_keys: tuple[str, ...] = tuple(sorted(AI_MCP_AUDIT_REDACTED_METADATA_KEYS))
 
@@ -149,9 +181,24 @@ def redact_ai_audit_metadata(metadata: Mapping[str, Any] | None) -> dict[str, An
             redacted[key] = "[REDACTED]"
         elif isinstance(value, Mapping):
             redacted[key] = redact_ai_audit_metadata(value)
+        elif isinstance(value, (list, tuple)):
+            redacted[key] = _redact_audit_sequence(value)
         else:
             redacted[key] = value
     return redacted
+
+
+def _redact_audit_sequence(values: list | tuple) -> list:
+    return [
+        redact_ai_audit_metadata(value) if isinstance(value, Mapping)
+        else _redact_audit_sequence(value) if isinstance(value, (list, tuple))
+        else value
+        for value in values
+    ]
+
+
+class AIExecutionAuditPersistenceError(RuntimeError):
+    """A operação governada não pode prosseguir sem trilha durável."""
 
 
 def build_persistable_ai_execution_audit_payload(record: AIExecutionAuditRecord) -> dict[str, Any]:
@@ -164,103 +211,23 @@ def build_persistable_ai_execution_audit_payload(record: AIExecutionAuditRecord)
     return payload
 
 
-def _ensure_ai_execution_audit_table() -> None:
-    from models import db
-
-    plan = build_ai_execution_audit_persistence_plan()
-    table_name = plan.table_name
-    inspector = inspect(db.engine)
-
-    with db.engine.begin() as conn:
-        if not inspector.has_table(table_name):
-            conn.execute(
-                text(
-                    f"""
-                    CREATE TABLE IF NOT EXISTS {table_name} (
-                        id BIGSERIAL PRIMARY KEY,
-                        schema_version VARCHAR(40) NOT NULL,
-                        event_type VARCHAR(80) NOT NULL,
-                        runtime VARCHAR(40) NOT NULL,
-                        status VARCHAR(40) NOT NULL,
-                        domain VARCHAR(80),
-                        operation VARCHAR(120),
-                        tool_name VARCHAR(120),
-                        scope VARCHAR(40),
-                        company_id INTEGER,
-                        user_id INTEGER,
-                        thread_id VARCHAR(120),
-                        execution_id VARCHAR(120),
-                        request_id VARCHAR(120),
-                        trace_id VARCHAR(120),
-                        metadata_json JSONB NOT NULL DEFAULT '{{}}'::jsonb,
-                        occurred_at TIMESTAMPTZ NOT NULL,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                    )
-                    """
-                )
-            )
-
-        conn.execute(text(f"CREATE INDEX IF NOT EXISTS {plan.required_indexes[0]} ON {table_name} (company_id, occurred_at DESC)"))
-        conn.execute(text(f"CREATE INDEX IF NOT EXISTS {plan.required_indexes[1]} ON {table_name} (user_id, occurred_at DESC)"))
-        conn.execute(text(f"CREATE INDEX IF NOT EXISTS {plan.required_indexes[2]} ON {table_name} (runtime, tool_name, occurred_at DESC)"))
-        conn.execute(text(f"CREATE INDEX IF NOT EXISTS {plan.required_indexes[3]} ON {table_name} (trace_id)"))
-
-
 def persist_ai_execution_audit_event(record: AIExecutionAuditRecord) -> dict[str, Any]:
-    """Persiste auditoria IA/MCP em PostgreSQL."""
-
+    """Persiste em transação própria; schema pertence exclusivamente ao Alembic."""
     from models import db
 
     payload = build_persistable_ai_execution_audit_payload(record)
     plan = build_ai_execution_audit_persistence_plan()
-    _ensure_ai_execution_audit_table()
-
-    db.session.execute(
-        text(
-            f"""
-            INSERT INTO {plan.table_name} (
-                schema_version,
-                event_type,
-                runtime,
-                status,
-                domain,
-                operation,
-                tool_name,
-                scope,
-                company_id,
-                user_id,
-                thread_id,
-                execution_id,
-                request_id,
-                trace_id,
-                metadata_json,
-                occurred_at
-            ) VALUES (
-                :schema_version,
-                :event_type,
-                :runtime,
-                :status,
-                :domain,
-                :operation,
-                :tool_name,
-                :scope,
-                :company_id,
-                :user_id,
-                :thread_id,
-                :execution_id,
-                :request_id,
-                :trace_id,
-                CAST(:metadata_json AS JSONB),
-                :occurred_at
-            )
-            """
-        ),
-        {
-            **payload,
-            "metadata_json": json.dumps(payload["metadata_json"], ensure_ascii=False, default=str),
-        },
-    )
-    db.session.commit()
+    columns = [column for column in plan.required_columns if column not in {"id", "created_at"}]
+    json_columns = {"metadata_json", "token_scopes"}
+    values = [f"CAST(:{column} AS JSONB)" if column in json_columns else f":{column}" for column in columns]
+    parameters = {column: payload[column] for column in columns}
+    for column in json_columns:
+        parameters[column] = json.dumps(parameters[column], ensure_ascii=False, default=str)
+    # Não commitar/rollback a sessão operacional da tool nem criar schema em request.
+    with db.engine.begin() as connection:
+        connection.execute(text(
+            f"INSERT INTO {plan.table_name} ({', '.join(columns)}) VALUES ({', '.join(values)})"
+        ), parameters)
     return payload
 
 
@@ -268,10 +235,12 @@ def emit_ai_execution_audit_event(
     record: AIExecutionAuditRecord,
     *,
     logger: logging.Logger | None = None,
+    require_persistence: bool = False,
 ) -> dict[str, Any]:
-    """Emite auditoria estruturada e persiste em PostgreSQL sem quebrar o fluxo IA/MCP."""
+    """Emite dados redigidos; ações governadas podem exigir persistência durável."""
 
     payload = record.model_dump(mode="json")
+    payload["metadata"] = redact_ai_audit_metadata(record.metadata)
     safe_logger = logger or logging.getLogger("src.intelligence.audit")
     try:
         safe_logger.info("AI_MCP_AUDIT %s", json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str))
@@ -293,4 +262,6 @@ def emit_ai_execution_audit_event(
     else:
         payload["persistence"] = {"target": persistence_target, "status": "skipped_no_app_context"}
 
+    if require_persistence and payload["persistence"]["status"] != "persisted":
+        raise AIExecutionAuditPersistenceError("operação bloqueada: auditoria durável indisponível")
     return payload

@@ -74,6 +74,27 @@ O nome exibido e usado pelo Codex é `mcp-versus`, configurável por
 CLI; não substitui o client OAuth `app32-mcp-pilot` e não altera grants,
 `company_id`, scopes ou permissões.
 
+## Coorte ChatGPT do plugin público
+
+A coorte ChatGPT segue o mesmo fluxo USER deste playbook, com diferenças
+operacionais explícitas:
+
+1. A Engenharia registra o MCP em modo de gestão do ChatGPT e obtém o redirect
+   URI e o modo de registro exatos antes de configurar o client no Keycloak.
+2. O client é de plataforma, nunca de empresa. A autorização de empresa ocorre
+   somente por `PrincipalCompanyGrant` após o login humano.
+3. A configuração inicial usa apenas `/mcp/pilot/user/`, `mcp:access` e
+   `mcp:user`; nenhuma surface `admin`, `analytics`, `ops` ou domínio financeiro
+   sensível entra no catálogo comercial inicial.
+4. O cliente instala/conecta o plugin e faz OAuth com sua conta Gestão Versus.
+   Sem vínculo/grant ativo, a resposta é neutra e não revela empresas, contratos
+   ou dados de negócio.
+5. O primeiro uso móvel e web é homologado em conta ChatGPT Go brasileira antes
+   de qualquer promessa comercial de plano mínimo.
+
+O marketplace pessoal só pode ser usado para dogfood e homologação. Ele não
+substitui a distribuição pública nem autoriza convite de clientes externos.
+
 ## Regras de expansão
 
 - Um client OAuth representa o **software/canal**, não a fronteira de tenant.

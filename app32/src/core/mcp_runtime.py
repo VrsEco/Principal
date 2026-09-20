@@ -7,7 +7,7 @@ from functools import wraps
 from typing import Any, Callable, Mapping, get_type_hints
 
 from src.intelligence.security.runtime_identity import resolve_runtime_identity
-from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy, require_tool_policy
+from src.intelligence.security.tool_policy import MUTATING_ACTIONS, ToolPolicyRequest, evaluate_tool_policy, require_tool_policy
 from src.intelligence.tool_context import (
     reset_legacy_tool_context,
     reset_sapiens_context,
@@ -68,6 +68,41 @@ def _policy_requires_persisted_approval(decision: Any) -> bool:
         return False
     reason = str(getattr(decision, "reason", "")).strip().lower()
     return "confirmação explícita" in reason or "human gate" in reason
+
+
+def _emit_mcp_policy_audit(source: Mapping[str, Any], request: ToolPolicyRequest,
+                           payload: dict[str, Any], *, allowed: bool, reason: str) -> None:
+    from services.tool_approval_service import canonical_payload_digest
+    from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
+
+    # Não copiar payload, prompt, token ou subject para metadata livre.
+    metadata = {key: source.get(key) for key in (
+        "principal_id", "subject_type", "client_id", "auth_method", "token_scopes", "correlation_id",
+    ) if source.get(key) is not None}
+    metadata.update({
+        "surface": request.surface,
+        "policy_allowed": allowed,
+        "policy_reason": reason,
+        "risk": request.risk,
+        "payload_digest": canonical_payload_digest(payload),
+        "approval_request_id": (request.metadata or {}).get("approved_human_gate_request_id"),
+    })
+    record = build_ai_execution_audit_record(
+        event_type="mcp.tool_policy.allowed" if allowed else "mcp.tool_policy.blocked",
+        runtime="mcp", status="allowed" if allowed else "blocked",
+        domain=request.domain, operation=request.action, tool_name=request.tool_name,
+        scope=request.surface, company_id=request.requested_company_id,
+        user_id=source.get("user_id"), thread_id=source.get("thread_id"),
+        trace_id=source.get("correlation_id"), metadata=metadata,
+        principal_id=source.get("principal_id"), auth_method=source.get("auth_method"),
+        client_id=source.get("client_id"), surface=request.surface,
+        token_scopes=source.get("token_scopes") or (), policy_allowed=allowed,
+        policy_reason=reason, approval_request_id=metadata["approval_request_id"],
+        payload_digest=metadata["payload_digest"],
+    )
+    emit_ai_execution_audit_event(
+        record, require_persistence=allowed and request.action in MUTATING_ACTIONS,
+    )
 
 
 def extract_mcp_payload(args: tuple[Any, ...], kwargs: Mapping[str, Any]) -> dict[str, Any]:
@@ -370,6 +405,9 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                 metadata=dict(execution_context.metadata or {}),
             )
             initial_decision = evaluate_tool_policy(policy_source, policy_request)
+            if not initial_decision.allowed:
+                _emit_mcp_policy_audit(policy_source, policy_request, payload,
+                                       allowed=False, reason=initial_decision.reason)
             if _policy_requires_persisted_approval(initial_decision):
                 from services.tool_approval_service import ToolApprovalBinding, ToolApprovalBindingError, tool_approval_service
 
@@ -385,6 +423,8 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                     raise PermissionError(f"aprovação persistida indisponível: {exc}") from exc
                 approval_decision = tool_approval_service.authorize_and_consume(approval_binding)
                 if not approval_decision.allowed:
+                    _emit_mcp_policy_audit(policy_source, policy_request, payload,
+                                           allowed=False, reason=approval_decision.reason)
                     raise PermissionError(approval_decision.reason)
                 policy_request = ToolPolicyRequest(
                     **{
@@ -397,6 +437,7 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                     }
                 )
             require_tool_policy(policy_source, policy_request)
+            _emit_mcp_policy_audit(policy_source, policy_request, payload, allowed=True, reason="ok")
             sapiens_token = set_sapiens_context(
                 user_id=execution_context.user_id,
                 company_id=execution_context.company_id,

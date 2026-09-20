@@ -26,6 +26,18 @@ O playbook de ingresso de clientes está em
 Ele não libera coortes, clients OAuth, redirects, grants ou surfaces novos por
 si só.
 
+### Coorte analytics — 2026-09-17
+
+`/mcp/pilot/analytics` é uma coorte OAuth distinta de `/mcp/analytics`,
+habilitada somente por `APP32_MCP_OIDC_PILOT_ANALYTICS_ROUTE_ENABLED=1`.
+O catálogo externo é fixo e somente-leitura: `list_financial_catalog_items`,
+`list_financial_automation_rules`, `list_financial_classification_rules` e
+`list_financial_entries`. Cada chamada exige `company_id`, grant ativo do
+principal e `financial.view`; nenhuma tool de criação, edição, importação,
+liquidação ou exclusão é publicada. `tools/list` e o manifesto de
+capabilities devem ser idênticos para essa coorte; divergência bloqueia o
+rollout.
+
 Auditoria estática do checkout `codex/process-artifacts-runtime`, HEAD `e3acd8d642c88efc2595632f8a0cc749ee2c6933`. Não representa inspeção da branch principal remota nem certificação da produção. “Principal” foi interpretado como o contrato `PrincipalContext`, efetivamente encontrado no código. Alterações preexistentes do usuário foram preservadas.
 
 O desenho é viável por evolução, não por substituição integral: já existem registry de surfaces, contexto por request, autorização tenant-aware e transporte Streamable HTTP. Faltam vínculo OIDC persistente, autenticação JWT efetiva e representação independente de pessoas, serviços e agentes. Ativar a flag OAuth existente não implementa esses componentes.
@@ -421,6 +433,75 @@ Clientes OAuth públicos são separados somente para restringir redirects e faci
 - cliente genérico: não usa wildcard. O administrador cadastra previamente nome do cliente e redirect URI HTTPS exato antes da liberação.
 
 O client legado `app32-mcp-pilot` permanece apenas para compatibilidade da coorte Codex já conectada. Novas telas e instruções não devem expor `app32-mcp` como nome de conexão. OAuth inválido nunca recua silenciosamente para token pessoal; o modo token é legado/controlado e visivelmente separado.
+
+### 15.1 Contrato OAuth do plugin público Gestão Versus para ChatGPT
+
+O plugin público não cria uma nova fronteira de tenant nem uma surface paralela.
+ChatGPT e Codex são hosts OAuth distintos que consomem o mesmo resource server
+`https://app.gestaoversus.com.br/mcp/pilot/user/`; o MVP comercial publica
+somente a surface `user`.
+
+A autorização do usuário segue Authorization Code + PKCE S256. O APP32 valida,
+a cada request, assinatura, `iss`, `aud`, expiração, `mcp:access`, `mcp:user`,
+principal ativo e `PrincipalCompanyGrant` do `company_id` efetivo. Não há
+default tenant no client OAuth, token de instalação, URL, manifesto de plugin
+ou redirect. Uma tool de descoberta pode listar empresas elegíveis sem empresa
+prévia; qualquer leitura ou mutação com empresa exige grant explícito.
+
+#### Registro do client OpenAI
+
+A integração deve usar OAuth 2.1 compatível com MCP. Antes de criar qualquer
+client produtivo, a Engenharia registra o MCP no ambiente de gestão do ChatGPT
+e guarda, fora do Git, o modo de registro e os valores exatos exibidos pela
+plataforma: redirect URI, client metadata document quando aplicável e scopes.
+
+A ordem de decisão é:
+
+1. **CIMD** é preferencial quando o metadata do Keycloak comprovar suporte a
+   `client_id_metadata_document_supported`, PKCE S256 e método de token
+   compatível (`none` ou `private_key_jwt`); o client ID é a URL HTTPS de
+   metadata publicada pelo ChatGPT.
+2. **DCR** só é aceitável se o endpoint de registro puder ser governado, auditado
+   e revogado sem segredo compartilhado nem crescimento incontrolado de clients.
+3. **Client pré-registrado** é fallback controlado: client público separado por
+   plataforma, Authorization Code + PKCE S256 e apenas o redirect URI HTTPS
+   exato informado pelo ChatGPT. Wildcard, redirect por tenant, segredo no
+   plugin e reutilização do client legado `app32-mcp-pilot` são proibidos.
+
+O redirect estável `https://chatgpt.com/connector_platform_oauth_redirect` só
+pode ser cadastrado se o issuer publicar
+`authorization_response_iss_parameter_supported=true` **e** devolver `iss`
+exato em respostas de sucesso e erro. Caso contrário, a Engenharia deve usar o
+redirect específico mostrado pela gestão do MCP ou escolher CIMD/DCR; nunca
+presumir callback fixo.
+
+#### Metadata e claims obrigatórios
+
+- resource metadata HTTPS do MCP anuncia o resource canônico, issuer Keycloak,
+  `mcp:access` e `mcp:user`; resposta não autenticada preserva challenge
+  `WWW-Authenticate` com `resource_metadata`;
+- OIDC discovery expõe issuer canônico, authorization/token endpoints, PKCE
+  S256 e scopes habilitados; `openid`, `email` e `profile` só são anunciados se
+  efetivamente liberados ao client;
+- o parâmetro OAuth `resource` deve ser preservado na autorização e token, e o
+  access token deve ter audience `app32-mcp-resource` verificável;
+- para restrições de domínio de workspaces ChatGPT Enterprise, quando
+  contratadas, o Keycloak fornece UserInfo com `email` e `email_verified=true`;
+- refresh, expiração, revogação de client, principal ou grant falham fechados;
+  nenhum caminho OAuth recua para token Bearer legado.
+
+#### Aceite da coorte ChatGPT
+
+1. ChatGPT descobre o protected-resource metadata por `401` e conclui OAuth
+   sem segredo copiado para chat, card ou repositório.
+2. Token correto, mas com audience, scope, issuer ou expiração inválida, recebe
+   negação objetiva e novo challenge OAuth.
+3. Usuário com grant em uma empresa conclui leitura do catálogo MVP; a mesma
+   operação em empresa sem grant não devolve dado de negócio.
+4. Revogar `PrincipalCompanyGrant` bloqueia chamada seguinte mesmo enquanto o
+   token ainda não expirou.
+5. A evidência registra apenas IDs operacionais não sensíveis e status; nunca
+   authorization code, refresh token, access token ou senha.
 
 ## 16. Redefinição de senha local — resposta P0 a comprometimento
 

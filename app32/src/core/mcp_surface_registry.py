@@ -34,6 +34,19 @@ PILOT_USER_TOOL_NAMES: tuple[str, ...] = (
     "list_projects",
 )
 
+# A coorte OAuth de analytics é intencionalmente menor que a surface
+# ``analytics`` interna.  A descoberta ocorre antes de existir um
+# ``company_id`` na chamada MCP; por isso a lista só contém leituras cujo
+# contrato recebe explicitamente o tenant e que foram revisadas para o
+# trabalho assistido do cliente.  A policy do runtime continua validando o
+# grant do principal e a permissão ``financial.view`` em toda execução.
+PILOT_ANALYTICS_TOOL_NAMES: tuple[str, ...] = (
+    "list_financial_catalog_items",
+    "list_financial_automation_rules",
+    "list_financial_classification_rules",
+    "list_financial_entries",
+)
+
 
 def normalize_surface(surface: McpSurface | str) -> McpSurface:
     normalized = str(surface).strip().lower()
@@ -284,29 +297,55 @@ def _register_tool(mcp: Any, tool: Any) -> None:
     make_wrapper(tool)
 
 
-def _register_shared_registrars(mcp: Any) -> None:
+def _register_shared_registrars(mcp: Any, *, allowed_names: set[str] | None = None) -> None:
+    """Registra somente as tools diretas publicadas pela surface.
+
+    Registrars legados usam ``@mcp.tool()`` diretamente e não participam do
+    ``langchain_tools``.  Sem este filtro, o servidor registrava todo o
+    conjunto e delegava a contenção apenas a ``tools/list``.  Além de ampliar
+    desnecessariamente o runtime, isso permitia drift entre o manifesto e o
+    nome que o FastMCP efetivamente registrava.  O nome canônico passa a ser
+    informado explicitamente na fronteira FastMCP.
+    """
+
     class _WrappedMCPProxy:
-        def __init__(self, target: Any):
+        def __init__(self, target: Any, published_names: set[str] | None):
             self._target = target
+            self._published_names = published_names
 
         def tool(self, *args, **kwargs):
-            decorator = self._target.tool(*args, **kwargs)
+            # FastMCP exige a forma ``@mcp.tool()``. Mantemos suporte ao
+            # formato direto usado por doubles de teste, mas nunca repassamos
+            # uma função como argumento ao FastMCP real.
+            direct_function = args[0] if args and callable(args[0]) else None
+            if direct_function is not None:
+                if len(args) != 1 or kwargs:
+                    raise TypeError("Uso direto de @mcp.tool não suporta argumentos adicionais")
+                args = ()
+
             explicit_name = kwargs.get("name")
 
             def _decorate(func):
                 tool_name = explicit_name or getattr(func, "__name__", "unknown_tool")
+                if self._published_names is not None and tool_name not in self._published_names:
+                    # O registrador apenas declara a função; ela não entra no
+                    # runtime nem pode aparecer acidentalmente em tools/list.
+                    return func
                 wrapped = wrap_mcp_callable(func)
                 setattr(wrapped, "__app32_tool_name__", tool_name)
+                registration_kwargs = dict(kwargs)
+                registration_kwargs["name"] = tool_name
+                decorator = self._target.tool(*args, **registration_kwargs)
                 return decorator(wrapped)
 
-            if args and callable(args[0]) and not kwargs:
-                return _decorate(args[0])
+            if direct_function is not None:
+                return _decorate(direct_function)
             return _decorate
 
         def __getattr__(self, item):
             return getattr(self._target, item)
 
-    proxy = _WrappedMCPProxy(mcp)
+    proxy = _WrappedMCPProxy(mcp, allowed_names)
     for registrar in getattr(catalog, "mcp_registrars", ()):
         registrar(proxy)
 
@@ -362,7 +401,7 @@ def register_mcp_surface_tools(
         _register_tool(mcp, tool)
 
     if include_shared_registrars:
-        _register_shared_registrars(mcp)
+        _register_shared_registrars(mcp, allowed_names=allowed_names)
 
     @mcp.tool(
         name=f"list_{normalized_surface}_app32_capabilities",
@@ -477,6 +516,25 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
         include_shared_registrars=False,
         include_admin_diagnostics=False,
         tool_names=PILOT_USER_TOOL_NAMES,
+    )
+    return mcp
+
+
+def build_pilot_analytics_mcp_server(name: str = "GestaoVersus Pilot Analytics MCP") -> Any:
+    """Monta a coorte OAuth financeira somente-leitura e tenant-safe."""
+    if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    mcp = _build_policy_fast_mcp(
+        name,
+        "analytics",
+        exposed_tool_names=PILOT_ANALYTICS_TOOL_NAMES,
+    )
+    register_mcp_surface_tools(
+        mcp,
+        "analytics",
+        include_shared_registrars=True,
+        include_admin_diagnostics=False,
+        tool_names=PILOT_ANALYTICS_TOOL_NAMES,
     )
     return mcp
 

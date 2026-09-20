@@ -288,7 +288,10 @@ def test_admin_surface_exposes_only_admin_scope_and_diagnostics(monkeypatch):
     assert "company_diag" in mcp.registered
     assert "analytics_query" not in mcp.registered
     assert "ops_escalate" not in mcp.registered
-    assert "shared_surface_tool" in mcp.registered
+    # Registrars diretos também obedecem ao catálogo canônico da surface.
+    # Uma tool sem capability não pode vazar apenas porque foi decorada por um
+    # registrar legado.
+    assert "shared_surface_tool" not in mcp.registered
     assert "list_admin_app32_capabilities" in mcp.registered
     assert "get_system_health" in mcp.registered
     assert "get_database_schema" in mcp.registered
@@ -324,6 +327,73 @@ def test_analytics_and_ops_surfaces_are_separated(monkeypatch):
     assert "list_ops_app32_capabilities" in ops_mcp.registered
     ops_manifest = ops_mcp.registered["list_ops_app32_capabilities"]["callable"]()
     assert {tool["name"] for tool in ops_manifest["tools"]} == {"ops_escalate"}
+
+
+def test_pilot_analytics_registers_exactly_the_financial_read_catalog(monkeypatch):
+    """Evita o drift onde o manifesto anuncia uma tool sem publicá-la."""
+
+    class _PilotAnalyticsCatalog(_FakeCatalog):
+        def __init__(self):
+            super().__init__()
+            self.mcp_registrars = (self._register_financial_reads,)
+
+        def _capabilities(self):
+            finance_reads = [
+                "list_financial_catalog_items",
+                "list_financial_automation_rules",
+                "list_financial_classification_rules",
+                "list_financial_entries",
+            ]
+            return super()._capabilities() + [
+                {
+                    "name": tool_name,
+                    "domain": "finance",
+                    "description": f"Leitura financeira {tool_name}",
+                    "scopes": ["mcp_analytics"],
+                    "risk": "low",
+                    "permissions": ["financial.view"],
+                    "human_gate": False,
+                    "human_gate_reason": None,
+                    "tags": ["finance", "read", "tenant_safe"],
+                }
+                for tool_name in finance_reads
+            ]
+
+        def _register_financial_reads(self, mcp):
+            @mcp.tool()
+            def list_financial_catalog_items(company_id: int, catalog_type: str):
+                return {"company_id": company_id, "catalog_type": catalog_type}
+
+            @mcp.tool()
+            def list_financial_automation_rules(company_id: int):
+                return {"company_id": company_id}
+
+            @mcp.tool()
+            def list_financial_classification_rules(company_id: int):
+                return {"company_id": company_id}
+
+            @mcp.tool()
+            def list_financial_entries(company_id: int):
+                return {"company_id": company_id}
+
+            @mcp.tool()
+            def create_financial_entry(payload: dict):
+                raise AssertionError("Mutação não pode ser publicada no piloto analytics")
+
+    monkeypatch.setattr(registry, "catalog", _PilotAnalyticsCatalog())
+    mcp = _FakeMCP()
+    registry.register_mcp_surface_tools(
+        mcp,
+        "analytics",
+        tool_names=registry.PILOT_ANALYTICS_TOOL_NAMES,
+    )
+
+    assert set(mcp.registered) == {
+        *registry.PILOT_ANALYTICS_TOOL_NAMES,
+        "list_analytics_app32_capabilities",
+    }
+    manifest = mcp.registered["list_analytics_app32_capabilities"]["callable"]()
+    assert {tool["name"] for tool in manifest["tools"]} == set(registry.PILOT_ANALYTICS_TOOL_NAMES)
 
 
 def test_surface_scope_filter_is_explicit_and_safe():

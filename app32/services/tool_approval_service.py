@@ -138,6 +138,7 @@ class ToolApprovalService:
             AgentAction.type == "workflow_approval_request",
             AgentAction.status == "approved",
             AgentAction.company_id == binding.company_id,
+            AgentAction.payload["approval_key"].as_string() == binding.approval_key,
         )
         if binding.user_id is None:
             query = query.filter(AgentAction.user_id.is_(None))
@@ -174,6 +175,13 @@ class ToolApprovalService:
 
         now = self._now_provider()
         for action in self._approved_actions_lookup(binding):
+            if (
+                getattr(action, "status", None) != "approved"
+                or getattr(action, "type", None) != "workflow_approval_request"
+                or getattr(action, "company_id", None) != binding.company_id
+                or getattr(action, "user_id", None) != binding.user_id
+            ):
+                continue
             payload = dict(getattr(action, "payload", None) or {})
             if payload.get("created_via") != "mcp_tool_approval":
                 continue

@@ -120,6 +120,45 @@ def test_pilot_oauth_route_uses_limited_user_catalog(monkeypatch):
     assert ("user", "", True, "/mcp/pilot/user") in calls
 
 
+def test_pilot_analytics_route_is_opt_in_and_uses_the_isolated_surface(monkeypatch):
+    monkeypatch.setenv("APP32_MCP_OIDC_PILOT_ANALYTICS_ROUTE_ENABLED", "1")
+    calls: list[tuple[str, bool | None, str | None]] = []
+
+    def fake_surface_app(surface: str, **kwargs):
+        calls.append((surface, kwargs.get("oauth_enabled"), kwargs.get("mount_path")))
+        return Starlette()
+
+    monkeypatch.setattr(http_server, "build_surface_http_app", fake_surface_app)
+    app = http_server.create_http_app()
+    paths = {getattr(route, "path", None) for route in app.routes}
+
+    assert "/mcp/analytics" in paths
+    assert "/mcp/pilot/analytics" in paths
+    assert ("analytics", True, "/mcp/pilot/analytics") in calls
+
+
+def test_pilot_analytics_metadata_declares_only_analytics_scope(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setenv("APP32_MCP_OIDC_PILOT_ANALYTICS_ROUTE_ENABLED", "1")
+    monkeypatch.setattr(http_server, "build_surface_http_app", lambda surface, **kwargs: Starlette())
+    monkeypatch.setattr(
+        http_server,
+        "build_auth_settings",
+        lambda **_: SimpleNamespace(
+            resource_server_url="https://app.gestaoversus.com.br/mcp/pilot/analytics",
+            issuer_url="https://id.gestaoversus.com.br/realms/app32",
+        ),
+    )
+
+    response = TestClient(http_server.create_http_app()).get(
+        "/.well-known/oauth-protected-resource/mcp/pilot/analytics"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["scopes_supported"] == ["mcp:access", "mcp:analytics"]
+
+
 def test_pilot_oauth_route_publishes_protected_resource_metadata(monkeypatch):
     from types import SimpleNamespace
 
