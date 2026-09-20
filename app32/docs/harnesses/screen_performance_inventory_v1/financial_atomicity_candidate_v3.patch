@@ -1,0 +1,712 @@
+--- a/app32/services/financial_service.py
++++ b/app32/services/financial_service.py
+@@ -1,3 +1,4 @@
++from services.financial_transaction import financial_commit, atomic_financial_operation
+ import logging
+ import os
+ import uuid
+@@ -32,6 +33,7 @@
+ from models.process import ProcessInstance, ProcessRoutine
+ from models.routine import Routine
+ from sqlalchemy import or_
++from sqlalchemy.exc import OperationalError
+ from werkzeug.datastructures import FileStorage
+ from werkzeug.utils import secure_filename
+ from schemas.financial import (
+@@ -1389,7 +1391,7 @@
+             )
+             entry = FinancialEntry(**normalized)
+             db.session.add(entry)
+-            db.session.commit()
++            financial_commit(db.session)
+             return entry, None
+         except Exception as exc:
+             db.session.rollback()
+@@ -1498,7 +1500,7 @@
+                     reconciled=True,
+                     actor_reason=unlock_reason or "Marcação manual de conciliação.",
+                 )
+-            db.session.commit()
++            financial_commit(db.session)
+             return entry, None
+         except Exception as exc:
+             db.session.rollback()
+@@ -1861,7 +1863,7 @@
+                 db.session.add(allocation)
+                 created.append(allocation)
+ 
+-            db.session.commit()
++            financial_commit(db.session)
+             return created, None
+         except Exception as exc:
+             db.session.rollback()
+@@ -2529,6 +2531,7 @@
+ 
+ 
+     @staticmethod
++    @atomic_financial_operation(lambda: db.session)
+     def create_settlement(
+         *,
+         payload: Dict[str, Any],
+@@ -2536,12 +2539,9 @@
+         ignore_bordero_lock: bool = False,
+     ) -> Tuple[Optional[FinancialSettlement], Optional[str]]:
+         normalized_payload = dict(payload or {})
+-        company_id = normalized_payload.get("company_id")
+-        if company_id:
+-            normalized_payload["settlement_code"] = FinancialService._normalize_requested_settlement_code(
+-                company_id=int(company_id),
+-                requested_code=normalized_payload.get("settlement_code"),
+-            )
++        requested_code = normalized_payload.get("settlement_code")
++        # Validate tenant/payload before any code lookup or lock acquisition.
++        normalized_payload["settlement_code"] = str(requested_code or "").strip() or "AUTO-PENDING"
+ 
+         try:
+             data = FinancialSettlementInput(**normalized_payload)
+@@ -2552,11 +2552,33 @@
+         if scope_error:
+             return None, scope_error
+ 
+-        entry = FinancialEntry.query.filter(
+-            FinancialEntry.id == data.financial_entry_id,
+-            FinancialEntry.company_id == data.company_id,
+-            FinancialEntry.deleted_at.is_(None),
+-        ).first()
++        try:
++            if not str(requested_code or "").strip() or FinancialService._is_auto_generated_settlement_code(requested_code):
++                if not FinancialService._try_lock_settlement_numbering(data.company_id):
++                    db.session.rollback()
++                    return None, "Numeração de baixas em processamento para esta empresa. Tente novamente; nenhuma baixa desta operação foi confirmada."
++            data.settlement_code = FinancialService._normalize_requested_settlement_code(
++                company_id=data.company_id, requested_code=requested_code)
++        except Exception:
++            db.session.rollback()
++            logger.exception("Erro ao reservar numeração de baixa")
++            return None, "Não foi possível reservar a numeração da baixa."
++
++        try:
++            # Serialize balance validation and commit across web/MCP processes.
++            # NOWAIT avoids tying up another HTTP worker behind an active write.
++            entry = FinancialEntry.query.filter(
++                FinancialEntry.id == data.financial_entry_id,
++                FinancialEntry.company_id == data.company_id,
++                FinancialEntry.deleted_at.is_(None),
++            ).populate_existing().with_for_update(nowait=True).first()
++        except OperationalError as exc:
++            db.session.rollback()
++            sqlstate = getattr(exc.orig, "pgcode", None) or getattr(exc.orig, "sqlstate", None)
++            if sqlstate == "55P03":
++                return None, "Lançamento em processamento por outra operação. Atualize os dados antes de tentar novamente."
++            logger.exception("Erro ao bloquear lançamento %s para baixa", data.financial_entry_id)
++            return None, "Não foi possível iniciar a baixa. Nenhuma baixa foi confirmada por esta operação."
+         if not entry:
+             return None, "Lançamento financeiro não encontrado para baixa."
+         from services.financial_bordero_service import FinancialBorderoService
+@@ -2720,7 +2742,7 @@
+             elif projected_total > Decimal("0"):
+                 entry.status = "partially_settled"
+ 
+-            db.session.commit()
++            financial_commit(db.session)
+             return settlement, None
+         except Exception as exc:
+             db.session.rollback()
+@@ -2734,6 +2756,7 @@
+         company_id: int,
+         allowed_company_ids: Optional[Sequence[int]] = None,
+         allow_bordero_child_delete: bool = False,
++        commit: bool = True,
+     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+         if scope_error:
+@@ -2755,7 +2778,20 @@
+                 FinancialEntry.id == settlement.financial_entry_id,
+                 FinancialEntry.company_id == company_id,
+                 FinancialEntry.deleted_at.is_(None),
+-            ).first()
++            ).populate_existing().with_for_update(nowait=True).first()
++            if not entry:
++                return None, "Lançamento financeiro não encontrado no escopo da empresa."
++            # Refresh after the entry lock: another transaction may have reversed
++            # or reconciled the settlement since the initial lookup.
++            settlement = FinancialSettlement.query.filter(
++                FinancialSettlement.id == settlement_id,
++                FinancialSettlement.company_id == company_id,
++                FinancialSettlement.deleted_at.is_(None),
++            ).populate_existing().with_for_update(nowait=True).first()
++            if not settlement:
++                return None, "Baixa financeira não encontrada no escopo da empresa."
++            if str(settlement.reconciliation_status or "").strip().lower() in {"matched", "reconciled"}:
++                return None, "Baixa conciliada/casada não pode ser excluída. Desfaça a conciliação antes de remover."
+             bordero_child_metadata = dict(getattr(settlement, "metadata_json", {}) or {})
+             bordero_child_delete_allowed = bool(
+                 allow_bordero_child_delete
+@@ -2764,8 +2800,11 @@
+             )
+             schedule = FinancialService._resolve_linked_schedule(entry, company_id)
+             schedule_metadata = dict(getattr(schedule, "metadata_json", None) or {}) if schedule is not None else {}
+-            if schedule_metadata.get("managed_by_contract_billing") and not bordero_child_delete_allowed:
+-                return None, "Título gerido pelo faturamento contratual. Edite o título no módulo de Contratos; a baixa do borderô pode ser ajustada pelo próprio borderô."
++            # A origem do título (inclusive faturamento contratual) não deve
++            # bloquear a gestão financeira de uma baixa. O contrato continua
++            # responsável pelo faturamento; já a baixa e a conciliação são
++            # eventos financeiros e podem precisar ser estornados sem
++            # cancelar ou refaturar o documento comercial.
+             if FinancialService._requires_whole_entry_delete(entry, schedule) and not bordero_child_delete_allowed:
+                 return None, (
+                     "Lançamento rápido não permite excluir apenas a baixa. "
+@@ -2865,8 +2904,19 @@
+                     schedule=schedule,
+                 )
+ 
+-            db.session.commit()
++            if commit:
++                financial_commit(db.session)
++            else:
++                # The composing service owns the transaction and final commit.
++                db.session.flush()
+             return {"message": "Baixa removida com sucesso.", "id": settlement.id}, None
++        except OperationalError as exc:
++            db.session.rollback()
++            sqlstate = getattr(exc.orig, "pgcode", None) or getattr(exc.orig, "sqlstate", None)
++            if sqlstate == "55P03":
++                return None, "Lançamento em processamento por outra operação. Atualize os dados antes de tentar novamente."
++            logger.exception("Erro ao bloquear baixa financeira %s para estorno", settlement_id)
++            return None, "Não foi possível concluir o estorno."
+         except Exception as exc:
+             db.session.rollback()
+             logger.exception("Erro ao remover baixa financeira %s", settlement_id)
+@@ -2945,12 +2995,20 @@
+                     "deleted_via": "financial_service.delete_entry",
+                 }
+ 
+-            db.session.commit()
++            financial_commit(db.session)
+             return {"message": "Lançamento financeiro removido com sucesso.", "id": entry.id}, None
+         except Exception as exc:
+             db.session.rollback()
+             logger.exception("Erro ao remover lançamento financeiro %s", entry_id)
+             return None, f"Erro ao remover lançamento financeiro: {str(exc)}"
++
++    @staticmethod
++    def _try_lock_settlement_numbering(company_id: int) -> bool:
++        # PostgreSQL transaction lock: shared by HTTP/MCP, released on commit or
++        # rollback, and reentrant within a composed bordero transaction.
++        return bool(db.session.execute(db.text(
++            "SELECT pg_try_advisory_xact_lock(:namespace, :company_id)"
++        ), {"namespace": 1735816302, "company_id": company_id}).scalar())
+ 
+     @staticmethod
+     def _generate_settlement_code(company_id: int) -> str:
+@@ -3052,7 +3110,7 @@
+         attachments.append(attachment)
+         metadata["attachments"] = attachments
+         settlement.metadata_json = metadata
+-        db.session.commit()
++        financial_commit(db.session)
+         return attachment, None
+ 
+     @staticmethod
+@@ -3101,7 +3159,7 @@
+         attachments.append(attachment)
+         metadata["attachments"] = attachments
+         entry.metadata_json = metadata
+-        db.session.commit()
++        financial_commit(db.session)
+         return attachment, None
+ 
+     @staticmethod
+@@ -3139,7 +3197,7 @@
+ 
+         metadata["attachments"] = remaining
+         entry.metadata_json = metadata
+-        db.session.commit()
++        financial_commit(db.session)
+ 
+         stored_name = removed.get("stored_name")
+         if stored_name:
+@@ -3190,7 +3248,7 @@
+ 
+         metadata["attachments"] = remaining
+         settlement.metadata_json = metadata
+-        db.session.commit()
++        financial_commit(db.session)
+ 
+         stored_name = removed.get("stored_name")
+         if stored_name:
+--- a/app32/services/financial_bordero_service.py
++++ b/app32/services/financial_bordero_service.py
+@@ -1,4 +1,6 @@
+ from __future__ import annotations
++
++from services.financial_transaction import financial_commit, atomic_financial_operation
+ 
+ import logging
+ from datetime import datetime
+@@ -7,7 +9,7 @@
+ 
+ from models import db
+ from sqlalchemy import case, func, or_
+-from sqlalchemy.exc import IntegrityError
++from sqlalchemy.exc import IntegrityError, OperationalError
+ from models.financial import (
+     FinancialBordero,
+     FinancialBorderoItem,
+@@ -244,7 +246,7 @@
+                 bordero.total_amount = total_amount
+                 bordero.settled_amount = Decimal("0.00")
+                 bordero.open_amount = total_amount
+-                db.session.commit()
++                financial_commit(db.session)
+                 return FinancialBorderoService._serialize_bordero(bordero, include_items=True), None
+             except IntegrityError as exc:
+                 db.session.rollback()
+@@ -300,7 +302,7 @@
+                 bordero.notes = data.notes
+             if "metadata_json" in data.model_fields_set and data.metadata_json is not None:
+                 bordero.metadata_json = dict(data.metadata_json or {})
+-            db.session.commit()
++            financial_commit(db.session)
+             return FinancialBorderoService._serialize_bordero(bordero, include_items=True, include_settlements=True), None
+         except Exception as exc:
+             db.session.rollback()
+@@ -340,7 +342,7 @@
+         try:
+             bordero.deleted_at = datetime.utcnow()
+             bordero.status = "cancelled"
+-            db.session.commit()
++            financial_commit(db.session)
+             return {"message": "Borderô removido com sucesso.", "id": bordero_id}, None
+         except Exception as exc:
+             db.session.rollback()
+@@ -348,6 +350,7 @@
+             return None, f"Erro ao remover borderô: {exc}"
+ 
+     @staticmethod
++    @atomic_financial_operation(lambda: db.session)
+     def create_settlement(
+         *,
+         bordero_id: int,
+@@ -367,7 +370,7 @@
+             FinancialBordero.id == bordero_id,
+             FinancialBordero.company_id == data.company_id,
+             FinancialBordero.deleted_at.is_(None),
+-        ).first()
++        ).populate_existing().with_for_update(nowait=True).first()
+         if not bordero:
+             return None, "Borderô não encontrado no escopo da empresa."
+         if bordero.status == "cancelled":
+@@ -477,7 +480,7 @@
+ 
+             FinancialBorderoService._sync_bordero_totals_from_items(bordero, items)
+ 
+-            db.session.commit()
++            financial_commit(db.session)
+             financial_settlement_ids = [
+                 int(entry_allocation.get("financial_settlement_id"))
+                 for allocation in allocation_payload
+@@ -502,6 +505,7 @@
+             return None, f"Erro ao registrar baixa do borderô: {exc}"
+ 
+     @staticmethod
++    @atomic_financial_operation(lambda: db.session)
+     def update_settlement(
+         *,
+         bordero_id: int,
+@@ -523,6 +527,7 @@
+             bordero_id=bordero_id,
+             settlement_id=settlement_id,
+             company_id=company_id,
++            for_update=True,
+         )
+         if error:
+             return None, error
+@@ -586,23 +591,26 @@
+         if scope_error:
+             return None, scope_error
+ 
+-        bordero, settlement, error = FinancialBorderoService._load_bordero_settlement(
+-            bordero_id=bordero_id,
+-            settlement_id=settlement_id,
+-            company_id=company_id,
+-        )
+-        if error:
+-            return None, error
+-
+-        child_error = FinancialBorderoService._delete_child_financial_settlements(
+-            company_id=company_id,
+-            bordero_settlement=settlement,
+-            allowed_company_ids=allowed_company_ids,
+-        )
+-        if child_error:
+-            return None, child_error
+-
+         try:
++            bordero, settlement, error = FinancialBorderoService._load_bordero_settlement(
++                bordero_id=bordero_id,
++                settlement_id=settlement_id,
++                company_id=company_id,
++                for_update=True,
++            )
++            if error:
++                db.session.rollback()
++                return None, error
++
++            child_error = FinancialBorderoService._delete_child_financial_settlements(
++                company_id=company_id,
++                bordero_settlement=settlement,
++                allowed_company_ids=allowed_company_ids,
++            )
++            if child_error:
++                db.session.rollback()
++                return None, child_error
++
+             deleted_at = datetime.utcnow()
+             settlement.deleted_at = deleted_at
+             settlement.settlement_status = "cancelled"
+@@ -621,8 +629,7 @@
+                 bordero=bordero,
+                 items=items,
+             )
+-            db.session.commit()
+-            return {
++            result = {
+                 "message": "Baixa do borderô removida com sucesso.",
+                 "id": settlement_id,
+                 "bordero": FinancialBorderoService._serialize_bordero(
+@@ -630,7 +637,16 @@
+                     include_items=True,
+                     include_settlements=True,
+                 ),
+-            }, None
++            }
++            financial_commit(db.session)
++            return result, None
++        except OperationalError as exc:
++            db.session.rollback()
++            sqlstate = getattr(exc.orig, "pgcode", None) or getattr(exc.orig, "sqlstate", None)
++            if sqlstate == "55P03":
++                return None, "Borderô em processamento por outra operação. Atualize os dados antes de tentar novamente."
++            logger.exception("Erro ao bloquear borderô %s para estorno", bordero_id)
++            return None, "Não foi possível concluir o estorno do borderô."
+         except Exception as exc:
+             db.session.rollback()
+             logger.exception("Erro ao remover baixa do borderô %s", settlement_id)
+@@ -914,21 +930,28 @@
+         bordero_id: int,
+         settlement_id: int,
+         company_id: int,
++        for_update: bool = False,
+     ) -> Tuple[Optional[FinancialBordero], Optional[FinancialBorderoSettlement], Optional[str]]:
+-        bordero = FinancialBordero.query.filter(
++        bordero_query = FinancialBordero.query.filter(
+             FinancialBordero.id == bordero_id,
+             FinancialBordero.company_id == company_id,
+             FinancialBordero.deleted_at.is_(None),
+-        ).first()
++        )
++        if for_update:
++            bordero_query = bordero_query.populate_existing().with_for_update(nowait=True)
++        bordero = bordero_query.first()
+         if not bordero:
+             return None, None, "Borderô não encontrado no escopo da empresa."
+ 
+-        settlement = FinancialBorderoSettlement.query.filter(
++        settlement_query = FinancialBorderoSettlement.query.filter(
+             FinancialBorderoSettlement.id == settlement_id,
+             FinancialBorderoSettlement.company_id == company_id,
+             FinancialBorderoSettlement.bordero_id == bordero_id,
+             FinancialBorderoSettlement.deleted_at.is_(None),
+-        ).first()
++        )
++        if for_update:
++            settlement_query = settlement_query.populate_existing().with_for_update(nowait=True)
++        settlement = settlement_query.first()
+         if not settlement:
+             return bordero, None, "Baixa do borderô não encontrada no escopo da empresa."
+         return bordero, settlement, None
+@@ -951,7 +974,7 @@
+                     ),
+                 ),
+             )
+-            .order_by(FinancialSettlement.id.asc())
++            .order_by(FinancialSettlement.financial_entry_id.asc(), FinancialSettlement.id.asc())
+             .all()
+         )
+         for child in child_settlements:
+@@ -960,6 +983,7 @@
+                 company_id=company_id,
+                 allowed_company_ids=allowed_company_ids,
+                 allow_bordero_child_delete=True,
++                commit=False,
+             )
+             if error:
+                 return error
+--- a/app32/services/financial_schedule_service.py
++++ b/app32/services/financial_schedule_service.py
+@@ -1,4 +1,6 @@
+ from __future__ import annotations
++
++from services.financial_transaction import financial_commit, abort_owned_financial_operation
+ 
+ import calendar
+ import logging
+@@ -908,7 +910,7 @@
+                     )
+ 
+                 if auto_commit:
+-                    db.session.commit()
++                    financial_commit(db.session)
+                 else:
+                     db.session.flush()
+                 return FinancialScheduleService._serialize_schedule(root_schedule), None
+@@ -924,7 +926,7 @@
+                 db.session.add(schedule)
+                 try:
+                     if auto_commit:
+-                        db.session.commit()
++                        financial_commit(db.session)
+                     else:
+                         db.session.flush()
+                     return FinancialScheduleService._serialize_schedule(schedule), None
+@@ -1104,7 +1106,7 @@
+                 db.session.rollback()
+                 return None, sync_error
+             if auto_commit:
+-                db.session.commit()
++                financial_commit(db.session)
+             else:
+                 db.session.flush()
+             return FinancialScheduleService._serialize_schedule(schedule), None
+@@ -1146,7 +1148,7 @@
+ 
+         try:
+             schedule.status = status
+-            db.session.commit()
++            financial_commit(db.session)
+             return FinancialScheduleService._serialize_schedule(schedule), None
+         except Exception as exc:
+             db.session.rollback()
+@@ -1239,7 +1241,7 @@
+                     "deleted_with_direct_entry_flow": True,
+                     "deleted_via": "financial_schedule_service.delete_schedule",
+                 }
+-            db.session.commit()
++            financial_commit(db.session)
+             return {"message": "Título Financeiro removido com sucesso.", "id": schedule_id}, None
+         except Exception as exc:
+             db.session.rollback()
+@@ -1306,7 +1308,7 @@
+             )
+             if allocation_error:
+                 return None, allocation_error
+-            db.session.commit()
++            financial_commit(db.session)
+             return {"entry": FinancialService.serialize_entry(existing), "created": False}, None
+ 
+         entry_payload = FinancialScheduleService._build_entry_payload(
+@@ -1335,7 +1337,7 @@
+         schedule.last_generated_entry_id = entry.id
+         if schedule.status == "draft":
+             schedule.status = "active"
+-        db.session.commit()
++        financial_commit(db.session)
+         return {"entry": FinancialService.serialize_entry(entry), "created": True}, None
+ 
+     @staticmethod
+@@ -1410,6 +1412,8 @@
+                 )
+             except Exception as exc:
+                 logger.exception("Erro ao aplicar motor de satélites do contrato no título %s", schedule.id)
++                if abort_owned_financial_operation(db.session):
++                    return None, 'Falha no processamento contratual associado; operação financeira cancelada integralmente.'
+                 satellite_execution = {"executed": 0, "error": str(exc)}
+ 
+         return {
+@@ -1512,7 +1516,7 @@
+                         break
+                     schedule.next_due_date = next_due
+ 
+-            db.session.commit()
++            financial_commit(db.session)
+             return {
+                 "company_id": company_id,
+                 "run_until": run_until.isoformat(),
+@@ -1577,7 +1581,7 @@
+         attachments.append(attachment)
+         metadata["attachments"] = attachments
+         schedule.metadata_json = metadata
+-        db.session.commit()
++        financial_commit(db.session)
+         return attachment, None
+ 
+     @staticmethod
+@@ -1620,7 +1624,7 @@
+ 
+         metadata["attachments"] = remaining
+         schedule.metadata_json = metadata
+-        db.session.commit()
++        financial_commit(db.session)
+ 
+         stored_name = removed.get("stored_name")
+         if stored_name:
+--- a/app32/services/financial_settlement_composition_service.py
++++ b/app32/services/financial_settlement_composition_service.py
+@@ -1,4 +1,6 @@
+ from __future__ import annotations
++
++from services.financial_transaction import financial_commit
+ 
+ from datetime import date
+ from decimal import Decimal, ROUND_HALF_UP
+@@ -513,7 +515,7 @@
+                 company_id=company_id,
+                 components=simulation["settlement_payload"]["settlement_components"],
+             )
+-            db.session.commit()
++            financial_commit(db.session)
+         except Exception as exc:  # pragma: no cover - defensive persistence boundary
+             db.session.rollback()
+             return None, f"Baixa criada, mas houve erro ao atualizar ajustes do título: {str(exc)}"
+--- a/app32/services/contract_financial_service.py
++++ b/app32/services/contract_financial_service.py
+@@ -1,4 +1,6 @@
+ from __future__ import annotations
++
++from services.financial_transaction import financial_commit
+ 
+ from datetime import date, datetime
+ from decimal import Decimal, InvalidOperation
+@@ -253,7 +255,7 @@
+             auto_commit=False,
+         )
+         if auto_commit:
+-            db.session.commit()
++            financial_commit(db.session)
+         else:
+             db.session.flush()
+         return policy
+@@ -279,7 +281,7 @@
+             user_id=user_id,
+             auto_commit=False,
+         )
+-        db.session.commit()
++        financial_commit(db.session)
+         return True
+ 
+     @staticmethod
+@@ -874,7 +876,7 @@
+                         main_schedule=existing_schedule,
+                     )
+                     if auto_commit:
+-                        db.session.commit()
++                        financial_commit(db.session)
+                     else:
+                         db.session.flush()
+                     return {
+@@ -994,7 +996,7 @@
+                 auto_commit=False,
+             )
+             if auto_commit:
+-                db.session.commit()
++                financial_commit(db.session)
+             else:
+                 db.session.flush()
+             return {
+@@ -1243,7 +1245,7 @@
+             )
+             if execution is None:
+                 continue
+-            db.session.commit()
++            financial_commit(db.session)
+             results.append(execution.to_dict())
+ 
+         return {"executed": len(results), "items": results, "event_type": event_type}
+--- /dev/null
++++ b/app32/services/financial_transaction.py
+@@ -0,0 +1,84 @@
++"""Session-local transaction ownership for composed financial operations.
++
++Leaf services use financial_commit; outside an owned operation it preserves
++their existing commit behavior. No process-global or cross-request state.
++"""
++from functools import wraps
++import logging
++
++from sqlalchemy import event
++from sqlalchemy.exc import OperationalError
++
++logger = logging.getLogger(__name__)
++_KEY = 'app32_financial_transaction_owner'
++
++
++def abort_owned_financial_operation(session):
++    """Mark a caught business failure for rollback by its transaction owner."""
++    state = getattr(session, 'info', {}).get(_KEY)
++    if state is None:
++        return False
++    state['aborted'] = True
++    return True
++
++
++def financial_commit(session):
++    state = getattr(session, 'info', {}).get(_KEY)
++    if state is None:
++        session.commit()
++    else:
++        if state['aborted']:
++            raise RuntimeError('A transação financeira já foi cancelada.')
++        session.flush()
++
++
++def atomic_financial_operation(session_provider):
++    """Own commit/rollback for a service returning (result, error).
++
++    Nested operations share ownership. A swallowed rollback or an unconverted
++    raw commit fails closed instead of allowing partial financial persistence.
++    """
++    def decorate(callback):
++        @wraps(callback)
++        def wrapped(*args, **kwargs):
++            proxy = session_provider()
++            session = proxy() if callable(proxy) else proxy
++            if _KEY in session.info:
++                result, error = callback(*args, **kwargs)
++                if error:
++                    session.info[_KEY]['aborted'] = True
++                return result, error
++            state = {'aborted': False, 'allow_commit': False}
++            session.info[_KEY] = state
++            def forbid_inner_commit(current):
++                if not state['allow_commit']:
++                    state['aborted'] = True
++                    raise RuntimeError('Commit intermediário proibido na operação financeira composta.')
++            def mark_rollback(current):
++                state['aborted'] = True
++            event.listen(session, 'before_commit', forbid_inner_commit)
++            event.listen(session, 'after_rollback', mark_rollback)
++            try:
++                result, error = callback(*args, **kwargs)
++                if error or state['aborted']:
++                    session.rollback()
++                    return None, error or 'Operação financeira cancelada integralmente por falha interna.'
++                state['allow_commit'] = True
++                session.commit()
++                return result, None
++            except OperationalError as exc:
++                session.rollback()
++                if (getattr(exc.orig, 'pgcode', None) or getattr(exc.orig, 'sqlstate', None)) == '55P03':
++                    return None, 'Operação financeira em processamento. Atualize os dados antes de tentar novamente.'
++                logger.exception('Falha de banco em operação financeira composta')
++                return None, 'Não foi possível concluir a operação financeira.'
++            except Exception:
++                session.rollback()
++                logger.exception('Falha em operação financeira composta')
++                return None, 'Não foi possível concluir a operação financeira.'
++            finally:
++                event.remove(session, 'before_commit', forbid_inner_commit)
++                event.remove(session, 'after_rollback', mark_rollback)
++                session.info.pop(_KEY, None)
++        return wrapped
++    return decorate

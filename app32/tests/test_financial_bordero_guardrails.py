@@ -320,6 +320,7 @@ def test_delete_child_financial_settlements_uses_controlled_bordero_delete(monke
             'company_id': _ColumnStub(),
             'deleted_at': _ColumnStub(),
             'external_reference': _ColumnStub(),
+            'financial_entry_id': _ColumnStub(),
             'metadata_json': type('MetadataColumn', (), {'contains': lambda self, other: True})(),
             'id': _ColumnStub(),
             'query': _ChildQuery(),
@@ -344,6 +345,7 @@ def test_delete_child_financial_settlements_uses_controlled_bordero_delete(monke
     assert captured['company_id'] == 9
     assert captured['allowed_company_ids'] == [9]
     assert captured['allow_bordero_child_delete'] is True
+    assert captured['commit'] is False
 
 
 def test_sync_bordero_totals_from_items_marks_partial_and_settled():

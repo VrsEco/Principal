@@ -1,0 +1,60 @@
+{
+  "class": "Harness",
+  "card": "AA.J.21.365",
+  "status": "v3_isolated_local_validation_passed_not_deployed",
+  "base_commit": "1a626a52f1f8559f09013989ac87e200966d04d7",
+  "patch": "financial_atomicity_candidate_v3.patch",
+  "patch_sha256": "021037eb92d8b7e017fe22cd1ab230b4c06efd5e188cfefb7a6d070524ab1c8e",
+  "files": [
+    {
+      "path": "app32/services/financial_service.py",
+      "base_sha256": "0d0e5376cdced099840f9e0ebdf758f04912ce6faba724acc00bb8cd72a8be87",
+      "candidate_sha256": "c5ea6f4b21559874e1b2d011c8f48c36b92b8581fd2ee06eb198a0f2b047141e"
+    },
+    {
+      "path": "app32/services/financial_bordero_service.py",
+      "base_sha256": "f2f04180e796d9c388eebcfa88db877ed0da77898698532d39488382fc2ce8b3",
+      "candidate_sha256": "6dc4489ef4a6a870849250d30d2b5743dacc60a18b60cf438ef642940ed0544f"
+    },
+    {
+      "path": "app32/services/financial_schedule_service.py",
+      "base_sha256": "8dd1c0b5b609af8c49e7009874a6a678f0e3ece738d1f5c12b2edd5574bf0e52",
+      "candidate_sha256": "7965bdb5ab272f4b3b1674a2b2be0fbe44b54f739c566977bae6ff9deb38e15e"
+    },
+    {
+      "path": "app32/services/financial_settlement_composition_service.py",
+      "base_sha256": "a62a988ff65276d681aa12c17cb574f716381f0c12a60b5f59ef8f31e221dba7",
+      "candidate_sha256": "1b4cdfe9569daf5f9e13f9af3890cc5934140a7450c573fc47bcc9d25e684a96"
+    },
+    {
+      "path": "app32/services/contract_financial_service.py",
+      "base_sha256": "52dc2bd7958db861ee8a36e0b41dd97510f7b2ce1a1ff634f53047035013e73f",
+      "candidate_sha256": "3f9eff02e0d6569fd768e34bca16a0719e75cbaf8eef498a4a4b0925674248aa"
+    },
+    {
+      "path": "app32/services/financial_transaction.py",
+      "base_sha256": null,
+      "candidate_sha256": "122a05a2b31ec077e6e652e213c1fdac5415c63067169618afcf57e00c1d3159"
+    }
+  ],
+  "excluded": "No rollback of current production contract-managed reversal permission",
+  "remaining_gates": [
+    "Version isolated package and recheck production drift before deployment",
+    "Align all HTTP/MCP writers on the numbering lock implementation",
+    "Idempotency remains unimplemented; no automatic retries",
+    "Capacity budget and controlled worker rollout",
+    "Contract retention gross/net functional integration remains separate"
+  ],
+  "isolated_test_checkout": "C:\\GestaoVersus\\app32\\app32\\tmp\\atomicity_candidate_test_6yz_cc7f",
+  "production_compatibility": "Preserves observed production reversal behavior; other deployment checks remain open",
+  "validation": {
+    "postgresql_passed": 20,
+    "postgresql_seconds": 14.38,
+    "unit_passed": 37,
+    "unit_seconds": 8.93,
+    "listener_stopped": true,
+    "patch_applied_to_clean_base": true,
+    "six_runtime_hashes_verified": true,
+    "rejection_lock_release_verified_before_teardown": true
+  }
+}
