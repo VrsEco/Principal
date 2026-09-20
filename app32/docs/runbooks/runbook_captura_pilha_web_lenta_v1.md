@@ -1,6 +1,27 @@
 # Runbook — Captura de pilha de requisições web lentas
 
-Classe: Runbook. Card: AA.J.21.348. Estado: implementação local; produção não ativada.
+Classe: Runbook. Card: AA.J.21.348. Estado: ativado em produção em 19/09/2026.
+
+## Evidência de ativação
+
+- Release de código `650666449`, publicado na branch
+  `codex/record-uploads-backup-activation`; deploy cirúrgico somente dos três arquivos
+  de runtime, preservando alterações alheias. Nenhum reset de checkout nem migração.
+- Teste isolado no mesmo binário uWSGI: HTTP 200 e captura real da função `blocked`
+  por timer, via socket Unix local; nenhum endpoint de teste publicado no site.
+- Worker de produção foi recriado; o master preserva PID ao re-executar.
+  Validar troca do worker, não exigir troca do PID master.
+- Log confirmou `python threads support enabled` e
+  `slow_request_probe_enabled threshold_seconds=5.0 max_pending=16`.
+- Health local HTTP 200. A primeira tentativa reverteu automaticamente devido à
+  checagem incorreta de PID master; a reaplicação validou com o critério corrigido.
+- Backup anterior à ativação final mantido fora do checkout, com acesso restrito.
+  Localização e identificadores operacionais não são publicados neste documento.
+- Próximo deploy completo: incorporar o commit à branch de release antes do reset
+  para `origin/main`, ou a instrumentação será removida. Não publicar outras
+  alterações da branch sem revisão. Flags ativas no ini canônico do uWSGI.
+- Ativação não significa causa raiz identificada: aguardar evidência de um
+  incidente real e correlacionar pilha/PID/horário antes de atribuir causa.
 
 ## Objetivo
 
