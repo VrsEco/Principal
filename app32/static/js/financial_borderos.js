@@ -373,9 +373,49 @@
     window.location.href = '/financial/borderos';
   }
 
-  async function init() {
+  let initializationPending = false;
+  const loadStatus = $('bordero-load-status');
+  const loadRetry = $('bordero-load-retry');
+  const loadGuards = () => document.querySelectorAll('[data-bordero-load-guard]');
+
+  async function initializeData() {
+    if (initializationPending) return;
+    initializationPending = true;
+    loadRetry.hidden = true;
+    loadRetry.classList.add('hidden');
+    loadStatus.textContent = 'Carregando dados do borderô. Aguarde para operar.';
+    loadGuards().forEach((element) => {
+      element.inert = true;
+      element.setAttribute('aria-busy', 'true');
+    });
     try {
-      await Promise.all([loadBankAccounts(), loadSchedules()]);
+      // Await both reads before allowing a retry: no old request can overwrite it.
+      const results = await Promise.allSettled([loadBankAccounts(), loadSchedules()]);
+      const failure = results.find((result) => result.status === 'rejected');
+      if (failure) throw failure.reason;
+      if (borderoId) {
+        await loadDetail();
+      } else {
+        ensureCreatedDateValue();
+        applyType(state.selectedType || '');
+      }
+      loadGuards().forEach((element) => {
+        element.inert = false;
+        element.setAttribute('aria-busy', 'false');
+      });
+      loadStatus.textContent = 'Dados carregados. Borderô pronto para operar.';
+    } catch (error) {
+      loadStatus.textContent = 'Não foi possível carregar os dados. As operações continuam bloqueadas. Tente carregar novamente.';
+      loadRetry.hidden = false;
+      loadRetry.classList.remove('hidden');
+    } finally {
+      initializationPending = false;
+    }
+  }
+
+  function init() {
+      // Bind once; retrying reads must never duplicate mutation handlers.
+      loadRetry?.addEventListener('click', initializeData);
       $('bordero-schedule-search')?.addEventListener('input', renderEligibleSchedules);
       $('bordero-refresh-schedules')?.addEventListener('click', loadSchedules);
       $('settlement-amount')?.addEventListener('input', (event) => {
@@ -410,16 +450,7 @@
         }
       });
 
-      if (borderoId) {
-        await loadDetail();
-      } else {
-        ensureCreatedDateValue();
-        applyType(state.selectedType || '');
-      }
-    } catch (error) {
-      banner.textContent = error.message;
-      if (!borderoId) $('bordero-schedule-body').innerHTML = `<tr><td colspan="6" class="empty-state">${error.message}</td></tr>`;
-    }
+      initializeData();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
