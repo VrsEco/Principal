@@ -1,0 +1,32 @@
+{
+  "pid": 626833,
+  "executable": "python",
+  "launcher_mode": "script_or_other",
+  "known_entrypoints": [],
+  "cgroup": "0::/user.slice/user-1047.slice/session-2768.scope",
+  "ppid": 1,
+  "rss_kib": "157712 kB",
+  "local_health": {
+    "status": 200
+  },
+  "public_health": {
+    "status": 200
+  },
+  "management_scripts": [
+    {
+      "name": "manage_mcp_http.sh",
+      "remote_sha256": "7075b19d005b6ee895c636d95832231174d6438f2bdf55787e0f9dbb2139b85d",
+      "matches_local": true
+    },
+    {
+      "name": "start_mcp_http.sh",
+      "remote_sha256": "483dbe028d509e050876c84b6894a4da159d98d047d336dd762305d946821b20",
+      "matches_local": true
+    },
+    {
+      "name": "deploy_configr.sh",
+      "remote_sha256": "5281f105a3d88cc38a17321763acb027e022bb6782a2d6754bf23d8279bb13ec",
+      "matches_local": true
+    }
+  ]
+}

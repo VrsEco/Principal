@@ -23,3 +23,12 @@ Manter pausa de escritas, restaurar somente os arquivos do backup e reiniciar os
 
 ## Limites
 Retenções bruto/líquido continuam com rejeição segura no cenário incompatível. A numeração ainda varre histórico. Resultados locais não provam eliminação da causa histórica da lentidão nem capacidade de dois workers. Arquivos de resultado contêm caminhos locais apenas para rastreabilidade; o PostgreSQL portátil deve estar provisionado para reproduzir o runner.
+
+## Inventário confirmado — 20/09/2026 04:08 UTC
+- MCP HTTP: listener 127.0.0.1:8101, PID 626833; health local e público retornaram HTTP 200. Cgroup de sessão, sem unidade MCP dedicada encontrada nas listagens consultadas.
+- Web: árvore uWSGI sob python3.12-uwsgi.service; não contar master/emperor como workers HTTP.
+- Scheduler: processo run_scheduler.py PID 626770 no snapshot anterior; deploy reinicia via manage_scheduler.sh e exige heartbeat válido.
+- Scripts remotos manage_mcp_http.sh, start_mcp_http.sh e deploy_configr.sh coincidem por hash com os inspecionados localmente. start_mcp_http.sh usa Python via stdin e runpy: buscas somente por nome de script não bastam para inventariar esse runtime.
+- O deploy atual usa RESTART_MCP=false por padrão. Para este pacote, a futura execução precisa incluir explicitamente o MCP HTTP (RESTART_MCP=true), além de garantir reconexão de clientes stdio que possam manter processos antigos.
+- O trecho de deploy MCP registra avisos quando health falha; não tratar o sucesso geral do script como aprovação desse componente. Gate independente: exigir health local/público, auth negativa, smoke autenticado tenant-safe e versão alinhada antes de reabrir escritas.
+- Nenhum restart ou deploy foi executado. PIDs são snapshots e precisam ser atualizados na janela. Não usar kill por PID antigo como procedimento de rollout.
