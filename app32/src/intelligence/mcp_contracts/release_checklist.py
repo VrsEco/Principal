@@ -151,10 +151,10 @@ def build_release_checklist_manifest() -> ReleaseChecklistManifest:
             ),
             ReleaseSmokeDefinition(
                 smoke_id="mcp_surface_manifest",
-                title="Manifestos user/admin/analytics/ops disponíveis",
-                command="python -c \"import app; from src.core.mcp_surface_registry import get_surface_manifest; print('AI_MCP_RELEASE_SURFACES_OK', all(bool(get_surface_manifest(s)) for s in ['user','admin','analytics','ops']))\"",
+                title="Manifestos user/admin/analytics/finance/ops disponíveis",
+                command="python -c \"import app; from src.core.mcp_surface_registry import get_surface_manifest; print('AI_MCP_RELEASE_SURFACES_OK', all(bool(get_surface_manifest(s)) for s in ['user','admin','analytics','finance','ops']))\"",
                 expected_output="AI_MCP_RELEASE_SURFACES_OK True",
-                surfaces=["user", "admin", "analytics", "ops"],
+                surfaces=["user", "admin", "analytics", "finance", "ops"],
             ),
             ReleaseSmokeDefinition(
                 smoke_id="release_checklist_manifest",

@@ -66,8 +66,9 @@ def test_domain_playbook_security_boundaries():
     identity_admin = APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("identity_admin")
 
     assert finance is not None
-    assert {"colaborador", "administrador", "admin_tecnico"} <= set(finance.allowed_profiles)
-    assert "user" in finance.allowed_surfaces
+    assert set(finance.allowed_profiles) == {"colaborador", "cliente", "administrador"}
+    assert "finance" in finance.allowed_surfaces
+    assert "user" not in finance.allowed_surfaces
     assert "admfin_cliente" in finance.allowed_role_overlays
     assert "finance_versus" in finance.allowed_role_overlays
     assert analytics is not None

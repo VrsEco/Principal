@@ -1,5 +1,13 @@
 # Harness — Homologação OAuth MCP R06
 
+> **Regressão obrigatória — 2026-09-17:** cobrir permissão APP32 concedida,
+> teto opcional do grant, grant vazio, remoção de vínculo com token ainda
+> válido e negativa cross-tenant. Escrita financeira só entra após contrato de
+> `company_id` explícito, idempotência e aprovação humana consumível.
+> **Incremento finance — 2026-09-17:** homologar a surface `finance` em fluxo
+> completo: criação da aprovação persistida, aprovação pelo APP32, consumo único
+> com payload idêntico e negativa cross-tenant antes de qualquer promoção.
+
 Classe documental: Harness. Escopo: ambiente isolado local/homologação; nunca produção.
 
 ## Objetivo
@@ -92,7 +100,7 @@ Provisionado laboratório portátil com [binários da EDB](https://www.enterpris
 
 `test_audit_p0_postgresql_integration.py`: 9 passed em 3,54 s. Regressão focalizada: 30 passed em 3,34 s. O primeiro ensaio teve falha sem logs visíveis e o segundo reteve pipes no `pg_ctl`; ambos os clusters foram encerrados. O runner foi corrigido para logs em arquivos e a execução final retornou `suite_exit_code=0`, `listener_stopped=true`, `synthetic_only`, `production_access=false`.
 
-Cobertura real: 11 testes em PostgreSQL 16.15, incluindo revision em schemas novo/legado, idempotência, colunas/índices, preservação/downgrade, redação, concorrência/replay, tenant/usuário/payload/expiração, busca da chave exata com 21 aprovações não relacionadas e transação própria da trilha. O replay de implantação carregou o APP32 e executou `flask db upgrade` de `20260913_1500` para o head `20260916_1000` em banco sintético.
+Cobertura real: 11 testes em PostgreSQL 16.15, incluindo revision em schemas novo/legado, idempotência, colunas/índices, preservação/downgrade, redação, concorrência/replay, tenant/usuário/payload/expiração, busca da chave exata com 21 aprovações não relacionadas e transação própria da trilha. O replay de implantação carregou o APP32 e executou `flask db upgrade` dos heads `20260913_1500` e `20260916_1000` para o head único `20260917_1000` em banco sintético.
 
 O smoke OAuth usa chave RSA efêmera e access JWT realmente assinado; valida assinatura, issuer, audience, client, scopes, vínculo `issuer/sub`, grant tenant-safe, cross-tenant, revogação do principal e persistência da decisão na trilha. Não usa token de produção nem rede externa.
 
@@ -105,3 +113,26 @@ Em 17/09/2026, o preflight live read-only contra os endpoints públicos produtiv
 O smoke seguinte confirmou o cliente real: `codex mcp login` concluiu Authorization Code com PKCE e Dynamic Client Registration sem expor credenciais. Em sessão read-only, e após aprovação humana apenas para a chamada corrente, `list_user_app32_capabilities` retornou 4 capabilities distribuídas em 3 domínios, com scope `mcp_user`. Não houve shell, leitura de arquivos, mutação nem aprovação permanente. A prova fecha a compatibilidade Codex CLI ↔ OAuth/MCP público, mas não a versão P0, ainda não promovida.
 
 Diagnóstico adicional: a cadeia histórica desde banco vazio falha antes deste incremento, em `20260205_2000`, por FK de `portfolios` para `companies` sem baseline Alembic correspondente. Essa dívida deve ser saneada em entrega própria; o P0 não deve reescrever revision histórica. O IdP/JWKS HTTPS externo e o cliente Codex CLI já foram comprovados; ainda falta rollout controlado do código/migration P0 e validação pós-deploy, portanto o P0 permanece aberto.
+
+
+
+
+No preflight final de 17/09/2026, a integração com `origin/main` revelou colisão do identificador inicialmente proposto `20260916_1000` com a migration de permissões MCP já publicada. O release foi corrigido sem reescrever histórico: a trilha de auditoria tornou-se a merge revision `20260917_1000`, dependente dos heads `20260913_1500` e `20260916_1000`. Novo laboratório: 11 testes PostgreSQL aprovados, `flask db upgrade` alcançou head único `20260917_1000` e o listener foi encerrado.
+
+## Endpoint canônico `mcp-versus` — ativado em 18/09/2026
+
+O harness comprova: (1) `tools/list` só publica tools permitidas ao principal;
+(2) cada chamada aplica a surface e o scope próprios da tool, e não uma
+surface implícita do conector; (3) `company_id` sem grant continua negado;
+(4) finance não é publicado ao perfil sem permissão APP32; (5) uma mutação
+financeira cria aprovação persistida e só aceita replay idêntico. A troca de
+nome local, isoladamente, não satisfaz esses critérios.
+
+
+### Correção de discovery unificada — AA.J.21.332 (2026-09-18)
+
+- No endpoint `/mcp/pilot/`, `list_user_app32_capabilities` mantém o nome por compatibilidade, mas descreve as ferramentas publicadas pelo conector unificado, incluindo o filtro `domain=finance`. Nos endpoints segmentados seu significado permanece restrito à respectiva surface.
+- `tools/list` e manifesto compartilham a seleção de ferramentas privilegiadas por scope OAuth e permissão específica da capability. `financial.view` não equivale a `financial.create`.
+- O catálogo indica discovery, não autorização definitiva: cada execução revalida empresa/grant/RBAC e mutações com human gate exigem aprovação persistida. Scopes do manifesto são metadados do catálogo, não os claims do token.
+- Critério de regressão: igualdade entre tools expostas e manifesto (exceto a própria tool de capabilities), filtro financeiro com leitura versus criação, token sem scope, teto de grant e isolamento tenant.
+- Não declarar paridade integral com todas as funções do APP32: a publicação remota continua limitada à coorte revisada. Homologação real da sessão cliente permanece obrigatória; testes simulados não a substituem.

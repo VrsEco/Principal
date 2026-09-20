@@ -104,6 +104,54 @@ def test_pilot_oauth_route_initializes_its_own_lifespan(monkeypatch):
     assert {surface for surface, _ in entered} == {"user", "admin", "analytics", "ops"}
 
 
+def test_pilot_finance_route_is_opt_in_and_has_own_protected_metadata(monkeypatch):
+    monkeypatch.setenv("APP32_MCP_OIDC_FINANCE_ROUTE_ENABLED", "1")
+
+    def fake_surface_app(surface: str, **kwargs):
+        app = Starlette()
+        app.state.surface = surface
+        app.state.kwargs = kwargs
+        return app
+
+    monkeypatch.setattr(http_server, "build_surface_http_app", fake_surface_app)
+    app = http_server.create_http_app()
+    paths = {getattr(route, "path", None) for route in app.routes}
+
+    assert "/mcp/pilot/finance" in paths
+    assert "/.well-known/oauth-protected-resource/mcp/pilot/finance" in paths
+
+
+def test_unified_oauth_route_uses_one_public_endpoint_and_metadata(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setenv("APP32_MCP_OIDC_UNIFIED_ROUTE_ENABLED", "1")
+
+    def fake_surface_app(surface: str, **kwargs):
+        return Starlette()
+
+    monkeypatch.setattr(http_server, "build_surface_http_app", fake_surface_app)
+    monkeypatch.setattr(http_server, "build_unified_http_app", lambda: Starlette())
+    monkeypatch.setattr(
+        http_server,
+        "build_auth_settings",
+        lambda **_: SimpleNamespace(
+            resource_server_url="https://app.gestaoversus.com.br/mcp/pilot",
+            issuer_url="https://id.gestaoversus.com.br/realms/app32",
+        ),
+    )
+
+    app = http_server.create_http_app()
+    paths = {getattr(route, "path", None) for route in app.routes}
+    assert "/mcp/pilot" in paths
+    assert "/.well-known/oauth-protected-resource/mcp/pilot" in paths
+
+    response = TestClient(app).get("/.well-known/oauth-protected-resource/mcp/pilot")
+    assert response.status_code == 200
+    assert response.json()["scopes_supported"] == [
+        "mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"
+    ]
+
+
 def test_pilot_oauth_route_uses_limited_user_catalog(monkeypatch):
     monkeypatch.setenv("APP32_MCP_OIDC_PILOT_ROUTE_ENABLED", "1")
     calls: list[tuple[str, str, bool | None, str | None]] = []

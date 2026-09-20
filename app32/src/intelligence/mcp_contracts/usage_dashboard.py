@@ -7,7 +7,7 @@ from pydantic import Field, model_validator
 from .base import MCPSuccessEnvelope, _StrictModel
 
 
-UsageDashboardSurface = Literal["user", "admin", "analytics", "ops", "sapiens", "mcp"]
+UsageDashboardSurface = Literal["user", "admin", "analytics", "finance", "ops", "sapiens", "mcp"]
 UsageDashboardMetricKind = Literal["counter", "ratio", "latency", "timeseries", "table"]
 UsageDashboardDataSource = Literal["ai_audit_log", "workflow_usage", "agent_messages", "tool_catalog"]
 

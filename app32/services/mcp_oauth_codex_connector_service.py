@@ -41,14 +41,20 @@ class McpOAuthCodexConnectorService:
         server_name = str(os.getenv("APP32_MCP_OAUTH_CODEX_SERVER_NAME") or "mcp-versus").strip()
         if not server_name:
             server_name = "mcp-versus"
-        mcp_url = f"{base_url}/mcp/pilot/user/"
+        unified_enabled = _enabled("MCP_VERSUS_OAUTH_UNIFIED_ENABLED")
+        mcp_url = f"{base_url}/mcp/pilot/" if unified_enabled else f"{base_url}/mcp/pilot/user/"
+        scopes_argument = (
+            " --scopes mcp:access,mcp:user,mcp:analytics,mcp:finance"
+            if unified_enabled
+            else ""
+        )
         return {
             "available": True,
             "server_name": server_name,
             "mcp_url": mcp_url,
             "client_id": client_id,
             "add_command": f"codex mcp add {server_name} --url {mcp_url} --oauth-client-id {client_id}",
-            "login_command": f"codex mcp login {server_name}",
+            "login_command": f"codex mcp login {server_name}{scopes_argument}",
             "verify_command": "codex mcp list",
             "instructions": [
                 "Copie e execute o comando de conexão no terminal onde o Codex está instalado.",

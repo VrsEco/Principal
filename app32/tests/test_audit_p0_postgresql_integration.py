@@ -62,7 +62,7 @@ def lab(monkeypatch):
     db = SimpleNamespace(engine=engine, session=session)
     monkeypatch.setitem(sys.modules, "models", SimpleNamespace(db=db))
     monkeypatch.setitem(sys.modules, "models.agent_action", SimpleNamespace(AgentAction=AgentAction))
-    path = Path(__file__).parents[1] / "migrations/versions/20260916_1000_ai_mcp_audit_schema_v2.py"
+    path = Path(__file__).parents[1] / "migrations/versions/20260917_1000_ai_mcp_audit_schema_v2.py"
     spec = importlib.util.spec_from_file_location("audit_p0_pg_migration", path)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)

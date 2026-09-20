@@ -32,6 +32,7 @@ from models.internal_audit import (
 from models.meeting import Meeting
 from models.project import Project, ProjectTask
 from models.user import User
+from services.internal_audit_financial_analyzer import InternalAuditFinancialAnalyzer
 
 
 class InternalAuditServiceError(ValueError):
@@ -95,6 +96,16 @@ class InternalAuditCatalogSummary:
 
 
 class InternalAuditService:
+    @staticmethod
+    def analyze_financial_crossings(company_id: int) -> list[dict]:
+        """Retorna candidatos financeiros sem criar pontos de auditoria."""
+        return [candidate.to_dict() for candidate in InternalAuditFinancialAnalyzer.analyze(company_id)]
+
+    @staticmethod
+    def materialize_financial_audit_points(company_id: int) -> dict:
+        """Materializa apenas candidatos novos, preservando a triagem humana posterior."""
+        return InternalAuditFinancialAnalyzer.materialize_points(company_id)
+
     @staticmethod
     def summary(company_id: int) -> dict:
         return InternalAuditCatalogSummary(

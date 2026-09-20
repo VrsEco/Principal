@@ -638,6 +638,25 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("finance", "mutation", "tenant_safe", "playbook", "explicit_human_confirmation"),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
+    # Leitura explicitamente publicada na coorte OAuth analytics.
+    "list_financial_catalog_items": {
+        "domain": "finance",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("financial.view",),
+        "tags": ("finance", "read", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
+    "create_financial_entry": {
+        "domain": "finance",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_FINANCE.value),
+        "risk": ToolRiskLevel.HIGH,
+        "permissions": ("financial.create",),
+        "human_gate": True,
+        "human_gate_reason": "Inclusão financeira por MCP exige confirmação humana persistida.",
+        "tags": ("finance", "mutation", "tenant_safe", "human_gate"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
     "update_user_contacts": {
         "domain": "identity_self_service",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

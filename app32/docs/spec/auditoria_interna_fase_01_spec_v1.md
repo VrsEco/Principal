@@ -613,7 +613,7 @@ Aceite desse incremento local: 27 testes focados aprovados, incluindo callback n
 
 ### 15.1 Schema de auditoria v2 — implementação local
 
-- migration `20260916_1000`, sobre `20260913_1500`, assume a tabela legada sem apagar histórico;
+- merge migration `20260917_1000`, sobre os heads `20260913_1500` e `20260916_1000`, assume a tabela legada sem apagar histórico;
 - colunas: `principal_id`, `auth_method`, `client_id`, `surface`, `token_scopes` (JSONB), `policy_allowed`, `policy_reason`, `approval_request_id`, `payload_digest`;
 - índices novos iniciam por `company_id` e cobrem principal/tempo, policy/tempo e aprovação;
 - eventos legados não são reinterpretados a partir de metadata livre; campos novos podem permanecer nulos;
@@ -629,7 +629,7 @@ Em 16/09/2026, 11 testes reais em PostgreSQL 16.15 passaram: schema novo/idempot
 
 O smoke OAuth local usa JWT RS256 assinado e valida de forma integrada issuer, audience, client allowlist, scopes, vínculo persistido `issuer/sub`, grant explícito de `company_id`, negação cross-tenant, principal revogado e evento `ai_mcp_audit_events` com identidade/policy estruturadas. Tokens inválidos ou principals revogados falham sem fallback para bearer legado.
 
-A evidência aplica a revision diretamente com Operations Alembic em schemas descartáveis. Complementarmente, o comando real `flask db upgrade`, com bootstrap de schema/runtime desligado e banco sintético marcado em `20260913_1500`, carregou o APP32, executou `20260916_1000` e alcançou o head esperado. O ORM concorrente do ensaio representa a fronteira de AgentAction usada pelo service.
+A evidência aplica a revision diretamente com Operations Alembic em schemas descartáveis. Complementarmente, o comando real `flask db upgrade`, com bootstrap de schema/runtime desligado e banco sintético marcado nos heads `20260913_1500` e `20260916_1000`, carregou o APP32, executou `20260917_1000` e alcançou o head esperado. O ORM concorrente do ensaio representa a fronteira de AgentAction usada pelo service.
 
 Banco totalmente vazio não é um gate válido deste incremento: a cadeia histórica falha antes do P0 em `20260205_2000`, pois `portfolios.company_id` referencia `companies` sem revision baseline que crie essa tabela. Corrigir o bootstrap integral é dívida arquitetural separada e não autoriza alterar ou mascarar migrations históricas durante o rollout do P0. A homologação posterior com IdP externo/redirect real está registrada em 15.4; ainda falta rollout controlado, portanto o P0 não está encerrado.
 
@@ -646,3 +646,25 @@ Sem configuração explícita, o gate retorna `ready=false`. Em 17/09/2026, as c
 O cliente `mcp-versus` concluiu Authorization Code com PKCE e Dynamic Client Registration no IdP público. Em seguida, o Codex CLI executou exclusivamente `list_user_app32_capabilities`, após aprovação humana limitada à chamada, sem acesso a shell, arquivos ou mutações. Resultado: 4 capabilities, 3 domínios e scope efetivo `mcp_user`.
 
 Critério comprovado: login interativo, emissão/uso de bearer pelo cliente sem revelar credencial, sessão MCP remota e catálogo autenticado de leitura. Critério ainda pendente: rollout do writer/schema v2 e comprovação em produção da trilha `ai_mcp_audit_events`; portanto, a evidência não encerra o P0 nem autoriza ampliar a coorte.
+
+## 16. P1 MCP — leituras de Auditoria Interna
+
+As capabilities `get_internal_audit_summary`, `list_internal_audit_points` e `list_internal_audit_findings` adotam domínio canônico `audit`, risco baixo, `company_id` obrigatório, `audit.read` e limite de retorno entre 1 e 100. A publicação inicial é exclusiva de `mcp_analytics` e `mcp_admin`; `mcp_user`, inclusive a coorte OAuth piloto, permanece sem estas tools. As tools não criam, atualizam, convertem ou encerram nenhum registro; mutações continuam pelo serviço/UI e exigem o fluxo humano já definido nesta SPEC.
+
+O P0 de trilha OAuth/policy foi aplicado em produção em 17/09/2026 na revision `20260917_1000`. P1 deve manter o rollout separado: só poderá ser publicado após validar catálogo por surface, grant `company_id`, permissão `audit.read` e negação cross-tenant.
+
+## 17. P2 — analisador financeiro e pontos gerados
+
+`InternalAuditFinancialAnalyzer` consulta exclusivamente registros da empresa solicitada e limita o escopo a liquidações postadas de contas a pagar. O contrato possui duas etapas separadas: `analyze(company_id)` retorna candidatos sem escrita; `materialize_points(company_id)` persiste novos `AuditPoint` com `origin_type=analyzer`, `source_module=audit_financial_analyzer` e fingerprint no metadata.
+
+Regras entregues: divergência de classificação por destinatário; pagamento de colaborador marcado no metadata da contraparte fora de salário/folha, viagem/diária/reembolso; e referência de pagamento repetida em uma mesma conta bancária com classificações distintas. Ausência de vínculo explícito de colaborador não é inferida por nome, CPF ou IA. Nenhuma regra altera registros financeiros, cria achado, envia comunicação ou fecha ponto; todas exigem triagem humana posterior.
+
+## 18. Cruzamentos de Auditoria Configurados
+
+O produto deverá manter um catálogo tenant-scoped de regras configuráveis para análise de Auditoria Interna. O catálogo é uma evolução da P2 e não substitui o analisador determinístico já entregue. Cada configuração exige `company_id`, versão, status, responsável, escopo de fontes/campos aprovados, condição/limite, janela temporal, severidade sugerida, periodicidade e estratégia de fingerprint/deduplicação.
+
+Estados permitidos para a configuração: `draft`, `validated`, `active`, `suspended`, `retired`. Somente configuração `active`, homologada por usuário autorizado, pode gerar candidatos. A execução deve registrar versão da regra, período, contagens de entrada/saída, parâmetros efetivos, duração, resultado e referências de evidência. A execução pode ser manual, agendada ou solicitada por IA/CLI via OAuth, mas o caminho IA/CLI deve respeitar capability, RBAC, policy, `company_id` e aprovação humana quando houver materialização.
+
+A regra configurada só pode ler fontes declaradas e permitidas no contrato; é proibido DDL/DML nas fontes financeiras, contábeis, de processos ou pessoas. Ela produz candidato ou Ponto de Auditoria; não cria achado, projeto, atividade, reunião, relatório ou follow-up automaticamente. Alterações de parâmetros, fontes, condição ou severidade abrem nova versão, preservando a anterior e seu histórico de execuções.
+
+Critérios de aceite da evolução: simulação sem escrita; segregação cross-tenant negada; validação de campos e operadores; materialização idempotente; trilha de execução; suspensão imediata; e triagem humana antes da conversão para achado.

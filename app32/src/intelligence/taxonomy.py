@@ -11,6 +11,7 @@ CANONICAL_TOOL_DOMAINS: tuple[str, ...] = (
     "consultive",
     "finance",
     "analytics",
+    "audit",
     "workload",
     "identity_self_service",
     "identity_admin",

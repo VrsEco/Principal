@@ -54,9 +54,9 @@ def test_cliente_is_restricted_to_user_read_or_limited_actions():
     cliente = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile("cliente")
 
     assert cliente is not None
-    assert cliente.allowed_surfaces == ["user"]
-    assert cliente.can_execute_financial_mutations is False
-    assert "finance" in cliente.forbidden_domains
+    assert cliente.allowed_surfaces == ["user", "finance"]
+    assert cliente.can_execute_financial_mutations is True
+    assert "finance" in cliente.allowed_domains
     assert "workload" in cliente.forbidden_domains
     assert "identity_self_service" in cliente.allowed_domains
     assert "processes" in cliente.allowed_domains
@@ -64,13 +64,14 @@ def test_cliente_is_restricted_to_user_read_or_limited_actions():
     assert "identity_admin" in cliente.forbidden_domains
 
 
-def test_colaborador_can_expose_finance_when_permission_effective_is_present():
+def test_colaborador_uses_dedicated_finance_surface_when_app32_permissions_allow_it():
     colaborador = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile("colaborador")
 
     assert colaborador is not None
-    assert colaborador.allowed_surfaces == ["user"]
+    assert colaborador.allowed_surfaces == ["user", "finance"]
     assert "finance" in colaborador.allowed_domains
     assert "finance" not in colaborador.forbidden_domains
+    assert colaborador.can_execute_financial_mutations is True
 
 
 def test_administrador_and_admin_tecnico_surface_matrix():
@@ -80,7 +81,7 @@ def test_administrador_and_admin_tecnico_surface_matrix():
     assert administrador is not None
     assert admin_tecnico is not None
 
-    assert set(administrador.allowed_surfaces) == {"user", "admin", "analytics"}
+    assert set(administrador.allowed_surfaces) == {"user", "admin", "analytics", "finance"}
     assert "ops" not in administrador.allowed_surfaces
     assert set(admin_tecnico.allowed_surfaces) == {"admin", "analytics", "ops"}
     assert "identity_admin" in administrador.allowed_domains

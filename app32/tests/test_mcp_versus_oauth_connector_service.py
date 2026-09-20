@@ -13,6 +13,18 @@ def test_mcp_versus_is_the_fixed_public_connection_name(monkeypatch):
     assert "company_id" not in payload
 
 
+def test_mcp_versus_codex_uses_unified_endpoint_when_enabled(monkeypatch):
+    monkeypatch.setenv("MCP_VERSUS_OAUTH_CODEX_ENABLED", "1")
+    monkeypatch.setenv("MCP_VERSUS_OAUTH_CODEX_CLIENT_ID", "mcp-versus-codex")
+    monkeypatch.setenv("MCP_VERSUS_OAUTH_UNIFIED_ENABLED", "1")
+
+    payload = McpVersusOAuthConnectorService().build_config("codex")
+
+    assert payload["server_name"] == "mcp-versus"
+    assert payload["mcp_url"].endswith("/mcp/pilot/")
+    assert "--scopes mcp:access,mcp:user,mcp:analytics,mcp:finance" in payload["login_command"]
+
+
 def test_claude_configuration_uses_dcr_without_exposing_a_static_client_id(monkeypatch):
     monkeypatch.setenv("MCP_VERSUS_OAUTH_CLAUDE_ENABLED", "1")
     monkeypatch.setenv("MCP_VERSUS_OAUTH_CLAUDE_CLIENT_ID", "mcp-versus-claude")

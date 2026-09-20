@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from contextlib import nullcontext
 from typing import Optional
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 from starlette.requests import Request
@@ -11,6 +12,20 @@ from starlette.requests import Request
 import src.core.mcp_http_auth as auth
 from src.core.mcp_http_auth import App32McpHttpIdentity, reset_http_request_context, set_http_request_context
 from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
+
+
+def _stub_flask_app_factory(monkeypatch, app_instance):
+    """Evita boot completo do Flask em testes unitários do wrapper MCP."""
+
+    fake_app_module = ModuleType("app")
+    fake_app_module.create_app = lambda: app_instance
+    monkeypatch.setitem(sys.modules, "app", fake_app_module)
+
+
+def _stub_tool_catalog(monkeypatch, catalog_instance):
+    fake_catalog_module = ModuleType("src.intelligence.tool_catalog")
+    fake_catalog_module.catalog = catalog_instance
+    monkeypatch.setitem(sys.modules, "src.intelligence.tool_catalog", fake_catalog_module)
 
 
 def test_runtime_prefers_http_request_context(monkeypatch):
@@ -187,8 +202,10 @@ def test_runtime_enforces_server_side_principal_grant_when_feature_flag_enabled(
     assert context.user_id == 44
     assert context.employee_id == 23
     assert context.company_id == 9
-    assert context.role == "cliente"
-    assert context.permissions == ()
+    # A role efetiva vem do APP32 no instante da chamada; o grant só vincula
+    # tenant e pode impor teto de permissão, sem congelar o perfil do usuário.
+    assert context.role == "administrador"
+    assert context.permissions == ("finance", "finance.write")
     assert context.metadata["principal_id"] == 71
     assert context.metadata["principal_grant_enforced"] is True
     assert context.metadata["company_resolution_source"] == "principal_company_grant"
@@ -245,6 +262,162 @@ def test_runtime_principal_grant_mode_never_inherits_legacy_user_or_permissions(
     assert context.role == "cliente"
     assert context.permissions == ()
     assert context.company_id == 9
+
+
+def test_runtime_principal_grant_uses_persisted_mcp_permissions_as_ceiling(monkeypatch):
+    class _GrantDecision:
+        allowed = True
+        company_id = 9
+        role = "cliente"
+        mcp_permissions = ("financial.view",)
+        principal = type("Principal", (), {"user_id": 44})()
+
+    class _PrincipalAuthorizationService:
+        def resolve_for_company(self, *, principal_id, company_id):
+            assert (principal_id, company_id) == (71, 9)
+            return _GrantDecision()
+
+    monkeypatch.setenv("APP32_MCP_USE_PRINCIPAL_GRANTS", "1")
+    monkeypatch.setattr(
+        "services.principal_authorization_service.principal_authorization_service",
+        _PrincipalAuthorizationService(),
+    )
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda **kwargs: {
+            "company_id": 9,
+            "employee_id": 23,
+            "role": "cliente",
+            "permissions": {"financial": ["view", "create"]},
+            "accessible_company_ids": [9],
+        },
+    )
+    tokens = set_http_request_context(
+        App32McpHttpIdentity(
+            token="token-permission-grant",
+            user_id=3,
+            company_id=9,
+            fallback_role="administrador",
+            allowed_surfaces=("user",),
+            principal_id=71,
+        ),
+        {
+            "user_id": 3,
+            "company_id": 9,
+            "principal_id": 71,
+            "surface": "user",
+            "transport": "streamable_http",
+            "auth_method": "oauth_oidc_bearer",
+        },
+    )
+
+    try:
+        context = resolve_mcp_execution_context({})
+    finally:
+        reset_http_request_context(tokens)
+
+    assert context.role == "cliente"
+    assert context.permissions == ("financial", "financial.view")
+
+
+def test_runtime_principal_grant_uses_live_app32_permissions_when_ceiling_is_empty(monkeypatch):
+    class _GrantDecision:
+        allowed = True
+        company_id = 9
+        role = "administrador"
+        mcp_permissions = ()
+        principal = type("Principal", (), {"user_id": 44})()
+
+    class _PrincipalAuthorizationService:
+        def resolve_for_company(self, *, principal_id, company_id):
+            assert (principal_id, company_id) == (71, 9)
+            return _GrantDecision()
+
+    monkeypatch.setenv("APP32_MCP_USE_PRINCIPAL_GRANTS", "1")
+    monkeypatch.setattr(
+        "services.principal_authorization_service.principal_authorization_service",
+        _PrincipalAuthorizationService(),
+    )
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda **kwargs: {
+            "company_id": 9,
+            "employee_id": 23,
+            "role": "colaborador",
+            "permissions": {"financial": ["view"]},
+            "accessible_company_ids": [9],
+        },
+    )
+    tokens = set_http_request_context(
+        App32McpHttpIdentity(
+            token="token-live-permissions",
+            user_id=3,
+            company_id=9,
+            fallback_role="administrador",
+            allowed_surfaces=("user",),
+            principal_id=71,
+        ),
+        {
+            "user_id": 3,
+            "company_id": 9,
+            "principal_id": 71,
+            "surface": "user",
+            "transport": "streamable_http",
+            "auth_method": "oauth_oidc_bearer",
+        },
+    )
+
+    try:
+        context = resolve_mcp_execution_context({})
+    finally:
+        reset_http_request_context(tokens)
+
+    assert context.role == "colaborador"
+    assert context.permissions == ("financial", "financial.view")
+
+
+def test_runtime_principal_grant_rejects_stale_app32_company_membership(monkeypatch):
+    class _GrantDecision:
+        allowed = True
+        company_id = 9
+        principal = type("Principal", (), {"user_id": 44})()
+
+    class _PrincipalAuthorizationService:
+        def resolve_for_company(self, **kwargs):
+            return _GrantDecision()
+
+    monkeypatch.setenv("APP32_MCP_USE_PRINCIPAL_GRANTS", "1")
+    monkeypatch.setattr(
+        "services.principal_authorization_service.principal_authorization_service",
+        _PrincipalAuthorizationService(),
+    )
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda **kwargs: {
+            "company_id": 9,
+            "employee_id": None,
+            "role": None,
+            "permissions": {},
+            "accessible_company_ids": [],
+        },
+    )
+    tokens = set_http_request_context(
+        App32McpHttpIdentity(
+            token="stale-grant",
+            user_id=3,
+            company_id=9,
+            fallback_role="colaborador",
+            allowed_surfaces=("user",),
+            principal_id=71,
+        ),
+        {"company_id": 9, "principal_id": 71, "surface": "user", "transport": "streamable_http"},
+    )
+
+    try:
+        with pytest.raises(PermissionError, match="sem vínculo ativo"):
+            resolve_mcp_execution_context({})
+    finally:
+        reset_http_request_context(tokens)
 
 
 def test_runtime_never_reads_principal_id_from_tool_payload(monkeypatch):
@@ -602,12 +775,9 @@ def test_wrap_mcp_callable_denies_unregistered_capability_before_callback(monkey
     def unregistered_tool():
         callback_calls.append(True)
 
-    monkeypatch.setattr("app.create_app", lambda: _App())
+    _stub_flask_app_factory(monkeypatch, _App())
     monkeypatch.setattr("src.core.mcp_runtime.resolve_mcp_execution_context", lambda payload: execution_context)
-    monkeypatch.setattr(
-        "src.intelligence.tool_catalog.catalog",
-        SimpleNamespace(get_tool_capability=lambda tool_name: None),
-    )
+    _stub_tool_catalog(monkeypatch, SimpleNamespace(get_tool_capability=lambda tool_name: None))
 
     with pytest.raises(PermissionError, match="sem capability canônica: unregistered_tool"):
         wrap_mcp_callable(unregistered_tool)()
@@ -645,12 +815,9 @@ def test_wrap_mcp_callable_never_accepts_human_gate_boolean_from_payload(monkeyp
     def gated_tool(**kwargs):
         return kwargs
 
-    monkeypatch.setattr("app.create_app", lambda: _App())
+    _stub_flask_app_factory(monkeypatch, _App())
     monkeypatch.setattr("src.core.mcp_runtime.resolve_mcp_execution_context", lambda payload: execution_context)
-    monkeypatch.setattr(
-        "src.intelligence.tool_catalog.catalog",
-        SimpleNamespace(get_tool_capability=lambda tool_name: capability),
-    )
+    _stub_tool_catalog(monkeypatch, SimpleNamespace(get_tool_capability=lambda tool_name: capability))
     def _evaluate(source, request):
         captured["policy_principal_id"] = source["principal_id"]
         return SimpleNamespace(allowed=False, reason="mutação de alto risco exige confirmação explícita")
@@ -676,7 +843,7 @@ def test_wrap_mcp_callable_never_accepts_human_gate_boolean_from_payload(monkeyp
     assert result["approval_confirmed"] is True
 
 
-def test_wrap_mcp_callable_denies_forged_boolean_when_no_persisted_approval(monkeypatch):
+def test_wrap_mcp_callable_creates_persisted_request_when_no_approval_exists(monkeypatch):
     execution_context = SimpleNamespace(
         user_id=3,
         principal_id=71,
@@ -706,12 +873,9 @@ def test_wrap_mcp_callable_denies_forged_boolean_when_no_persisted_approval(monk
     def gated_tool(**kwargs):
         callback_calls.append(kwargs)
 
-    monkeypatch.setattr("app.create_app", lambda: _App())
+    _stub_flask_app_factory(monkeypatch, _App())
     monkeypatch.setattr("src.core.mcp_runtime.resolve_mcp_execution_context", lambda payload: execution_context)
-    monkeypatch.setattr(
-        "src.intelligence.tool_catalog.catalog",
-        SimpleNamespace(get_tool_capability=lambda tool_name: capability),
-    )
+    _stub_tool_catalog(monkeypatch, SimpleNamespace(get_tool_capability=lambda tool_name: capability))
     monkeypatch.setattr(
         "src.core.mcp_runtime.evaluate_tool_policy",
         lambda source, request: SimpleNamespace(allowed=False, reason="mutação de alto risco exige confirmação explícita"),
@@ -725,15 +889,27 @@ def test_wrap_mcp_callable_denies_forged_boolean_when_no_persisted_approval(monk
             )
         ),
     )
+    requested = {}
+    monkeypatch.setattr(
+        "services.tool_approval_service.tool_approval_request_service",
+        SimpleNamespace(
+            request=lambda binding, **kwargs: requested.update(
+                {"binding": binding, **kwargs}
+            ) or SimpleNamespace(approval_request_id=321, reused_existing=False)
+        ),
+    )
     monkeypatch.setattr(
         "src.core.mcp_runtime.require_tool_policy",
         lambda source, request: pytest.fail("policy final não deve rodar sem aprovação"),
     )
 
-    with pytest.raises(PermissionError, match="aprovação persistida vigente não encontrada"):
+    with pytest.raises(PermissionError, match="solicitação #321"):
         wrap_mcp_callable(gated_tool)(confirmed_mutation=True)
 
     assert callback_calls == []
+    assert requested["binding"].principal_id == 71
+    assert requested["binding"].company_id == 9
+    assert requested["reason"] == "mutação de alto risco exige confirmação explícita"
 
 
 def test_runtime_rehydrates_http_request_context_from_current_mcp_request(monkeypatch):

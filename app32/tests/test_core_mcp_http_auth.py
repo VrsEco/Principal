@@ -909,8 +909,10 @@ def test_oauth_http_context_enforces_principal_grant_for_requested_company(monke
     assert allowed.json() == {
         "company_id": 9,
         "principal_id": 71,
-        "role": "cliente",
-        "permissions": [],
+        # O grant escolhe o tenant; papel e permissões de negócio vêm da
+        # identidade APP32 reidratada no request, nunca do papel do grant.
+        "role": "administrador",
+        "permissions": ["finance", "finance.write"],
         "grant_enforced": True,
     }
     assert denied.status_code == 403

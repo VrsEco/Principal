@@ -36,8 +36,8 @@ def test_permission_matrix_manifest_covers_main_profiles_and_surfaces():
 
     assert manifest.version == "app32.ai-mcp.permission-matrix.v1"
     assert {"colaborador", "cliente", "administrador", "admin_tecnico"} <= profiles
-    assert surfaces == {"user", "admin", "analytics", "ops"}
-    assert len(manifest.matrices) == 7
+    assert surfaces == {"user", "admin", "analytics", "finance", "ops"}
+    assert len(manifest.matrices) == 10
     assert len(manifest.overlay_matrices) == 23
 
 
@@ -57,16 +57,19 @@ def test_permission_matrix_boundaries_for_cliente_and_finance():
     finance_admin = [m for m in APP32_PERMISSION_MATRIX_MANIFEST.get_profile("administrador") if m.surface == "admin"][0]
     collaborator_user = [m for m in APP32_PERMISSION_MATRIX_MANIFEST.get_profile("colaborador") if m.surface == "user"][0]
 
-    assert len(cliente_matrices) == 1
-    assert cliente_matrices[0].surface == "user"
+    assert len(cliente_matrices) == 2
+    assert {matrix.surface for matrix in cliente_matrices} == {"user", "finance"}
     assert all(
         not any(action in rule.allowed_actions for action in {"create", "update", "delete", "audit"})
-        for rule in cliente_matrices[0].domains
+        for rule in next(matrix for matrix in cliente_matrices if matrix.surface == "user").domains
     )
-    assert all(rule.domain != "finance" for rule in cliente_matrices[0].domains)
-    collaborator_finance = next(rule for rule in collaborator_user.domains if rule.domain == "finance")
-    assert collaborator_finance.requires_explicit_company_id is True
-    assert {"discover", "read", "create", "update"} <= set(collaborator_finance.allowed_actions)
+    cliente_finance = next(matrix for matrix in cliente_matrices if matrix.surface == "finance")
+    cliente_finance_rule = next(rule for rule in cliente_finance.domains if rule.domain == "finance")
+    assert cliente_finance_rule.requires_explicit_company_id is True
+    assert {"create", "update"} <= set(cliente_finance_rule.human_gate_for_actions)
+    collaborator_finance = [matrix for matrix in APP32_PERMISSION_MATRIX_MANIFEST.get_profile("colaborador") if matrix.surface == "finance"][0]
+    assert collaborator_finance.domains[0].domain == "finance"
+    assert {"create", "update"} <= set(collaborator_finance.domains[0].human_gate_for_actions)
     assert all(
         not any(action in rule.allowed_actions for action in {"create", "update", "delete"})
         for rule in admin_analytics.domains
@@ -104,7 +107,7 @@ def test_permission_matrix_tool_returns_manifest_and_filters():
     assert manifest_payload["success"] is True
     assert manifest_payload["data"]["version"] == "app32.ai-mcp.permission-matrix.v1"
     assert profile_payload["success"] is True
-    assert len(profile_payload["data"]) == 3
+    assert len(profile_payload["data"]) == 4
     assert surface_payload["success"] is True
     assert len(surface_payload["data"]) == 2
     assert single_payload["success"] is True

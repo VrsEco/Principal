@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import logging
 from dataclasses import replace
 from typing import Any, Literal, Sequence
 
@@ -14,11 +15,12 @@ try:  # pragma: no cover - dependência opcional em ambiente de teste
 except ImportError:  # pragma: no cover - fallback quando o pacote não está instalado
     FastMCP = None
 
-McpSurface = Literal["user", "admin", "analytics", "ops"]
+McpSurface = Literal["user", "admin", "analytics", "finance", "ops"]
 
 _SURFACE_SCOPE_FILTERS: dict[McpSurface, tuple[str, ...]] = {
     "user": (ToolScope.MCP_USER.value,),
     "analytics": (ToolScope.MCP_ANALYTICS.value,),
+    "finance": (ToolScope.MCP_FINANCE.value,),
     "ops": (ToolScope.MCP_OPS.value,),
     "admin": (ToolScope.MCP_ADMIN.value,),
 }
@@ -34,18 +36,140 @@ PILOT_USER_TOOL_NAMES: tuple[str, ...] = (
     "list_projects",
 )
 
-# A coorte OAuth de analytics é intencionalmente menor que a surface
-# ``analytics`` interna.  A descoberta ocorre antes de existir um
-# ``company_id`` na chamada MCP; por isso a lista só contém leituras cujo
-# contrato recebe explicitamente o tenant e que foram revisadas para o
-# trabalho assistido do cliente.  A policy do runtime continua validando o
-# grant do principal e a permissão ``financial.view`` em toda execução.
-PILOT_ANALYTICS_TOOL_NAMES: tuple[str, ...] = (
-    "list_financial_catalog_items",
+# Leituras financeiras são uma coorte OAuth privilegiada e exclusiva da
+# surface ``analytics``. A lista é deliberadamente pequena: cada tool exige
+# ``company_id`` e a policy revalida principal/grant/RBAC por chamada.
+PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES: tuple[str, ...] = (
     "list_financial_automation_rules",
+    "list_financial_catalog_items",
     "list_financial_classification_rules",
     "list_financial_entries",
 )
+PILOT_FINANCE_OPERATIONAL_TOOL_NAMES: tuple[str, ...] = ("create_financial_entry",)
+PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES: tuple[str, ...] = (
+    *PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+    *PILOT_FINANCE_OPERATIONAL_TOOL_NAMES,
+)
+
+# Compatibilidade interna temporária para imports de testes/integrações antigas.
+# A rota OAuth user não consome esta constante.
+PILOT_USER_FINANCE_READ_TOOL_NAMES = PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES
+
+
+def _has_authenticated_mcp_permission(permission: str) -> bool:
+    """Verifica discovery por principal, sem aceitar permissão do cliente."""
+
+    try:
+        from flask import has_app_context
+        from src.core.mcp_http_auth import get_http_request_identity
+
+        identity = get_http_request_identity()
+        principal_id = getattr(identity, "principal_id", None)
+        if not isinstance(principal_id, int) or principal_id <= 0:
+            return False
+
+        def _load() -> bool:
+            from models.identity_principal import PrincipalCompanyGrant
+            from src.intelligence.security.runtime_identity import resolve_runtime_identity
+
+            grants = PrincipalCompanyGrant.query.filter_by(
+                principal_id=principal_id,
+                status="active",
+            ).all()
+            for grant in grants:
+                if not grant.is_active:
+                    continue
+                ceiling = {
+                    str(item).strip().lower()
+                    for item in (getattr(grant, "mcp_permissions", ()) or ())
+                }
+                # Um teto explícito só restringe; vazio não cria uma segunda
+                # matriz de RBAC paralela ao APP32.
+                if ceiling and permission not in ceiling and "financial" not in ceiling:
+                    continue
+                user_id = getattr(getattr(grant, "principal", None), "user_id", None)
+                if not user_id:
+                    continue
+                runtime = resolve_runtime_identity(user_id=int(user_id), company_id=int(grant.company_id))
+                if bool(runtime.get("has_full_app32_permissions")):
+                    return True
+                permissions = runtime.get("permissions") or {}
+                flattened = set()
+                for resource, actions in permissions.items():
+                    for action in actions if isinstance(actions, (list, tuple, set)) else [actions]:
+                        flattened.add(f"{str(resource).strip().lower()}.{str(action).strip().lower()}")
+                if permission in flattened:
+                    return True
+            return False
+
+        if has_app_context():
+            return _load()
+        from app import create_app
+
+        app = create_app()
+        with app.app_context():
+            return _load()
+    except Exception as exc:
+        logging.getLogger(__name__).warning("MCP permission discovery failed (%s)", type(exc).__name__)
+        # Discovery não pode se transformar em bypass se o contexto OAuth ou o
+        # banco não estiver disponível.
+        return False
+
+
+def _pilot_user_visible_tool_names() -> tuple[str, ...]:
+    names = list(PILOT_USER_TOOL_NAMES)
+    if _has_authenticated_mcp_permission("financial.view"):
+        names.extend(PILOT_USER_FINANCE_READ_TOOL_NAMES)
+    return tuple(names)
+
+
+def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
+    """Discovery uses each capability's permission and its OAuth surface scope."""
+    try:
+        from src.core.mcp_http_auth import get_http_request_identity
+        identity = get_http_request_identity()
+        token_scopes = set(getattr(identity, "scopes", ()) or ())
+    except Exception:
+        return set()
+    if identity is None:
+        # Offline registry only; permission resolver still denies without a principal.
+        token_scopes = {"mcp:access", "mcp:analytics", "mcp:finance"}
+    if "mcp:access" not in token_scopes:
+        return set()
+    visible = set()
+    permission_results: dict[str, bool] = {}
+    for name in sorted(requested_names):
+        capability = catalog.get_tool_capability(name)
+        scope = "mcp:finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else "mcp:analytics"
+        if capability is not None and scope in token_scopes:
+            for permission in capability.permissions:
+                if permission not in permission_results:
+                    permission_results[permission] = _has_authenticated_mcp_permission(permission)
+            if all(permission_results[p] for p in capability.permissions):
+                visible.add(name)
+    return visible
+
+
+def get_unified_manifest(domain: str | None = None, include_tools: bool = True) -> dict[str, Any]:
+    """Same discovery set as tools/list; execution is always revalidated per tenant."""
+    names = set(PILOT_USER_TOOL_NAMES)
+    names.update(_visible_privileged_tool_names(frozenset(PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES)))
+    capabilities = []
+    for name in sorted(names):
+        capability = catalog.get_tool_capability(name)
+        if capability is None:
+            continue
+        surface = ("finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else
+                   "analytics" if name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES else "user")
+        capabilities.append(replace(capability, scopes=get_surface_scope_filter(surface)))
+    manifest = build_capability_manifest(capabilities, domain=domain, include_tools=include_tools)
+    manifest["discovery"] = {
+        "connector": "mcp-versus", "surface": "unified",
+        "authorization": "revalidated_per_call_and_company",
+        "human_approval": "required_for_gated_mutations",
+        "scope_meaning": "catalog_scopes_not_oauth_token_scopes",
+    }
+    return manifest
 
 
 def normalize_surface(surface: McpSurface | str) -> McpSurface:
@@ -115,6 +239,13 @@ def get_surface_capability_status(
 
     decision = evaluate_tool_policy(
         {
+            "principal_id": getattr(context, "principal_id", None),
+            "issuer": getattr(context, "issuer", None),
+            "subject": getattr(context, "subject", None),
+            "subject_type": getattr(context, "subject_type", "USER"),
+            "client_id": getattr(context, "client_id", None),
+            "auth_method": getattr(context, "auth_method", None),
+            "token_scopes": getattr(context, "token_scopes", ()),
             "user_id": context.user_id,
             "company_id": context.company_id,
             "employee_id": context.employee_id,
@@ -247,12 +378,14 @@ def _build_policy_fast_mcp(
     surface: McpSurface | str,
     *,
     exposed_tool_names: Sequence[str] | None = None,
+    conditional_tool_names: Sequence[str] | None = None,
 ) -> Any:
     """Cria servidor cujo tools/list reflete a policy efetiva da requisição."""
     if FastMCP is None:  # pragma: no cover
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
     normalized_surface = normalize_surface(surface)
     static_tool_names = frozenset(exposed_tool_names or ())
+    conditional_names = frozenset(conditional_tool_names or ())
     if not hasattr(FastMCP, "list_tools"):
         return FastMCP(name)
 
@@ -264,6 +397,8 @@ def _build_policy_fast_mcp(
                 # ainda não existe ``company_id`` para avaliar o grant. Cada
                 # execução é protegida novamente pelo wrapper tenant-safe.
                 allowed_names = set(static_tool_names)
+                if conditional_names:
+                    allowed_names.update(_visible_privileged_tool_names(conditional_names))
             else:
                 manifest = _get_surface_manifest_in_app_context(
                     normalized_surface,
@@ -280,72 +415,63 @@ def _tool_map() -> dict[str, Any]:
     return {getattr(tool, "name", str(tool)): tool for tool in catalog.get_langchain_tools()}
 
 
-def _register_tool(mcp: Any, tool: Any) -> None:
+def _register_tool(mcp: Any, tool: Any, *, policy_surface: str | None = None) -> None:
     if hasattr(tool, "func"):
-        mcp.tool(name=tool.name, description=tool.description)(wrap_mcp_callable(tool.func))
+        mcp.tool(name=tool.name, description=tool.description)(
+            wrap_mcp_callable(tool.func, policy_surface=policy_surface)
+        )
         return
 
     def make_wrapper(current_tool: Any):
-        @mcp.tool(name=current_tool.name, description=current_tool.description)
-        @wrap_mcp_callable
         def mcp_tool_wrapper(*args, **kwargs):
             payload = kwargs if kwargs else args[0] if args else {}
             return current_tool.invoke(payload)
 
-        return mcp_tool_wrapper
+        wrapped = wrap_mcp_callable(mcp_tool_wrapper, policy_surface=policy_surface)
+        return mcp.tool(name=current_tool.name, description=current_tool.description)(wrapped)
 
     make_wrapper(tool)
 
 
-def _register_shared_registrars(mcp: Any, *, allowed_names: set[str] | None = None) -> None:
-    """Registra somente as tools diretas publicadas pela surface.
+def _register_shared_registrars(
+    mcp: Any,
+    *,
+    tool_names: set[str] | None = None,
+    policy_surface: str | None = None,
+) -> None:
+    """Registra tools diretas do catálogo, opcionalmente por allowlist.
 
-    Registrars legados usam ``@mcp.tool()`` diretamente e não participam do
-    ``langchain_tools``.  Sem este filtro, o servidor registrava todo o
-    conjunto e delegava a contenção apenas a ``tools/list``.  Além de ampliar
-    desnecessariamente o runtime, isso permitia drift entre o manifesto e o
-    nome que o FastMCP efetivamente registrava.  O nome canônico passa a ser
-    informado explicitamente na fronteira FastMCP.
+    Registrars legados usam ``@mcp.tool()`` e não pertencem a
+    ``langchain_tools``. A coorte OAuth reduzida deve filtrá-los no registro,
+    e não apenas em ``tools/list``: uma tool oculta da descoberta ainda seria
+    invocável por um cliente que conhecesse o nome.
     """
 
     class _WrappedMCPProxy:
-        def __init__(self, target: Any, published_names: set[str] | None):
+        def __init__(self, target: Any, allowed_names: set[str] | None):
             self._target = target
-            self._published_names = published_names
+            self._allowed_names = allowed_names
 
         def tool(self, *args, **kwargs):
-            # FastMCP exige a forma ``@mcp.tool()``. Mantemos suporte ao
-            # formato direto usado por doubles de teste, mas nunca repassamos
-            # uma função como argumento ao FastMCP real.
-            direct_function = args[0] if args and callable(args[0]) else None
-            if direct_function is not None:
-                if len(args) != 1 or kwargs:
-                    raise TypeError("Uso direto de @mcp.tool não suporta argumentos adicionais")
-                args = ()
-
+            decorator = self._target.tool(*args, **kwargs)
             explicit_name = kwargs.get("name")
 
             def _decorate(func):
                 tool_name = explicit_name or getattr(func, "__name__", "unknown_tool")
-                if self._published_names is not None and tool_name not in self._published_names:
-                    # O registrador apenas declara a função; ela não entra no
-                    # runtime nem pode aparecer acidentalmente em tools/list.
+                if self._allowed_names is not None and tool_name not in self._allowed_names:
                     return func
-                wrapped = wrap_mcp_callable(func)
+                wrapped = wrap_mcp_callable(func, policy_surface=policy_surface)
                 setattr(wrapped, "__app32_tool_name__", tool_name)
-                registration_kwargs = dict(kwargs)
-                registration_kwargs["name"] = tool_name
-                decorator = self._target.tool(*args, **registration_kwargs)
                 return decorator(wrapped)
 
-            if direct_function is not None:
-                return _decorate(direct_function)
+            if args and callable(args[0]) and not kwargs:
+                return _decorate(args[0])
             return _decorate
 
         def __getattr__(self, item):
             return getattr(self._target, item)
 
-    proxy = _WrappedMCPProxy(mcp, allowed_names)
+    proxy = _WrappedMCPProxy(mcp, tool_names)
     for registrar in getattr(catalog, "mcp_registrars", ()):
         registrar(proxy)
 
@@ -389,32 +515,36 @@ def register_mcp_surface_tools(
     include_shared_registrars: bool = True,
     include_admin_diagnostics: bool = False,
     tool_names: Sequence[str] | None = None,
+    conditional_tool_names: Sequence[str] | None = None,
+    shared_registrar_tool_names: Sequence[str] | None = None,
+    unified_discovery: bool = False,
 ) -> None:
     normalized_surface = normalize_surface(surface)
     allowed_names = set(tool_names or iter_surface_tool_names(normalized_surface))
+    allowed_names.update(conditional_tool_names or ())
     tools_by_name = _tool_map()
 
     for tool_name in sorted(allowed_names):
         tool = tools_by_name.get(tool_name)
         if tool is None:
             continue
-        _register_tool(mcp, tool)
+        _register_tool(mcp, tool, policy_surface=normalized_surface)
 
     if include_shared_registrars:
-        _register_shared_registrars(mcp, allowed_names=allowed_names)
+        _register_shared_registrars(
+            mcp,
+            tool_names=(set(shared_registrar_tool_names) if shared_registrar_tool_names is not None else None),
+            policy_surface=normalized_surface,
+        )
 
-    @mcp.tool(
-        name=f"list_{normalized_surface}_app32_capabilities",
-        description=(
-            "Lista as capacidades e metadados de segurança do catálogo MCP/Sapiens "
-            f"do APP32 para a superfície {normalized_surface}."
-        ),
-    )
     def list_surface_capabilities(
         domain: str | None = None,
         include_tools: bool = True,
     ) -> dict[str, Any]:
         """Manifesto consultável por agentes para descoberta de capacidades."""
+
+        if unified_discovery:
+            return get_unified_manifest(domain=domain, include_tools=include_tools)
 
         manifest_loader = (
             _get_surface_manifest_in_app_context
@@ -428,9 +558,29 @@ def register_mcp_surface_tools(
         # Só a coorte usa filtro estático: manter o contrato de descoberta da
         # surface user normal inalterado.
         if tool_names is not None:
-            manifest_kwargs["tool_names"] = tuple(sorted(allowed_names))
+            visible_names = set(tool_names)
+            if conditional_tool_names and _has_authenticated_mcp_permission("financial.view"):
+                visible_names.update(conditional_tool_names)
+            manifest_kwargs["tool_names"] = tuple(sorted(visible_names))
             manifest_kwargs["public_scopes"] = get_surface_scope_filter(normalized_surface)
         return manifest_loader(normalized_surface, **manifest_kwargs)
+
+    # FastMCP 1.x ainda chama ``issubclass`` sobre a annotation recebida. Como
+    # este módulo usa postponed annotations, normalizar a assinatura antes de
+    # registrar evita que ``str | None`` textual derrube o tools/list.
+    list_surface_capabilities.__annotations__ = {
+        "domain": str,
+        "include_tools": bool,
+        "return": dict,
+    }
+    mcp.tool(
+        name=f"list_{normalized_surface}_app32_capabilities",
+        description=(
+            "Lista as capacidades e metadados de segurança do catálogo MCP/Sapiens "
+            + ("do conector unificado mcp-versus, com autorização revalidada por empresa na execução."
+               if unified_discovery else f"do APP32 para a superfície {normalized_surface}.")
+        ),
+    )(list_surface_capabilities)
 
     if normalized_surface == "admin" and include_admin_diagnostics:
         _register_admin_diagnostics(mcp)
@@ -520,21 +670,102 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
     return mcp
 
 
-def build_pilot_analytics_mcp_server(name: str = "GestaoVersus Pilot Analytics MCP") -> Any:
-    """Monta a coorte OAuth financeira somente-leitura e tenant-safe."""
+def build_oauth_user_mcp_server(name: str = "GestaoVersus OAuth User MCP") -> Any:
+    """Monta a coorte remota OAuth na superfície ``user`` mínima.
+
+    OAuth substitui apenas o transporte de identidade; não transforma o
+    conector remoto em atalho para domínios sensíveis. A seleção reaproveita o
+    registry e a policy canônicos, mas publica somente o subconjunto revisado
+    de operações tenant-safe. Cada chamada ainda revalida principal, grant e
+    ``company_id``.
+
+    Finance, administração e análise privilegiada exigem a surface própria e
+    o respectivo contrato de gate; não podem ser promovidos pela role de um
+    usuário nem por uma ``mcp_permissions`` vazia.
+    """
+
+    return build_pilot_user_mcp_server(name=name)
+
+
+def build_oauth_analytics_finance_mcp_server(
+    name: str = "GestaoVersus OAuth Analytics Finance MCP",
+) -> Any:
+    """Monta a coorte financeira OAuth, estritamente de leitura/análise.
+
+    A surface ``analytics`` conserva a policy canônica que bloqueia mutações.
+    O allowlist impede a descoberta acidental de todo o catálogo analítico e
+    não depende de permissão declarada pelo cliente OAuth.
+    """
+
     if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
     mcp = _build_policy_fast_mcp(
         name,
         "analytics",
-        exposed_tool_names=PILOT_ANALYTICS_TOOL_NAMES,
+        exposed_tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
     )
     register_mcp_surface_tools(
         mcp,
         "analytics",
         include_shared_registrars=True,
         include_admin_diagnostics=False,
-        tool_names=PILOT_ANALYTICS_TOOL_NAMES,
+        tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+        shared_registrar_tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+    )
+    return mcp
+
+
+def build_oauth_finance_mcp_server(name: str = "GestaoVersus OAuth Finance MCP") -> Any:
+    if FastMCP is None:  # pragma: no cover
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    mcp = _build_policy_fast_mcp(name, "finance", exposed_tool_names=PILOT_FINANCE_OPERATIONAL_TOOL_NAMES)
+    register_mcp_surface_tools(mcp, "finance", include_shared_registrars=True,
+                               include_admin_diagnostics=False, tool_names=PILOT_FINANCE_OPERATIONAL_TOOL_NAMES,
+                               shared_registrar_tool_names=PILOT_FINANCE_OPERATIONAL_TOOL_NAMES)
+    return mcp
+
+
+def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
+    """Servidor público único: ``mcp-versus`` sem promover finance a user.
+
+    A descoberta começa pelas tools user e acrescenta as privilegiadas somente
+    quando a identidade APP32/grant permite. Cada wrapper privilegiado mantém
+    sua própria surface na policy, independentemente da URL única.
+    """
+    if FastMCP is None:  # pragma: no cover
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    mcp = _build_policy_fast_mcp(
+        name,
+        "user",
+        exposed_tool_names=PILOT_USER_TOOL_NAMES,
+        conditional_tool_names=PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES,
+    )
+    register_mcp_surface_tools(
+        mcp,
+        "user",
+        include_shared_registrars=False,
+        include_admin_diagnostics=False,
+        tool_names=PILOT_USER_TOOL_NAMES,
+        unified_discovery=True,
+    )
+    tools_by_name = _tool_map()
+    for tool_name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES:
+        tool = tools_by_name.get(tool_name)
+        if tool is not None:
+            _register_tool(mcp, tool, policy_surface="analytics")
+    for tool_name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES:
+        tool = tools_by_name.get(tool_name)
+        if tool is not None:
+            _register_tool(mcp, tool, policy_surface="finance")
+    _register_shared_registrars(
+        mcp,
+        tool_names=set(PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES),
+        policy_surface="analytics",
+    )
+    _register_shared_registrars(
+        mcp,
+        tool_names=set(PILOT_FINANCE_OPERATIONAL_TOOL_NAMES),
+        policy_surface="finance",
     )
     return mcp
 
@@ -572,6 +803,12 @@ def run_user_mcp_server() -> None:
 def run_analytics_mcp_server() -> None:
     mcp = build_analytics_mcp_server()
     print("Iniciando MCP Analytics Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
+    mcp.run()
+
+
+def run_finance_mcp_server() -> None:
+    mcp = build_oauth_finance_mcp_server()
+    print("Iniciando MCP Finance Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
     mcp.run()
 
 

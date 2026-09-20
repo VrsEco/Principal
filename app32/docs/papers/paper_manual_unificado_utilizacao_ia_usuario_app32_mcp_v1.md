@@ -1,5 +1,15 @@
 # Paper — Manual Unificado de Utilização do APP32 por IA e Usuário via APP e MCP v1
 
+> **Nota de evolução OAuth — 2026-09-17:** OAuth autentica, mas não cria um
+> segundo RBAC. Em toda chamada MCP de um usuário humano, o APP32 reavalia
+> vínculo, perfil e permissões na empresa solicitada. O grant OAuth só pode
+> restringir, suspender ou revogar; nunca ampliar a autorização de negócio.
+>
+> **Evolução de surface financeira — 2026-09-17:** o espelhamento do APP32
+> não transforma a surface `user` em atalho financeiro. Operações financeiras
+> ocorrem na surface `finance`, com `company_id` explícito, RBAC reavaliado em
+> cada chamada e gate humano persistido para mutações.
+
 Status: em evolução  
 Classe: Paper
 
@@ -473,6 +483,40 @@ Por isso, o manual unificado deve ensinar que:
 - outras podem ser ensinadas pela IA, mas não executadas por ela;
 - outras podem ser executadas via MCP, desde que a surface permita;
 - sensibilidade financeira, administrativa e de governança depende da surface correta.
+
+### 9.1. Tese de operação unificada por identidade
+
+O usuário não ganha uma segunda identidade de negócio ao abrir um CLI. O
+modelo sustentável é uma mesma identidade APP32 operando por três contratos
+complementares:
+
+1. **Usuário ↔ APP32:** cadastro, vínculo de empresa e permissões do papel
+   permanecem a fonte de verdade.
+2. **CLI ↔ usuário:** OAuth/OIDC com Authorization Code + PKCE prova a
+   identidade humana para o cliente, sem copiar senha ou token para prompt.
+3. **CLI ↔ APP32:** o resource server valida o token, resolve o principal e
+   revalida o `PrincipalCompanyGrant`, `company_id`, surface e policy em cada
+   chamada.
+
+OAuth é transporte de identidade, não um segundo RBAC. A equivalência desejada
+entre APP e CLI é de **semântica de autorização**: o mesmo usuário continua
+sujeito aos mesmos vínculos empresariais, permissões e auditoria. Ela não é uma
+licença para publicar, em uma surface remota de menor privilégio, toda tool que
+exista no APP ou no stdio.
+
+O padrão de produto é: catálogo mínimo na surface `user`; dados e operações
+financeiras, administrativas ou analíticas sensíveis em surface/fluxo próprio,
+com política e gate compatíveis. O cliente pode orientar, preparar e validar
+uma operação; a execução só ocorre no canal que possua capability e aprovação
+servidor válidas.
+
+### 9.2. Leitura financeira privilegiada
+
+Consulta financeira por IA é uma jornada analítica, não extensão da surface
+`user`. Ela deve usar uma conexão OAuth separada para `analytics`, com
+`company_id` explícito, grant ativo e RBAC `financial.read`. O catálogo é
+allowlisted e somente leitura; preparar ou importar dados não autoriza criar,
+editar, liquidar ou excluir lançamentos.
 
 ### Princípio MCP First
 
@@ -1343,3 +1387,17 @@ Este paper cumpre seu papel quando gerar, no mínimo:
 4. um caminho explícito para consumo por IA e por MCP.
 
 Quando isso acontecer, o tema deixa de estar apenas em amadurecimento conceitual e passa a exigir congelamento formal da estrutura oficial.
+
+## 19. Hipótese de experiência — um conector, autorização composta
+
+Para a pessoa que opera o APP32, o conector chama-se `mcp-versus`,
+independentemente de ela estar consultando projetos, processos ou finanças. A
+especialização deve permanecer no servidor: cada tool declara seu domínio,
+surface, risco, `company_id` e gate; o cliente não vira um mosaico de nomes
+como `mcp-versus-finance`.
+
+A entrega foi materializada em 18/09/2026 no endpoint canônico
+`/mcp/pilot/`: ele compõe apenas as tools autorizadas ao principal, sem
+transformar `user` em surface financeira e sem perder scopes, auditoria ou
+isolamento cross-tenant. Aliases por domínio continuam artefatos técnicos de
+compatibilidade, nunca instrução para usuários.

@@ -152,7 +152,7 @@ def main():
                         cursor.execute("SELECT version_num FROM alembic_version")
                         heads = sorted(row[0] for row in cursor.fetchall())
                         full_chain_head = ",".join(heads)
-                        if heads != ["20260916_1000"]:
+                        if heads != ["20260917_1000"]:
                             raise RuntimeError(f"unexpected Alembic heads: {heads}")
                         cursor.execute(
                             """
@@ -204,9 +204,9 @@ def main():
                         "CREATE TABLE alembic_version "
                         "(version_num VARCHAR(32) NOT NULL PRIMARY KEY)"
                     )
-                    cursor.execute(
+                    cursor.executemany(
                         "INSERT INTO alembic_version(version_num) VALUES (%s)",
-                        ("20260913_1500",),
+                        [("20260913_1500",), ("20260916_1000",)],
                     )
                 conn.commit()
             finally:
@@ -249,7 +249,7 @@ def main():
                         cursor.execute("SELECT version_num FROM alembic_version")
                         heads = sorted(row[0] for row in cursor.fetchall())
                         deployment_replay_head = ",".join(heads)
-                        if heads != ["20260916_1000"]:
+                        if heads != ["20260917_1000"]:
                             deployment_replay_code = 2
                         cursor.execute(
                             """

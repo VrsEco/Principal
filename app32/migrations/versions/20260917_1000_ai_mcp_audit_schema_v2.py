@@ -4,8 +4,8 @@ Legacy rows and metadata are preserved. No parsing of untrusted legacy metadata.
 """
 from alembic import op
 
-revision = "20260916_1000"
-down_revision = "20260913_1500"
+revision = "20260917_1000"
+down_revision = ("20260913_1500", "20260916_1000")
 branch_labels = None
 depends_on = None
 

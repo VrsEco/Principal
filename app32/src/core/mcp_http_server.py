@@ -48,9 +48,11 @@ from src.core.mcp_http_auth import (  # noqa: E402
 from src.core.mcp_surface_registry import (  # noqa: E402
     build_admin_mcp_server,
     build_analytics_mcp_server,
+    build_oauth_analytics_finance_mcp_server,
+    build_oauth_finance_mcp_server,
+    build_oauth_unified_mcp_server,
     build_ops_mcp_server,
-    build_pilot_analytics_mcp_server,
-    build_pilot_user_mcp_server,
+    build_oauth_user_mcp_server,
     build_user_mcp_server,
 )
 try:  # compatibilidade com o pacote MCP usado por testes legados locais
@@ -122,7 +124,15 @@ def _pilot_user_mount_enabled() -> bool:
 
 
 def _pilot_analytics_mount_enabled() -> bool:
-    return _env_flag("APP32_MCP_OIDC_PILOT_ANALYTICS_ROUTE_ENABLED", False)
+    return _env_flag("APP32_MCP_OIDC_ANALYTICS_ROUTE_ENABLED", False)
+
+
+def _pilot_finance_mount_enabled() -> bool:
+    return _env_flag("APP32_MCP_OIDC_FINANCE_ROUTE_ENABLED", False)
+
+
+def _pilot_unified_mount_enabled() -> bool:
+    return _env_flag("APP32_MCP_OIDC_UNIFIED_ROUTE_ENABLED", False)
 
 
 def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, mount_path: str | None = None):
@@ -134,7 +144,7 @@ def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, m
     """
     if surface == "user":
         mcp = (
-            build_pilot_user_mcp_server(name="GestaoVersus Pilot User Remote MCP")
+            build_oauth_user_mcp_server(name="GestaoVersus OAuth User Remote MCP")
             if oauth_enabled is True and mount_path == "/mcp/pilot/user"
             else build_user_mcp_server(name="GestaoVersus User Remote MCP")
         )
@@ -142,10 +152,14 @@ def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, m
         mcp = build_admin_mcp_server(name="GestaoVersus Admin Remote MCP")
     elif surface == "analytics":
         mcp = (
-            build_pilot_analytics_mcp_server(name="GestaoVersus Pilot Analytics Remote MCP")
+            build_oauth_analytics_finance_mcp_server(
+                name="GestaoVersus OAuth Analytics Finance Remote MCP"
+            )
             if oauth_enabled is True and mount_path == "/mcp/pilot/analytics"
             else build_analytics_mcp_server(name="GestaoVersus Analytics Remote MCP")
         )
+    elif surface == "finance":
+        mcp = build_oauth_finance_mcp_server(name="GestaoVersus OAuth Finance Remote MCP")
     elif surface == "ops":
         mcp = build_ops_mcp_server(name="GestaoVersus Ops Remote MCP")
     else:  # pragma: no cover - proteção defensiva
@@ -177,6 +191,36 @@ def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, m
     return app
 
 
+def build_unified_http_app():
+    """Monta o endpoint público único, mantendo as surfaces por tool."""
+    mcp = build_oauth_unified_mcp_server(name="GestaoVersus OAuth MCP")
+    mcp.settings.host = DEFAULT_HOST
+    mcp.settings.port = DEFAULT_PORT
+    transport_security = _build_transport_security_settings()
+    if transport_security is not None:
+        mcp.settings.transport_security = transport_security
+    mcp.settings.streamable_http_path = "/"
+    mcp.settings.mount_path = "/"
+    mcp.settings.stateless_http = DEFAULT_STATELESS_HTTP
+    public_path = "/mcp/pilot"
+    # O transporte autentica a conexão como user; wrappers de tool aplicam
+    # analytics/finance e os respectivos scopes antes da execução.
+    mcp.settings.auth = build_auth_settings(
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{public_path}",
+        surface="user",
+        oauth_enabled=True,
+    )
+    mcp._token_verifier = App32MCPTokenVerifier(surface="user", oauth_enabled=True)  # noqa: SLF001
+    app = mcp.streamable_http_app()
+    app.add_middleware(
+        App32MCPRequestContextMiddleware,
+        surface="user",
+        oauth_enabled=True,
+        resource_path=public_path,
+    )
+    return app
+
+
 async def _healthz(_: Request) -> JSONResponse:
     oauth_preparation = build_oauth_preparation(base_url=DEFAULT_PUBLIC_BASE_URL)
     return JSONResponse(
@@ -189,6 +233,8 @@ async def _healthz(_: Request) -> JSONResponse:
                 "user": _surface_mount_path("user"),
                 "admin": _surface_mount_path("admin"),
                 "analytics": _surface_mount_path("analytics"),
+                **({"pilot_finance": "/mcp/pilot/finance"} if _pilot_finance_mount_enabled() else {}),
+                **({"pilot": "/mcp/pilot"} if _pilot_unified_mount_enabled() else {}),
                 "ops": _surface_mount_path("ops"),
                 **({"pilot_user": "/mcp/pilot/user"} if _pilot_user_mount_enabled() else {}),
                 **({"pilot_analytics": "/mcp/pilot/analytics"} if _pilot_analytics_mount_enabled() else {}),
@@ -224,11 +270,7 @@ async def _index(_: Request) -> JSONResponse:
                 "analytics": f"{base}{_surface_mount_path('analytics')}",
                 "ops": f"{base}{_surface_mount_path('ops')}",
                 **({"pilot_user": f"{base}/mcp/pilot/user"} if _pilot_user_mount_enabled() else {}),
-                **(
-                    {"pilot_analytics": f"{base}/mcp/pilot/analytics"}
-                    if _pilot_analytics_mount_enabled()
-                    else {}
-                ),
+                **({"pilot_analytics": f"{base}/mcp/pilot/analytics"} if _pilot_analytics_mount_enabled() else {}),
             },
             "requirements": {
                 "authorization": "Bearer token (MVP interno) / OAuth (preparação de arquitetura).",
@@ -239,24 +281,20 @@ async def _index(_: Request) -> JSONResponse:
     )
 
 
-async def _pilot_oauth_protected_resource(request: Request) -> JSONResponse:
-    """Publica RFC 9728 somente para as rotas OAuth isoladas do piloto.
+async def _pilot_oauth_protected_resource(_: Request) -> JSONResponse:
+    """Publica RFC 9728 apenas para a rota OAuth isolada do piloto.
 
     A resposta é deliberadamente montada da configuração server-side que já
     criou o resource server. Não aceita issuer, audience ou escopos da URL,
     evitando que a descoberta OAuth se torne uma fonte de redirecionamento.
     """
-    is_analytics = request.url.path.endswith("/mcp/pilot/analytics")
-    if (is_analytics and not _pilot_analytics_mount_enabled()) or (
-        not is_analytics and not _pilot_user_mount_enabled()
-    ):
+    if not _pilot_user_mount_enabled():
         return JSONResponse({"error": "not_found"}, status_code=404)
 
-    pilot_path = "/mcp/pilot/analytics" if is_analytics else "/mcp/pilot/user"
-    surface = "analytics" if is_analytics else "user"
+    pilot_path = "/mcp/pilot/user"
     auth_settings = build_auth_settings(
         base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{pilot_path}",
-        surface=surface,
+        surface="user",
         oauth_enabled=True,
     )
     if auth_settings is None:  # pragma: no cover - defesa para contratos futuros
@@ -269,7 +307,66 @@ async def _pilot_oauth_protected_resource(request: Request) -> JSONResponse:
             # descoberta OAuth em 500 no runtime real.
             "resource": str(auth_settings.resource_server_url),
             "authorization_servers": [str(auth_settings.issuer_url)],
-            "scopes_supported": ["mcp:access", "mcp:analytics" if is_analytics else "mcp:user"],
+            "scopes_supported": ["mcp:access", "mcp:user"],
+            "bearer_methods_supported": ["header"],
+        }
+    )
+
+
+async def _pilot_analytics_oauth_protected_resource(_: Request) -> JSONResponse:
+    """Publica metadata OAuth da coorte analítica financeira isolada."""
+    if not _pilot_analytics_mount_enabled():
+        return JSONResponse({"error": "not_found"}, status_code=404)
+
+    pilot_path = "/mcp/pilot/analytics"
+    auth_settings = build_auth_settings(
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{pilot_path}",
+        surface="analytics",
+        oauth_enabled=True,
+    )
+    if auth_settings is None:  # pragma: no cover
+        return JSONResponse({"error": "oauth_configuration_error"}, status_code=503)
+    return JSONResponse(
+        {
+            "resource": str(auth_settings.resource_server_url),
+            "authorization_servers": [str(auth_settings.issuer_url)],
+            "scopes_supported": ["mcp:access", "mcp:analytics"],
+            "bearer_methods_supported": ["header"],
+        }
+    )
+
+
+async def _pilot_finance_oauth_protected_resource(_: Request) -> JSONResponse:
+    if not _pilot_finance_mount_enabled():
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    auth_settings = build_auth_settings(
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}/mcp/pilot/finance",
+        surface="finance", oauth_enabled=True,
+    )
+    if auth_settings is None:  # pragma: no cover
+        return JSONResponse({"error": "oauth_configuration_error"}, status_code=503)
+    return JSONResponse({"resource": str(auth_settings.resource_server_url),
+                         "authorization_servers": [str(auth_settings.issuer_url)],
+                         "scopes_supported": ["mcp:access", "mcp:finance"],
+                         "bearer_methods_supported": ["header"]})
+
+
+async def _pilot_unified_oauth_protected_resource(_: Request) -> JSONResponse:
+    if not _pilot_unified_mount_enabled():
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    pilot_path = "/mcp/pilot"
+    auth_settings = build_auth_settings(
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{pilot_path}",
+        surface="user",
+        oauth_enabled=True,
+    )
+    if auth_settings is None:  # pragma: no cover
+        return JSONResponse({"error": "oauth_configuration_error"}, status_code=503)
+    return JSONResponse(
+        {
+            "resource": str(auth_settings.resource_server_url),
+            "authorization_servers": [str(auth_settings.issuer_url)],
+            "scopes_supported": ["mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"],
             "bearer_methods_supported": ["header"],
         }
     )
@@ -286,6 +383,8 @@ def create_http_app() -> Starlette:
         if _pilot_analytics_mount_enabled()
         else None
     )
+    pilot_finance_app = build_surface_http_app("finance", oauth_enabled=True, mount_path="/mcp/pilot/finance") if _pilot_finance_mount_enabled() else None
+    pilot_unified_app = build_unified_http_app() if _pilot_unified_mount_enabled() else None
 
     @asynccontextmanager
     async def lifespan(app: Starlette):
@@ -299,6 +398,10 @@ def create_http_app() -> Starlette:
                 surface_apps += (pilot_user_app,)
             if pilot_analytics_app is not None:
                 surface_apps += (pilot_analytics_app,)
+            if pilot_finance_app is not None:
+                surface_apps += (pilot_finance_app,)
+            if pilot_unified_app is not None:
+                surface_apps += (pilot_unified_app,)
             for surface_app in surface_apps:
                 await stack.enter_async_context(surface_app.router.lifespan_context(surface_app))
             yield
@@ -320,18 +423,22 @@ def create_http_app() -> Starlette:
             [
                 Route(
                     "/.well-known/oauth-protected-resource/mcp/pilot/analytics",
-                    endpoint=_pilot_oauth_protected_resource,
+                    endpoint=_pilot_analytics_oauth_protected_resource,
                 )
             ]
             if pilot_analytics_app is not None
             else []
         ),
+        *([Route("/.well-known/oauth-protected-resource/mcp/pilot/finance", endpoint=_pilot_finance_oauth_protected_resource)] if pilot_finance_app is not None else []),
+        *([Route("/.well-known/oauth-protected-resource/mcp/pilot", endpoint=_pilot_unified_oauth_protected_resource)] if pilot_unified_app is not None else []),
         Mount(_surface_mount_path("user"), app=user_app),
         Mount(_surface_mount_path("admin"), app=admin_app),
         Mount(_surface_mount_path("analytics"), app=analytics_app),
         Mount(_surface_mount_path("ops"), app=ops_app),
         *([Mount("/mcp/pilot/user", app=pilot_user_app)] if pilot_user_app is not None else []),
         *([Mount("/mcp/pilot/analytics", app=pilot_analytics_app)] if pilot_analytics_app is not None else []),
+        *([Mount("/mcp/pilot/finance", app=pilot_finance_app)] if pilot_finance_app is not None else []),
+        *([Mount("/mcp/pilot", app=pilot_unified_app)] if pilot_unified_app is not None else []),
     ]
     return Starlette(debug=False, routes=routes, lifespan=lifespan)
 

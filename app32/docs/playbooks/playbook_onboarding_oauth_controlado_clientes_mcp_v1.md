@@ -1,5 +1,10 @@
 # Playbook — Onboarding OAuth controlado para clientes MCP
 
+> **Gate adicional — 2026-09-17:** antes de aprovar uma coorte, testar a
+> revogação no APP32 com o mesmo token OAuth ainda válido. A remoção de vínculo
+> ou permissão deve negar a próxima chamada MCP; `mcp_permissions` não pode
+> restaurar esse acesso.
+
 **Classe documental:** Playbook
 **Status:** vigente para coortes controladas
 **Data:** 2026-09-11
@@ -11,8 +16,15 @@
 O acesso remoto não é aberto por URL, token compartilhado ou `company_id`
 informado pelo cliente. Cada conexão é autorizada pela interseção de identidade
 OAuth, client OAuth permitido, scopes, surface, `PrincipalCompanyGrant` e policy
-da tool. O piloto produtivo usa somente a surface `user` em
-`/mcp/pilot/user`.
+da tool. O conector produtivo usa o endpoint canônico `/mcp/pilot/`, com
+catálogo calculado por principal, permissões APP32, grant e scopes OAuth.
+
+Para caso de uso financeiro, há coorte controlada em `/mcp/pilot/finance/`,
+com scope `mcp:finance`, `company_id` explícito e aprovação humana persistida
+antes de qualquer mutação. A coorte financeira não amplia o perfil APP32:
+apenas projeta no MCP as permissões efetivas já existentes para o mesmo
+usuário. Ela não recebe nome público próprio: o nome exibido ao usuário é
+sempre `mcp-versus`.
 
 Este playbook é para **USER + Authorization Code com PKCE S256**. SERVICE e
 AGENT exigem entrega e playbook próprios; não reutilizam conta humana nem o
@@ -20,8 +32,8 @@ client público desta jornada.
 
 ## Pré-requisitos de entrada
 
-1. O caso de uso é leitura operacional e cabe na surface `user`; não inclui
-   `finance` sensível, `admin`, `analytics` ou `ops`.
+1. O caso de uso cabe no catálogo revisado da surface `user`; não inclui
+   `finance` sensível, mutação financeira, `admin`, `analytics` ou `ops`.
 2. Há responsável de negócio, usuário humano identificável, empresa(s) alvo e
    runtime MCP compatível com OAuth remoto.
 3. O cliente OAuth e seus redirect URIs foram revisados. Para CLI/desktop,
@@ -44,16 +56,24 @@ client público desta jornada.
 
 ## Parâmetros do piloto atual
 
-- URL MCP: `https://app.gestaoversus.com.br/mcp/pilot/user/`.
-- Discovery do recurso: `/.well-known/oauth-protected-resource/mcp/pilot/user`.
+- URL MCP: `https://app.gestaoversus.com.br/mcp/pilot/`.
+- Discovery do recurso: `/.well-known/oauth-protected-resource/mcp/pilot`.
 - Issuer: `https://id.gestaoversus.com.br/realms/app32`.
 - Audience: `app32-mcp-resource`.
-- Scopes mínimos: `mcp:access` e `mcp:user`.
-- Catálogo piloto: `list_user_app32_capabilities`, `get_company_profile`,
-  `list_meetings`, `list_projects` e `list_project_tasks_secure`.
+- Scopes: `mcp:access`, `mcp:user`; adicionar `mcp:analytics` e/ou
+  `mcp:finance` somente quando o caso de uso e o RBAC APP32 exigirem.
+- Catálogo remoto `user`: `list_user_app32_capabilities`,
+  `get_company_profile`, `list_meetings`, `list_projects` e
+  `list_project_tasks_secure`.
 
 Esses parâmetros não concedem acesso sozinhos. O `company_id` requerido pela
 tool é revalidado contra o grant do principal a cada chamada.
+
+As permissões APP32 do usuário são resolvidas no runtime. Quando existir,
+`PrincipalCompanyGrant.mcp_permissions` atua somente como teto: lista vazia não
+eleva nada; lista preenchida reduz por interseção. Esse mecanismo não promove
+tools financeiras para `user` e não substitui o contrato de uma surface
+privilegiada.
 
 ## Conector Codex no APP32
 
@@ -129,3 +149,21 @@ substitui a distribuição pública nem autoriza convite de clientes externos.
   deve ser anunciado como OAuth remoto.
 - Este playbook não autoriza habilitar nova rota, client, redirect URI, grant
   produtivo ou deploy sem card, revisão e autorização operacional apropriados.
+
+## Complemento: coorte financeira analytics
+
+Para consulta financeira aprovada, a coorte usa
+`https://app.gestaoversus.com.br/mcp/pilot/analytics/`. Ela requer
+`mcp:access`, `mcp:analytics`, grant explícito e `financial.read` no APP32. O
+catálogo é somente leitura; não usar esta coorte para criar, editar, importar,
+liquidar ou excluir dados financeiros. Não instruir usuários a criar aliases
+como `mcp-versus-analytics`: `mcp-versus` é o nome público canônico.
+
+
+### Correção de discovery unificada — AA.J.21.332 (2026-09-18)
+
+- No endpoint `/mcp/pilot/`, `list_user_app32_capabilities` mantém o nome por compatibilidade, mas descreve as ferramentas publicadas pelo conector unificado, incluindo o filtro `domain=finance`. Nos endpoints segmentados seu significado permanece restrito à respectiva surface.
+- `tools/list` e manifesto compartilham a seleção de ferramentas privilegiadas por scope OAuth e permissão específica da capability. `financial.view` não equivale a `financial.create`.
+- O catálogo indica discovery, não autorização definitiva: cada execução revalida empresa/grant/RBAC e mutações com human gate exigem aprovação persistida. Scopes do manifesto são metadados do catálogo, não os claims do token.
+- Critério de regressão: igualdade entre tools expostas e manifesto (exceto a própria tool de capabilities), filtro financeiro com leitura versus criação, token sem scope, teto de grant e isolamento tenant.
+- Não declarar paridade integral com todas as funções do APP32: a publicação remota continua limitada à coorte revisada. Homologação real da sessão cliente permanece obrigatória; testes simulados não a substituem.

@@ -141,4 +141,3 @@ def test_verifier_fetches_real_jwks_over_verified_loopback_https(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
-

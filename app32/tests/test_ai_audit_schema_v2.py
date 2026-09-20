@@ -9,14 +9,14 @@ from src.intelligence.audit import (
 
 
 def test_migration_matches_contract_and_preserves_legacy(monkeypatch):
-    path = Path(__file__).parents[1] / "migrations/versions/20260916_1000_ai_mcp_audit_schema_v2.py"
+    path = Path(__file__).parents[1] / "migrations/versions/20260917_1000_ai_mcp_audit_schema_v2.py"
     spec = importlib.util.spec_from_file_location("audit_v2_migration", path)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
     statements = []
     monkeypatch.setattr(migration, "op", SimpleNamespace(execute=statements.append))
     migration.upgrade()
-    assert migration.down_revision == "20260913_1500"
+    assert migration.down_revision == ("20260913_1500", "20260916_1000")
     assert set(migration.INDEXES) == set(build_ai_execution_audit_persistence_plan().required_indexes)
     assert set(migration.NEW_COLUMNS) <= set(build_ai_execution_audit_persistence_plan().required_columns)
     assert "CREATE TABLE IF NOT EXISTS" in statements[0]

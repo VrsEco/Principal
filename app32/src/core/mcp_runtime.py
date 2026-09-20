@@ -162,8 +162,40 @@ def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
                     normalized.append(permission_key)
         return tuple(normalized)
     if isinstance(raw_permissions, (list, tuple, set, frozenset)):
-        return tuple(str(item).strip().lower() for item in raw_permissions if str(item).strip())
+        normalized: list[str] = []
+        for item in raw_permissions:
+            permission = str(item).strip().lower()
+            if not permission:
+                continue
+            resource = permission.split(".", 1)[0]
+            if resource and resource not in normalized:
+                normalized.append(resource)
+            if permission not in normalized:
+                normalized.append(permission)
+        return tuple(normalized)
     return (str(raw_permissions).strip().lower(),) if str(raw_permissions).strip() else ()
+
+
+def _intersect_mcp_permission_ceiling(
+    app32_permissions: tuple[str, ...],
+    grant_permissions: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Aplica o teto opcional do grant sem nunca elevar o RBAC do APP32.
+
+    ``*`` representa somente a semântica já existente do APP32 para os perfis
+    cliente/administrador dentro de empresa vinculada. Não elimina nenhuma
+    outra barreira MCP; se o grant declarar um teto, o curinga é reduzido aos
+    átomos explicitamente permitidos.
+    """
+
+    app32 = tuple(dict.fromkeys(app32_permissions))
+    ceiling = tuple(dict.fromkeys(grant_permissions))
+    if not ceiling:
+        return app32
+    if "*" in app32:
+        return ceiling
+    allowed = set(app32)
+    return tuple(permission for permission in ceiling if permission in allowed)
 
 
 @dataclass(frozen=True)
@@ -246,20 +278,39 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         # do processo ou headers. SERVICE/AGENT continuam sem user sintético.
         user_id = _coerce_optional_int(getattr(grant_decision.principal, "user_id", None))
         resolved_company_id = grant_decision.company_id
+        trusted_runtime_identity: dict[str, Any] = {}
         if user_id is not None:
             trusted_runtime_identity = resolve_runtime_identity(
                 user_id=user_id,
                 company_id=resolved_company_id,
             )
+            if resolved_company_id not in _coerce_optional_int_list(
+                trusted_runtime_identity.get("accessible_company_ids")
+            ):
+                raise PermissionError(
+                    "principal grant negado: usuário APP32 sem vínculo ativo com a empresa"
+                )
             employee_id = _coerce_optional_int(trusted_runtime_identity.get("employee_id"))
         accessible_company_ids = (resolved_company_id,) if resolved_company_id is not None else ()
         disable_company_fallback = True
         company_resolution_source = "principal_company_grant"
-        role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
-        # Permissões legadas não são evidência de autorização do principal. A
-        # policy recebe apenas o papel/grant até a interseção explícita com
-        # capabilities e scopes ser introduzida na próxima entrega.
-        permissions: tuple[str, ...] = ()
+        # Para USER, APP32 é a fonte de verdade de role e permissões a cada
+        # chamada. O grant OAuth apenas vincula/revoga o tenant e, quando
+        # preenchido, restringe o acesso por interseção; ele jamais o amplia.
+        if user_id is not None:
+            role = str(trusted_runtime_identity.get("role") or "colaborador").strip().lower() or "colaborador"
+            app32_permissions = _normalize_permissions(trusted_runtime_identity.get("permissions"))
+            if bool(trusted_runtime_identity.get("has_full_app32_permissions")):
+                app32_permissions = ("*", *app32_permissions)
+            permissions = _intersect_mcp_permission_ceiling(
+                app32_permissions,
+                _normalize_permissions(getattr(grant_decision, "mcp_permissions", ())),
+            )
+        else:
+            # SERVICE/AGENT não possuem RBAC humano a espelhar. Para eles o
+            # grant explícito continua sendo a autoridade de permissões.
+            role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
+            permissions = _normalize_permissions(getattr(grant_decision, "mcp_permissions", ()))
         principal_grant_enforced = True
     else:
         if user_id:
@@ -348,7 +399,17 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
     )
 
 
-def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
+def wrap_mcp_callable(
+    callback: Callable[..., Any],
+    *,
+    policy_surface: str | None = None,
+) -> Callable[..., Any]:
+    """Envolve uma tool preservando a surface efetiva da capability.
+
+    Um conector público pode agregar tools de superfícies distintas. O nome do
+    conector não é uma autorização: a policy continua sendo avaliada na
+    surface da própria tool, passada exclusivamente pelo registry do servidor.
+    """
     @wraps(callback)
     def _wrapped(*args: Any, **kwargs: Any) -> Any:
         from app import create_app
@@ -393,7 +454,7 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
             # de consumir um registro persistido exatamente vinculado à ação.
             policy_request = ToolPolicyRequest(
                 tool_name=tool_name,
-                surface=str(execution_context.metadata.get("surface") or "user"),
+                surface=str(policy_surface or execution_context.metadata.get("surface") or "user"),
                 domain=getattr(capability, "domain", None),
                 action=action,
                 risk=getattr(getattr(capability, "risk", None), "value", "medium"),
@@ -409,7 +470,12 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                 _emit_mcp_policy_audit(policy_source, policy_request, payload,
                                        allowed=False, reason=initial_decision.reason)
             if _policy_requires_persisted_approval(initial_decision):
-                from services.tool_approval_service import ToolApprovalBinding, ToolApprovalBindingError, tool_approval_service
+                from services.tool_approval_service import (
+                    ToolApprovalBinding,
+                    ToolApprovalBindingError,
+                    tool_approval_request_service,
+                    tool_approval_service,
+                )
 
                 try:
                     approval_binding = ToolApprovalBinding.from_execution(
@@ -423,9 +489,37 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                     raise PermissionError(f"aprovação persistida indisponível: {exc}") from exc
                 approval_decision = tool_approval_service.authorize_and_consume(approval_binding)
                 if not approval_decision.allowed:
+                    # O MCP não pode aceitar confirmação enviada pelo CLI. A
+                    # primeira tentativa cria (ou reaproveita) uma aprovação
+                    # persistida no APP32, vinculada ao payload exato. Após a
+                    # aprovação humana, o usuário repete a mesma chamada.
+                    try:
+                        approval_request = tool_approval_request_service.request(
+                            approval_binding,
+                            reason=initial_decision.reason,
+                            channel=execution_context.channel,
+                            thread_id=execution_context.thread_id,
+                        )
+                    except Exception as exc:
+                        _emit_mcp_policy_audit(
+                            policy_source,
+                            policy_request,
+                            payload,
+                            allowed=False,
+                            reason="falha ao registrar aprovação humana persistida",
+                        )
+                        raise PermissionError("falha ao registrar aprovação humana persistida") from exc
                     _emit_mcp_policy_audit(policy_source, policy_request, payload,
-                                           allowed=False, reason=approval_decision.reason)
-                    raise PermissionError(approval_decision.reason)
+                                           allowed=False,
+                                           reason=(
+                                               f"aprovação humana necessária: solicitação "
+                                               f"#{approval_request.approval_request_id}"
+                                           ))
+                    raise PermissionError(
+                        f"aprovação humana necessária no APP32: solicitação "
+                        f"#{approval_request.approval_request_id}. "
+                        "Após aprová-la, repita exatamente a mesma chamada."
+                    )
                 policy_request = ToolPolicyRequest(
                     **{
                         **policy_request.__dict__,

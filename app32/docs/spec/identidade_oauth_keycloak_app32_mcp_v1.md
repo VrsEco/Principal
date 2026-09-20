@@ -1,5 +1,12 @@
 # SPEC — Identidade OAuth/OIDC e implantação Keycloak APP32/MCP
 
+> **Correção normativa — 2026-09-17:** para principais `USER`, role e
+> permissões são projetados da identidade APP32 viva por `company_id` em cada
+> chamada. `mcp_permissions` vazio preserva essa projeção; preenchido é teto
+> por interseção. Grant não sobrevive a vínculo APP32 removido. Mutações
+> financeiras continuam dependentes de surface contratada, `company_id`
+> explícito, idempotência, pré-validação e aprovação humana persistida.
+
 **Classe:** SPEC
 **Data:** 2026-09-07
 **Status:** arquitetura-alvo implantada em coorte produtiva controlada; expansão de clientes permanece governada
@@ -8,6 +15,49 @@
 **Origem:** [histórico aprovado](https://chatgpt.com/share/6a9f1148-baec-83e9-9ad4-0fce7f197e17?ogimg=plain).
 
 ## 1. Limites e conclusão
+
+### Decisão oficial de unificação RBAC — 2026-09-16
+
+`mcp-versus` é o nome público do conector remoto OAuth. OAuth/OIDC autentica o
+usuário, mas não cria um catálogo paralelo nem concede permissões de negócio.
+Para cada `tools/call`, o APP32 resolve o vínculo externo, o
+`PrincipalCompanyGrant` ativo, o `company_id` solicitado e as permissões
+efetivas do papel APP32. O campo opcional `PrincipalCompanyGrant.mcp_permissions`
+é exclusivamente um **teto restritivo**: vazio significa “sem teto adicional”;
+preenchido significa interseção com o RBAC APP32; jamais amplia uma permissão.
+
+Essa unificação não altera a segregação de surfaces. A rota pública OAuth
+`/mcp/pilot/user/` publica somente o catálogo revisado, tenant-safe e de menor
+privilégio. Ela não expõe `finance` sensível, mutação financeira, `admin` ou
+`analytics`, mesmo que o usuário tenha uma permissão equivalente no APP32 ou
+no transporte legado. Esses casos exigem uma surface/contrato próprio, policy
+canônica, auditoria e gate humano quando aplicável. `tools/list` é conveniência;
+o controle definitivo continua em cada chamada com `company_id` explícito.
+
+O modelo operacional passa a ser: **Usuário ↔ APP32** (papel e memberships),
+**CLI ↔ usuário** (Authorization Code + PKCE) e **CLI ↔ APP32** (JWT, grant,
+surface, capability, tenant e gate). Nenhuma credencial OAuth, senha ou token
+é copiada para configuração, prompt, card ou log.
+
+### Decisão de leitura financeira OAuth — 2026-09-16
+
+Quando habilitada por coorte, a leitura financeira remota usa exclusivamente
+`/mcp/pilot/analytics/`, scopes `mcp:access` e `mcp:analytics`, e catálogo
+allowlisted de regras de automação, catálogo, regras de classificação e
+lançamentos. A surface `analytics` é somente leitura/análise; mutação financeira
+continua fora desta coorte. O usuário precisa de grant da empresa e permissão
+APP32 `financial.read`; `mcp_permissions`, se presente, apenas restringe.
+
+### Decisão de operação financeira OAuth — 2026-09-17
+
+Operações financeiras com a mesma autorização efetiva do usuário APP32 usam a
+surface canônica `/mcp/pilot/finance/`, scope `mcp:finance` e capability
+canônica. `company_id` é obrigatório na assinatura da tool, a identidade e o
+vínculo APP32 são reavaliados a cada chamada e `mcp_permissions` continua sendo
+somente teto restritivo. Mutações não aceitam confirmação do cliente: a primeira
+tentativa cria (ou reutiliza) um `AgentAction` persistido, vinculado ao principal,
+tenant, tool e digest do payload; após aprovação humana no APP32, a mesma chamada
+é executada uma única vez. A surface `user` não publica domínio financeiro.
 
 ### Atualização de produção — 2026-09-10
 
@@ -25,18 +75,6 @@ O playbook de ingresso de clientes está em
 `docs/playbooks/playbook_onboarding_oauth_controlado_clientes_mcp_v1.md`.
 Ele não libera coortes, clients OAuth, redirects, grants ou surfaces novos por
 si só.
-
-### Coorte analytics — 2026-09-17
-
-`/mcp/pilot/analytics` é uma coorte OAuth distinta de `/mcp/analytics`,
-habilitada somente por `APP32_MCP_OIDC_PILOT_ANALYTICS_ROUTE_ENABLED=1`.
-O catálogo externo é fixo e somente-leitura: `list_financial_catalog_items`,
-`list_financial_automation_rules`, `list_financial_classification_rules` e
-`list_financial_entries`. Cada chamada exige `company_id`, grant ativo do
-principal e `financial.view`; nenhuma tool de criação, edição, importação,
-liquidação ou exclusão é publicada. `tools/list` e o manifesto de
-capabilities devem ser idênticos para essa coorte; divergência bloqueia o
-rollout.
 
 Auditoria estática do checkout `codex/process-artifacts-runtime`, HEAD `e3acd8d642c88efc2595632f8a0cc749ee2c6933`. Não representa inspeção da branch principal remota nem certificação da produção. “Principal” foi interpretado como o contrato `PrincipalContext`, efetivamente encontrado no código. Alterações preexistentes do usuário foram preservadas.
 
@@ -424,7 +462,7 @@ Próxima entrega técnica: R01. Não iniciar R05 por haver verifier e 95 testes 
 
 ## 15. Decisão operacional — conector público `mcp-versus`
 
-A partir de 2026-09-12, `mcp-versus` é o único nome público do servidor MCP remoto da Gestão Versus. Ele não é `client_id`, tenant nem papel de autorização. Todos os clientes conectam-se ao mesmo resource server `https://app.gestaoversus.com.br/mcp/pilot/user/`; a resolução de `company_id` continua posterior ao login e depende do grant persistido do principal.
+A partir de 2026-09-18, `mcp-versus` é o único nome público do servidor MCP remoto da Gestão Versus. Ele não é `client_id`, tenant nem papel de autorização. A instalação padrão conecta-se ao resource server canônico `https://app.gestaoversus.com.br/mcp/pilot/`; a resolução de `company_id` continua posterior ao login e depende do grant persistido do principal.
 
 Clientes OAuth públicos são separados somente para restringir redirects e facilitar revogação por plataforma:
 
@@ -434,74 +472,18 @@ Clientes OAuth públicos são separados somente para restringir redirects e faci
 
 O client legado `app32-mcp-pilot` permanece apenas para compatibilidade da coorte Codex já conectada. Novas telas e instruções não devem expor `app32-mcp` como nome de conexão. OAuth inválido nunca recua silenciosamente para token pessoal; o modo token é legado/controlado e visivelmente separado.
 
-### 15.1 Contrato OAuth do plugin público Gestão Versus para ChatGPT
+### 15.1 Nome público não é surface
 
-O plugin público não cria uma nova fronteira de tenant nem uma surface paralela.
-ChatGPT e Codex são hosts OAuth distintos que consomem o mesmo resource server
-`https://app.gestaoversus.com.br/mcp/pilot/user/`; o MVP comercial publica
-somente a surface `user`.
+`mcp-versus` é o único nome que o usuário deve ver ou copiar. `finance`,
+`analytics`, `admin` e `user` são **surfaces internas de autorização**: elas
+definem catálogo, scope, RBAC, tenant e gate por tool; não são produtos nem
+nomes de conectores para o cliente.
 
-A autorização do usuário segue Authorization Code + PKCE S256. O APP32 valida,
-a cada request, assinatura, `iss`, `aud`, expiração, `mcp:access`, `mcp:user`,
-principal ativo e `PrincipalCompanyGrant` do `company_id` efetivo. Não há
-default tenant no client OAuth, token de instalação, URL, manifesto de plugin
-ou redirect. Uma tool de descoberta pode listar empresas elegíveis sem empresa
-prévia; qualquer leitura ou mutação com empresa exige grant explícito.
-
-#### Registro do client OpenAI
-
-A integração deve usar OAuth 2.1 compatível com MCP. Antes de criar qualquer
-client produtivo, a Engenharia registra o MCP no ambiente de gestão do ChatGPT
-e guarda, fora do Git, o modo de registro e os valores exatos exibidos pela
-plataforma: redirect URI, client metadata document quando aplicável e scopes.
-
-A ordem de decisão é:
-
-1. **CIMD** é preferencial quando o metadata do Keycloak comprovar suporte a
-   `client_id_metadata_document_supported`, PKCE S256 e método de token
-   compatível (`none` ou `private_key_jwt`); o client ID é a URL HTTPS de
-   metadata publicada pelo ChatGPT.
-2. **DCR** só é aceitável se o endpoint de registro puder ser governado, auditado
-   e revogado sem segredo compartilhado nem crescimento incontrolado de clients.
-3. **Client pré-registrado** é fallback controlado: client público separado por
-   plataforma, Authorization Code + PKCE S256 e apenas o redirect URI HTTPS
-   exato informado pelo ChatGPT. Wildcard, redirect por tenant, segredo no
-   plugin e reutilização do client legado `app32-mcp-pilot` são proibidos.
-
-O redirect estável `https://chatgpt.com/connector_platform_oauth_redirect` só
-pode ser cadastrado se o issuer publicar
-`authorization_response_iss_parameter_supported=true` **e** devolver `iss`
-exato em respostas de sucesso e erro. Caso contrário, a Engenharia deve usar o
-redirect específico mostrado pela gestão do MCP ou escolher CIMD/DCR; nunca
-presumir callback fixo.
-
-#### Metadata e claims obrigatórios
-
-- resource metadata HTTPS do MCP anuncia o resource canônico, issuer Keycloak,
-  `mcp:access` e `mcp:user`; resposta não autenticada preserva challenge
-  `WWW-Authenticate` com `resource_metadata`;
-- OIDC discovery expõe issuer canônico, authorization/token endpoints, PKCE
-  S256 e scopes habilitados; `openid`, `email` e `profile` só são anunciados se
-  efetivamente liberados ao client;
-- o parâmetro OAuth `resource` deve ser preservado na autorização e token, e o
-  access token deve ter audience `app32-mcp-resource` verificável;
-- para restrições de domínio de workspaces ChatGPT Enterprise, quando
-  contratadas, o Keycloak fornece UserInfo com `email` e `email_verified=true`;
-- refresh, expiração, revogação de client, principal ou grant falham fechados;
-  nenhum caminho OAuth recua para token Bearer legado.
-
-#### Aceite da coorte ChatGPT
-
-1. ChatGPT descobre o protected-resource metadata por `401` e conclui OAuth
-   sem segredo copiado para chat, card ou repositório.
-2. Token correto, mas com audience, scope, issuer ou expiração inválida, recebe
-   negação objetiva e novo challenge OAuth.
-3. Usuário com grant em uma empresa conclui leitura do catálogo MVP; a mesma
-   operação em empresa sem grant não devolve dado de negócio.
-4. Revogar `PrincipalCompanyGrant` bloqueia chamada seguinte mesmo enquanto o
-   token ainda não expirou.
-5. A evidência registra apenas IDs operacionais não sensíveis e status; nunca
-   authorization code, refresh token, access token ou senha.
+O endpoint canônico `/mcp/pilot/` aplica catálogo e policy por tool/surface no
+servidor. É proibido resolver permissões renomeando conexão para
+`mcp-versus-finance` ou agregando finance à surface `user`: leitura financeira
+exige `mcp:analytics`; mutação exige `mcp:finance`, RBAC APP32, `company_id` e
+gate humano persistido. URLs antigas permanecem apenas para compatibilidade.
 
 ## 16. Redefinição de senha local — resposta P0 a comprometimento
 
@@ -523,3 +505,12 @@ Este fluxo **não** altera senhas, sessões ou required actions do Keycloak. OAu
 continua tendo ciclo de senha e recuperação próprios no IdP; a convergência só
 será definida em entrega específica, após decidir qual autoridade autentica cada
 coorte. Não se deve sincronizar senhas entre APP32 e Keycloak.
+
+
+### Correção de discovery unificada — AA.J.21.332 (2026-09-18)
+
+- No endpoint `/mcp/pilot/`, `list_user_app32_capabilities` mantém o nome por compatibilidade, mas descreve as ferramentas publicadas pelo conector unificado, incluindo o filtro `domain=finance`. Nos endpoints segmentados seu significado permanece restrito à respectiva surface.
+- `tools/list` e manifesto compartilham a seleção de ferramentas privilegiadas por scope OAuth e permissão específica da capability. `financial.view` não equivale a `financial.create`.
+- O catálogo indica discovery, não autorização definitiva: cada execução revalida empresa/grant/RBAC e mutações com human gate exigem aprovação persistida. Scopes do manifesto são metadados do catálogo, não os claims do token.
+- Critério de regressão: igualdade entre tools expostas e manifesto (exceto a própria tool de capabilities), filtro financeiro com leitura versus criação, token sem scope, teto de grant e isolamento tenant.
+- Não declarar paridade integral com todas as funções do APP32: a publicação remota continua limitada à coorte revisada. Homologação real da sessão cliente permanece obrigatória; testes simulados não a substituem.

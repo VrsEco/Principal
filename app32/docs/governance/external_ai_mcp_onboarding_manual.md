@@ -21,9 +21,10 @@ Documento operacional da **AA.J.31.1325 — Organização IA/MCP - Grupo 08 - Cr
 
 | Surface | Providers permitidos | Perfis | Observação |
 |---|---|---|---|
-| `user` | ChatGPT, Claude, Gemini, custom, internal | colaborador, cliente, administrador | menor privilégio, `finance` permission-aware |
+| `user` | ChatGPT, Claude, Gemini, custom, internal | colaborador, cliente, administrador | menor privilégio; não publica finanças |
 | `admin` | custom, internal | administrador, admin_tecnico | exige aprovação humana |
 | `analytics` | custom, internal | administrador, admin_tecnico | somente read models/catálogo |
+| `finance` | ChatGPT, Claude, Gemini, custom, internal | colaborador, cliente, administrador | `company_id` explícito e gate persistido para mutação |
 | `ops` | internal | admin_tecnico | uso técnico e incidentes |
 
 ## Discovery obrigatório
@@ -68,8 +69,8 @@ sem coorte, client OAuth e smoke de isolamento aprovados.
 
 ## Regra de permissão real do usuário
 
-- A IA externa não deve assumir que `surface=user` implica bloqueio automático de `finance`.
-- O comportamento correto é refletir a mesma permissão efetiva da senha do usuário no APP32.
+- A IA externa não deve assumir que `surface=user` permite `finance`.
+- O comportamento correto é refletir a mesma permissão efetiva da senha do usuário no APP32 na surface `finance` dedicada.
 - Exemplos de permissões efetivas:
   - `financial.view`
   - `financial.create`
@@ -107,6 +108,8 @@ describe_app32_external_ai_onboarding_tool(surface='admin')
 ```powershell
 python -c "import app; from src.intelligence.mcp_contracts import APP32_EXTERNAL_AI_ONBOARDING_MANIFEST; print('AI_MCP_EXTERNAL_ONBOARDING_OK', len(APP32_EXTERNAL_AI_ONBOARDING_MANIFEST.surface_access_rules), len(APP32_EXTERNAL_AI_ONBOARDING_MANIFEST.steps))"
 ```
+
+Saída esperada: `AI_MCP_EXTERNAL_ONBOARDING_OK 5 5`.
 
 Resultado esperado:
 

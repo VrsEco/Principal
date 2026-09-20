@@ -104,6 +104,15 @@ class ToolApprovalDecision:
     approval_request_id: int | None = None
 
 
+@dataclass(frozen=True)
+class ToolApprovalRequest:
+    """Pedido persistido para uma operação MCP que exige gate humano."""
+
+    approval_request_id: int
+    reused_existing: bool
+    approval_key: str
+
+
 def _parse_expiry(value: Any) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -201,3 +210,95 @@ class ToolApprovalService:
 
 
 tool_approval_service = ToolApprovalService()
+
+
+class ToolApprovalRequestService:
+    """Cria o único tipo de aprovação que ``ToolApprovalService`` consome.
+
+    O runtime HTTP não aceita um ``human_gate_confirmed`` vindo do cliente.
+    Em vez disso, ele persiste um ``AgentAction`` ligado ao principal, tenant,
+    nome da tool e digest canônico do payload. A tela do APP32 aprova ou recusa
+    esse mesmo registro; uma nova chamada idêntica da tool consome a aprovação
+    uma única vez.
+    """
+
+    def request(
+        self,
+        binding: ToolApprovalBinding,
+        *,
+        reason: str,
+        channel: str | None = None,
+        thread_id: str | None = None,
+    ) -> ToolApprovalRequest:
+        from datetime import timedelta
+
+        from models import db
+        from models.agent_action import AgentAction
+        from services.agent_action_backlog_service import ensure_backlog_task_for_action
+
+        existing = (
+            AgentAction.query.filter(
+                AgentAction.type == "workflow_approval_request",
+                AgentAction.status == "pending",
+                AgentAction.company_id == binding.company_id,
+                AgentAction.user_id == binding.user_id,
+                AgentAction.payload["approval_key"].as_string() == binding.approval_key,
+            )
+            .order_by(AgentAction.created_at.desc(), AgentAction.id.desc())
+            .first()
+        )
+        if existing is not None:
+            return ToolApprovalRequest(
+                approval_request_id=int(existing.id),
+                reused_existing=True,
+                approval_key=binding.approval_key,
+            )
+
+        now = datetime.utcnow()
+        action = AgentAction(
+            type="workflow_approval_request",
+            status="pending",
+            requesting_agent="mcp-versus",
+            handling_agent="human_approval",
+            title=f"Aprovação necessária: {binding.tool_name}",
+            description=(
+                "Operação MCP sensível aguardando aprovação no APP32.\n"
+                f"Tool: {binding.tool_name}\nPrincipal: {binding.principal_id}\n"
+                f"Empresa: {binding.company_id}\nMotivo: {reason}"
+            ),
+            payload={
+                "created_via": "mcp_tool_approval",
+                "approval_key": binding.approval_key,
+                "approval_status": "pending",
+                "approval_expires_at": (now + timedelta(hours=24)).isoformat(),
+                "principal_id": binding.principal_id,
+                "action_key": f"tool.{binding.tool_name}",
+                "channel": str(channel or "mcp-versus").strip() or "mcp-versus",
+                "object_code": binding.tool_name,
+                "request_payload_digest": binding.payload_digest,
+                "thread_id": thread_id,
+                "human_gate_reason": reason,
+            },
+            company_id=binding.company_id,
+            user_id=binding.user_id,
+        )
+        db.session.add(action)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+        try:
+            ensure_backlog_task_for_action(action, autocommit=True)
+        except Exception:
+            # O registro de aprovação já foi persistido e é a fronteira de
+            # segurança. A projeção de backlog não pode desfazer essa garantia.
+            pass
+        return ToolApprovalRequest(
+            approval_request_id=int(action.id),
+            reused_existing=False,
+            approval_key=binding.approval_key,
+        )
+
+
+tool_approval_request_service = ToolApprovalRequestService()

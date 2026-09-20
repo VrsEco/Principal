@@ -58,6 +58,149 @@ def test_pilot_user_server_exposes_only_the_reviewed_tenant_safe_catalog():
     }
 
 
+def test_oauth_user_server_keeps_the_same_reviewed_remote_catalog():
+    server = registry.build_oauth_user_mcp_server()
+    tools = asyncio.run(server.list_tools())
+
+    assert {tool.name for tool in tools} == {
+        *registry.PILOT_USER_TOOL_NAMES,
+        "list_user_app32_capabilities",
+    }
+    assert not {
+        *registry.PILOT_USER_FINANCE_READ_TOOL_NAMES,
+    }.intersection({tool.name for tool in tools})
+
+
+def test_oauth_analytics_finance_server_exposes_only_reviewed_read_catalog():
+    server = registry.build_oauth_analytics_finance_mcp_server()
+    tools = asyncio.run(server.list_tools())
+
+    assert {tool.name for tool in tools} == {
+        *registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+        "list_analytics_app32_capabilities",
+    }
+
+
+def test_oauth_finance_server_exposes_only_the_canonical_operational_catalog():
+    server = registry.build_oauth_finance_mcp_server()
+    tools = asyncio.run(server.list_tools())
+
+    assert {tool.name for tool in tools} == {
+        *registry.PILOT_FINANCE_OPERATIONAL_TOOL_NAMES,
+        "list_finance_app32_capabilities",
+    }
+
+
+def test_oauth_unified_server_keeps_user_tools_and_adds_privileged_tools_only_when_allowed(monkeypatch):
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
+    denied_server = registry.build_oauth_unified_mcp_server()
+    denied_tools = {tool.name for tool in asyncio.run(denied_server.list_tools())}
+
+    assert set(registry.PILOT_USER_TOOL_NAMES).issubset(denied_tools)
+    assert not set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).intersection(denied_tools)
+
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: permission in {"financial.view", "financial.create"})
+    allowed_server = registry.build_oauth_unified_mcp_server()
+    allowed_tools = {tool.name for tool in asyncio.run(allowed_server.list_tools())}
+
+    assert set(registry.PILOT_USER_TOOL_NAMES).issubset(allowed_tools)
+    assert set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).issubset(allowed_tools)
+
+
+def test_unified_privileged_discovery_respects_oauth_scope_per_tool_surface(monkeypatch):
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics")),
+    )
+
+    visible = registry._visible_privileged_tool_names(
+        frozenset(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES)
+    )
+
+    assert visible == set(registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES)
+    assert "create_financial_entry" not in visible
+
+
+def test_oauth_analytics_registers_allowlisted_direct_registrars_only(monkeypatch):
+    """Uma tool fora de tools/list não pode ficar invocável por nome conhecido."""
+
+    class _FinanceRegistrarCatalog:
+        langchain_tools = ()
+
+        @staticmethod
+        def _register_finance_tools(mcp):
+            @mcp.tool()
+            def list_financial_entries(company_id: int):
+                return {"company_id": company_id}
+
+            @mcp.tool()
+            def create_financial_entry(payload: dict):
+                return payload
+
+        mcp_registrars = (_register_finance_tools,)
+
+        @staticmethod
+        def get_langchain_tools():
+            return []
+
+    monkeypatch.setattr(registry, "catalog", _FinanceRegistrarCatalog())
+    mcp = _FakeMCP()
+    registry.register_mcp_surface_tools(
+        mcp,
+        "analytics",
+        tool_names=("list_financial_entries",),
+        shared_registrar_tool_names=("list_financial_entries",),
+    )
+
+    assert "list_financial_entries" in mcp.registered
+    assert "create_financial_entry" not in mcp.registered
+
+
+def test_oauth_analytics_manifest_matches_the_allowlisted_finance_catalog_for_delegated_client(monkeypatch):
+    """Evita drift entre tool registrada e capability devolvida ao conector."""
+
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=44,
+            company_id=1,
+            employee_id=None,
+            role="cliente",
+            channel="codex",
+            thread_id=None,
+            accessible_company_ids=(1,),
+            permissions=("financial.view",),
+            metadata={"surface": "analytics", "transport": "streamable_http"},
+        ),
+    )
+
+    manifest = registry.get_surface_manifest(
+        "analytics",
+        tool_names=registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+        public_scopes=registry.get_surface_scope_filter("analytics"),
+    )
+
+    assert {tool["name"] for tool in manifest["tools"]} == set(
+        registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES
+    )
+
+
+def test_pilot_user_finance_tools_are_never_discovered_even_if_grant_has_permission(monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "_has_authenticated_mcp_permission",
+        lambda permission: permission == "financial.view",
+    )
+    server = registry.build_pilot_user_mcp_server()
+    tools = asyncio.run(server.list_tools())
+
+    assert not set(registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES).intersection(
+        {tool.name for tool in tools}
+    )
+
+
 @dataclass
 class _FakeTool:
     name: str
@@ -947,3 +1090,66 @@ def test_user_surface_discovers_gated_consultive_reviews_without_session_company
     assert "consultive_register_assisted_analysis" in names
     assert "consultive_register_squad_validation" in names
     assert "consultive_register_consultant_decision" not in names
+
+
+@pytest.mark.parametrize("permissions,scopes,expected", [
+    ({"financial.view", "financial.create"}, ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 5),
+    ({"financial.view"}, ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 4),
+    ({"financial.create"}, ("mcp:access", "mcp:user", "mcp:finance"), 1),
+    ({"financial.view", "financial.create"}, ("mcp:access", "mcp:user"), 0),
+    ({"financial.view", "financial.create"}, (), 0),
+    (set(), ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 0),
+])
+def test_unified_manifest_matches_tools_list_and_finance_filter(monkeypatch, permissions, scopes, expected):
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda p: p in permissions)
+    monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=scopes))
+    server = registry.build_oauth_unified_mcp_server()
+    exposed = {t.name for t in asyncio.run(server.list_tools())}
+    manifest = registry.get_unified_manifest()
+    assert {t["name"] for t in manifest["tools"]} == exposed - {"list_user_app32_capabilities"}
+    financial = registry.get_unified_manifest(domain="finance")
+    assert financial["summary"]["capabilities"] == expected
+    if expected in (1, 5):
+        create = next(t for t in financial["tools"] if t["name"] == "create_financial_entry")
+        assert create["permissions"] == ["financial.create"]
+        assert create["human_gate"] is True
+        assert create["scopes"] == ["mcp_finance"]
+
+
+def test_unified_existing_capability_tool_uses_unified_manifest(monkeypatch):
+    fake = _FakeMCP()
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda p: True)
+    monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(
+        scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance")))
+    registry.register_mcp_surface_tools(fake, "user", include_shared_registrars=False,
+                                       tool_names=registry.PILOT_USER_TOOL_NAMES, unified_discovery=True)
+    result = fake.registered["list_user_app32_capabilities"]["callable"](domain="finance")
+    assert result["summary"]["capabilities"] == 5
+    assert result["discovery"]["authorization"] == "revalidated_per_call_and_company"
+    assert "tools" not in registry.get_unified_manifest(include_tools=False)
+
+
+@pytest.mark.parametrize("actions,ceiling,full,expected", [
+    (["view"], [], False, False),
+    (["create"], [], False, True),
+    (["create"], ["financial.view"], False, False),
+    ([], [], True, True),
+])
+def test_permission_resolver_does_not_promote_read_to_create(monkeypatch, isolated_app_factory, actions, ceiling, full, expected):
+    grant = SimpleNamespace(is_active=True, mcp_permissions=ceiling,
+                            principal=SimpleNamespace(user_id=44), company_id=1)
+    class Query:
+        def filter_by(self, **kwargs):
+            assert kwargs == {"principal_id": 12, "status": "active"}
+            return self
+        def all(self):
+            return [grant]
+    monkeypatch.setitem(sys.modules, "models.identity_principal", SimpleNamespace(
+        PrincipalCompanyGrant=SimpleNamespace(query=Query())))
+    monkeypatch.setitem(sys.modules, "src.intelligence.security.runtime_identity", SimpleNamespace(
+        resolve_runtime_identity=lambda **kwargs: {"permissions": {"financial": actions},
+                                                  "has_full_app32_permissions": full}))
+    monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity",
+                        lambda: SimpleNamespace(principal_id=12))
+    with isolated_app_factory.app_context():
+        assert registry._has_authenticated_mcp_permission("financial.create") is expected

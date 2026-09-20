@@ -45,7 +45,11 @@ class McpVersusOAuthConnectorService:
 
     @property
     def mcp_url(self) -> str:
-        return f"{_public_base_url()}/mcp/pilot/user/"
+        # Durante a migração o endpoint unificado é habilitado explicitamente
+        # no ambiente; isso evita entregar URL inexistente a uma coorte já
+        # conectada. Quando ativo, continua sendo o mesmo nome público.
+        suffix = "/mcp/pilot/" if _enabled("MCP_VERSUS_OAUTH_UNIFIED_ENABLED") else "/mcp/pilot/user/"
+        return f"{_public_base_url()}{suffix}"
 
     def _base_payload(self, runtime: str, client_id: str | None = None) -> dict[str, object]:
         payload: dict[str, object] = {
@@ -81,10 +85,15 @@ class McpVersusOAuthConnectorService:
         if not enabled or not client_id:
             return {"available": False, "runtime": "codex", "message": "OAuth do Codex ainda não está liberado para esta coorte."}
         payload = self._base_payload("codex", client_id)
+        scopes_argument = (
+            " --scopes mcp:access,mcp:user,mcp:analytics,mcp:finance"
+            if _enabled("MCP_VERSUS_OAUTH_UNIFIED_ENABLED")
+            else ""
+        )
         payload.update(
             {
                 "add_command": f"codex mcp add {self.server_name} --url {self.mcp_url} --oauth-client-id {client_id}",
-                "login_command": f"codex mcp login {self.server_name}",
+                "login_command": f"codex mcp login {self.server_name}{scopes_argument}",
                 "verify_command": "codex mcp list",
                 "instructions": [
                     "Execute a conexão no terminal onde o Codex está instalado.",
