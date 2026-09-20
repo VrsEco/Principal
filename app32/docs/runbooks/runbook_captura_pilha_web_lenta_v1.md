@@ -30,11 +30,22 @@ Não corrige, cancela ou repete a requisição. Não adiciona consultas ao banco
 
 ## Mitigação de conexões sem resposta — AA.J.21.349
 
+Implantada em 19/09/2026, release `05be68ec9`, por publicação cirúrgica dos três
+arquivos de runtime. Backup restrito e reversão preparados; captura de pilha
+preservada. Log do worker confirmou política efetiva 120/5/5/15000 e reset do
+pool após fork. Health local respondeu HTTP 200 após reinício.
+
+Validação: 20 testes locais passaram. Em processo isolado no servidor, testes
+read-only confirmaram opções TCP efetivas no kernel, recuperação de conexão
+fechada, reciclagem e pool independente após fork com conexão do pai preservada.
+O teste de reciclagem usou intervalo reduzido apenas no processo isolado.
+Isso valida a mitigação, não prova a causa original nem ausência de reincidência.
+
 Pilha observada: carregamento do usuário -> checkout SQLAlchemy -> `do_ping`.
 Uma conexão independente respondeu rapidamente; isso identifica a espera, mas não
 prova perda de rede nem compartilhamento de socket entre processos.
 
-Política de produção proposta: reciclar conexões com idade maior que 120s no
+Política de produção ativa: reciclar conexões com idade maior que 120s no
 próximo checkout (não é uma limpeza periódica); espera por vaga no pool 5s;
 abertura de conexão 5s por host; keepalive habilitado com idle 15s, intervalo 5s,
 3 tentativas; `tcp_user_timeout=15000` ms. `pool_pre_ping` permanece habilitado.
