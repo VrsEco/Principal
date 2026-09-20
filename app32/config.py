@@ -61,6 +61,8 @@ class Config:
     # porque I/O síncrono a cada request degrada o runtime web.
     REQUEST_DEBUG_LOG_ENABLED = env_flag("REQUEST_DEBUG_LOG_ENABLED", default=False)
     SLOW_REQUEST_THRESHOLD_MS = int(os.environ.get("SLOW_REQUEST_THRESHOLD_MS") or 1000)
+    SLOW_REQUEST_STACK_ENABLED = env_flag("SLOW_REQUEST_STACK_ENABLED", default=False)
+    SLOW_REQUEST_STACK_SECONDS = float(os.environ.get("SLOW_REQUEST_STACK_SECONDS") or 5)
     WEBHOOK_SHARED_SECRET = os.environ.get("WEBHOOK_SHARED_SECRET")
     WHATSAPP_WEBHOOK_SECRET = os.environ.get("WHATSAPP_WEBHOOK_SECRET")
     TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET")

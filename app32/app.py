@@ -772,6 +772,8 @@ def create_app(config_name=None):
     else:
         print("DEBUG: Runtime background bootstrap skipped for this context.")
 
+    from utils.slow_request_probe import install_slow_request_probe
+    install_slow_request_probe(app)
     print("DEBUG: create_app() finished successfully.")
     return app
 
