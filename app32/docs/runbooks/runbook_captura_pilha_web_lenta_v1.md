@@ -28,6 +28,42 @@ Classe: Runbook. Card: AA.J.21.348. Estado: ativado em produção em 19/09/2026.
 Capturar a pilha Python ainda durante o bloqueio, antes do harakiri de 300s.
 Não corrige, cancela ou repete a requisição. Não adiciona consultas ao banco.
 
+## Mitigação de conexões sem resposta — AA.J.21.349
+
+Pilha observada: carregamento do usuário -> checkout SQLAlchemy -> `do_ping`.
+Uma conexão independente respondeu rapidamente; isso identifica a espera, mas não
+prova perda de rede nem compartilhamento de socket entre processos.
+
+Política de produção proposta: reciclar conexões com idade maior que 120s no
+próximo checkout (não é uma limpeza periódica); espera por vaga no pool 5s;
+abertura de conexão 5s por host; keepalive habilitado com idle 15s, intervalo 5s,
+3 tentativas; `tcp_user_timeout=15000` ms. `pool_pre_ping` permanece habilitado.
+Não há limite global novo de duração SQL nem repetição de transações financeiras.
+
+Variáveis: `SQLALCHEMY_POOL_RECYCLE`, `SQLALCHEMY_POOL_TIMEOUT`,
+`DB_CONNECT_TIMEOUT_SECONDS`, `DB_KEEPALIVES_IDLE_SECONDS`,
+`DB_KEEPALIVES_INTERVAL_SECONDS`, `DB_KEEPALIVES_COUNT`, `DB_TCP_USER_TIMEOUT_MS`.
+Valores explícitos prevalecem e devem ser positivos. Desenvolvimento preserva
+suas opções anteriores; as opções de transporte novas são de produção.
+
+Um middleware preventivo troca pools herdados antes da primeira requisição em
+cada processo filho usando `dispose(close=False)`, antes do ping/autenticação.
+Ele preserva as conexões do pai, não modifica a sessão do cliente e não repete
+operações. Aplicável ao prefork WSGI cujo master não atende requisições; jobs e
+processos que compartilhem sessões/transações exigem tratamento próprio.
+
+Importante: timeout TCP limita dados não confirmados pela rede; não limita
+qualquer espera SQL, DNS ou servidor que continue confirmando pacotes. Keepalive
+não se aplica a sockets Unix. Portanto, os valores não prometem resposta total
+em 5 ou 15 segundos. Manter captura e validar novos acessos após ociosidade.
+
+Referências oficiais: [libpq](https://www.postgresql.org/docs/current/libpq-connect.html)
+e [pool/fork SQLAlchemy](https://docs.sqlalchemy.org/en/20/core/pooling.html#using-connection-pools-with-multiprocessing-or-os-fork).
+
+Reversão: restaurar os arquivos de app/config anteriores via backup da entrega,
+reiniciar o worker e validar saúde. Remover apenas o módulo novo se não existir
+na versão anterior. Preservar a captura de pilha implantada no card anterior.
+
 ## Publicação e ativação
 
 1. Revisar/publicar somente `utils/slow_request_probe.py`, integração em `app.py`

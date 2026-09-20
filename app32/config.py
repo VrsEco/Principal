@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 from utils.env_helpers import normalize_database_url
+from utils.db_connection_policy import production_connection_options
 from utils.security import env_csv, env_flag, get_or_create_dev_secret
 
 # Força o carregamento do .env local.
@@ -191,6 +192,7 @@ class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = _prod_database_url
     SQLALCHEMY_ENGINE_OPTIONS = {
         **Config.SQLALCHEMY_ENGINE_OPTIONS,
+        **production_connection_options(os.environ),
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE") or 10),
         "max_overflow": int(os.environ.get("SQLALCHEMY_MAX_OVERFLOW") or 20),
     }
