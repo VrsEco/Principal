@@ -10,6 +10,7 @@
     const activeFiltersChip = document.getElementById('bordero-active-filters-chip');
     const applyButton = document.getElementById('borderos-apply-filters');
     const clearButton = document.getElementById('borderos-clear-filters');
+    const paginationContainer = document.getElementById('bordero-pagination');
     const filters = {
       search: document.getElementById('bordero-filter-search'),
       type: document.getElementById('bordero-filter-type'),
@@ -17,6 +18,8 @@
     };
 
     let borderos = [];
+    let borderoPagination = { page: 1, per_page: 50, total: 0, has_more: false };
+    let borderoSummary = {};
     const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const typeLabel = (value) => value === 'payable' ? 'Pagamento' : 'Recebimento';
     const statusLabel = (value) => ({ open: 'Aberto', partially_settled: 'Parcial', settled: 'Liquidado', cancelled: 'Cancelado', draft: 'Rascunho' }[value] || value || '-');
@@ -30,16 +33,7 @@
     }
 
     function getFiltered() {
-      const search = String(filters.search?.value || '').trim().toLowerCase();
-      const type = String(filters.type?.value || '').trim();
-      const status = String(filters.status?.value || '').trim();
-      return borderos.filter((item) => {
-        const haystack = `${item.bordero_code || ''} ${item.name || ''} ${item.description || ''} ${item.notes || ''}`.toLowerCase();
-        if (search && !haystack.includes(search)) return false;
-        if (type && item.bordero_type !== type) return false;
-        if (status && item.status !== status) return false;
-        return true;
-      });
+      return borderos;
     }
 
     function updateFilterIndicators() {
@@ -63,10 +57,10 @@
     }
 
     function renderKpis(items) {
-      const openTotal = items.reduce((acc, item) => acc + Number(item.signed_open_amount || 0), 0);
-      const settledTotal = items.reduce((acc, item) => acc + Number(item.signed_settled_amount || 0), 0);
+      const openTotal = Number(borderoSummary.signed_open_amount || 0);
+      const settledTotal = Number(borderoSummary.signed_settled_amount || 0);
       const itemCount = items.reduce((acc, item) => acc + Number(item.item_count || 0), 0);
-      if (kpis[0]) kpis[0].querySelector('strong').textContent = String(items.length);
+      if (kpis[0]) kpis[0].querySelector('strong').textContent = String(borderoPagination.total || 0);
       if (kpis[1]) kpis[1].querySelector('strong').textContent = money(openTotal);
       if (kpis[2]) kpis[2].querySelector('strong').textContent = money(settledTotal);
       if (kpis[3]) kpis[3].querySelector('strong').textContent = String(itemCount);
@@ -78,6 +72,7 @@
       renderKpis(items);
       if (!items.length) {
         tbody.innerHTML = '<tr><td colspan="9" class="empty-cell">Nenhum borderô encontrado para os filtros aplicados.</td></tr>';
+        if (paginationContainer) paginationContainer.replaceChildren();
         return;
       }
 
@@ -107,10 +102,56 @@
           </td>
         </tr>
       `).join('');
+      renderPagination();
     }
 
-    async function load() {
-      borderos = await fetchJson(`/api/financial/borderos?company_id=${companyId}`);
+    function renderPagination() {
+      if (!paginationContainer) return;
+      paginationContainer.replaceChildren();
+      if (!borderoPagination.has_more) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-secondary';
+      button.textContent = `Carregar mais (${borderos.length} de ${borderoPagination.total})`;
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        button.textContent = 'Carregando...';
+        try {
+          await load({ append: true });
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = error.message || 'Tentar novamente';
+        }
+      });
+      paginationContainer.appendChild(button);
+    }
+
+    async function load({ append = false } = {}) {
+      const page = append ? borderoPagination.page + 1 : 1;
+      const params = new URLSearchParams({
+        company_id: String(companyId),
+        paginated: 'true',
+        page: String(page),
+        per_page: '50',
+      });
+      const search = String(filters.search?.value || '').trim();
+      const type = String(filters.type?.value || '').trim();
+      const status = String(filters.status?.value || '').trim();
+      if (search) params.set('search', search);
+      if (type) params.set('bordero_type', type);
+      if (status) params.set('status', status);
+      const payload = await fetchJson(`/api/financial/borderos?${params.toString()}`);
+      if (!Array.isArray(payload.items) || !payload.pagination) {
+        throw new Error('Resposta paginada inválida ao carregar borderôs.');
+      }
+      if (append) {
+        const knownIds = new Set(borderos.map((item) => Number(item.id)));
+        borderos = borderos.concat(payload.items.filter((item) => !knownIds.has(Number(item.id))));
+      } else {
+        borderos = payload.items;
+      }
+      borderoPagination = payload.pagination;
+      borderoSummary = payload.summary || {};
       render();
     }
 
@@ -126,12 +167,16 @@
       input?.addEventListener('change', updateFilterIndicators);
     });
 
-    applyButton?.addEventListener('click', render);
+    applyButton?.addEventListener('click', () => load().catch((error) => {
+      tbody.innerHTML = `<tr><td colspan="9" class="empty-cell">${error.message}</td></tr>`;
+    }));
     clearButton?.addEventListener('click', () => {
       Object.values(filters).forEach((input) => {
         if (input) input.value = '';
       });
-      render();
+      load().catch((error) => {
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-cell">${error.message}</td></tr>`;
+      });
     });
 
     tbody?.addEventListener('click', async (event) => {

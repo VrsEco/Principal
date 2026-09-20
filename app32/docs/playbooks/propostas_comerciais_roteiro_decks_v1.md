@@ -61,7 +61,7 @@ Conteúdo:
 - Intervenção de Necessidade Urgente, quando houver dor específica;
 - Diagnóstico Inicial — Fase 00, quando a qualificação for necessária;
 - Programa de Estruturação Empresarial, quando a causa exigir evolução duradoura;
-- Performance Hub, apenas para sustentação recorrente deliberada;
+- Performance Hub, como Gestão Corporativa Assistida recorrente, quando a empresa precisa planejar, acompanhar execução, controlar, medir e ajustar rota junto da Versus;
 - Business Review como registro de valor, nunca como oferta.
 
 ### Slide 7 — O que será entregue e aceito?
@@ -86,6 +86,7 @@ Conteúdo:
 
 Conteúdo:
 - APP32 como fonte operacional de contratos, execução e evidências;
+- capacidades técnicas mobilizadas conforme contrato, sem criar uma oferta autônoma de assessoria;
 - Sapiens/CLI e Squad Cliente para coleta, pesquisa e preparação;
 - Squad Versus e consultor para método, validação e decisão;
 - Squad Engenharia para evolução técnica governada.

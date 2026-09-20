@@ -101,3 +101,18 @@ Perguntas douradas mínimas:
 - `Como que eu faço pra ver os títulos financeiros em aberto?`;
 - `Como eu faço para conciliar uma conta bancária?`;
 - `Como publico um processo no Portal de Processos?`.
+
+## Triagem de resposta IA/CLI: conhecimento ou estado operacional
+
+Quando uma resposta estiver desatualizada, sem evidência ou usar fonte errada:
+
+1. classificar se a solicitação pede documento/conhecimento ou estado atual;
+2. para estado atual, validar a capability MCP/read model e o `company_id` da
+   sessão; não compensar a falha com RAG;
+3. para conhecimento, validar fonte, versão, vigência, grants, `query_plan`,
+   claims e citações;
+4. se houver composição, registrar separadamente a evidência MCP e a citação
+   documental na ocorrência;
+5. se faltar evidência autorizada, manter abstenção e abrir curadoria da fonte;
+6. bloquear rollout se conteúdo ChromaDB global, `company_id` recebido do cliente
+   ou recuperação vetorial anterior ao ACL aparecer no fluxo.

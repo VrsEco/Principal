@@ -102,3 +102,22 @@ Regras:
 - sempre preferir linguagem simples para usuário final;
 - nunca usar feedback de uma empresa para revelar fonte de outra empresa;
 - toda melhoria em fonte tenant-owned preserva `company_id` e grants.
+
+## Playbook de decisão RAG versus MCP
+
+Antes de desenhar ou habilitar uma jornada de IA/CLI, classifique a pergunta:
+
+1. se pedir estado atual, ação, indicador, permissão, aprovação ou registro,
+   publique/consuma primeiro um read model ou capability MCP;
+2. se pedir interpretação de POP, política, decisão, ata, manual ou documento,
+   use a capability `knowledge` citada;
+3. se pedir ambos, obtenha o estado pelo MCP e o contexto pelo conhecimento,
+   mantendo as evidências separadas na resposta;
+4. se não houver evidência autorizada, responda com lacuna/abstenção e encaminhe
+   para curadoria — nunca complete com memória do modelo;
+5. nenhuma resposta recuperada cria ou confirma autorização para mutação.
+
+Para ativar embeddings ou `pgvector`, o responsável deve comprovar no Harness:
+ACL anterior à recuperação, isolamento cross-tenant, citações completas,
+abstenção correta e preservação do comportamento full-text. O RAG legado ChromaDB
+não integra novas jornadas produtivas.

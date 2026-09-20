@@ -1360,3 +1360,24 @@ Regras oficiais:
 5. cada caso do golden set deve possuir manual `product_help` correspondente,
    mesmo quando houver resposta determinística para proteger a experiência.
 
+## 44. Contrato de composição MCP + conhecimento
+
+Para IA/CLI, a resposta deve compor duas classes de evidência sem confundí-las:
+
+| Necessidade | Fonte primária obrigatória | Papel da camada de conhecimento |
+| --- | --- | --- |
+| estado atual, indicador, tarefa, permissão ou aprovação | MCP/read model tenant-safe | contexto explicativo, se houver |
+| POP, política, decisão, ata, manual ou documento | `knowledge` com ACL/grant | fonte primária citada |
+| mutação operacional | capability MCP + policy + gate humano | nunca autoriza nem executa |
+
+Regras adicionais:
+
+1. o agente resolve identidade e `company_id` antes de qualquer recuperação;
+2. tools de conhecimento não aceitam `company_id` fornecido pelo cliente;
+3. cada claim documental material carrega citação, fonte, versão e vigência;
+4. resposta que combinar dado atual e documento identifica a origem de cada
+   afirmação de forma legível;
+5. RAG não pode preencher lacuna de estado operacional, autorização ou aprovação;
+6. `pgvector` só pode ser habilitado sobre chunks PostgreSQL já elegíveis; ChromaDB
+   legado não recebe escrita, consulta ou responsabilidade produtiva nova.
+

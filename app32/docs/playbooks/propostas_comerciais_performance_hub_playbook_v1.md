@@ -9,7 +9,7 @@ Conduzir propostas comerciais que representem fielmente a arquitetura oficial da
 ## Arquitetura que a proposta deve preservar
 - Existem somente dois trilhos metodológicos: **Necessidade Urgente** e **Estruturação Empresarial**.
 - **Diagnóstico Inicial — Fase 00** qualifica, prioriza e recomenda o trilho; não é um terceiro trilho.
-- **Performance Hub** é sustentação recorrente e operação assistida; não substitui a Estruturação Empresarial.
+- **Performance Hub** é a Gestão Corporativa Assistida da Versus: sustentação recorrente, planejamento, acompanhamento da execução, controle, medição e correção de rota junto do gestor e da equipe. Não substitui a Estruturação Empresarial.
 - **Business Review** registra valor agregado comprovado; nunca é produto isolado.
 
 ## Quando usar
@@ -20,6 +20,12 @@ Sinais frequentes:
 - baixa previsibilidade financeira e decisões por suposição;
 - processos sem dono, projetos parados ou dependência do fundador;
 - indicadores frágeis, rotina sem cadência ou pouca governança.
+
+## O que o cliente compra
+
+O cliente não compra uma assessoria técnica isolada. Compra a presença estruturada da Versus na rotina de gestão, atuando junto do gestor e da equipe para planejar, acompanhar, controlar, medir e ajudar a corrigir a rota.
+
+Especialidades como finanças, custos, fiscal, processos e auditoria são capacidades mobilizadas conforme a necessidade e o contrato.
 
 ## Tese e promessa comercial
 **Tese:** a empresa precisa enxergar melhor, decidir melhor e executar com ritmo.

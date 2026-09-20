@@ -149,6 +149,21 @@ Gate mínimo antes de ativar embeddings/`pgvector`:
 4. métrica de groundedness;
 5. precisão e completude de citações;
 6. abstenção correta;
+
+## Suíte de composição MCP First
+
+- pergunta de estado atual confirma o dado pelo MCP/read model, nunca por chunk;
+- pergunta documental retorna evidência `knowledge` com citação e vigência;
+- pergunta híbrida mantém o fato MCP separado do contexto documental;
+- uma falha de MCP não autoriza fallback factual para RAG;
+- uma fonte recuperada não autoriza mutação, alteração de policy ou troca de
+  `company_id`;
+- o mesmo cenário executado por principal sem grant falha fechado antes do
+  retrieval;
+- RAG legado ChromaDB não é inicializado nem chamado em fluxo produtivo.
+
+Evidência mínima: teste de contrato para cada classe acima, relatório de
+cross-tenant e amostra de respostas com citações verificáveis antes do rollout.
 7. custo e latência por empresa;
 8. rollback para SQL + full-text.
 

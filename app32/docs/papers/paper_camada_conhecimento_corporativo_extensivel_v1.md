@@ -1517,3 +1517,27 @@ Essa abordagem cria uma régua objetiva para treinar o Sapiens: antes de discuti
 RAG vetorial ou modelos mais sofisticados, o sistema precisa acertar o básico com
 linguagem simples e ação navegável.
 
+## 49. Decisão de integração — RAG governado e MCP First
+
+RAG é uma camada de **contexto e memória institucional**, não o sistema de
+registro nem o executor do APP32. Sua adoção é recomendada para interpretar
+conteúdo não estruturado e versionado — POPs, políticas, atas, decisões,
+manuais e documentos de implantação — sempre com evidência recuperável.
+
+O fluxo de uma interação com IA/CLI deve separar explicitamente as fontes:
+
+1. o MCP/read model consulta fatos operacionais atuais, permissões, indicadores,
+   aprovações e estado de processo;
+2. a camada de conhecimento recupera apenas documentos já autorizados pelo
+   `company_id`, grants, vigência e autoridade;
+3. a síntese identifica a evidência documental e não apresenta texto recuperado
+   como fato operacional atual;
+4. qualquer mutação continua passando por capability MCP, policy e gate humano
+   quando exigido.
+
+O RAG legado baseado em ChromaDB permanece fora de produção multi-tenant. A
+evolução oficial aproveita `knowledge_sources`, `knowledge_chunks` e
+`knowledge_source_grants` no perímetro PostgreSQL. Full-text é a base inicial;
+embeddings e `pgvector` só entram após o harness comprovar isolamento entre
+tenants, ACL anterior à recuperação, qualidade de citação e abstenção correta.
+

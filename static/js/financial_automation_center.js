@@ -4,11 +4,12 @@
   const companyId = Number(root.dataset.companyId || 0);
   const companyCode = String(root.dataset.companyCode || 'VS').trim().toUpperCase();
   const recordsBody = document.getElementById('fa-records-body');
+  const recordsPagination = document.getElementById('fa-records-pagination');
   const importDialog = document.getElementById('fa-import-dialog');
   const documentDialog = document.getElementById('fa-document-dialog');
   const reviewDialog = document.getElementById('fa-review-dialog');
   const documentBody = document.getElementById('fa-document-body');
-  const state = { options: null, records: [], activeReviewId: null, documentCache: {}, reviewQueueIds: [] };
+  const state = { options: null, records: [], pagination: { page: 1, total: 0, has_more: false }, activeReviewId: null, documentCache: {}, reviewQueueIds: [] };
   const statusLabels = { imported: 'Importada', validated: 'Validada', generated: 'Gerada', excluded: 'Excluída' };
   const originLabels = {
     accountability: 'Prestação de contas',
@@ -376,8 +377,22 @@
     return `Exclusão bloqueada: ${blockers.map((item) => item.label || item.type || 'vínculo ativo').join(', ')}`;
   }
 
+  function renderPagination() {
+    if (!recordsPagination) return;
+    recordsPagination.innerHTML = '';
+    if (!state.pagination.has_more) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'fa-btn fa-btn--secondary';
+    button.textContent = `Carregar mais (${state.records.length} de ${state.pagination.total})`;
+    button.addEventListener('click', () => loadRecords({ append: true }));
+    recordsPagination.appendChild(button);
+  }
+
   function render() {
     refreshReviewQueue();
+    renderPagination();
     if (!state.records.length) {
       recordsBody.innerHTML = '<tr><td colspan="12" class="fa-empty">Nenhum registro encontrado.</td></tr>';
       return;
@@ -661,10 +676,19 @@
       .map((item) => `<option value="${item.id}">${escapeHtml(batchOptionLabel(item.id))}</option>`).join('');
   }
 
-  async function loadRecords() {
-    const query = new URLSearchParams({ company_id: companyId });
+  async function loadRecords({ append = false } = {}) {
+    const page = append ? state.pagination.page + 1 : 1;
+    const query = new URLSearchParams({
+      company_id: String(companyId),
+      paginated: 'true',
+      page: String(page),
+      per_page: '50',
+    });
     Object.entries(readFilters()).forEach(([key, value]) => query.set(key, value));
-    state.records = await api(`/api/financial/automation/records?${query.toString()}`);
+    const payload = await api(`/api/financial/automation/records?${query.toString()}`);
+    const items = Array.isArray(payload) ? payload : (payload.items || []);
+    state.records = append ? state.records.concat(items) : items;
+    state.pagination = payload.pagination || { page, total: state.records.length, has_more: false };
     render();
   }
 

@@ -4,65 +4,83 @@
  */
 
 let allCompanies = [];
-let filteredCompanies = [];
 let companyToDelete = null;
+let companyPagination = { page: 1, per_page: 50, total: 0, has_more: false };
+let companiesFilterTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadCompanies();
 });
 
-async function loadCompanies() {
+async function loadCompanies({ append = false } = {}) {
     try {
         const grid = document.getElementById('companies-grid');
         const emptyState = document.getElementById('empty-state');
         const loadingState = document.getElementById('loading-state');
 
-        loadingState.style.display = 'block';
-        grid.style.display = 'none';
-        emptyState.style.display = 'none';
+        if (!append) {
+            loadingState.style.display = 'block';
+            grid.style.display = 'none';
+            emptyState.style.display = 'none';
+        }
 
-        const response = await fetch('/api/companies?all=true');
+        const page = append ? companyPagination.page + 1 : 1;
+        const params = new URLSearchParams({
+            all: 'true',
+            paginated: 'true',
+            page: String(page),
+            per_page: '50',
+        });
+        const search = document.getElementById('filter-search')?.value.trim();
+        const segment = document.getElementById('filter-segment')?.value;
+        const size = document.getElementById('filter-size')?.value;
+        if (search) params.set('search', search);
+        if (segment) params.set('segment', segment);
+        if (size) params.set('size', size);
+        const response = await fetch(`/api/companies?${params.toString()}`);
         if (!response.ok) throw new Error();
 
-        allCompanies = await response.json();
-        filteredCompanies = [...allCompanies];
+        const payload = await response.json();
+        if (!Array.isArray(payload.items) || !payload.pagination) throw new Error();
+        if (append) {
+            const knownIds = new Set(allCompanies.map((company) => Number(company.id)));
+            allCompanies = allCompanies.concat(payload.items.filter((company) => !knownIds.has(Number(company.id))));
+        } else {
+            allCompanies = payload.items;
+        }
+        companyPagination = payload.pagination;
 
         loadingState.style.display = 'none';
         renderCompanies();
+        return true;
     } catch (error) {
         console.error('Error:', error);
-        document.getElementById('loading-state').innerHTML = '<p style="color:red">Erro ao carregar dados.</p>';
+        if (!append) {
+            document.getElementById('loading-state').innerHTML = '<p style="color:red">Erro ao carregar dados.</p>';
+        }
+        return false;
     }
 }
 
 function filterCompanies() {
-    const search = document.getElementById('filter-search').value.toLowerCase();
-    const segment = document.getElementById('filter-segment').value;
-    const size = document.getElementById('filter-size').value;
-
-    filteredCompanies = allCompanies.filter(c => {
-        const matchesSearch = !search || c.name.toLowerCase().includes(search) || (c.client_code && c.client_code.toLowerCase().includes(search));
-        const matchesSegment = !segment || c.segment === segment;
-        const matchesSize = !size || c.size === size;
-        return matchesSearch && matchesSegment && matchesSize;
-    });
-
-    renderCompanies();
+    window.clearTimeout(companiesFilterTimer);
+    companiesFilterTimer = window.setTimeout(() => loadCompanies(), 250);
 }
 
 function renderCompanies() {
     const grid = document.getElementById('companies-grid');
     const emptyState = document.getElementById('empty-state');
 
-    if (filteredCompanies.length === 0) {
+    if (allCompanies.length === 0) {
         grid.style.display = 'none';
         emptyState.style.display = 'flex';
+        document.getElementById('companies-pagination')?.replaceChildren();
         return;
     }
 
     emptyState.style.display = 'none';
     grid.style.display = 'flex';
-    grid.innerHTML = filteredCompanies.map(c => `
+    grid.innerHTML = allCompanies.map(c => `
         <div class="instance-card fade-in" onclick="window.location.href='/companies/${c.id}/edit'" style="cursor: pointer;">
             <!-- Line 1: Code | Title | Status -->
             <div class="compact-row" style="margin-bottom: 2px;">
@@ -109,6 +127,28 @@ function renderCompanies() {
             </div>
         </div>
     `).join('');
+    renderCompaniesPagination();
+}
+
+function renderCompaniesPagination() {
+    const container = document.getElementById('companies-pagination');
+    if (!container) return;
+    container.replaceChildren();
+    if (!companyPagination.has_more) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-secondary';
+    button.textContent = `Carregar mais (${allCompanies.length} de ${companyPagination.total})`;
+    button.addEventListener('click', async () => {
+        button.disabled = true;
+        button.textContent = 'Carregando...';
+        const loaded = await loadCompanies({ append: true });
+        if (!loaded) {
+            button.disabled = false;
+            button.textContent = 'Tentar novamente';
+        }
+    });
+    container.appendChild(button);
 }
 
 function resetCompaniesFilters() {

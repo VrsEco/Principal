@@ -263,3 +263,33 @@ Regras:
 8. mutações nunca são repetidas automaticamente, pois o resultado anterior pode ser desconhecido.
 
 A queda observada durante restart é tratada como incidente de transporte, não como falha de autenticação, tenant ou regra de negócio.
+
+---
+
+## 24. MCP-08 — Produto público Gestão Versus no ChatGPT
+
+O conector que será distribuído comercialmente não é um token, uma empresa ou
+uma cópia do APP32 por cliente. É um único plugin público, com um único
+resource server remoto e autorização por identidade humana.
+
+Decisão:
+
+> O plugin Gestão Versus usará o mesmo MCP HTTPS do APP32, mas o acesso de
+> cada cliente será decidido somente após OAuth/OIDC e `PrincipalCompanyGrant`.
+> Marketplace pessoal é ambiente de homologação; não é canal de distribuição
+> comercial.
+
+Implicações:
+
+1. ChatGPT/Codex é cliente OAuth; Keycloak é authorization server; APP32 é
+   resource server e autoridade de tenant, roles e capabilities.
+2. `company_id` não é configurado no plugin, no client OAuth ou em URL pública.
+   Ele é solicitado por tool quando necessário e revalidado no grant persistido.
+3. O MVP comercial publica apenas a surface `user`, com catálogo mínimo,
+   operações de menor privilégio e aprovações explícitas para qualquer mutação.
+4. A conexão pública exige OAuth 2.1 Authorization Code + PKCE S256,
+   protected-resource metadata, issuer/audience/scopes verificáveis e negação
+   fail-closed de token, principal ou grant inválido.
+5. O primeiro lançamento deve passar por marketplace privado de homologação e
+   piloto controlado antes da submissão pública; a marca melhora a descoberta,
+   mas não substitui autorização ou evidência operacional.

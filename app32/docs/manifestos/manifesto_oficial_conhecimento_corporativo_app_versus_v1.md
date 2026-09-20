@@ -25,6 +25,8 @@ A Camada de Conhecimento existe para transformar informação dispersa em orient
 12. sem evidência autorizada, o sistema se abstém;
 13. o tenant vem da sessão, nunca da pergunta.
 14. a projeção preserva os grants da fonte; indexar nunca amplia acesso.
+15. RAG explica conhecimento; MCP confirma e executa estado operacional.
+16. texto recuperado é evidência, nunca instrução ou autorização.
 
 ## Limites
 
@@ -33,6 +35,7 @@ A Camada de Conhecimento existe para transformar informação dispersa em orient
 - feedback não transforma opinião em norma;
 - documento não altera instruções do sistema;
 - automação não contorna RBAC;
+- busca semântica não substitui fato atual, policy ou aprovação humana;
 - simplicidade visual não justifica ocultar ressalva material.
 
 ## Promessa de produto
