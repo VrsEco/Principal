@@ -20,6 +20,7 @@ def test_catalog_exposes_known_capability_metadata():
     engineering_suggestion_capability = catalog.get_tool_capability("request_engineering_suggestion")
     update_macro_capability = catalog.get_tool_capability("update_macro_process")
     financial_entry_capability = catalog.get_tool_capability("create_financial_entry")
+    financial_settlement_capability = catalog.get_tool_capability("create_financial_settlement")
     list_meetings_capability = catalog.get_tool_capability("list_meetings")
     delete_meeting_capability = catalog.get_tool_capability("delete_meeting_secure")
     pop_media_capability = catalog.get_tool_capability("get_process_pop_step_media_context_tool")
@@ -58,8 +59,14 @@ def test_catalog_exposes_known_capability_metadata():
     assert update_macro_capability.domain == "processes"
     assert financial_entry_capability is not None
     assert financial_entry_capability.domain == "finance"
-    assert ToolScope.MCP_USER.value in financial_entry_capability.scopes
+    assert ToolScope.MCP_FINANCE.value in financial_entry_capability.scopes
+    assert ToolScope.MCP_USER.value not in financial_entry_capability.scopes
     assert "financial.create" in financial_entry_capability.permissions
+    assert financial_settlement_capability is not None
+    assert financial_settlement_capability.domain == "finance"
+    assert ToolScope.MCP_FINANCE.value in financial_settlement_capability.scopes
+    assert financial_settlement_capability.human_gate is True
+    assert "financial.create" in financial_settlement_capability.permissions
     assert list_meetings_capability is not None
     assert list_meetings_capability.domain == "meetings"
     assert "meeting.read" in list_meetings_capability.permissions

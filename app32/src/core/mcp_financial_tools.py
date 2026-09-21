@@ -788,6 +788,15 @@ def register_financial_mcp_tools(mcp: Any) -> None:
             except (TypeError, ValueError):
                 return {"success": False, "error": "company_id do payload é inválido"}
         normalized_payload["company_id"] = company_id
+        requested_status = str(normalized_payload.get("status") or "").strip().lower()
+        if requested_status in {"settled", "partially_settled"}:
+            return {
+                "success": False,
+                "error": (
+                    "O lançamento não pode ser criado como liquidado sem uma baixa. "
+                    "Crie-o em aberto e use create_financial_settlement para registrar a baixa bancária vinculada."
+                ),
+            }
 
         def _create_and_serialize_entry(*, payload: dict):
             entry, error = FinancialService.create_entry(payload=payload)
@@ -839,20 +848,50 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         }
 
     @mcp.tool()
-    def create_financial_settlement(payload: dict) -> dict:
+    def create_financial_settlement(company_id: int, payload: dict) -> dict:
         """
-        Cria uma liquidação financeira com juros, multas, descontos e ajustes.
-        Espera payload compatível com FinancialSettlementInput.
+        Registra uma baixa bancária vinculada a um lançamento da empresa autorizada.
+
+        A baixa é uma mutação financeira de alto risco e só é executada após o
+        gate humano persistido. O ``company_id`` explícito é obrigatório para
+        que o wrapper OAuth revalide tenant, grant e RBAC antes do serviço.
         """
         from services.financial_service import FinancialService
 
+        if isinstance(company_id, bool) or not isinstance(company_id, int) or company_id <= 0:
+            return {"success": False, "error": "company_id válido é obrigatório"}
+        normalized_payload = dict(payload or {})
+        payload_company_id = normalized_payload.get("company_id")
+        if payload_company_id not in (None, ""):
+            try:
+                if int(payload_company_id) != company_id:
+                    return {
+                        "success": False,
+                        "error": "company_id do payload diverge do tenant da requisição",
+                    }
+            except (TypeError, ValueError):
+                return {"success": False, "error": "company_id do payload é inválido"}
+        normalized_payload["company_id"] = company_id
+        if not normalized_payload.get("financial_entry_id"):
+            return {"success": False, "error": "financial_entry_id é obrigatório para a baixa."}
+        if not normalized_payload.get("bank_account_id"):
+            return {
+                "success": False,
+                "error": "bank_account_id é obrigatório para registrar uma baixa bancária vinculada.",
+            }
+        if str(normalized_payload.get("settlement_status") or "posted").strip().lower() != "posted":
+            return {
+                "success": False,
+                "error": "A baixa MCP deve ser registrada com settlement_status=posted.",
+            }
+
         settlement, error = _run_financial_action(
             FinancialService.create_settlement,
-            payload=payload,
+            payload=_attach_mcp_audit_payload(normalized_payload),
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "item": settlement.to_dict()}
+        return {"success": True, "item": FinancialService.serialize_settlement(settlement)}
 
     @mcp.tool()
     def list_financial_import_batches(company_id: int) -> dict:

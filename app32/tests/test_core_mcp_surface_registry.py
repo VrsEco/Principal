@@ -1023,9 +1023,9 @@ def test_user_surface_discovers_gated_consultive_reviews_without_session_company
 
 
 @pytest.mark.parametrize("permissions,scopes,expected", [
-    ({"financial.view", "financial.create"}, ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 5),
+    ({"financial.view", "financial.create"}, ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 6),
     ({"financial.view"}, ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 4),
-    ({"financial.create"}, ("mcp:access", "mcp:user", "mcp:finance"), 1),
+    ({"financial.create"}, ("mcp:access", "mcp:user", "mcp:finance"), 2),
     ({"financial.view", "financial.create"}, ("mcp:access", "mcp:user"), 0),
     ({"financial.view", "financial.create"}, (), 0),
     (set(), ("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"), 0),
@@ -1039,7 +1039,7 @@ def test_unified_manifest_matches_tools_list_and_finance_filter(monkeypatch, per
     assert {t["name"] for t in manifest["tools"]} == exposed - {"list_user_app32_capabilities"}
     financial = registry.get_unified_manifest(domain="finance")
     assert financial["summary"]["capabilities"] == expected
-    if expected in (1, 5):
+    if expected in (2, 6):
         create = next(t for t in financial["tools"] if t["name"] == "create_financial_entry")
         assert create["permissions"] == ["financial.create"]
         assert create["human_gate"] is True
@@ -1054,7 +1054,7 @@ def test_unified_existing_capability_tool_uses_unified_manifest(monkeypatch):
     registry.register_mcp_surface_tools(fake, "user", include_shared_registrars=False,
                                        tool_names=registry.PILOT_USER_TOOL_NAMES, unified_discovery=True)
     result = fake.registered["list_user_app32_capabilities"]["callable"](domain="finance")
-    assert result["summary"]["capabilities"] == 5
+    assert result["summary"]["capabilities"] == 6
     assert result["discovery"]["authorization"] == "revalidated_per_call_and_company"
     assert "tools" not in registry.get_unified_manifest(include_tools=False)
 

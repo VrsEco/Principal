@@ -29,6 +29,7 @@ def test_register_financial_mcp_tools_registers_complete_financial_surface():
     assert "list_financial_catalog_items" in mcp.registered
     assert "create_financial_catalog_item" in mcp.registered
     assert "create_financial_entry" in mcp.registered
+    assert "create_financial_settlement" in mcp.registered
     assert "match_financial_bank_reconciliation_row" in mcp.registered
     assert "list_financial_closings" in mcp.registered
     assert "create_financial_closing" in mcp.registered
@@ -287,3 +288,94 @@ def test_list_financial_entries_accepts_due_date_filters(monkeypatch):
     assert captured["entry_type"] == "receivable"
     assert captured["due_date_from"].isoformat() == "2026-07-20"
     assert captured["due_date_to"].isoformat() == "2026-07-26"
+
+
+def test_create_financial_entry_rejects_settled_status_without_settlement():
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_entry"](
+        10,
+        {"company_id": 10, "entry_code": "LCT-000034", "status": "settled"},
+    )
+
+    assert response["success"] is False
+    assert "create_financial_settlement" in response["error"]
+
+
+def test_create_financial_settlement_binds_payload_to_explicit_tenant(monkeypatch):
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_settlement"](
+        10,
+        {"company_id": 11, "financial_entry_id": 33},
+    )
+
+    assert response == {
+        "success": False,
+        "error": "company_id do payload diverge do tenant da requisição",
+    }
+
+
+def test_create_financial_settlement_attaches_mcp_audit_context(monkeypatch):
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+    captured = {}
+
+    class _FakeAppContext:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class _FakeApp:
+        def app_context(self):
+            return _FakeAppContext()
+
+    fake_app_module = types.ModuleType("app")
+    fake_app_module.create_app = lambda: _FakeApp()
+    monkeypatch.setitem(sys.modules, "app", fake_app_module)
+
+    class _FakeSettlement:
+        def to_dict(self):
+            return {"id": 91, "financial_entry_id": 33}
+
+    class _FakeFinancialService:
+        @staticmethod
+        def create_settlement(*, payload):
+            captured.update(payload)
+            return _FakeSettlement(), None
+
+        @staticmethod
+        def serialize_settlement(item):
+            return item.to_dict()
+
+    fake_service_module = types.ModuleType("services.financial_service")
+    fake_service_module.FinancialService = _FakeFinancialService
+    monkeypatch.setitem(sys.modules, "services.financial_service", fake_service_module)
+
+    response = mcp.registered["create_financial_settlement"](
+        10,
+        {"financial_entry_id": 33, "settlement_code": "SET-000033", "bank_account_id": 8},
+    )
+
+    assert response == {"success": True, "item": {"id": 91, "financial_entry_id": 33}}
+    assert captured["company_id"] == 10
+    assert captured["metadata_json"]["audit"]["channel"] == "web"
+
+
+def test_create_financial_settlement_requires_bank_account():
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_settlement"](
+        10,
+        {"financial_entry_id": 33, "settlement_code": "SET-000033"},
+    )
+
+    assert response == {
+        "success": False,
+        "error": "bank_account_id é obrigatório para registrar uma baixa bancária vinculada.",
+    }
