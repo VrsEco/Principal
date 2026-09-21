@@ -254,6 +254,80 @@ class _FakeApprovalQuery:
         return items
 
 
+class _FakeBatchApprovalQuery:
+    def __init__(self, actions):
+        self._actions = list(actions)
+        self._company_id = None
+        self._type = None
+        self._ids = []
+
+    def filter_by(self, **kwargs):
+        self._company_id = kwargs.get('company_id')
+        self._type = kwargs.get('type')
+        return self
+
+    def filter(self, ids):
+        self._ids = list(ids)
+        return self
+
+    def with_for_update(self):
+        return self
+
+    def all(self):
+        return [
+            action for action in self._actions
+            if action.company_id == self._company_id
+            and action.type == self._type
+            and action.id in self._ids
+        ]
+
+
+def test_approve_workflow_approvals_batch_approves_only_explicit_tenant_selection(monkeypatch):
+    app = _build_app()
+    first_action = _FakeAction(action_id=91)
+    second_action = _FakeAction(action_id=92)
+    foreign_action = _FakeAction(action_id=93, company_id=10)
+    fake_db_session = _FakeSession()
+    logged = []
+
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+    monkeypatch.setattr(agents_route, '_log_workflow_approval_message', lambda action, message, metadata: logged.append(action.id))
+
+    import models
+    import models.agent_action as agent_action_module
+    import services.workflow_approval_service as workflow_approval_module
+    import src.intelligence.menu_engine as menu_engine_module
+
+    monkeypatch.setattr(models, 'db', SimpleNamespace(session=fake_db_session))
+    fake_id_column = SimpleNamespace(in_=lambda ids: list(ids))
+    fake_agent_action_class = type('FakeAgentAction', (), {
+        'id': fake_id_column,
+        'query': _FakeBatchApprovalQuery([first_action, second_action, foreign_action]),
+    })
+    monkeypatch.setattr(agent_action_module, 'AgentAction', fake_agent_action_class)
+    monkeypatch.setattr(workflow_approval_module, 'WorkflowApprovalService', _FakeWorkflowApprovalService)
+    monkeypatch.setattr(menu_engine_module, 'execute_approved_resume_payload', lambda payload: None)
+
+    with app.test_request_context(
+        '/api/agents/actions/workflow-approvals/approve-batch',
+        method='POST',
+        json={'action_ids': [91, 92]},
+    ):
+        session['active_company_id'] = 9
+        response = agents_route.approve_workflow_approvals_batch.__wrapped__()
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body['success'] is True
+    assert body['processed_count'] == 2
+    assert [result['action_id'] for result in body['results']] == [91, 92]
+    assert first_action.status == 'executed'
+    assert second_action.status == 'executed'
+    assert foreign_action.status == 'pending'
+    assert logged == [91, 92]
+    assert fake_db_session.committed is True
+
+
 def test_list_workflow_approvals_returns_structured_payload(monkeypatch):
     app = _build_app()
     created_at = datetime(2026, 3, 8, 10, 15, 0)

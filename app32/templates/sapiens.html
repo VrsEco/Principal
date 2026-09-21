@@ -467,6 +467,41 @@
         margin-bottom: 0.9rem;
     }
 
+    .workflow-batch-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.65rem;
+        margin: -0.2rem 0 0.9rem;
+        padding: 0.65rem 0.75rem;
+        border: 1px solid rgba(51, 144, 236, 0.2);
+        border-radius: 12px;
+        background: rgba(239, 246, 255, 0.72);
+        font-size: 0.76rem;
+    }
+
+    .workflow-select-all-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-weight: 700;
+        color: #334155;
+        cursor: pointer;
+    }
+
+    .workflow-selection-count {
+        color: #475569;
+        font-weight: 600;
+        margin-right: auto;
+    }
+
+    .workflow-card-select {
+        width: 1rem;
+        height: 1rem;
+        accent-color: var(--tg-accent);
+        cursor: pointer;
+    }
+
     .workflow-board-search,
     .workflow-board-select {
         width: 100%;
@@ -1273,6 +1308,14 @@
                     <option value="all">Todos os canais</option>
                 </select>
             </div>
+            <div class="workflow-batch-toolbar" id="workflowBatchToolbar">
+                <label class="workflow-select-all-label">
+                    <input id="workflowSelectAll" type="checkbox" onchange="toggleAllWorkflowApprovals(this.checked)" />
+                    Selecionar todos os pendentes visíveis
+                </label>
+                <span class="workflow-selection-count" id="workflowSelectionCount">0 selecionados</span>
+                <button id="workflowApproveSelected" class="workflow-mini-btn primary" type="button" disabled onclick="approveSelectedWorkflowApprovals()">Aprovar selecionados</button>
+            </div>
             <div class="workflow-filter-chips" id="workflowFilterChips"></div>
             <div class="workflow-board-loading" id="workflowBoardLoading" style="display:none;">
                 <div class="workflow-skeleton"></div>
@@ -1387,6 +1430,9 @@
     const workflowChannelFilter = document.getElementById('workflowChannelFilter');
     const workflowChannelFamilyFilter = document.getElementById('workflowChannelFamilyFilter');
     const workflowSearchInput = document.getElementById('workflowSearchInput');
+    const workflowSelectAll = document.getElementById('workflowSelectAll');
+    const workflowSelectionCount = document.getElementById('workflowSelectionCount');
+    const workflowApproveSelected = document.getElementById('workflowApproveSelected');
     const workflowRejectModal = document.getElementById('workflowRejectModal');
     const workflowRejectFeedback = document.getElementById('workflowRejectFeedback');
     const workflowCatalogPanel = document.getElementById('workflowCatalogPanel');
@@ -1410,6 +1456,8 @@
         search: '',
     };
     let workflowBusyActionId = null;
+    let workflowBatchBusy = false;
+    let selectedWorkflowApprovalIds = new Set();
     let workflowRejectActionId = null;
     let workflowCatalogData = null;
     let workflowCatalogFilters = {
@@ -1568,7 +1616,7 @@
     }
 
     function renderWorkflowActionButton(card, action) {
-        const isBusy = workflowBusyActionId === card.id;
+        const isBusy = workflowBatchBusy || workflowBusyActionId === card.id;
         const disabledAttr = isBusy ? 'disabled' : '';
         const label = isBusy ? 'Processando...' : (action.label || action.id || 'Ação');
         return `<button class="workflow-mini-btn ${action.style || 'secondary'}" type="button" ${disabledAttr} onclick="handleWorkflowApprovalAction(${card.id}, '${action.id}')">${escapeHtml(label)}</button>`;
@@ -1580,7 +1628,12 @@
         const meta = card.metadata || {};
         const experience = card.experience || {};
         const capabilities = Array.isArray(experience.capability_summary) ? experience.capability_summary : [];
-        const busyClass = workflowBusyActionId === card.id ? ' is-busy' : '';
+        const busyClass = workflowBatchBusy || workflowBusyActionId === card.id ? ' is-busy' : '';
+        const canApprove = (card.actions || []).some(action => action.id === 'approve');
+        const isSelected = selectedWorkflowApprovalIds.has(card.id);
+        const selectionControl = canApprove
+            ? `<input class="workflow-card-select" type="checkbox" aria-label="Selecionar approval #${card.id}" ${isSelected ? 'checked' : ''} ${workflowBatchBusy ? 'disabled' : ''} onchange="toggleWorkflowApprovalSelection(${card.id}, this.checked)" />`
+            : '';
         return `
             <article class="workflow-card${busyClass}">
                 <div class="workflow-card-header">
@@ -1588,7 +1641,7 @@
                         <div class="workflow-card-title">${card.title || ''}</div>
                         <div class="workflow-card-subtitle">${escapeHtml(card.subtitle || 'Aguardando orquestração humana para seguir com segurança.')}</div>
                     </div>
-                    <span class="workflow-card-tone tone-${card.tone || 'muted'}">${escapeHtml(card.status || '')}</span>
+                    <div style="display:flex; align-items:center; gap:.55rem;">${selectionControl}<span class="workflow-card-tone tone-${card.tone || 'muted'}">${escapeHtml(card.status || '')}</span></div>
                 </div>
                 <div class="workflow-badges">${badges}</div>
                 <div class="workflow-card-meta">
@@ -1648,6 +1701,38 @@
         });
     }
 
+    function getVisibleApprovableWorkflowIds(cards = null) {
+        const sourceCards = cards || filterWorkflowCards(Array.isArray(workflowBoardData?.approval_cards) ? workflowBoardData.approval_cards : []);
+        return sourceCards
+            .filter(card => (card.actions || []).some(action => action.id === 'approve'))
+            .map(card => card.id);
+    }
+
+    function updateWorkflowBatchControls(visibleCards = null) {
+        const visibleIds = getVisibleApprovableWorkflowIds(visibleCards);
+        const selectedVisibleCount = visibleIds.filter(id => selectedWorkflowApprovalIds.has(id)).length;
+        workflowSelectionCount.textContent = `${selectedWorkflowApprovalIds.size} selecionado${selectedWorkflowApprovalIds.size === 1 ? '' : 's'}`;
+        workflowApproveSelected.disabled = workflowBatchBusy || selectedWorkflowApprovalIds.size === 0;
+        workflowApproveSelected.textContent = workflowBatchBusy ? 'Aprovando...' : 'Aprovar selecionados';
+        workflowSelectAll.disabled = workflowBatchBusy || visibleIds.length === 0;
+        workflowSelectAll.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+        workflowSelectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+    }
+
+    function toggleWorkflowApprovalSelection(actionId, checked) {
+        if (checked) selectedWorkflowApprovalIds.add(actionId);
+        else selectedWorkflowApprovalIds.delete(actionId);
+        if (workflowBoardData) renderWorkflowBoard(workflowBoardData);
+    }
+
+    function toggleAllWorkflowApprovals(checked) {
+        getVisibleApprovableWorkflowIds().forEach(actionId => {
+            if (checked) selectedWorkflowApprovalIds.add(actionId);
+            else selectedWorkflowApprovalIds.delete(actionId);
+        });
+        if (workflowBoardData) renderWorkflowBoard(workflowBoardData);
+    }
+
     function renderWorkflowBoard(board) {
         workflowBoardData = board;
         workflowBoardMeta.innerHTML = buildWorkflowBoardMeta(board);
@@ -1657,10 +1742,13 @@
 
         const summaryCards = Array.isArray(board.summary_cards) ? board.summary_cards : [];
         const approvalCards = filterWorkflowCards(Array.isArray(board.approval_cards) ? board.approval_cards : []);
+        const availableIds = new Set((board.approval_cards || []).map(card => card.id));
+        selectedWorkflowApprovalIds = new Set([...selectedWorkflowApprovalIds].filter(id => availableIds.has(id)));
 
         workflowSummaryGrid.innerHTML = summaryCards.map(renderWorkflowSummaryCard).join('');
         workflowCardList.innerHTML = approvalCards.map(renderWorkflowApprovalCard).join('');
         workflowBoardEmpty.style.display = approvalCards.length ? 'none' : 'block';
+        updateWorkflowBatchControls(approvalCards);
         workflowBoardPanel.classList.add('visible');
     }
 
@@ -1766,6 +1854,39 @@
             if (workflowBoardData) {
                 renderWorkflowBoard(workflowBoardData);
             }
+        }
+    }
+
+    async function approveSelectedWorkflowApprovals() {
+        const actionIds = [...selectedWorkflowApprovalIds];
+        if (!actionIds.length || workflowBatchBusy) return;
+        if (!window.confirm(`Deseja aprovar e retomar automaticamente ${actionIds.length} approval(s) selecionado(s)?`)) return;
+
+        workflowBatchBusy = true;
+        if (workflowBoardData) renderWorkflowBoard(workflowBoardData);
+        setWorkflowBoardStatus('info', `Aprovando ${actionIds.length} approval(s) selecionado(s)...`);
+        try {
+            const resp = await fetch('/api/agents/actions/workflow-approvals/approve-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action_ids: actionIds }),
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                const detail = (data.results || []).map(item => `#${item.action_id}: ${item.message}`).join(' ');
+                setWorkflowBoardStatus('danger', data.error || detail || 'Não foi possível aprovar a seleção.');
+                return;
+            }
+            selectedWorkflowApprovalIds.clear();
+            addMessageUI('assistant', `✅ **APROVAÇÃO EM LOTE:** ${data.message}`, 'workflow_approval');
+            setWorkflowBoardStatus('success', data.message || 'Approvals processados com sucesso.');
+            await refreshWorkflowBoard();
+        } catch (error) {
+            console.error('Erro ao aprovar approvals em lote:', error);
+            setWorkflowBoardStatus('danger', 'Falha de rede durante a aprovação em lote.');
+        } finally {
+            workflowBatchBusy = false;
+            if (workflowBoardData) renderWorkflowBoard(workflowBoardData);
         }
     }
 

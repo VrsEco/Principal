@@ -1468,6 +1468,137 @@ def approve_action(action_id):
     else:
         return jsonify({"success": False, "error": message}), 500
 
+
+@agents_bp.route('/api/agents/actions/workflow-approvals/approve-batch', methods=['POST'])
+@login_required
+def approve_workflow_approvals_batch():
+    """Aprova uma seleção explícita de approvals do tenant ativo.
+
+    A seleção vem sempre do cliente; o servidor volta a validar tipo, empresa,
+    permissão e estado de cada ação antes de qualquer retomada de workflow.
+    """
+    from models import db
+    from models.agent_action import AgentAction
+    from services.workflow_approval_service import WorkflowApprovalService
+    from src.intelligence.menu_engine import execute_approved_resume_payload
+
+    active_company_id, error_response = _active_company_context_or_error()
+    if error_response:
+        return error_response
+    if not _has_operational_full_access(active_company_id):
+        return jsonify({"success": False, "error": "Sem permissão para aprovar ações operacionais."}), 403
+
+    payload = request.get_json(silent=True) or {}
+    action_ids = payload.get('action_ids')
+    if not isinstance(action_ids, list) or not action_ids:
+        return jsonify({"success": False, "error": "Informe ao menos um approval para aprovação em lote."}), 400
+    if len(action_ids) > 50:
+        return jsonify({"success": False, "error": "O limite por aprovação em lote é de 50 itens."}), 400
+
+    normalized_ids = []
+    for action_id in action_ids:
+        if isinstance(action_id, bool):
+            return jsonify({"success": False, "error": "action_ids deve conter apenas identificadores numéricos válidos."}), 400
+        try:
+            normalized_id = int(action_id)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "error": "action_ids deve conter apenas identificadores numéricos válidos."}), 400
+        if normalized_id <= 0:
+            return jsonify({"success": False, "error": "action_ids deve conter apenas identificadores positivos."}), 400
+        normalized_ids.append(normalized_id)
+    if len(set(normalized_ids)) != len(normalized_ids):
+        return jsonify({"success": False, "error": "Não envie approvals duplicados na mesma operação."}), 400
+
+    actions = (
+        AgentAction.query.filter_by(
+            company_id=active_company_id,
+            type='workflow_approval_request',
+        )
+        .filter(AgentAction.id.in_(normalized_ids))
+        .with_for_update()
+        .all()
+    )
+    actions_by_id = {action.id: action for action in actions}
+    missing_ids = [action_id for action_id in normalized_ids if action_id not in actions_by_id]
+    if missing_ids:
+        return jsonify({
+            "success": False,
+            "error": "Um ou mais approvals não foram encontrados na empresa ativa.",
+            "missing_action_ids": missing_ids,
+        }), 404
+
+    # Valida toda a seleção antes de retomar qualquer workflow. Isso evita que
+    # um item expirado ou já resolvido gere uma aprovação parcial inesperada.
+    from src.intelligence.workflows.approval_utils import is_workflow_approval_expired
+    invalid_results = []
+    for action_id in normalized_ids:
+        action = actions_by_id[action_id]
+        if getattr(action, 'status', None) != 'pending':
+            invalid_results.append({
+                "action_id": action_id,
+                "success": False,
+                "message": f"Ação já está em status {getattr(action, 'status', 'desconhecido')}.",
+                "status": getattr(action, 'status', None),
+            })
+        elif is_workflow_approval_expired(action):
+            invalid_results.append({
+                "action_id": action_id,
+                "success": False,
+                "message": "A solicitação de aprovação expirou e precisa ser revalidada.",
+                "status": getattr(action, 'status', None),
+            })
+    if invalid_results:
+        return jsonify({
+            "success": False,
+            "error": "Nenhum approval foi confirmado porque a seleção contém item expirado ou já processado.",
+            "results": invalid_results,
+        }), 409
+
+    service = WorkflowApprovalService(resume_executor=execute_approved_resume_payload)
+    results = []
+    failed = False
+    for action_id in normalized_ids:
+        action = actions_by_id[action_id]
+        outcome = service.approve(
+            action=action,
+            approver_user_id=current_user.id,
+            approver_name=current_user.name,
+            active_company_id=active_company_id,
+        )
+        result = {
+            "action_id": action_id,
+            "success": outcome.success,
+            "message": outcome.message,
+            "status": outcome.action_status,
+        }
+        if outcome.success:
+            _log_workflow_approval_message(action, outcome.message, outcome.audit_metadata)
+        else:
+            failed = True
+            result["http_status"] = outcome.http_status
+        results.append(result)
+
+    if failed:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": "Nenhum approval foi confirmado porque a seleção contém item inválido, expirado ou indisponível.",
+            "results": results,
+        }), 409
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
+    return jsonify({
+        "success": True,
+        "message": f"{len(results)} approval(s) aprovado(s) com sucesso.",
+        "processed_count": len(results),
+        "results": results,
+    })
+
 @agents_bp.route('/api/agents/actions/revalidate/<int:action_id>', methods=['POST'])
 @login_required
 def revalidate_action(action_id):
