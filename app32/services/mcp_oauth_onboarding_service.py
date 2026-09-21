@@ -8,6 +8,7 @@ from models import Company, Employee, User, db
 from models.identity_principal import ExternalIdentity, IdentityPrincipal, PrincipalCompanyGrant
 from services.keycloak_identity_provisioning_service import KeycloakProvisioningError, KeycloakIdentityProvisioningService
 from services.mcp_oauth_codex_connector_service import mcp_oauth_codex_connector_service
+from utils.permissions import is_platform_admin
 
 
 class McpOAuthOnboardingError(ValueError):
@@ -24,6 +25,18 @@ class McpOAuthOnboardingService:
 
     @staticmethod
     def _linked_company(user_id: int, company_id: int) -> bool:
+        """Valida o tenant antes de provisionar o principal OAuth.
+
+        O administrador global já possui acesso a toda empresa ativa pelo
+        mesmo resolvedor RBAC do APP32; exigir um ``Employee`` artificial
+        criava drift entre o login web e o onboarding MCP. Para os demais
+        perfis, o vínculo ativo de colaborador continua obrigatório.
+        """
+        user = User.query.filter_by(id=user_id, is_active=True).first()
+        if user is None:
+            return False
+        if is_platform_admin(user=user):
+            return True
         return Employee.query.filter_by(user_id=user_id, company_id=company_id, status="active").first() is not None
 
     def status(self, *, user_id: int) -> dict:
