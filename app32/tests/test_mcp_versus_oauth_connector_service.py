@@ -28,6 +28,7 @@ def test_mcp_versus_codex_uses_unified_endpoint_when_enabled(monkeypatch):
 def test_claude_configuration_uses_dcr_without_exposing_a_static_client_id(monkeypatch):
     monkeypatch.setenv("MCP_VERSUS_OAUTH_CLAUDE_ENABLED", "1")
     monkeypatch.setenv("MCP_VERSUS_OAUTH_CLAUDE_CLIENT_ID", "mcp-versus-claude")
+    monkeypatch.setenv("MCP_VERSUS_OAUTH_CLAUDE_DCR_READY", "1")
 
     payload = McpVersusOAuthConnectorService().build_config("claude")
 
@@ -37,8 +38,8 @@ def test_claude_configuration_uses_dcr_without_exposing_a_static_client_id(monke
     assert "client_id" not in payload
     assert payload["redirect_uri"] == "https://claude.ai/api/mcp/auth_callback"
     assert not any("token" in str(key).lower() for key in payload)
-    assert any("Não informe client ID nem token manualmente." in item for item in payload["instructions"])
-    assert any("homologação deste cliente é independente" in item for item in payload["instructions"])
+    assert any("client ID, token, scope, host" in item for item in payload["instructions"])
+    assert any("Claude Desktop possui homologação própria" in item for item in payload["instructions"])
 
 
 def test_antigravity_configuration_has_oauth_client_id(monkeypatch):
@@ -61,3 +62,18 @@ def test_generic_oauth_refuses_to_advertise_without_admin_registration(monkeypat
     assert payload["available"] is False
     assert payload["server_name"] == "mcp-versus"
     assert "redirect URI" in payload["message"]
+
+
+def test_claude_is_not_advertised_until_dcr_policy_is_ready(monkeypatch):
+    monkeypatch.setenv("MCP_VERSUS_OAUTH_CLAUDE_ENABLED", "1")
+    monkeypatch.delenv("MCP_VERSUS_OAUTH_CLAUDE_DCR_READY", raising=False)
+
+    payload = McpVersusOAuthConnectorService().build_config("claude")
+
+    assert payload == {
+        "available": False,
+        "runtime": "claude",
+        "readiness": "blocked",
+        "message": "Integração OAuth do Claude em preparação pela Versus. Não configure o conector ainda.",
+        "support_code": "claude_dcr_not_ready",
+    }

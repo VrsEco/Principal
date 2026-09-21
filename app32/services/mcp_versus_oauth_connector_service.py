@@ -105,18 +105,30 @@ class McpVersusOAuthConnectorService:
 
     def _build_claude(self) -> dict[str, object]:
         enabled, _client_id = self._configured_client("claude")
-        if not enabled:
-            return {"available": False, "runtime": "claude", "message": "OAuth do Claude ainda não está liberado para esta coorte."}
+        # Claude usa DCR. Não basta liberar o endpoint: a política do IdP deve
+        # aceitar o redirect oficial e os scopes antes que a tela anuncie a
+        # integração. Flag ausente é fail-closed para evitar onboarding quebrado.
+        dcr_ready = _enabled("MCP_VERSUS_OAUTH_CLAUDE_DCR_READY")
+        if not enabled or not dcr_ready:
+            return {
+                "available": False,
+                "runtime": "claude",
+                "readiness": "blocked",
+                "message": "Integração OAuth do Claude em preparação pela Versus. Não configure o conector ainda.",
+                "support_code": "claude_dcr_not_ready",
+            }
         payload = self._base_payload("claude")
         payload.update(
             {
                 "connector_name": self.server_name,
                 "registration_mode": "dynamic",
+                "readiness": "ready",
                 "instructions": [
-                    "Claude Code: adicione um conector MCP remoto HTTP com o nome mcp-versus e a URL indicada.",
-                    "Claude Desktop: a homologação deste cliente é independente; use-o somente após a liberação explícita pela Versus.",
-                    "Clique em Connect/Authenticate e conclua o login OAuth no Keycloak. Não informe client ID nem token manualmente.",
-                    "Ao concluir, peça ao Claude para listar suas capabilities para validar a conexão somente-leitura.",
+                    "No Claude Code, adicione o conector MCP remoto HTTPS com o nome mcp-versus e a URL indicada.",
+                    "Em /mcp, escolha Authenticate/Connect. O navegador abrirá o Keycloak.",
+                    "Faça login e retorne ao Claude. Não informe client ID, token, scope, host ou qualquer configuração do Keycloak.",
+                    "Peça ao Claude para listar as capabilities somente-leitura e confirme a empresa antes de qualquer operação.",
+                    "Claude Desktop possui homologação própria e só deve ser usado quando estiver explicitamente liberado pela Versus.",
                 ],
                 "redirect_uri": "https://claude.ai/api/mcp/auth_callback",
             }

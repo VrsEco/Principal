@@ -71,3 +71,8 @@ repetir operação com outro `company_id`.
 - O catálogo indica discovery, não autorização definitiva: cada execução revalida empresa/grant/RBAC e mutações com human gate exigem aprovação persistida. Scopes do manifesto são metadados do catálogo, não os claims do token.
 - Critério de regressão: igualdade entre tools expostas e manifesto (exceto a própria tool de capabilities), filtro financeiro com leitura versus criação, token sem scope, teto de grant e isolamento tenant.
 - Não declarar paridade integral com todas as funções do APP32: a publicação remota continua limitada à coorte revisada. Homologação real da sessão cliente permanece obrigatória; testes simulados não a substituem.
+
+
+### Gate de prontidão Claude DCR — 2026-09-20
+
+O APP32 só anuncia o conector OAuth Claude como disponível quando `MCP_VERSUS_OAUTH_CLAUDE_ENABLED=1` e `MCP_VERSUS_OAUTH_CLAUDE_DCR_READY=1`. A segunda flag é uma declaração operacional da plataforma, posterior à validação real da política DCR do Keycloak: redirect oficial `claude.ai` e scopes permitidos. Flag ausente ou falsa falha fechada: a tela informa que a integração está em preparação e não entrega URL ou instruções de conexão. O cliente nunca recebe instruções para ajustar Trusted Hosts, scopes, IP, client ID ou token.
