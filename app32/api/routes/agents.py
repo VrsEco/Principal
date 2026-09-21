@@ -215,6 +215,7 @@ def sapiens_page():
         'sapiens.html',
         strategic_tree_enabled=StrategicTreeService.is_enabled(company_id),
         strategic_tree_csrf_token=session.get('strategic_tree_csrf_token'),
+        can_manage_operational_approvals=_has_operational_full_access(company_id),
     )
 
 

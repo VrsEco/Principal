@@ -999,6 +999,12 @@
             </div>
             <div class="kv-header-actions">
                 <span class="kv-authorized"><i class="fas fa-shield-alt" aria-hidden="true"></i> Fontes autorizadas</span>
+                {% if can_manage_operational_approvals %}
+                <a class="kv-approval-link" href="{{ url_for('agents.sapiens_page', legacy=1, view='approvals') }}" title="Abrir aprovações operacionais pendentes" aria-label="Abrir aprovações operacionais">
+                    <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+                    <span>Aprovações</span>
+                </a>
+                {% endif %}
                 <a class="kv-icon-button" href="{{ url_for('agents.sapiens_training_page') }}" title="Treinamento do Sapiens" aria-label="Treinamento do Sapiens">
                     <i class="fas fa-graduation-cap" aria-hidden="true"></i>
                 </a>
@@ -2201,6 +2207,11 @@
         const contactParam = params.get('contact');
         const surfaceParam = params.get('surface');
         const presetParam = params.get('preset');
+        const operationalViewParam = params.get('view');
+        const operationalViews = new Set(['approvals', 'catalog']);
+        if (operationalViews.has(operationalViewParam)) {
+            activeOperationalView = operationalViewParam;
+        }
         activeSurface = surfaceParam || null;
         const surfaceMeta = getSurfaceMeta(surfaceParam);
 

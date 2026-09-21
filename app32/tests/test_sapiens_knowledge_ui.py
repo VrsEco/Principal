@@ -178,3 +178,21 @@ def test_knowledge_feedback_endpoint_uses_authenticated_session_company(monkeypa
     assert captured["company_id"] == 44
     assert captured["user_id"] == 7
     assert captured["rating"] == "partial"
+
+
+def test_sapiens_page_exposes_approval_entrypoint_for_authorized_users():
+    template = (ROOT / "templates" / "sapiens.html").read_text(encoding="utf-8")
+    routes = (ROOT / "api" / "routes" / "agents.py").read_text(encoding="utf-8")
+
+    assert "can_manage_operational_approvals" in routes
+    assert "can_manage_operational_approvals" in template
+    assert "legacy=1, view='approvals'" in template
+    assert "Abrir aprovações operacionais" in template
+
+
+def test_legacy_sapiens_honors_approval_deep_link():
+    template = (ROOT / "templates" / "sapiens.html").read_text(encoding="utf-8")
+
+    assert "const operationalViewParam = params.get('view');" in template
+    assert "const operationalViews = new Set(['approvals', 'catalog']);" in template
+    assert "activeOperationalView = operationalViewParam;" in template
