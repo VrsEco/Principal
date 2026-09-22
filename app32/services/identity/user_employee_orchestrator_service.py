@@ -116,12 +116,21 @@ class UserEmployeeOrchestratorService:
                 action_parts.append(assignment_result.get("action", "linked_existing"))
 
             db.session.commit()
+            identity_provisioning = None
+            if user is not None:
+                # O vínculo com a empresa é parte do contexto OAuth: registrar
+                # após o commit preserva o APP32 caso o IdP esteja indisponível.
+                from services.identity_provisioning_outbox_service import identity_provisioning_outbox_service
+                event = identity_provisioning_outbox_service.queue_user_state(user)
+                db.session.commit()
+                identity_provisioning = identity_provisioning_outbox_service.process_event(event.id)
             return {
                 "success": True,
                 "action": UserEmployeeOrchestratorService._collapse_actions(action_parts),
                 "user": user.to_dict() if user else None,
                 "employee": employee.to_dict() if employee else None,
                 "assignment": assignment.to_dict() if assignment else None,
+                "identity_provisioning": identity_provisioning,
             }
         except Exception as exc:
             db.session.rollback()

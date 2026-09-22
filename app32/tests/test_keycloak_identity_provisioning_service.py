@@ -40,7 +40,7 @@ def test_keycloak_provisioning_creates_user_and_sets_temporary_password_without_
     subject = service.ensure_user(email="ana@example.com", name="Ana Silva", temporary_password="SenhaTemporaria!12")
 
     assert subject == "subject-1"
-    assert session.calls[2][2]["json"]["requiredActions"] == ["UPDATE_PASSWORD"]
+    assert session.calls[2][2]["json"]["enabled"] is True
     assert session.calls[3][2]["json"] == {"type": "password", "value": "SenhaTemporaria!12", "temporary": True}
 
 
@@ -49,6 +49,7 @@ def test_keycloak_provisioning_reuses_existing_identity():
         _Response(200, {"access_token": "token"}),
         _Response(200, [{"id": "subject-existing"}]),
         _Response(204),
+        _Response(204),
     ])
 
     subject = KeycloakIdentityProvisioningService(_settings(), session=session).ensure_user(
@@ -56,4 +57,20 @@ def test_keycloak_provisioning_reuses_existing_identity():
     )
 
     assert subject == "subject-existing"
-    assert [call[0] for call in session.calls] == ["post", "get", "put"]
+    assert [call[0] for call in session.calls] == ["post", "get", "put", "put"]
+
+
+def test_keycloak_provisioning_sends_password_setup_email_without_receiving_password():
+    session = _Session([
+        _Response(200, {"access_token": "token"}),
+        _Response(200, []),
+        _Response(201, headers={"Location": "https://id.example/admin/realms/app32/users/subject-2"}),
+        _Response(204),
+    ])
+    subject = KeycloakIdentityProvisioningService(_settings(), session=session).ensure_user(
+        email="novo@example.com", name="Novo Usuário", send_password_setup_email=True
+    )
+
+    assert subject == "subject-2"
+    assert session.calls[-1][1].endswith("/subject-2/execute-actions-email")
+    assert session.calls[-1][2]["json"] == ["UPDATE_PASSWORD"]

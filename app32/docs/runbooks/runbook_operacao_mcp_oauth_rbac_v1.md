@@ -63,6 +63,22 @@ a solicitação persistida exibida no APP32 e repetir **o mesmo payload**. Não
 passar booleano de confirmação, não alterar o payload após a aprovação e não
 repetir operação com outro `company_id`.
 
+## Provisionamento automático de identidade
+
+1. Crie ou ative o usuário apenas no APP32 e confirme o vínculo ativo com a
+   empresa. O APP32 gera o evento `identity_provisioning_outbox` e tenta a
+   sincronização imediatamente.
+2. Para usuário novo, o Keycloak envia o convite de definição de senha. Nunca
+   copie senha local, hash ou token para o Keycloak, card, log ou suporte.
+3. Se a identidade estiver pendente/falha, execute o processador
+   `scripts/process_identity_provisioning_outbox.py` ou aguarde a retentativa
+   agendada. Consulte somente status, código e mensagem saneada do evento.
+4. Antes de alterar o client técnico, valide que ele tem apenas `manage-users`
+   no realm `app32`; não conceda `realm-admin` para resolver falha de convite.
+5. Smoke mínimo: usuário novo recebe identidade, conclui a senha, autentica
+   por OAuth e acessa exclusivamente empresas com vínculo ativo. Em seguida,
+   desative-o no APP32 e valide a negativa no próximo uso OAuth.
+
 
 ### Correção de discovery unificada — AA.J.21.332 (2026-09-18)
 

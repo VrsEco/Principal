@@ -109,6 +109,12 @@ class Config:
     KNOWLEDGE_TENANT_SYNC_MINUTES = int(
         os.environ.get("KNOWLEDGE_TENANT_SYNC_MINUTES") or 15
     )
+    # Identidade OAuth: APP32 persiste evento e o scheduler retenta a
+    # sincronização Keycloak; senhas nunca entram na outbox.
+    IDENTITY_PROVISIONING_ENABLED = env_flag("IDENTITY_PROVISIONING_ENABLED", default=True)
+    IDENTITY_PROVISIONING_RETRY_MINUTES = int(
+        os.environ.get("IDENTITY_PROVISIONING_RETRY_MINUTES") or 5
+    )
 
     # WhatsApp Integration
     WHATSAPP_PROVIDER = os.environ.get(

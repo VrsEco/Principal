@@ -1,0 +1,159 @@
+"""Sincronização idempotente APP32 -> Keycloak com outbox persistente.
+
+O APP32 confirma primeiro seu estado local. A chamada remota acontece somente
+depois do commit; falhas ficam pendentes para retentativa e não expõem senha.
+"""
+from __future__ import annotations
+
+import hashlib
+import logging
+from datetime import datetime, timedelta
+
+from models import Company, Employee, User, db
+from models.identity_principal import ExternalIdentity, IdentityPrincipal, PrincipalCompanyGrant
+from models.identity_provisioning_outbox import IdentityProvisioningOutbox
+from services.keycloak_identity_provisioning_service import (
+    KeycloakIdentityProvisioningService,
+    KeycloakProvisioningError,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class IdentityProvisioningOutboxService:
+    """Orquestra uma identidade Keycloak por usuário APP32, sem tenant fallback."""
+
+    max_backoff_minutes = 60
+
+    @staticmethod
+    def _dedupe_key(user: User, operation: str) -> str:
+        version = f"{user.id}|{user.email.strip().lower()}|{user.name}|{bool(user.is_active)}|{operation}"
+        return hashlib.sha256(version.encode("utf-8")).hexdigest()
+
+    def queue_user_state(self, user: User) -> IdentityProvisioningOutbox:
+        operation = "upsert_user" if user.is_active else "disable_user"
+        dedupe_key = self._dedupe_key(user, operation)
+        event = IdentityProvisioningOutbox.query.filter_by(
+            user_id=user.id, operation=operation, dedupe_key=dedupe_key
+        ).first()
+        if event is not None:
+            return event
+        event = IdentityProvisioningOutbox(
+            user_id=user.id,
+            operation=operation,
+            dedupe_key=dedupe_key,
+            payload={"email": user.email.strip().lower(), "name": user.name, "is_active": bool(user.is_active)},
+            status="pending",
+            next_attempt_at=datetime.utcnow(),
+        )
+        db.session.add(event)
+        return event
+
+    @staticmethod
+    def _issuer() -> str:
+        from os import getenv
+        return str(getenv("APP32_MCP_OIDC_ISSUER") or "").rstrip("/")
+
+    def _sync_principal_and_grants(self, *, user: User, subject: str) -> None:
+        issuer = self._issuer()
+        if not issuer:
+            raise KeycloakProvisioningError("Issuer OAuth não configurado para sincronizar a identidade.")
+        principal = IdentityPrincipal.query.filter_by(user_id=user.id, subject_type="USER").first()
+        if principal is None:
+            principal = IdentityPrincipal(subject_type="USER", user_id=user.id, status="active", label=user.email)
+            db.session.add(principal)
+            db.session.flush()
+        principal.status = "active" if user.is_active else "suspended"
+        principal.revoked_at = None if user.is_active else datetime.utcnow()
+        identity = ExternalIdentity.query.filter_by(issuer=issuer, subject=subject).first()
+        if identity is not None and identity.principal_id != principal.id:
+            raise KeycloakProvisioningError("Identidade Keycloak já vinculada a outro usuário APP32.")
+        if identity is None:
+            db.session.add(ExternalIdentity(principal_id=principal.id, issuer=issuer, subject=subject, provider_alias="keycloak"))
+
+        memberships = Employee.query.filter_by(user_id=user.id).filter(Employee.status == "active").all()
+        active_company_ids = {company.id for company in Company.query.filter_by(is_active=True).all()}
+        for employee in memberships:
+            if employee.company_id not in active_company_ids:
+                continue
+            grant = PrincipalCompanyGrant.query.filter_by(
+                principal_id=principal.id, company_id=employee.company_id
+            ).first()
+            if grant is None:
+                grant = PrincipalCompanyGrant(
+                    principal_id=principal.id,
+                    company_id=employee.company_id,
+                    role=user.role or "collaborator",
+                    status="active" if user.is_active else "suspended",
+                    starts_at=datetime.utcnow(),
+                )
+                db.session.add(grant)
+            else:
+                grant.role = user.role or "collaborator"
+                grant.status = "active" if user.is_active else "suspended"
+                grant.revoked_at = None if user.is_active else datetime.utcnow()
+
+    def process_event(self, event_id: int) -> dict:
+        event = IdentityProvisioningOutbox.query.get(event_id)
+        if event is None:
+            return {"success": False, "reason": "event_not_found"}
+        if event.status == "succeeded":
+            return {"success": True, "status": "succeeded", "event_id": event.id}
+        user = User.query.get(event.user_id)
+        if user is None:
+            event.status, event.last_error_code, event.last_error = "failed", "user_not_found", "Usuário removido antes do provisionamento."
+            db.session.commit()
+            return {"success": False, "reason": "user_not_found", "event_id": event.id}
+        event.status, event.attempts = "processing", event.attempts + 1
+        db.session.commit()
+        try:
+            provisioner = KeycloakIdentityProvisioningService()
+            if event.operation == "disable_user":
+                subject = provisioner.disable_user(email=user.email, name=user.name)
+            else:
+                principal = IdentityPrincipal.query.filter_by(user_id=user.id, subject_type="USER").first()
+                existing_identity = (
+                    ExternalIdentity.query.filter_by(principal_id=principal.id, issuer=self._issuer()).first()
+                    if principal is not None else None
+                )
+                subject = provisioner.ensure_user(
+                    email=user.email,
+                    name=user.name,
+                    # Convite ocorre uma única vez: eventos de perfil/vínculo
+                    # não podem resetar ou interromper credenciais existentes.
+                    send_password_setup_email=existing_identity is None,
+                    enabled=True,
+                )
+            self._sync_principal_and_grants(user=user, subject=subject)
+            event.status, event.external_subject, event.processed_at = "succeeded", subject, datetime.utcnow()
+            event.last_error_code = event.last_error = None
+            db.session.commit()
+            return {"success": True, "status": "succeeded", "event_id": event.id, "subject": subject}
+        except (KeycloakProvisioningError, Exception) as exc:
+            db.session.rollback()
+            event = IdentityProvisioningOutbox.query.get(event_id)
+            delay = min(2 ** min(event.attempts, 6), self.max_backoff_minutes)
+            event.status = "failed"
+            event.next_attempt_at = datetime.utcnow() + timedelta(minutes=delay)
+            event.last_error_code = "keycloak_provisioning_failed"
+            event.last_error = str(exc)[:500]
+            db.session.commit()
+            logger.exception("Identity provisioning failed for event %s", event_id)
+            return {"success": False, "status": "failed", "event_id": event.id}
+
+    def process_due(self, *, limit: int = 25) -> list[dict]:
+        now = datetime.utcnow()
+        events = (
+            IdentityProvisioningOutbox.query.filter(
+                IdentityProvisioningOutbox.status.in_(["pending", "failed"]),
+                (IdentityProvisioningOutbox.next_attempt_at.is_(None))
+                | (IdentityProvisioningOutbox.next_attempt_at <= now),
+            )
+            .order_by(IdentityProvisioningOutbox.id.asc())
+            .limit(max(1, min(int(limit), 100)))
+            .all()
+        )
+        return [self.process_event(event.id) for event in events]
+
+
+identity_provisioning_outbox_service = IdentityProvisioningOutboxService()

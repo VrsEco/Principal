@@ -514,3 +514,25 @@ coorte. Não se deve sincronizar senhas entre APP32 e Keycloak.
 - O catálogo indica discovery, não autorização definitiva: cada execução revalida empresa/grant/RBAC e mutações com human gate exigem aprovação persistida. Scopes do manifesto são metadados do catálogo, não os claims do token.
 - Critério de regressão: igualdade entre tools expostas e manifesto (exceto a própria tool de capabilities), filtro financeiro com leitura versus criação, token sem scope, teto de grant e isolamento tenant.
 - Não declarar paridade integral com todas as funções do APP32: a publicação remota continua limitada à coorte revisada. Homologação real da sessão cliente permanece obrigatória; testes simulados não a substituem.
+
+## 17. Provisionamento automático APP32 → Keycloak — 2026-09-21
+
+O APP32 é a fonte de verdade para cadastro, status, papel e vínculos
+`User`/`Employee`/`company_id`; o Keycloak é autoridade exclusiva de
+credenciais e sessões. Ao criar, atualizar, vincular ou desativar um usuário,
+o APP32 grava um evento idempotente em `identity_provisioning_outbox` na sua
+própria transação. O processador só chama a Admin API do Keycloak após o
+commit local e reexecuta eventos falhos com backoff. Falha do IdP nunca desfaz
+o usuário ou o vínculo empresarial já confirmado no APP32.
+
+O payload da outbox não contém senha, token ou segredo. Para identidade nova,
+o Keycloak cria a conta e envia a ação `UPDATE_PASSWORD`; mudanças posteriores
+de perfil e memberships não reenviam convite nem redefinem senha. O worker
+registra `IdentityPrincipal`, o vínculo exato `issuer/sub` e grants apenas
+para `Employee` ativo em `Company` ativa. Desativação local suspende a conta
+no Keycloak e o principal/grants, sem exclusão física automática.
+
+O client técnico usa Client Credentials restrito a `manage-users` do realm
+`app32`, com segredo somente em variável protegida. Esta automação não amplia
+capabilities: OAuth continua reavaliando role APP32, grant, scope, surface,
+`company_id` e gate humano em toda tool.

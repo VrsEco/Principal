@@ -226,6 +226,26 @@ def setup_knowledge_jobs(app):
     )
 
 
+def process_identity_provisioning_outbox(app):
+    """Retenta eventos APP32 -> Keycloak sem bloquear requests de cadastro."""
+    if not app.config.get("IDENTITY_PROVISIONING_ENABLED", True):
+        return {"skipped": "identity_provisioning_disabled"}
+    with app.app_context():
+        from services.identity_provisioning_outbox_service import identity_provisioning_outbox_service
+        return {"results": identity_provisioning_outbox_service.process_due(limit=25)}
+
+
+def setup_identity_provisioning_job(app):
+    interval_minutes = max(1, int(app.config.get("IDENTITY_PROVISIONING_RETRY_MINUTES", 5)))
+    scheduler_service.add_job(
+        func=lambda: process_identity_provisioning_outbox(app),
+        trigger="interval",
+        job_id="identity_provisioning_outbox",
+        minutes=interval_minutes,
+        name="Retentativa de provisionamento Keycloak",
+    )
+
+
 def sync_product_help_knowledge(app):
     """Bridge para manual, navegação e documentação global do produto."""
     with app.app_context():
@@ -305,6 +325,9 @@ def initialize_scheduler(app):
 
         # Configurar atualização automática da Camada de Conhecimento
         setup_knowledge_jobs(app)
+
+        # Retentativa idempotente do provisionamento APP32 -> Keycloak.
+        setup_identity_provisioning_job(app)
 
         # Configurar monitor de chat
         setup_chat_timeout_job(app)

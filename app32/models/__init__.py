@@ -8,6 +8,7 @@ from .user import User
 from .password_reset_token import PasswordResetToken
 from .user_mcp_token import UserMcpToken
 from .identity_principal import IdentityPrincipal, ExternalIdentity, PrincipalCompanyGrant
+from .identity_provisioning_outbox import IdentityProvisioningOutbox
 from .instruction_registry import InstructionRegistryEntry, InstructionRegistryAuditLog
 from .knowledge import KnowledgeSource, KnowledgeSourceGrant, KnowledgeChunk, KnowledgeIndexRun, KnowledgeInteraction, KnowledgeFeedback, KnowledgeTrainingProposal
 from .strategic_tree import StrategicTree, StrategicTreeNode, StrategicTreeContribution, StrategicTreeAuditEvent
@@ -220,7 +221,7 @@ __all__ = [
     'RoleCostProfile',
     'EmployeeRoleOccupancy',
     'db', 'Company', 'User', 'PasswordResetToken', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
-    'InstructionRegistryEntry', 'InstructionRegistryAuditLog',
+    'InstructionRegistryEntry', 'InstructionRegistryAuditLog', 'IdentityPrincipal', 'ExternalIdentity', 'PrincipalCompanyGrant', 'IdentityProvisioningOutbox',
     'KnowledgeSource', 'KnowledgeSourceGrant', 'KnowledgeChunk', 'KnowledgeIndexRun', 'KnowledgeInteraction', 'KnowledgeFeedback', 'KnowledgeTrainingProposal',
     'StrategicTree', 'StrategicTreeNode', 'StrategicTreeContribution', 'StrategicTreeAuditEvent',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
