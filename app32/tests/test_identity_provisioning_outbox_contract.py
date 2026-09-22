@@ -14,9 +14,9 @@ def test_identity_provisioning_uses_persistent_outbox_and_never_persists_passwor
     assert "queue_user_state(user)" in routes
 
 
-def test_keycloak_invite_is_only_for_new_identity_and_profile_changes_do_not_reset_password():
+def test_keycloak_invite_is_explicit_and_can_recover_a_remote_identity_after_retry():
     root = Path(__file__).resolve().parents[1]
     service = (root / "services" / "keycloak_identity_provisioning_service.py").read_text(encoding="utf-8")
 
-    assert "elif send_password_setup_email and created" in service
+    assert "elif send_password_setup_email:" in service
     assert 'json=["UPDATE_PASSWORD"]' in service

@@ -536,3 +536,30 @@ O client técnico usa Client Credentials restrito a `manage-users` do realm
 `app32`, com segredo somente em variável protegida. Esta automação não amplia
 capabilities: OAuth continua reavaliando role APP32, grant, scope, surface,
 `company_id` e gate humano em toda tool.
+
+## 18. Recuperação self-service da conexão OAuth — 2026-09-22
+
+A tela **Perfil → Instalar Squad** expõe a ação confirmada **Recuperar conexão
+OAuth** para o próprio usuário autenticado. Ela não recebe `company_id`,
+`email`, `subject`, role ou capability do navegador. O APP32 deriva o usuário
+pela sessão, revalida sua atividade e e-mail e registra uma auditoria sem
+segredo em `oauth_connection_recovery_audits`.
+
+Após provisionar/reativar a identidade no Keycloak, o APP32 reconcilia o
+`IdentityPrincipal`, o vínculo `issuer/sub` e os `PrincipalCompanyGrant` para
+as empresas com `Employee` ativo e `Company` ativa. Grants locais que já não
+correspondem a um vínculo ativo são apenas **suspensos**, nunca removidos em
+silêncio. Capabilities, scopes, roles finos e gates continuam sendo resolvidos
+pelo catálogo/policy canônicos durante cada chamada MCP; a recuperação não
+concede permissões.
+
+Por fim, o Keycloak envia a ação nativa `UPDATE_PASSWORD`. Não há sincronismo
+de senha APP32-Keycloak, token retornado ao browser ou alteração de dados
+operacionais. A rota exige sessão, same-origin e limites por IP/usuário. O
+tema de e-mail `versus` preserva o link e a expiração nativos do Keycloak,
+apenas aplicando identidade visual Versus.
+
+O client técnico de provisionamento deve permanecer limitado a `manage-users`,
+`query-users` e `view-users`. `manage-realm` só pode ser usado de forma
+administrativa, temporária e auditada para configurar SMTP/tema do realm; deve
+ser removido após a configuração. Não utilizar `realm-admin`.

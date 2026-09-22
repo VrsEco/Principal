@@ -54,7 +54,20 @@ class IdentityProvisioningOutboxService:
         from os import getenv
         return str(getenv("APP32_MCP_OIDC_ISSUER") or "").rstrip("/")
 
-    def _sync_principal_and_grants(self, *, user: User, subject: str) -> None:
+    def reconcile_user_identity_and_grants(
+        self,
+        *,
+        user: User,
+        subject: str,
+        suspend_stale_grants: bool = False,
+    ) -> list[int]:
+        """Reconcilia principal, identidade e grants tenant-safe de um usuário.
+
+        A operação normal de provisionamento não suspende histórico de grants,
+        pois um vínculo pode estar sendo atualizado na mesma transação. A
+        recuperação OAuth é explícita e usa ``suspend_stale_grants=True`` para
+        refletir exatamente os vínculos ativos do APP32 naquele instante.
+        """
         issuer = self._issuer()
         if not issuer:
             raise KeycloakProvisioningError("Issuer OAuth não configurado para sincronizar a identidade.")
@@ -73,9 +86,11 @@ class IdentityProvisioningOutboxService:
 
         memberships = Employee.query.filter_by(user_id=user.id).filter(Employee.status == "active").all()
         active_company_ids = {company.id for company in Company.query.filter_by(is_active=True).all()}
+        effective_company_ids: set[int] = set()
         for employee in memberships:
             if employee.company_id not in active_company_ids:
                 continue
+            effective_company_ids.add(employee.company_id)
             grant = PrincipalCompanyGrant.query.filter_by(
                 principal_id=principal.id, company_id=employee.company_id
             ).first()
@@ -92,6 +107,19 @@ class IdentityProvisioningOutboxService:
                 grant.role = user.role or "collaborator"
                 grant.status = "active" if user.is_active else "suspended"
                 grant.revoked_at = None if user.is_active else datetime.utcnow()
+
+        if suspend_stale_grants:
+            active_grant_company_ids = effective_company_ids if user.is_active else set()
+            now = datetime.utcnow()
+            for grant in PrincipalCompanyGrant.query.filter_by(principal_id=principal.id).all():
+                if grant.company_id not in active_grant_company_ids:
+                    grant.status = "suspended"
+                    grant.revoked_at = now
+        return sorted(effective_company_ids)
+
+    # Mantido durante a transição para não quebrar consumidores internos.
+    def _sync_principal_and_grants(self, *, user: User, subject: str) -> None:
+        self.reconcile_user_identity_and_grants(user=user, subject=subject)
 
     def process_event(self, event_id: int) -> dict:
         event = IdentityProvisioningOutbox.query.get(event_id)
