@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import case
 from services.agent_conversation_service import AgentConversationService
 from services.cadastro_agent_service import CadastroAgentService
 from utils.permissions import has_company_full_access
@@ -989,7 +990,13 @@ def workflow_approval_board():
 
     actions = (
         AgentAction.query.filter_by(company_id=company_id, type='workflow_approval_request')
-        .order_by(AgentAction.created_at.desc())
+        # Pendências são prioridade operacional: sem essa ordenação, uma fila
+        # antiga pode desaparecer atrás de aprovações recentes e o painel passa
+        # a sugerir incorretamente que não há ação a executar.
+        .order_by(
+            case((AgentAction.status == 'pending', 0), else_=1),
+            AgentAction.created_at.desc(),
+        )
         .limit(limit)
         .all()
     )

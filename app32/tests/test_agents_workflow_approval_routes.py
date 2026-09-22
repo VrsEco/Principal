@@ -611,10 +611,11 @@ def test_workflow_approval_board_returns_visual_payload(monkeypatch):
     fake_agent_action_class = type(
         'FakeAgentAction',
         (),
-        {
-            'created_at': SimpleNamespace(desc=lambda: None),
-            'query': _FakeApprovalQuery([action_a]),
-        },
+            {
+                'created_at': SimpleNamespace(desc=lambda: None),
+                'status': 'pending',
+                'query': _FakeApprovalQuery([action_a]),
+            },
     )
     monkeypatch.setattr(agent_action_module, 'AgentAction', fake_agent_action_class)
 
