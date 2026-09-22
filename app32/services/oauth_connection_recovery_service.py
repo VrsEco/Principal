@@ -40,6 +40,10 @@ class OAuthConnectionRecoveryService:
         attempts = OAuthConnectionRecoveryAudit.query.filter(
             OAuthConnectionRecoveryAudit.user_id == user.id,
             OAuthConnectionRecoveryAudit.created_at >= window_start,
+            # Falha de infraestrutura/IdP não pode impedir o usuário de
+            # recuperar a conexão depois de uma correção. Só envios aceitos
+            # (ou em processamento) entram na contenção antiabuso.
+            OAuthConnectionRecoveryAudit.status.in_(["processing", "succeeded"]),
         ).count()
         if attempts >= self.max_requests_per_hour:
             raise OAuthConnectionRecoveryRateLimitError(

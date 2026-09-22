@@ -11,7 +11,7 @@
       <div style="margin-top:14px;padding:24px 26px;border:1px solid #dbe4ee;border-radius:16px;background:#ffffff;line-height:1.65;">
         <p style="margin:0 0 14px;font-size:15px;color:#334155;">Olá,</p>
         <p style="margin:0 0 20px;font-size:15px;color:#334155;">Recebemos uma solicitação para definir ou atualizar sua senha de acesso ao <strong>Gestão Versus</strong>.</p>
-        <p style="margin:0 0 22px;"><a href="${link?html}" style="display:inline-block;padding:13px 20px;border-radius:10px;background:#2563eb;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;">Definir senha de acesso</a></p>
+        <p style="margin:0 0 22px;"><a href="${link}" style="display:inline-block;padding:13px 20px;border-radius:10px;background:#2563eb;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;">Definir senha de acesso</a></p>
         <p style="margin:0;font-size:13px;color:#64748b;">Por segurança, este link expira em ${linkExpirationFormatter(linkExpiration)}. Se você não solicitou esta ação, ignore esta mensagem.</p>
       </div>
       <div style="padding:16px 8px;text-align:center;color:#64748b;font-size:12px;line-height:1.5;">Sapiens Versus · Gestão Corporativa<br>Mensagem automática de segurança.</div>
