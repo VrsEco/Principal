@@ -74,3 +74,21 @@ def test_keycloak_provisioning_sends_password_setup_email_without_receiving_pass
     assert subject == "subject-2"
     assert session.calls[-1][1].endswith("/subject-2/execute-actions-email")
     assert session.calls[-1][2]["json"] == ["UPDATE_PASSWORD"]
+
+
+def test_keycloak_provisioning_retries_password_setup_email_when_remote_user_already_exists():
+    """Um retry do outbox deve recuperar criação remota incompleta."""
+    session = _Session([
+        _Response(200, {"access_token": "token"}),
+        _Response(200, [{"id": "subject-existing"}]),
+        _Response(204),
+        _Response(204),
+    ])
+
+    subject = KeycloakIdentityProvisioningService(_settings(), session=session).ensure_user(
+        email="novo@example.com", name="Novo Usuário", send_password_setup_email=True
+    )
+
+    assert subject == "subject-existing"
+    assert session.calls[-1][1].endswith("/subject-existing/execute-actions-email")
+    assert session.calls[-1][2]["json"] == ["UPDATE_PASSWORD"]

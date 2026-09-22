@@ -97,7 +97,6 @@ class KeycloakIdentityProvisioningService:
             raise KeycloakProvisioningError("Não foi possível consultar o usuário no Keycloak.")
         users: list[dict[str, Any]] = lookup.json() or []
         first_name, last_name = self._name_parts(name, normalized_email)
-        created = False
         if users:
             keycloak_user_id = str(users[0].get("id") or "")
             update = self.session.put(
@@ -115,7 +114,6 @@ class KeycloakIdentityProvisioningService:
             if update.status_code not in (200, 204):
                 raise KeycloakProvisioningError("Não foi possível atualizar o usuário no Keycloak.")
         else:
-            created = True
             create = self.session.post(
                 self._users_url(),
                 headers=headers,
@@ -144,7 +142,12 @@ class KeycloakIdentityProvisioningService:
             )
             if reset.status_code not in (200, 204):
                 raise KeycloakProvisioningError("Não foi possível definir a senha temporária do usuário.")
-        elif send_password_setup_email and created:
+        # O outbox pode falhar depois de o Keycloak criar o usuário, mas antes
+        # de o vínculo local ser persistido. Na repetição a identidade remota
+        # já existe; ainda assim, o convite precisa ser enviado. A decisão de
+        # solicitar o convite é do chamador (somente quando ainda não há
+        # ExternalIdentity local), evitando reenvios em atualizações normais.
+        elif send_password_setup_email:
             invite = self.session.put(
                 f"{self._users_url()}/{keycloak_user_id}/execute-actions-email",
                 headers=headers,
