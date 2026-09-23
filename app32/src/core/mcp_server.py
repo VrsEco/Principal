@@ -1,8 +1,11 @@
 import asyncio
 import sys
 import os
-# Ensure src is in path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+# Priorizar módulos do projeto antes de pacotes homônimos do ambiente.
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+while PROJECT_ROOT in sys.path:
+    sys.path.remove(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
 
 from src.intelligence.tool_catalog import catalog
 
