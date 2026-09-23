@@ -85,7 +85,7 @@
   </section>
   {% endfor %}
 </div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>
 <script>
 const charts={{ report.charts|tojson }};
 new Chart(document.getElementById('scopeCapacityChart'),{type:'doughnut',data:{labels:charts.scope_capacity.labels,datasets:[{data:charts.scope_capacity.values,backgroundColor:['#2563eb','#cbd5e1']}]},options:{plugins:{legend:{position:'bottom'}}}});
