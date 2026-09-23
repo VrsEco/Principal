@@ -80,3 +80,11 @@ def test_projection_key_changes_when_same_state_returns_after_another_event():
     user = SimpleNamespace(id=4, email="test@example.com", name="Test", is_active=True, role="client")
     service = outbox.IdentityProvisioningOutboxService()
     assert service._dedupe_key(user, "upsert_user", 7) != service._dedupe_key(user, "upsert_user", 9)
+
+
+def test_unexpected_failure_does_not_persist_or_log_secrets(harness, caplog):
+    service, event, user, provisioner = harness
+    service._sync_principal_and_grants.side_effect = RuntimeError('password=SECRET token=PRIVATE')
+    assert service.process_event(event.id)['success'] is False
+    assert 'SECRET' not in event.last_error and 'PRIVATE' not in event.last_error
+    assert 'SECRET' not in caplog.text and 'PRIVATE' not in caplog.text

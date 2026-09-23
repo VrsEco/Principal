@@ -87,7 +87,7 @@ class OAuthConnectionRecoveryService:
             raise OAuthConnectionRecoveryError("Não foi possível recuperar a conexão OAuth agora. Tente novamente mais tarde.") from exc
         except Exception as exc:
             db.session.rollback()
-            self._mark_failed(audit.id, str(exc), "oauth_recovery_unexpected")
+            self._mark_failed(audit.id, "Falha interna na recuperação OAuth; detalhes sensíveis omitidos.", "oauth_recovery_unexpected")
             raise OAuthConnectionRecoveryError("Não foi possível recuperar a conexão OAuth agora. Tente novamente mais tarde.") from exc
 
     @staticmethod

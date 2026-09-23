@@ -185,16 +185,17 @@ class IdentityProvisioningOutboxService:
             event.last_error_code = event.last_error = None
             db.session.commit()
             return {"success": True, "status": "succeeded", "event_id": event.id, "subject": subject}
-        except (KeycloakProvisioningError, Exception) as exc:
+        except Exception as exc:
             db.session.rollback()
             event = IdentityProvisioningOutbox.query.get(event_id)
             delay = min(2 ** min(event.attempts, 6), self.max_backoff_minutes)
             event.status = "failed"
             event.next_attempt_at = datetime.utcnow() + timedelta(minutes=delay)
             event.last_error_code = "keycloak_provisioning_failed"
-            event.last_error = str(exc)[:500]
+            event.last_error = (str(exc)[:500] if isinstance(exc, KeycloakProvisioningError)
+                                else "Falha interna no provisionamento; detalhes sensíveis omitidos.")
             db.session.commit()
-            logger.exception("Identity provisioning failed for event %s", event_id)
+            logger.error("Identity provisioning failed for event %s", event_id)
             return {"success": False, "status": "failed", "event_id": event.id}
 
     def process_due(self, *, limit: int = 25) -> list[dict]:

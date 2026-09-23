@@ -56,3 +56,13 @@ def test_recovery_does_not_email_when_identity_reconciliation_fails(recovery_har
         service.recover_authenticated_user(user_id=4)
     provisioner.send_password_setup_email.assert_not_called()
     service._mark_failed.assert_called_once_with(73, "identity collision", "oauth_recovery_failed")
+
+
+def test_unexpected_error_does_not_persist_credentials(recovery_harness):
+    service, events, provisioner, grants = recovery_harness
+    grants.reconcile_user_identity_and_grants.side_effect = RuntimeError('password=SECRET token=PRIVATE')
+    with pytest.raises(recovery.OAuthConnectionRecoveryError):
+        service.recover_authenticated_user(user_id=4)
+    detail = service._mark_failed.call_args.args[1]
+    assert 'SECRET' not in detail and 'PRIVATE' not in detail
+    provisioner.send_password_setup_email.assert_not_called()
