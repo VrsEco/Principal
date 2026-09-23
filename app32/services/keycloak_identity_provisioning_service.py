@@ -73,7 +73,12 @@ class KeycloakIdentityProvisioningService:
 
     @staticmethod
     def _name_parts(name: str, email: str) -> tuple[str, str]:
-        first_name, _, last_name = str(name or "").strip().partition(" ")
+        # APP32 aceita qualificadores como "Magno (Meu Chapa)". Parênteses
+        # são proibidos pelo person-name-prohibited-characters do Keycloak.
+        # Normalize apenas a representação externa, sem alterar o cadastro
+        # local, o e-mail usado como identidade ou as validações do IdP.
+        external_name = " ".join(str(name or "").replace("(", " ").replace(")", " ").split())
+        first_name, _, last_name = external_name.partition(" ")
         return first_name or email, last_name
 
     def ensure_user(

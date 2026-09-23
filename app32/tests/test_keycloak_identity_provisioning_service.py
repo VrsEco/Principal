@@ -31,6 +31,40 @@ def _settings():
     return KeycloakProvisioningSettings("https://id.example", "master", "app32", "provisioner", "secret")
 
 
+@pytest.mark.parametrize("existing", [True, False])
+def test_parenthesized_name_is_normalized_before_invitation(existing):
+    session = _Session([
+        _Response(200, {"access_token": "token"}),
+        _Response(200, [{"id": "subject-1"}] if existing else []),
+        _Response(204 if existing else 201, headers={"Location": "https://id.example/users/subject-1"}),
+        _Response(204),
+    ])
+    name = "Magno (Meu Chapa)"
+    service = KeycloakIdentityProvisioningService(_settings(), session=session)
+    assert service.ensure_user(
+        email="operacao@example.com", name=name, send_password_setup_email=True
+    ) == "subject-1"
+    payload = session.calls[2][2]["json"]
+    assert payload["firstName"] == "Magno"
+    assert payload["lastName"] == "Meu Chapa"
+    assert payload["username"] == payload["email"] == "operacao@example.com"
+    assert name == "Magno (Meu Chapa)"
+    assert session.calls[2][0] == ("put" if existing else "post")
+    assert session.calls[3][1].endswith("/subject-1/execute-actions-email")
+    assert session.calls[3][2]["json"] == ["UPDATE_PASSWORD"]
+
+
+@pytest.mark.parametrize("name, expected", [
+    ("João D'Ávila-Souza", ("João", "D'Ávila-Souza")),
+    ("  Magno  (Meu Chapa)  ", ("Magno", "Meu Chapa")),
+    ("Magno(Meu Chapa)", ("Magno", "Meu Chapa")),
+    ("Ana", ("Ana", "")),
+    ("", ("ana@example.com", "")),
+])
+def test_name_parts_preserves_valid_names(name, expected):
+    assert KeycloakIdentityProvisioningService._name_parts(name, "ana@example.com") == expected
+
+
 def test_keycloak_provisioning_creates_user_and_sets_temporary_password_without_logging_it():
     session = _Session([
         _Response(200, {"access_token": "token"}),
