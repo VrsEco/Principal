@@ -6,6 +6,25 @@ from pathlib import Path
 
 from src.core.mcp_financial_tools import register_financial_mcp_tools
 
+import pytest
+from contextlib import nullcontext
+
+
+@pytest.fixture(autouse=True)
+def isolated_financial_tool_runtime(monkeypatch):
+    """Wrappers unitários nunca devem iniciar Flask, scheduler ou banco real."""
+    fake_app = types.ModuleType("app")
+    fake_app.create_app = lambda: types.SimpleNamespace(app_context=lambda: nullcontext())
+    monkeypatch.setitem(sys.modules, "app", fake_app)
+    import psycopg2
+
+    def deny_database(*args, **kwargs):
+        raise AssertionError("Teste unitário tentou conectar a um banco real")
+
+    monkeypatch.setattr(psycopg2, "connect", deny_database)
+
+
+
 
 class _FakeMCP:
     def __init__(self):
