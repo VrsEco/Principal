@@ -1,7 +1,7 @@
 # SPEC — Política de Orçamento de Contexto v1
 
-**Status:** vigente  
-**Classe:** SPEC  
+**Status:** vigente
+**Classe:** SPEC
 **Escopo:** agentes e automações que atuam no APP32/Gestão Versus.
 
 ## Decisão
@@ -30,4 +30,3 @@ O orquestrador e a skill `gestao_versus_core` apontam para esta SPEC. Atualizaç
 ## Automação local
 - `python app32/scripts/qa/check_agent_context_budget.py --root app32 --json` valida teto de palavras, headings duplicados, presença da SPEC e seu vínculo à skill-base. Ele deve rodar em revisão de governança e antes de alterar instruções obrigatórias.
 - `python app32/scripts/qa/generate_agent_handoff.py --objective "..." --decision "..." --file "..." --test "..."` gera a transferência compacta entre task, modelo ou agente. Só registre fatos verificáveis e pendências acionáveis.
-

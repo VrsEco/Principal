@@ -11,7 +11,7 @@ def send_fixture_static(filename):
   return send_from_directory(str(ROOT.parent/'static'), filename)
  return original_send_static(filename)
 app.send_static_file = send_fixture_static
-app.secret_key='local-synthetic-only' 
+app.secret_key='local-synthetic-only'
 app.url_build_error_handlers.append(lambda error, endpoint, values: '/fixture-unavailable')
 app.jinja_loader=FileSystemLoader(str(ROOT/'templates'))
 app.jinja_env.globals.update(has_permission=lambda *a: False, is_platform_admin=lambda: False, current_user={'name':'Teste local'})
@@ -25,5 +25,3 @@ def options():
  time.sleep(8)
  return jsonify(counterparties=[],bank_accounts=[],chart_accounts=[],cost_centers=[],correction_indexes=[],discount_rules=[],enabled_domains=[],default_suggestions={})
 if __name__=='__main__':app.run(host='127.0.0.1',port=5087,threaded=True,use_reloader=False)
-
-

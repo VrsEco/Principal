@@ -20,4 +20,3 @@ A alteração permite estornar uma baixa não conciliada de título gerenciado p
 
 ## Limites
 Sem commit, push, merge, deploy ou alteração de dados de produção nesta rodada. Testes selecionados não equivalem à homologação de toda a aplicação. Pendências comerciais/MCP e alterações da worktree raiz não foram descartadas nem incorporadas. Teste funcional OAuth com operacaolp permanece não executado, conforme encerramento solicitado pelo usuário.
-
