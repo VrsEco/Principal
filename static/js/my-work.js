@@ -62,6 +62,10 @@ const state = {
   searchQuery: '',
   sortBy: 'deadline',
   activities: [],
+  activitiesPage: 1,
+  activitiesPerPage: 75,
+  activitiesTotal: 0,
+  activitiesHasMore: false,
   teamData: null,
   companyData: null,
   companies: [], // Lista de empresas do usuário
@@ -1283,7 +1287,7 @@ function handleUrgentActivity(activityId, activityTitle, activityElement) {
 // Carregar Dados (API)
 // ========================================
 
-async function loadActivitiesData() {
+async function loadActivitiesData({ append = false } = {}) {
   try {
     console.log('Carregando dados para scope:', state.currentScope);
 
@@ -1291,9 +1295,14 @@ async function loadActivitiesData() {
 
     const activeCompanyId = window.companyId || '';
 
+    if (!append) state.activitiesPage = 1;
+
     const params = new URLSearchParams({
       scope: state.currentScope,
-      active_company_id: activeCompanyId
+      active_company_id: activeCompanyId,
+      paginated: 'true',
+      page: String(state.activitiesPage),
+      per_page: String(state.activitiesPerPage)
     });
 
     // Adicionar company_ids se houver seleção
@@ -1363,7 +1372,19 @@ async function loadActivitiesData() {
       throw new Error(data.error || 'Erro ao carregar atividades');
     }
 
-    state.activities = Array.isArray(data.data) ? data.data : [];
+    const pageItems = Array.isArray(data.data) ? data.data : [];
+    if (append) {
+      const existingIds = new Set(
+        state.activities.map(activity => `${activity.type || ''}:${activity.id || ''}`)
+      );
+      state.activities = state.activities.concat(
+        pageItems.filter(activity => !existingIds.has(`${activity.type || ''}:${activity.id || ''}`))
+      );
+    } else {
+      state.activities = pageItems;
+    }
+    state.activitiesTotal = Number(data.pagination?.total || state.activities.length);
+    state.activitiesHasMore = Boolean(data.pagination?.has_more);
 
     if (data.scope_counts) {
       updateScopeButtons(data.scope_counts);
@@ -1380,6 +1401,7 @@ async function loadActivitiesData() {
 
     await updateIncidentSummary();
     renderActivities();
+    renderActivitiesPagination();
 
     if (state.currentScope === 'team') {
       state.teamData = null;
@@ -1389,15 +1411,47 @@ async function loadActivitiesData() {
       loadCompanyOverview();
     }
 
-    console.log(`✅ Carregados ${state.activities.length} registros para scope: ${state.currentScope}`);
+    console.log(`✅ Carregados ${state.activities.length} de ${state.activitiesTotal} registros para scope: ${state.currentScope}`);
+    return true;
   } catch (error) {
     console.error('Erro ao carregar atividades:', error);
     window.showMessage(error.message || 'Erro ao carregar atividades', 'error');
-    state.activities = [];
-    renderActivities();
+    if (!append) {
+      state.activities = [];
+      renderActivities();
+      renderActivitiesPagination();
+    }
+    return false;
   } finally {
     setActivitiesLoading(false);
   }
+}
+
+function renderActivitiesPagination() {
+  const container = document.getElementById('activitiesPagination');
+  if (!container) return;
+
+  container.replaceChildren();
+  if (!state.activitiesHasMore) return;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn btn-secondary';
+  button.textContent = `Carregar mais (${state.activities.length} de ${state.activitiesTotal})`;
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'Carregando...';
+    state.activitiesPage += 1;
+    try {
+      const loaded = await loadActivitiesData({ append: true });
+      if (!loaded) {
+        state.activitiesPage = Math.max(state.activitiesPage - 1, 1);
+      }
+    } catch (_error) {
+      state.activitiesPage = Math.max(state.activitiesPage - 1, 1);
+    }
+  });
+  container.appendChild(button);
 }
 
 // ========================================

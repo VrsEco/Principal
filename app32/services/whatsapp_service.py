@@ -447,4 +447,5 @@ class WhatsAppService:
 
 
 # Singleton instance
-whatsapp_service = WhatsAppService()
+from utils.lazy_service import lazy_service
+whatsapp_service = lazy_service(WhatsAppService)

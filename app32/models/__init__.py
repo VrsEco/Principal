@@ -213,7 +213,10 @@ from .incentive import (
     IncentiveParticipant
 )
 
+from .identity_provisioning_outbox import IdentityProvisioningOutbox, OAuthConnectionRecoveryAudit
+
 __all__ = [
+    'IdentityProvisioningOutbox', 'OAuthConnectionRecoveryAudit',
     'EmployeeQualificationEvidence',
     'UsageTelemetryHourly',
     'RoleCostProfile',
@@ -251,3 +254,6 @@ __all__ = [
     'IncentiveGovernabilityMatrix', 'IncentiveCalculation',
     'IncentiveParticipant'
 ]
+
+from .financial import FinancialReconciliationPlaybook
+__all__.append("FinancialReconciliationPlaybook")

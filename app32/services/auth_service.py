@@ -62,6 +62,10 @@ class AuthService:
 
             db.session.add(user)
             db.session.commit()
+            from services.identity_provisioning_outbox_service import identity_provisioning_outbox_service
+            event = identity_provisioning_outbox_service.queue_user_state(user)
+            db.session.commit()
+            identity_provisioning_outbox_service.process_event(event.id)
 
             return user
 
@@ -229,6 +233,11 @@ class AuthService:
             user.updated_at = datetime.utcnow()
             db.session.commit()
 
+            from services.identity_provisioning_outbox_service import identity_provisioning_outbox_service
+            event = identity_provisioning_outbox_service.queue_user_state(user)
+            db.session.commit()
+            identity_provisioning_outbox_service.process_event(event.id)
+
             # Log profile update
             log_service.log_update(
                 entity_type="user",
@@ -293,6 +302,11 @@ class AuthService:
             user.updated_at = datetime.utcnow()
 
             db.session.commit()
+
+            from services.identity_provisioning_outbox_service import identity_provisioning_outbox_service
+            event = identity_provisioning_outbox_service.queue_user_state(user)
+            db.session.commit()
+            identity_provisioning_outbox_service.process_event(event.id)
 
             # Log status change
             log_service.log_update(

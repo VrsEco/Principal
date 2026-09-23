@@ -84,6 +84,14 @@ CLASSIFICATION_OPERATOR_VALUES = ("contains", "equals", "starts_with")
 CLASSIFICATION_MEMORY_SOURCE_VALUES = ("user_confirmed", "ai_suggested", "imported_memory")
 CLASSIFICATION_SUGGESTION_SOURCE_VALUES = ("rule", "memory", "ai")
 CLASSIFICATION_SUGGESTION_STATUS_VALUES = ("suggested", "confirmed", "rejected", "applied")
+RECONCILIATION_PLAYBOOK_ACTION_VALUES = (
+    "classify_only",
+    "transfer",
+    "schedule_settlement",
+    "direct_entry",
+    "bordero",
+)
+RECONCILIATION_PLAYBOOK_CONFIRMATION_VALUES = ("always", "suggest", "never")
 
 IMPORT_SOURCE_VALUES = ("csv", "csc", "xlsx", "ofx", "api", "mcp")
 IMPORT_BATCH_STATUS_VALUES = ("uploaded", "parsed", "processed", "processed_with_errors", "cancelled")
@@ -2060,6 +2068,64 @@ class FinancialClassificationRule(db.Model):
             "counterparty_hint": self.counterparty_hint,
             "notes": self.notes,
             "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialReconciliationPlaybook(db.Model):
+    """Padrão operacional auditável para sugestão de conciliação bancária."""
+
+    __tablename__ = "financial_reconciliation_playbooks"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "playbook_code", name="uq_financial_reconciliation_playbooks_company_code"),
+        db.Index("ix_financial_reconciliation_playbooks_company_active", "company_id", "is_active"),
+        db.Index("ix_financial_reconciliation_playbooks_company_priority", "company_id", "priority"),
+        db.CheckConstraint(
+            f"action_type IN {RECONCILIATION_PLAYBOOK_ACTION_VALUES}",
+            name="ck_financial_reconciliation_playbooks_action",
+        ),
+        db.CheckConstraint(
+            f"confirmation_policy IN {RECONCILIATION_PLAYBOOK_CONFIRMATION_VALUES}",
+            name="ck_financial_reconciliation_playbooks_confirmation",
+        ),
+        db.CheckConstraint(
+            f"operator IN {CLASSIFICATION_OPERATOR_VALUES}",
+            name="ck_financial_reconciliation_playbooks_operator",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
+    playbook_code = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    priority = db.Column(db.Integer, nullable=False, default=100)
+    source_type = db.Column(db.String(20))
+    field_name = db.Column(db.String(50), nullable=False)
+    operator = db.Column(db.String(20), nullable=False, default="contains")
+    match_value = db.Column(db.String(255), nullable=False)
+    action_type = db.Column(db.String(30), nullable=False)
+    confirmation_policy = db.Column(db.String(20), nullable=False, default="always")
+    action_payload_json = db.Column(JSONB, nullable=False, default=dict)
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_by_agent = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    def to_dict(self):
+        return {
+            "id": self.id, "company_id": self.company_id, "playbook_code": self.playbook_code,
+            "name": self.name, "is_active": self.is_active, "priority": self.priority,
+            "source_type": self.source_type, "field_name": self.field_name,
+            "operator": self.operator, "match_value": self.match_value,
+            "action_type": self.action_type, "confirmation_policy": self.confirmation_policy,
+            "action_payload_json": self.action_payload_json or {}, "notes": self.notes,
+            "metadata_json": self.metadata_json or {}, "created_by_user_id": self.created_by_user_id,
+            "created_by_agent": self.created_by_agent,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

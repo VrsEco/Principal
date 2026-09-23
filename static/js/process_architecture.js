@@ -555,6 +555,15 @@ function renderMacroSipoc() {
     const macro = state.macros.find(item => String(item.id) === macroId);
     const bundle = getCurrentMacroSipocBundle();
     const snapshot = bundle?.current_snapshot || null;
+    const pdfLink = document.getElementById('macroSipocPdfLink');
+
+    if (pdfLink) {
+        const hasPublishedSipoc = Boolean(macroId && bundle?.published_snapshot);
+        pdfLink.hidden = !hasPublishedSipoc;
+        pdfLink.href = hasPublishedSipoc
+            ? `/macro-processes/${encodeURIComponent(macroId)}/sipoc/report`
+            : '#';
+    }
 
     if (!macro) {
         workspace.innerHTML = `<div class="sipoc-empty-state">Selecione um macroprocesso para visualizar ou modelar o SIPOC.</div>`;

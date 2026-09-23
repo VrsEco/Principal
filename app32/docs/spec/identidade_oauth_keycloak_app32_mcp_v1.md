@@ -515,7 +515,66 @@ coorte. Não se deve sincronizar senhas entre APP32 e Keycloak.
 - Critério de regressão: igualdade entre tools expostas e manifesto (exceto a própria tool de capabilities), filtro financeiro com leitura versus criação, token sem scope, teto de grant e isolamento tenant.
 - Não declarar paridade integral com todas as funções do APP32: a publicação remota continua limitada à coorte revisada. Homologação real da sessão cliente permanece obrigatória; testes simulados não a substituem.
 
+## 17. Provisionamento automático APP32 → Keycloak — 2026-09-21
 
+O APP32 é a fonte de verdade para cadastro, status, papel e vínculos
+`User`/`Employee`/`company_id`; o Keycloak é autoridade exclusiva de
+credenciais e sessões. Ao criar, atualizar, vincular ou desativar um usuário,
+o APP32 grava um evento idempotente em `identity_provisioning_outbox` na sua
+própria transação. O processador só chama a Admin API do Keycloak após o
+commit local e reexecuta eventos falhos com backoff. Falha do IdP nunca desfaz
+o usuário ou o vínculo empresarial já confirmado no APP32.
+
+O consumidor projeta o estado atual do usuário, não executa cegamente uma
+operação histórica. Eventos concluídos não são reutilizados para novas
+transições (inclusive ativo → inativo → ativo) ou alterações de vínculos.
+Somente pendências não iniciadas com o mesmo payload podem ser coalescidas;
+a chave de uma nova projeção inclui o evento predecessor e o papel APP32.
+
+O payload da outbox não contém senha, token ou segredo. Para identidade nova,
+o Keycloak cria a conta e envia a ação `UPDATE_PASSWORD`; mudanças posteriores
+de perfil e memberships não reenviam convite nem redefinem senha. O worker
+registra `IdentityPrincipal`, o vínculo exato `issuer/sub` e grants apenas
+para `Employee` ativo em `Company` ativa. Desativação local suspende a conta
+no Keycloak e o principal/grants, sem exclusão física automática.
+
+O client técnico usa Client Credentials restrito a `manage-users` do realm
+`app32`, com segredo somente em variável protegida. Esta automação não amplia
+capabilities: OAuth continua reavaliando role APP32, grant, scope, surface,
+`company_id` e gate humano em toda tool.
+
+## 18. Recuperação self-service da conexão OAuth — 2026-09-22
+
+A tela **Perfil → Instalar Squad** expõe a ação confirmada **Recuperar conexão
+OAuth** para o próprio usuário autenticado. Ela não recebe `company_id`,
+`email`, `subject`, role ou capability do navegador. O APP32 deriva o usuário
+pela sessão, revalida sua atividade e e-mail e registra uma auditoria sem
+segredo em `oauth_connection_recovery_audits`.
+
+Após provisionar/reativar a identidade no Keycloak, o APP32 reconcilia o
+`IdentityPrincipal`, o vínculo `issuer/sub` e os `PrincipalCompanyGrant` para
+as empresas com `Employee` ativo e `Company` ativa. Grants locais que já não
+correspondem a um vínculo ativo são apenas **suspensos**, nunca removidos em
+silêncio. Capabilities, scopes, roles finos e gates continuam sendo resolvidos
+pelo catálogo/policy canônicos durante cada chamada MCP; a recuperação não
+concede permissões.
+
+Por fim, o Keycloak envia a ação nativa `UPDATE_PASSWORD`. Não há sincronismo
+de senha APP32-Keycloak, token retornado ao browser ou alteração de dados
+operacionais. A rota exige sessão, same-origin e limites por IP/usuário. O
+tema de e-mail `versus` preserva o link e a expiração nativos do Keycloak,
+apenas aplicando identidade visual Versus.
+
+A recuperação confirma a transação dos vínculos locais antes de pedir o
+e-mail ao IdP. Falhas de reconciliação impedem o envio; falha no envio não
+desfaz os vínculos já confirmados. Aceite do IdP não comprova entrega à caixa
+de entrada. O checkpoint remoto da outbox reduz reenvios após falhas locais,
+mas não oferece exactly-once entre transações APP32 e chamadas Keycloak.
+
+O client técnico de provisionamento deve permanecer limitado a `manage-users`,
+`query-users` e `view-users`. `manage-realm` só pode ser usado de forma
+administrativa, temporária e auditada para configurar SMTP/tema do realm; deve
+ser removido após a configuração. Não utilizar `realm-admin`.
 ### Gate de prontidão Claude DCR — 2026-09-20
 
 O APP32 só anuncia o conector OAuth Claude como disponível quando `MCP_VERSUS_OAUTH_CLAUDE_ENABLED=1` e `MCP_VERSUS_OAUTH_CLAUDE_DCR_READY=1`. A segunda flag é uma declaração operacional da plataforma, posterior à validação real da política DCR do Keycloak: redirect oficial `claude.ai` e scopes permitidos. Flag ausente ou falsa falha fechada: a tela informa que a integração está em preparação e não entrega URL ou instruções de conexão. O cliente nunca recebe instruções para ajustar Trusted Hosts, scopes, IP, client ID ou token.

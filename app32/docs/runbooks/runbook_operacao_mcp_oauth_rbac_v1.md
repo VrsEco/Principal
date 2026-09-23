@@ -63,6 +63,24 @@ a solicitação persistida exibida no APP32 e repetir **o mesmo payload**. Não
 passar booleano de confirmação, não alterar o payload após a aprovação e não
 repetir operação com outro `company_id`.
 
+## Provisionamento automático de identidade
+
+1. Crie ou ative o usuário apenas no APP32 e confirme o vínculo ativo com a
+   empresa. O APP32 gera o evento `identity_provisioning_outbox` e tenta a
+   sincronização imediatamente.
+2. Para usuário novo, o Keycloak envia o convite de definição de senha. Nunca
+   copie senha local, hash ou token para o Keycloak, card, log ou suporte.
+3. Se a identidade estiver pendente/falha, execute o processador
+   `scripts/process_identity_provisioning_outbox.py` ou aguarde a retentativa
+   agendada. Consulte somente status, código e mensagem saneada do evento.
+4. Antes de alterar o client técnico, valide `manage-users`, `query-users` e
+   `view-users` no realm `app32`; não conceda `realm-admin` para resolver
+   falha de convite. `manage-realm` é excepcional e temporário, apenas para
+   configurar SMTP/tema do realm, devendo ser revogado ao término.
+5. Smoke mínimo: usuário novo recebe identidade, conclui a senha, autentica
+   por OAuth e acessa exclusivamente empresas com vínculo ativo. Em seguida,
+   desative-o no APP32 e valide a negativa no próximo uso OAuth.
+
 
 ### Correção de discovery unificada — AA.J.21.332 (2026-09-18)
 
@@ -72,7 +90,43 @@ repetir operação com outro `company_id`.
 - Critério de regressão: igualdade entre tools expostas e manifesto (exceto a própria tool de capabilities), filtro financeiro com leitura versus criação, token sem scope, teto de grant e isolamento tenant.
 - Não declarar paridade integral com todas as funções do APP32: a publicação remota continua limitada à coorte revisada. Homologação real da sessão cliente permanece obrigatória; testes simulados não a substituem.
 
+## Recuperar conexão OAuth pelo Perfil
 
+### Gate de reconciliação de migrations — 2026-09-23
+
+Preservar o pai publicado de `20260919_0001`: `20260916_1000`. A revisão
+aditiva `20260923_1200` une os heads `20260922_1100` e `20260917_1000`,
+sem operações próprias de schema/dados. Antes do upgrade oficial, confirmar
+revisões atuais e schema no PostgreSQL e gerar backup verificado. Não substituir
+esse procedimento por `stamp`, remoção manual de linhas ou reescrita de ancestry.
+Se ambos os heads estiverem aplicados, o plano deve conter apenas o merge;
+outro estado exige revisar todas as revisões pendentes antes de prosseguir.
+
+Use **Perfil → Instalar Squad → Recuperar conexão OAuth** quando o usuário
+não receber convite, não conseguir autenticar no Keycloak ou quando o vínculo
+APP32/Keycloak precisar de realinhamento.
+
+1. O próprio usuário autenticado confirma a ação. Ela não aceita empresa,
+   e-mail, perfil ou permissões informados pelo navegador.
+2. O APP32 recria/atualiza a identidade no Keycloak, reconcilia somente grants
+   de empresas com vínculo `Employee` ativo e suspende grants locais obsoletos.
+3. O Keycloak envia o e-mail nativo de `UPDATE_PASSWORD`. O usuário conclui a
+   senha pelo link e então remove/reconecta `mcp-versus` no seu cliente.
+4. Validar `tools/list`, uma consulta permitida e uma negativa cross-tenant.
+   A recuperação não deve criar capabilities nem ampliar roles.
+5. Em caso de limite de solicitações ou falha, não repetir em lote nem criar
+   senha manual: consultar a auditoria saneada e o log do provisionador.
+
+O e-mail usa o tema `versus` do Keycloak. Ele preserva link, expiração e ação
+nativa do IdP; APP32 não deve enviar link próprio de redefinição para essa
+finalidade.
+
+### Privilégio do client técnico
+
+O client de provisionamento usa `manage-users`, `query-users` e `view-users`.
+`manage-realm` é excepcional, temporário e administrativo apenas para alterar
+SMTP/tema do realm; revogue-o ao terminar. `realm-admin` é proibido para este
+fluxo.
 ### Gate de prontidão Claude DCR — 2026-09-20
 
 O APP32 só anuncia o conector OAuth Claude como disponível quando `MCP_VERSUS_OAUTH_CLAUDE_ENABLED=1` e `MCP_VERSUS_OAUTH_CLAUDE_DCR_READY=1`. A segunda flag é uma declaração operacional da plataforma, posterior à validação real da política DCR do Keycloak: redirect oficial `claude.ai` e scopes permitidos. Flag ausente ou falsa falha fechada: a tela informa que a integração está em preparação e não entrega URL ou instruções de conexão. O cliente nunca recebe instruções para ajustar Trusted Hosts, scopes, IP, client ID ou token.

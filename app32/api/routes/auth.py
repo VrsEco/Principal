@@ -13,6 +13,11 @@ from services.user_presence_service import UserPresenceService
 from services.user_mcp_token_service import user_mcp_token_service
 from services.mcp_oauth_codex_connector_service import mcp_oauth_codex_connector_service
 from services.mcp_versus_oauth_connector_service import mcp_versus_oauth_connector_service
+from services.oauth_connection_recovery_service import (
+    OAuthConnectionRecoveryError,
+    OAuthConnectionRecoveryRateLimitError,
+    oauth_connection_recovery_service,
+)
 from schemas.user_pydantic import (
     UserProfileUpdateSchema,
     UserPasswordChangeSchema,
@@ -604,6 +609,36 @@ def profile_mcp_oauth_connector_config():
             logger,
             exc,
             context='Falha ao montar configuração OAuth do conector mcp-versus',
+            success=False,
+        )
+
+
+@auth_bp.route('/auth/profile/mcp-oauth/recover', methods=['POST'])
+@auth_bp.route('/profile/mcp-oauth/recover', methods=['POST'])
+@login_required
+def recover_profile_mcp_oauth_connection():
+    """Reconciliador self-service sem aceitar identidade ou tenant do browser."""
+    if not same_origin_verified():
+        return jsonify({"success": False, "message": "Origem da solicitação não confirmada."}), 403
+    if not consume_rate_limit(
+        "auth.mcp_oauth_recovery.ip",
+        get_request_ip(),
+        limit=5,
+        window_seconds=3600,
+    ):
+        return rate_limit_exceeded_response("Muitas solicitações de recuperação. Tente novamente mais tarde.")
+    try:
+        result = oauth_connection_recovery_service.recover_authenticated_user(user_id=current_user.id)
+        return jsonify({"success": True, "message": result["message"], "data": {"company_ids": result["company_ids"]}})
+    except OAuthConnectionRecoveryRateLimitError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 429
+    except OAuthConnectionRecoveryError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao recuperar conexão OAuth do usuário autenticado',
             success=False,
         )
 

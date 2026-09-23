@@ -12,6 +12,7 @@ from pathlib import Path
 
 from utils.env_helpers import normalize_database_url, normalize_docker_host
 import os
+import sys
 from dotenv import load_dotenv
 
 # Carrega .env local do projeto (app32) cedo para evitar fallback acidental
@@ -78,9 +79,9 @@ def get_engine():
         # Fallback: Se estiver no Cloud Run (K_SERVICE existe) mas sem a variável definida, usar o valor conhecido
         if not connection_name and os.environ.get("K_SERVICE"):
             connection_name = "vrs-eco-478714:southamerica-east1:gestaoversus-db-prod"
-            print(f"DEBUG: Using Fallback CLOUD_SQL_CONNECTION_NAME='{connection_name}'")
+            print(f"DEBUG: Using Fallback CLOUD_SQL_CONNECTION_NAME='{connection_name}'", file=sys.stderr)
         
-        print(f"DEBUG: CLOUD_SQL_CONNECTION_NAME='{connection_name}'")
+        print(f"DEBUG: CLOUD_SQL_CONNECTION_NAME='{connection_name}'", file=sys.stderr)
         
         if connection_name:
             # Use Cloud SQL Python Connector
@@ -108,7 +109,7 @@ def get_engine():
             )
         else:
             # Local development or standard connection
-            print(f"DEBUG: Using standard DATABASE_URL connection")
+            print("DEBUG: Using standard DATABASE_URL connection", file=sys.stderr)
             _engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
             
     return _engine
@@ -222,7 +223,7 @@ class PostgresConnection:
         if self._conn:
             self._conn.commit()
         else:
-            print("WARNING: Tentando commit sem conexão ativa")
+            print("WARNING: Tentando commit sem conexão ativa", file=sys.stderr)
 
     def rollback(self):
         """Rollback da transação"""

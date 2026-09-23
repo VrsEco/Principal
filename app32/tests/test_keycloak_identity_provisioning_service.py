@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import pytest
+
 from services.keycloak_identity_provisioning_service import (
     KeycloakIdentityProvisioningService,
+    KeycloakProvisioningError,
     KeycloakProvisioningSettings,
 )
 
@@ -40,7 +43,7 @@ def test_keycloak_provisioning_creates_user_and_sets_temporary_password_without_
     subject = service.ensure_user(email="ana@example.com", name="Ana Silva", temporary_password="SenhaTemporaria!12")
 
     assert subject == "subject-1"
-    assert session.calls[2][2]["json"]["requiredActions"] == ["UPDATE_PASSWORD"]
+    assert session.calls[2][2]["json"]["enabled"] is True
     assert session.calls[3][2]["json"] == {"type": "password", "value": "SenhaTemporaria!12", "temporary": True}
 
 
@@ -49,6 +52,7 @@ def test_keycloak_provisioning_reuses_existing_identity():
         _Response(200, {"access_token": "token"}),
         _Response(200, [{"id": "subject-existing"}]),
         _Response(204),
+        _Response(204),
     ])
 
     subject = KeycloakIdentityProvisioningService(_settings(), session=session).ensure_user(
@@ -56,4 +60,55 @@ def test_keycloak_provisioning_reuses_existing_identity():
     )
 
     assert subject == "subject-existing"
-    assert [call[0] for call in session.calls] == ["post", "get", "put"]
+    assert [call[0] for call in session.calls] == ["post", "get", "put", "put"]
+
+
+def test_keycloak_provisioning_sends_password_setup_email_without_receiving_password():
+    session = _Session([
+        _Response(200, {"access_token": "token"}),
+        _Response(200, []),
+        _Response(201, headers={"Location": "https://id.example/admin/realms/app32/users/subject-2"}),
+        _Response(204),
+    ])
+    subject = KeycloakIdentityProvisioningService(_settings(), session=session).ensure_user(
+        email="novo@example.com", name="Novo Usuário", send_password_setup_email=True
+    )
+
+    assert subject == "subject-2"
+    assert session.calls[-1][1].endswith("/subject-2/execute-actions-email")
+    assert session.calls[-1][2]["json"] == ["UPDATE_PASSWORD"]
+
+
+def test_keycloak_provisioning_retries_password_setup_email_when_remote_user_already_exists():
+    """Um retry do outbox deve recuperar criação remota incompleta."""
+    session = _Session([
+        _Response(200, {"access_token": "token"}),
+        _Response(200, [{"id": "subject-existing"}]),
+        _Response(204),
+        _Response(204),
+    ])
+
+    subject = KeycloakIdentityProvisioningService(_settings(), session=session).ensure_user(
+        email="novo@example.com", name="Novo Usuário", send_password_setup_email=True
+    )
+
+    assert subject == "subject-existing"
+    assert session.calls[-1][1].endswith("/subject-existing/execute-actions-email")
+    assert session.calls[-1][2]["json"] == ["UPDATE_PASSWORD"]
+
+
+def test_keycloak_update_failure_exposes_only_http_status_not_response_body():
+    session = _Session([
+        _Response(200, {"access_token": "token"}),
+        _Response(200, [{"id": "subject-existing"}]),
+        _Response(403, {"error": "sensitive internal detail"}),
+    ])
+
+    with pytest.raises(KeycloakProvisioningError) as exc:
+        KeycloakIdentityProvisioningService(_settings(), session=session).ensure_user(
+            email="ana@example.com", name="Ana Silva", send_password_setup_email=True
+        )
+
+    assert "HTTP 403" in str(exc.value)
+    assert "sensitive internal detail" not in str(exc.value)
+    assert len(session.calls) == 3  # O convite não foi solicitado após a falha de atualização.

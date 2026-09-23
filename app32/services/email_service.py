@@ -622,4 +622,5 @@ Equipe de Planejamento Estratégico
 
 
 # Singleton instance
-email_service = EmailService()
+from utils.lazy_service import lazy_service
+email_service = lazy_service(EmailService)

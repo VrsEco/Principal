@@ -9,6 +9,7 @@ from services.mcp_oauth_onboarding_service import McpOAuthOnboardingError, mcp_o
 from services.identity.user_employee_orchestrator_service import (
     UserEmployeeOrchestratorService,
 )
+from services.identity_provisioning_outbox_service import identity_provisioning_outbox_service
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
@@ -273,7 +274,18 @@ def create_user():
         else:
             db.session.commit()
 
-        return jsonify({"success": True, "user": user.to_dict(), "employees": employees}), 201
+        # Cadastro local é autoridade. O evento permite provisionar/retry no
+        # Keycloak sem nunca transacionar senha ou bloquear a criação APP32.
+        event = identity_provisioning_outbox_service.queue_user_state(user)
+        db.session.commit()
+        identity_provisioning = identity_provisioning_outbox_service.process_event(event.id)
+
+        return jsonify({
+            "success": True,
+            "user": user.to_dict(),
+            "employees": employees,
+            "identity_provisioning": identity_provisioning,
+        }), 201
         
     except ValidationError as e:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 400
@@ -303,7 +315,10 @@ def update_user(user_id):
         if validated_data.is_active is not None and _is_platform_admin_local(): user.is_active = validated_data.is_active
         
         db.session.commit()
-        return jsonify({"success": True, "user": user.to_dict()})
+        event = identity_provisioning_outbox_service.queue_user_state(user)
+        db.session.commit()
+        identity_provisioning = identity_provisioning_outbox_service.process_event(event.id)
+        return jsonify({"success": True, "user": user.to_dict(), "identity_provisioning": identity_provisioning})
         
     except ValidationError as e:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 400
@@ -433,4 +448,7 @@ def delete_user_route(user_id):
         
     user.is_active = False
     db.session.commit()
-    return jsonify({"success": True})
+    event = identity_provisioning_outbox_service.queue_user_state(user)
+    db.session.commit()
+    identity_provisioning = identity_provisioning_outbox_service.process_event(event.id)
+    return jsonify({"success": True, "identity_provisioning": identity_provisioning})

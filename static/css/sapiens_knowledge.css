@@ -87,6 +87,13 @@ body.page-sapiens-chat.sapiens-legacy .kv-page {
     background: #fff; color: #526079; text-decoration: none; cursor: pointer;
 }
 .kv-icon-button:hover { color: var(--kv-primary); border-color: #a9cbf8; }
+.kv-approval-link {
+    min-height: 38px; display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid #bfe8d6; border-radius: 10px; background: #edf9f4;
+    color: #16724e; padding: 0 11px; text-decoration: none;
+    font-size: 12px; font-weight: 800;
+}
+.kv-approval-link:hover { background: #def5e9; color: #0f6944; border-color: #8ad0b0; }
 
 .kv-ask-card, .kv-answer, .kv-empty, .kv-recent {
     background: rgba(255,255,255,.97);
@@ -209,6 +216,8 @@ body.page-sapiens-chat.sapiens-legacy .kv-page {
     .kv-page { padding: 16px 10px 32px; }
     .kv-header { align-items: flex-start; }
     .kv-authorized { display: none; }
+    .kv-approval-link { padding: 0 9px; }
+    .kv-approval-link span { display: none; }
     .kv-ask-card, .kv-answer { border-radius: 14px; }
     .kv-question-box { display: grid; grid-template-columns: auto 1fr; }
     .kv-question-box textarea { min-height: 46px; }

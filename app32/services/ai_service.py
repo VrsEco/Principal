@@ -1003,4 +1003,5 @@ _AnÃ¡lise baseada em dados de reputaÃ§Ã£o online e inteligÃªncia estrat�
 
 
 # Singleton instance
-ai_service = AIService()
+from utils.lazy_service import lazy_service
+ai_service = lazy_service(AIService)

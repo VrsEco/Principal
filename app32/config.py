@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 from utils.env_helpers import normalize_database_url
+from utils.db_connection_policy import production_connection_options
 from utils.security import env_csv, env_flag, get_or_create_dev_secret
 
 # Força o carregamento do .env local.
@@ -61,6 +62,8 @@ class Config:
     # porque I/O síncrono a cada request degrada o runtime web.
     REQUEST_DEBUG_LOG_ENABLED = env_flag("REQUEST_DEBUG_LOG_ENABLED", default=False)
     SLOW_REQUEST_THRESHOLD_MS = int(os.environ.get("SLOW_REQUEST_THRESHOLD_MS") or 1000)
+    SLOW_REQUEST_STACK_ENABLED = env_flag("SLOW_REQUEST_STACK_ENABLED", default=False)
+    SLOW_REQUEST_STACK_SECONDS = float(os.environ.get("SLOW_REQUEST_STACK_SECONDS") or 5)
     WEBHOOK_SHARED_SECRET = os.environ.get("WEBHOOK_SHARED_SECRET")
     WHATSAPP_WEBHOOK_SECRET = os.environ.get("WHATSAPP_WEBHOOK_SECRET")
     TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET")
@@ -105,6 +108,12 @@ class Config:
     )
     KNOWLEDGE_TENANT_SYNC_MINUTES = int(
         os.environ.get("KNOWLEDGE_TENANT_SYNC_MINUTES") or 15
+    )
+    # Identidade OAuth: APP32 persiste evento e o scheduler retenta a
+    # sincronização Keycloak; senhas nunca entram na outbox.
+    IDENTITY_PROVISIONING_ENABLED = env_flag("IDENTITY_PROVISIONING_ENABLED", default=True)
+    IDENTITY_PROVISIONING_RETRY_MINUTES = int(
+        os.environ.get("IDENTITY_PROVISIONING_RETRY_MINUTES") or 5
     )
 
     # WhatsApp Integration
@@ -189,6 +198,7 @@ class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = _prod_database_url
     SQLALCHEMY_ENGINE_OPTIONS = {
         **Config.SQLALCHEMY_ENGINE_OPTIONS,
+        **production_connection_options(os.environ),
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE") or 10),
         "max_overflow": int(os.environ.get("SQLALCHEMY_MAX_OVERFLOW") or 20),
     }

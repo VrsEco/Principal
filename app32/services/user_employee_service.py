@@ -81,6 +81,10 @@ class UserEmployeeService:
             
             db.session.add(employee)
             db.session.commit()
+            from services.identity_provisioning_outbox_service import identity_provisioning_outbox_service
+            event = identity_provisioning_outbox_service.queue_user_state(user)
+            db.session.commit()
+            identity_provisioning_outbox_service.process_event(event.id)
             
             return {
                 'success': True,

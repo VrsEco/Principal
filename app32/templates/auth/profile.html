@@ -182,6 +182,7 @@
             <textarea id="mcpConnectorCommand" class="form-control mcp-command-output" rows="6" readonly placeholder="As instruções compatíveis com a ferramenta selecionada aparecerão aqui."></textarea>
             <div class="mcp-command-actions">
                 <button type="button" class="btn btn-secondary" id="loadMcpConnectorButton">Exibir instruções OAuth</button>
+                <button type="button" class="btn btn-secondary" id="recoverMcpOAuthButton">Recuperar conexão OAuth</button>
                 <button type="button" class="btn btn-primary" id="copyMcpConnectorButton" disabled>Copiar instruções</button>
             </div>
         </section>
@@ -283,6 +284,19 @@
     </div>
 </div>
 
+<div id="mcpOAuthRecoveryModal" class="mcp-token-modal" hidden>
+    <div class="mcp-token-modal__backdrop" data-close-oauth-recovery-modal="true"></div>
+    <div class="mcp-token-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mcpOAuthRecoveryModalTitle">
+        <h3 id="mcpOAuthRecoveryModalTitle">Recuperar conexão OAuth</h3>
+        <p>Vamos reconciliar sua identidade no APP32, os vínculos ativos das suas empresas e o acesso no Keycloak.</p>
+        <p>Um e-mail será enviado para você definir ou atualizar a senha do Keycloak. Nenhum token MCP, dado operacional ou permissão adicional será criado.</p>
+        <div class="mcp-modal-actions">
+            <button type="button" class="btn btn-secondary" id="cancelMcpOAuthRecoveryButton">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="confirmMcpOAuthRecoveryButton">Enviar e recuperar</button>
+        </div>
+    </div>
+</div>
+
 <style>
     .mcp-profile-shell { width: 100%; max-width: 1120px; min-width: 0; margin: 0 auto; padding: 0 1rem 4rem; box-sizing: border-box; overflow-x: clip; }
     .mcp-profile-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid rgba(15, 23, 42, .08); border-radius: 28px; background: linear-gradient(135deg, rgba(37, 99, 235, .1), rgba(255, 255, 255, .92)); }
@@ -375,6 +389,10 @@
     const mcpTokenModalValue = document.getElementById('mcpTokenModalValue');
     const copyMcpTokenModalButton = document.getElementById('copyMcpTokenModalButton');
     const closeMcpTokenModalButton = document.getElementById('closeMcpTokenModalButton');
+    const recoverMcpOAuthButton = document.getElementById('recoverMcpOAuthButton');
+    const mcpOAuthRecoveryModal = document.getElementById('mcpOAuthRecoveryModal');
+    const cancelMcpOAuthRecoveryButton = document.getElementById('cancelMcpOAuthRecoveryButton');
+    const confirmMcpOAuthRecoveryButton = document.getElementById('confirmMcpOAuthRecoveryButton');
     let latestMcpPlaintextToken = null;
     let selectedMcpRuntime = 'claude';
     let selectedMcpSquad = 'squad_cliente';
@@ -672,6 +690,42 @@
         document.body.style.overflow = '';
     }
 
+    function openMcpOAuthRecoveryModal() {
+        if (!mcpOAuthRecoveryModal) return;
+        mcpOAuthRecoveryModal.hidden = false;
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => confirmMcpOAuthRecoveryButton?.focus(), 0);
+    }
+
+    function closeMcpOAuthRecoveryModal() {
+        if (!mcpOAuthRecoveryModal) return;
+        mcpOAuthRecoveryModal.hidden = true;
+        document.body.style.overflow = '';
+        recoverMcpOAuthButton?.focus();
+    }
+
+    async function recoverMcpOAuthConnection() {
+        if (confirmMcpOAuthRecoveryButton) {
+            confirmMcpOAuthRecoveryButton.disabled = true;
+            confirmMcpOAuthRecoveryButton.textContent = 'Recuperando...';
+        }
+        try {
+            const response = await fetch('{{ url_for('auth.recover_profile_mcp_oauth_connection') }}', { method: 'POST' });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao recuperar a conexão OAuth.');
+            closeMcpOAuthRecoveryModal();
+            await loadOAuthConnectorConfig(false).catch(() => {});
+            renderAlert('mcp-token-alert-container', true, data.message || 'Conexão OAuth recuperada. Confira seu e-mail.');
+        } catch (error) {
+            renderAlert('mcp-token-alert-container', false, error.message);
+        } finally {
+            if (confirmMcpOAuthRecoveryButton) {
+                confirmMcpOAuthRecoveryButton.disabled = false;
+                confirmMcpOAuthRecoveryButton.textContent = 'Enviar e recuperar';
+            }
+        }
+    }
+
     async function runMcpTokenAction(url, successMessage) {
         const response = await fetch(url, {
             method: 'POST',
@@ -810,6 +864,13 @@
             } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
+
+    if (recoverMcpOAuthButton) recoverMcpOAuthButton.addEventListener('click', openMcpOAuthRecoveryModal);
+    if (cancelMcpOAuthRecoveryButton) cancelMcpOAuthRecoveryButton.addEventListener('click', closeMcpOAuthRecoveryModal);
+    if (confirmMcpOAuthRecoveryButton) confirmMcpOAuthRecoveryButton.addEventListener('click', recoverMcpOAuthConnection);
+    document.querySelectorAll('[data-close-oauth-recovery-modal="true"]').forEach((element) => {
+        element.addEventListener('click', closeMcpOAuthRecoveryModal);
+    });
 
     document.querySelectorAll('.profile-tab').forEach((button) => {
         button.addEventListener('click', () => {
