@@ -274,8 +274,8 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
                 ContractsCatalogService.list_commercial_offer_process_candidates,
                 company_id,
             )
-        except Exception as exc:  # noqa: BLE001
-            return _fail(str(exc))
+        except Exception:  # Não expor detalhes internos ou parâmetros de banco.
+            return _fail("Não foi possível consultar a oferta comercial. Verifique o acesso e tente novamente.")
         return _ok(items=items, count=len(items))
 
     @mcp.tool()
@@ -289,8 +289,8 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
                 company_id,
                 item_id,
             )
-        except Exception as exc:  # noqa: BLE001
-            return _fail(str(exc))
+        except Exception:  # Não expor detalhes internos ou parâmetros de banco.
+            return _fail("Não foi possível consultar a oferta comercial. Verifique o acesso e tente novamente.")
         return _ok(**guidance)
 
     @mcp.tool()
