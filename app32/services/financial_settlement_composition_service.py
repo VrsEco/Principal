@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from services.financial_transaction import financial_commit
+
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -513,7 +515,7 @@ class FinancialSettlementCompositionService:
                 company_id=company_id,
                 components=simulation["settlement_payload"]["settlement_components"],
             )
-            db.session.commit()
+            financial_commit(db.session)
         except Exception as exc:  # pragma: no cover - defensive persistence boundary
             db.session.rollback()
             return None, f"Baixa criada, mas houve erro ao atualizar ajustes do título: {str(exc)}"

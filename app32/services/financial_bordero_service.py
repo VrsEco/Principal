@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from services.financial_transaction import financial_commit, atomic_financial_operation
+
 import logging
 from datetime import datetime
 from decimal import Decimal, ROUND_DOWN
@@ -7,7 +9,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from models import db
 from sqlalchemy import case, func, or_
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from models.financial import (
     FinancialBordero,
     FinancialBorderoItem,
@@ -244,7 +246,7 @@ class FinancialBorderoService:
                 bordero.total_amount = total_amount
                 bordero.settled_amount = Decimal("0.00")
                 bordero.open_amount = total_amount
-                db.session.commit()
+                financial_commit(db.session)
                 return FinancialBorderoService._serialize_bordero(bordero, include_items=True), None
             except IntegrityError as exc:
                 db.session.rollback()
@@ -300,7 +302,7 @@ class FinancialBorderoService:
                 bordero.notes = data.notes
             if "metadata_json" in data.model_fields_set and data.metadata_json is not None:
                 bordero.metadata_json = dict(data.metadata_json or {})
-            db.session.commit()
+            financial_commit(db.session)
             return FinancialBorderoService._serialize_bordero(bordero, include_items=True, include_settlements=True), None
         except Exception as exc:
             db.session.rollback()
@@ -340,7 +342,7 @@ class FinancialBorderoService:
         try:
             bordero.deleted_at = datetime.utcnow()
             bordero.status = "cancelled"
-            db.session.commit()
+            financial_commit(db.session)
             return {"message": "Borderô removido com sucesso.", "id": bordero_id}, None
         except Exception as exc:
             db.session.rollback()
@@ -348,6 +350,7 @@ class FinancialBorderoService:
             return None, f"Erro ao remover borderô: {exc}"
 
     @staticmethod
+    @atomic_financial_operation(lambda: db.session)
     def create_settlement(
         *,
         bordero_id: int,
@@ -367,7 +370,7 @@ class FinancialBorderoService:
             FinancialBordero.id == bordero_id,
             FinancialBordero.company_id == data.company_id,
             FinancialBordero.deleted_at.is_(None),
-        ).first()
+        ).populate_existing().with_for_update(nowait=True).first()
         if not bordero:
             return None, "Borderô não encontrado no escopo da empresa."
         if bordero.status == "cancelled":
@@ -477,7 +480,7 @@ class FinancialBorderoService:
 
             FinancialBorderoService._sync_bordero_totals_from_items(bordero, items)
 
-            db.session.commit()
+            financial_commit(db.session)
             financial_settlement_ids = [
                 int(entry_allocation.get("financial_settlement_id"))
                 for allocation in allocation_payload
@@ -502,6 +505,7 @@ class FinancialBorderoService:
             return None, f"Erro ao registrar baixa do borderô: {exc}"
 
     @staticmethod
+    @atomic_financial_operation(lambda: db.session)
     def update_settlement(
         *,
         bordero_id: int,
@@ -523,6 +527,7 @@ class FinancialBorderoService:
             bordero_id=bordero_id,
             settlement_id=settlement_id,
             company_id=company_id,
+            for_update=True,
         )
         if error:
             return None, error
@@ -586,23 +591,26 @@ class FinancialBorderoService:
         if scope_error:
             return None, scope_error
 
-        bordero, settlement, error = FinancialBorderoService._load_bordero_settlement(
-            bordero_id=bordero_id,
-            settlement_id=settlement_id,
-            company_id=company_id,
-        )
-        if error:
-            return None, error
-
-        child_error = FinancialBorderoService._delete_child_financial_settlements(
-            company_id=company_id,
-            bordero_settlement=settlement,
-            allowed_company_ids=allowed_company_ids,
-        )
-        if child_error:
-            return None, child_error
-
         try:
+            bordero, settlement, error = FinancialBorderoService._load_bordero_settlement(
+                bordero_id=bordero_id,
+                settlement_id=settlement_id,
+                company_id=company_id,
+                for_update=True,
+            )
+            if error:
+                db.session.rollback()
+                return None, error
+
+            child_error = FinancialBorderoService._delete_child_financial_settlements(
+                company_id=company_id,
+                bordero_settlement=settlement,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if child_error:
+                db.session.rollback()
+                return None, child_error
+
             deleted_at = datetime.utcnow()
             settlement.deleted_at = deleted_at
             settlement.settlement_status = "cancelled"
@@ -621,8 +629,7 @@ class FinancialBorderoService:
                 bordero=bordero,
                 items=items,
             )
-            db.session.commit()
-            return {
+            result = {
                 "message": "Baixa do borderô removida com sucesso.",
                 "id": settlement_id,
                 "bordero": FinancialBorderoService._serialize_bordero(
@@ -630,7 +637,16 @@ class FinancialBorderoService:
                     include_items=True,
                     include_settlements=True,
                 ),
-            }, None
+            }
+            financial_commit(db.session)
+            return result, None
+        except OperationalError as exc:
+            db.session.rollback()
+            sqlstate = getattr(exc.orig, "pgcode", None) or getattr(exc.orig, "sqlstate", None)
+            if sqlstate == "55P03":
+                return None, "Borderô em processamento por outra operação. Atualize os dados antes de tentar novamente."
+            logger.exception("Erro ao bloquear borderô %s para estorno", bordero_id)
+            return None, "Não foi possível concluir o estorno do borderô."
         except Exception as exc:
             db.session.rollback()
             logger.exception("Erro ao remover baixa do borderô %s", settlement_id)
@@ -914,21 +930,28 @@ class FinancialBorderoService:
         bordero_id: int,
         settlement_id: int,
         company_id: int,
+        for_update: bool = False,
     ) -> Tuple[Optional[FinancialBordero], Optional[FinancialBorderoSettlement], Optional[str]]:
-        bordero = FinancialBordero.query.filter(
+        bordero_query = FinancialBordero.query.filter(
             FinancialBordero.id == bordero_id,
             FinancialBordero.company_id == company_id,
             FinancialBordero.deleted_at.is_(None),
-        ).first()
+        )
+        if for_update:
+            bordero_query = bordero_query.populate_existing().with_for_update(nowait=True)
+        bordero = bordero_query.first()
         if not bordero:
             return None, None, "Borderô não encontrado no escopo da empresa."
 
-        settlement = FinancialBorderoSettlement.query.filter(
+        settlement_query = FinancialBorderoSettlement.query.filter(
             FinancialBorderoSettlement.id == settlement_id,
             FinancialBorderoSettlement.company_id == company_id,
             FinancialBorderoSettlement.bordero_id == bordero_id,
             FinancialBorderoSettlement.deleted_at.is_(None),
-        ).first()
+        )
+        if for_update:
+            settlement_query = settlement_query.populate_existing().with_for_update(nowait=True)
+        settlement = settlement_query.first()
         if not settlement:
             return bordero, None, "Baixa do borderô não encontrada no escopo da empresa."
         return bordero, settlement, None
@@ -951,7 +974,7 @@ class FinancialBorderoService:
                     ),
                 ),
             )
-            .order_by(FinancialSettlement.id.asc())
+            .order_by(FinancialSettlement.financial_entry_id.asc(), FinancialSettlement.id.asc())
             .all()
         )
         for child in child_settlements:
@@ -960,6 +983,7 @@ class FinancialBorderoService:
                 company_id=company_id,
                 allowed_company_ids=allowed_company_ids,
                 allow_bordero_child_delete=True,
+                commit=False,
             )
             if error:
                 return error

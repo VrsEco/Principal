@@ -33,19 +33,21 @@
 
 {% block workspace_content %}
 <div class="finance-page bordero-page fade-in" data-company-id="{{ company_id or '' }}" data-bordero-id="{{ bordero_id or '' }}" data-initial-bordero-type="{{ initial_bordero_type or '' }}" data-bordero-type="{{ initial_bordero_type or '' }}">
+    <div role="status" aria-live="polite" id="bordero-load-status">Carregando dados do borderô. Aguarde para operar.</div>
+    <button type="button" id="bordero-load-retry" class="btn btn-secondary hidden" hidden>Tentar carregar novamente</button>
     <header class="finance-header bordero-header">
         <div>
             <h1 id="bordero-title">{{ 'Novo Borderô' if not bordero_id else 'Borderô' }}</h1>
             <p class="bordero-header-subtitle">Operação centralizada para baixa única de títulos agrupados. Títulos participantes ficam congelados enquanto o borderô estiver ativo.</p>
         </div>
         <div class="bordero-header-actions">
-            <button type="button" class="btn btn-primary hidden" id="bordero-save-button">Salvar alterações</button>
-            <button type="button" class="btn btn-danger hidden" id="bordero-delete-button">Excluir borderô</button>
+            <button type="button" class="btn btn-primary hidden" id="bordero-save-button" data-bordero-load-guard inert>Salvar alterações</button>
+            <button type="button" class="btn btn-danger hidden" id="bordero-delete-button" data-bordero-load-guard inert>Excluir borderô</button>
             <a class="btn btn-secondary" href="/financial/borderos">Voltar para lista</a>
         </div>
     </header>
 
-    <section class="bordero-shell">
+    <section class="bordero-shell" data-bordero-load-guard inert aria-busy="true">
         <div class="bordero-main">
             <section class="panel bordero-card">
                 <div id="bordero-banner" class="bordero-banner">Selecione o tipo do borderô e os títulos financeiros elegíveis.</div>
@@ -201,7 +203,7 @@
     </section>
 </div>
 
-<script src="{{ url_for('static', filename='js/financial_borderos.js', v='20260707-bordero-filters-selection') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_borderos.js', v=static_asset_version('js/financial_borderos.js')) }}"></script>
 {% endblock %}
 
 {% block sidebar_right %}
@@ -211,7 +213,7 @@
     <p class="borderos-sidebar-subtitle">Refine os títulos elegíveis sem perder as seleções já marcadas.</p>
 </div>
 
-<div class="borderos-sidebar-filters">
+<div class="borderos-sidebar-filters" data-bordero-load-guard inert>
     <div class="filter-group">
         <label class="filter-label" for="bordero-filter-counterparty">Favorecido</label>
         <input id="bordero-filter-counterparty" type="search" placeholder="Nome do cliente/fornecedor">

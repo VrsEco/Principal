@@ -10,8 +10,14 @@
 <span class="current">Lançamento Rápido</span>
 {% endblock %}
 
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_entry_direct.css', v=static_asset_version('css/financial_entry_direct.css')) }}">
+{% endblock %}
+
 {% block workspace_content %}
-<div class="direct-entry-page" data-company-id="{{ company_id or '' }}" data-entry-type="payable" data-initial-entry-type="{{ initial_entry_type or '' }}">
+{% set initial_type = initial_entry_type if initial_entry_type in ['payable', 'receivable'] else 'payable' %}
+<div class="direct-entry-page" data-company-id="{{ company_id or '' }}" data-entry-type="{{ initial_type }}" data-initial-entry-type="{{ initial_entry_type or '' }}">
     <header class="direct-entry-header">
         <div>
             <h1>Lançamento Rápido</h1>
@@ -20,14 +26,14 @@
     </header>
 
     <section class="direct-entry-card">
-        <div id="direct-entry-type-switch" class="direct-entry-type-switch" role="group" aria-label="Tipo do lançamento rápido">
-            <button type="button" class="type-chip active" data-entry-type="payable" onclick="setDirectEntryType('payable')">Conta a Pagar</button>
-            <button type="button" class="type-chip" data-entry-type="receivable" onclick="setDirectEntryType('receivable')">Conta a Receber</button>
+        <div id="direct-entry-type-switch" class="direct-entry-type-switch{{ ' is-locked' if initial_entry_type in ['payable', 'receivable'] else '' }}" role="group" aria-label="Tipo do lançamento rápido">
+            <button type="button" class="type-chip{{ ' active' if initial_type == 'payable' else '' }}" data-entry-type="payable" onclick="setDirectEntryType('payable')">Conta a Pagar</button>
+            <button type="button" class="type-chip{{ ' active' if initial_type == 'receivable' else '' }}" data-entry-type="receivable" onclick="setDirectEntryType('receivable')">Conta a Receber</button>
         </div>
-        <div id="direct-entry-banner" class="direct-entry-banner">Conta a pagar · preenchimento orientado para pagamentos imediatos.</div>
+        <div id="direct-entry-banner" class="direct-entry-banner">{% if initial_type == 'receivable' %}Conta a receber · preenchimento orientado para recebimentos imediatos.{% else %}Conta a pagar · preenchimento orientado para pagamentos imediatos.{% endif %}</div>
 
         <form id="direct-entry-form" class="direct-entry-form">
-            <input type="hidden" name="entry_type" value="payable">
+            <input type="hidden" name="entry_type" value="{{ initial_type }}">
 
             <section class="form-block form-block--main">
                 <div class="form-grid">
@@ -146,6 +152,5 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="/static/css/financial_entry_direct.css">
-<script src="/static/js/financial_entry_direct.js?v=20260518-searchable-rateio-hotfix-served-assets"></script>
+<script src="{{ url_for('static', filename='js/financial_entry_direct.js', v=static_asset_version('js/financial_entry_direct.js')) }}"></script>
 {% endblock %}

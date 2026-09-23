@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from services.financial_transaction import financial_commit
+
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Optional
@@ -253,7 +255,7 @@ class ContractFinancialService:
             auto_commit=False,
         )
         if auto_commit:
-            db.session.commit()
+            financial_commit(db.session)
         else:
             db.session.flush()
         return policy
@@ -279,7 +281,7 @@ class ContractFinancialService:
             user_id=user_id,
             auto_commit=False,
         )
-        db.session.commit()
+        financial_commit(db.session)
         return True
 
     @staticmethod
@@ -874,7 +876,7 @@ class ContractFinancialService:
                         main_schedule=existing_schedule,
                     )
                     if auto_commit:
-                        db.session.commit()
+                        financial_commit(db.session)
                     else:
                         db.session.flush()
                     return {
@@ -994,7 +996,7 @@ class ContractFinancialService:
                 auto_commit=False,
             )
             if auto_commit:
-                db.session.commit()
+                financial_commit(db.session)
             else:
                 db.session.flush()
             return {
@@ -1243,7 +1245,7 @@ class ContractFinancialService:
             )
             if execution is None:
                 continue
-            db.session.commit()
+            financial_commit(db.session)
             results.append(execution.to_dict())
 
         return {"executed": len(results), "items": results, "event_type": event_type}

@@ -877,17 +877,17 @@
 
   document.addEventListener('DOMContentLoaded', async () => {
     try {
-      allocationRows = [createAllocationRow({ percentage: '100' })];
-      await loadOptions();
-      ensureDateDefaults({ force: true });
-      recalculateAllRowsFromPercentages();
-      renderAllocations();
       if (lockedEntryType) {
         entryTypeSwitch?.classList.add('is-locked');
         window.setDirectEntryType(lockedEntryType);
       } else {
         window.setDirectEntryType('payable');
       }
+      allocationRows = [createAllocationRow({ percentage: '100' })];
+      await loadOptions();
+      ensureDateDefaults({ force: true });
+      recalculateAllRowsFromPercentages();
+      renderAllocations();
       $('direct-description').focus();
     } catch (error) {
       alert(error.message);
