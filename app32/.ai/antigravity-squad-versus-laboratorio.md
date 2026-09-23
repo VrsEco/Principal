@@ -1,3 +1,5 @@
+> **Escopo restrito:** experimento AA.J.16 e company_id=10. Não usar como prompt padrão; use app32/.ai/antigravity-squad-versus.md.
+
 # Antigravity — Harness do Squad Versus (Empresa-Laboratório)
 
 ## Objetivo

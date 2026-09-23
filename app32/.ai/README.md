@@ -9,7 +9,11 @@ Este diretório contém configurações de governança para diferentes assistent
 ├── README.md                    ← Este arquivo
 ├── gemini-instructions.md       ← Google Gemini
 ├── claude-instructions.md       ← Anthropic Claude
-└── chatgpt-instructions.md      ← OpenAI ChatGPT
+├── chatgpt-instructions.md      ← OpenAI ChatGPT
+├── codex-squad-engenharia.md    ← Ativação econômica do Squad Engenharia
+├── claude-squad-cliente.md       ← Ativação econômica do Squad Cliente
+├── antigravity-squad-versus.md   ← Ativação econômica do Squad Versus
+└── codex-squad-engenharia-laboratorio.md ← Harness restrito AA.J.16
 ```
 
 ## 🎯 IAs Suportadas
@@ -55,7 +59,11 @@ Não precisa fazer nada!
 ```
 1. Se via API: Use como system message
 2. Se via playground: Cole no início
-3. Veja exemplos em .ai/codex-instructions.md
+3. Para Squads, copie o prompt correspondente e preencha a tarefa:
+   - Engenharia: `.ai/codex-squad-engenharia.md`
+   - Cliente: `.ai/claude-squad-cliente.md`
+   - Versus: `.ai/antigravity-squad-versus.md`
+4. Não use `codex-squad-engenharia-laboratorio.md` fora do experimento AA.J.16
 ```
 
 ### Para Gemini (Manual)
@@ -98,4 +106,3 @@ Quando atualizar governança em `docs/governance/`:
 
 **Versão:** 1.0  
 **Data:** 18/10/2025
-

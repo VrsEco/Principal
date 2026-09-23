@@ -1,3 +1,5 @@
+> **Escopo restrito:** experimento AA.J.16 e company_id=10. Não usar como prompt padrão; use app32/.ai/claude-squad-cliente.md.
+
 # Claude — Harness do Squad Cliente (Empresa-Laboratório)
 
 ## Objetivo

@@ -1,3 +1,4 @@
+> **Escopo restrito:** este harness pertence ao experimento `AA.J.16`, à empresa-laboratório e ao `company_id=10`. Não o carregue como instrução padrão do Squad Engenharia. Para ativação econômica e geral, use `app32/.ai/codex-squad-engenharia.md`.
 # Codex — Harness do Squad de Engenharia (Empresa-Laboratório)
 
 ## Objetivo
