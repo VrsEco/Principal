@@ -1,33 +1,21 @@
 # Matriz de Roteamento
 
-## Tipo de pedido -> skill / especialista principal
-
-| Tipo | Skill principal | Especialista líder | Apoio comum |
+| Tipo | Skill | Líder | Apoio quando necessário |
 |---|---|---|---|
-| Definir arquitetura, boundaries, refatoração estrutural | `gestao_versus_core` | `arquiteto.md` | `dba.md`, `backend_service.md` |
-| Criar, refatorar ou revisar arquitetura de processos empresariais | `versus-arquitetura-processos` | `arquiteto_processos.md` | `backend_service.md`, `qa_automation.md` |
-| Descobrir e validar AS-IS com executores do cliente | `squad-cliente-descoberta-modelagem-processos` | `SC-OPS` | `SC-COORD`, `arquiteto_processos.md` por handoff |
-| Modelar ou revisar fluxo BPMN 2.0 de processo delimitado | `versus-modelagem-processos-bpmn` | `arquiteto_processos.md` | `backend_service.md`, `qa_automation.md` |
-| Refatorar AS-IS, desenhar TO-BE ou validar método pelo Squad Versus | `squad-versus-arquitetura-modelagem-processos` | `business_architect_versus.md` | `arquiteto_processos.md`, `qa_automation.md` |
-| Execução longa com 3+ etapas | `aa-j-31-card-execution` (obrigatória) | depende do domínio | `qa_automation.md`, `arquiteto.md` |
-| Criar ou revisar workflow V3 | `workflow-factory-versus` | `backend_service.md` | `backend_api.md`, `qa_automation.md`, `ai_engineer.md` |
-| Investigar bug, drift, permissão, tenant, produção | `gestao-versus-incident-response` | `qa_automation.md` | `arquiteto.md`, `backend_api.md`, `dba.md` |
-| Deploy, produção, migração, restart | `deploy_gestao_versus` | `qa_automation.md` | `backend_api.md`, `dba.md` |
-| Nova rota/API REST/MCP | nenhuma adicional obrigatória | `backend_api.md` | `backend_service.md`, `qa_automation.md` |
-| Regra de negócio / service | nenhuma adicional obrigatória | `backend_service.md` | `arquiteto.md`, `dba.md` |
-| Modelo, query, migração, performance SQL | nenhuma adicional obrigatória | `dba.md` | `backend_service.md` |
-| UI, template, print, dashboard | nenhuma adicional obrigatória | `frontend.md` | `backend_api.md`, `qa_automation.md` |
-| LangGraph, RAG, consumo MCP, agentes internos | nenhuma adicional obrigatória | `ai_engineer.md` | `backend_api.md`, `arquiteto.md` |
-| Proposta comercial, oferta, deck de venda, narrativa e pacote de serviços | nenhuma adicional obrigatória | `alex_reeves.md` | `business_architect_versus.md`, `lorenzo_vega.md`, `felix_moreira.md`, `ruth_nakamura.md`, `arquiteto.md` |
+| Arquitetura, boundary, refatoração | `gestao_versus_core` | Arquiteto | DBA, Backend Service |
+| Processo AS-IS/TO-BE/BPMN | skill de processos aplicável | Arquiteto de Processos | Backend Service, QA |
+| Execução com 3+ etapas | `aa-j-31-card-execution` | conforme domínio | QA, Arquiteto |
+| Workflow V3/Sapiens/WhatsApp | `workflow-factory-versus` ou `sapiens-workflow-first` | Backend Service | API, QA, AI |
+| Incidente, RBAC, tenant, produção | `gestao-versus-incident-response` | QA | Arquiteto, API, DBA |
+| Deploy, migração, restart | `deploy_gestao_versus` | QA | API, DBA |
+| Rota/API/MCP | — | Backend API | Backend Service, QA |
+| Regra de negócio | — | Backend Service | Arquiteto, DBA |
+| Modelo, query, migração, SQL | — | DBA | Backend Service |
+| UI, template, dashboard | — | Frontend | API, QA |
+| LangGraph, RAG, MCP client | — | AI Engineer | API, Arquiteto |
+| Proposta comercial | — | Alex Reeves | Conselho PME mínimo |
 
-## Regra de contenção
-Se o pedido couber em 1 skill + 1 especialista, não expandir para mais componentes.
-
-## Regra de resposta
-As respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento.
-
-## Regra de resposta
-As respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento.
-
-## Regra mandatória
-Se houver 3 ou mais etapas, a execução deve começar por `aa-j-31-card-execution`, com um card real por entrega no projeto operacional de engenharia vigente, checklist interno e fechamento após a validação final.
+## Contenção
+- Se cabe em uma skill e um líder, não expanda.
+- Delegação exige entrega independente, contrato de entrada/saída e evidência objetiva.
+- Para detalhes de processo, use somente a skill específica; esta matriz não é manual operacional.

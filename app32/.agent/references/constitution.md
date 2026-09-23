@@ -1,26 +1,12 @@
 # Constituição Técnica — Gestão Versus
 
-## Stack oficial
-- Python 3.10+
-- Flask
-- PostgreSQL com `psycopg2`
-- OpenAI / LangGraph quando aplicável
-- Jinja2 + TailwindCSS no frontend server-rendered
+## Arquitetura obrigatória
+- Python 3.10+, Flask, PostgreSQL com `psycopg2`, Jinja2 + Tailwind; OpenAI/LangGraph quando aplicável.
+- SQLite e Vertex AI são proibidos.
+- Toda operação lê e grava com `company_id`; id de objeto isolado não é autorização.
+- Regras vivem em services, não em rotas. Payloads são validados por schema rigoroso.
+- MCP é a superfície prioritária para leitura operacional e integrações de agentes.
 
-## Guardrails globais
-1. Multi-tenancy obrigatório: toda leitura e escrita deve escopar `company_id`.
-2. Não confiar apenas no id do objeto.
-3. Não colocar lógica de negócio em rotas.
-4. Validar payloads com schema rigoroso.
-5. MCP First para leitura operacional e integração com agentes.
-6. SQLite proibido.
-7. Vertex AI proibido.
-
-## Comunicação
-- responder em Português-Brasil
-- exigência técnica alta
-- respostas curtas e objetivas, com alvo padrão de leitura em até 1 minuto; só expandir quando houver necessidade real de detalhamento ou quando o usuário pedir aprofundamento
-- preferir respostas em 3 a 7 bullets quando o formato permitir
-- evitar blocos longos de texto; quebrar em bullets curtos ou seções mínimas
-- abrir pela decisão, conclusão ou próximo passo antes do contexto
-- priorizar clareza arquitetural e evolução sustentável
+## Comunicação e eficiência
+- PT-BR, decisão primeiro, 3–7 bullets e profundidade proporcional ao risco.
+- Contexto é recurso finito: carregue apenas o necessário, limite saídas de ferramentas e evite reexplicar contexto já disponível.
