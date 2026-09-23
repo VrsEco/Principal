@@ -425,7 +425,7 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>
 <script>
 const statusData = { on: {{ count_on_target }}, below: {{ count_below }}, nodata: {{ count_no_data }} };
 const typeData   = { effort: {{ type_counts.effort }}, result: {{ type_counts.result }}, impact: {{ type_counts.impact }} };
