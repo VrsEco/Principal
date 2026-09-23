@@ -3,7 +3,12 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.backfill_versus_commercial_offer_catalog import CATALOG_BLUEPRINT
+import pytest
+
+from scripts.backfill_versus_commercial_offer_catalog import (
+    CATALOG_BLUEPRINT,
+    _assert_safety_preserved,
+)
 
 
 def test_versus_offer_catalog_blueprint_is_parent_first_and_unique():
@@ -30,3 +35,25 @@ def test_new_offers_start_inactive_until_operational_contract_is_approved():
         assert by_code[code]["selectable"] is True
         assert by_code[code]["active"] is False
         assert by_code[code]["enforce_contract"] is True
+
+
+def test_backfill_safety_preserves_existing_performance_hub_and_contract_references():
+    snapshot = {
+        "performance_hub": {"id": 3, "code": "1.01.001", "name": "Performance Hub", "is_active": True},
+        "contract_items_total": 5,
+        "contract_items_linked_to_performance_hub": 5,
+    }
+
+    _assert_safety_preserved(snapshot, dict(snapshot))
+
+
+def test_backfill_safety_rejects_contract_reference_drift():
+    before = {
+        "performance_hub": {"id": 3, "code": "1.01.001", "name": "Performance Hub", "is_active": True},
+        "contract_items_total": 5,
+        "contract_items_linked_to_performance_hub": 5,
+    }
+    after = {**before, "contract_items_linked_to_performance_hub": 4}
+
+    with pytest.raises(RuntimeError, match="referência contratual protegida"):
+        _assert_safety_preserved(before, after)

@@ -150,6 +150,12 @@ class _FakeProcessColumn:
     def in_(self, values):
         return ("in", self.key, set(values))
 
+    def desc(self):
+        return ("desc", self.key)
+
+    def asc(self):
+        return ("asc", self.key)
+
 
 class _FakeProcessQuery:
     def __init__(self, rows):
@@ -158,6 +164,9 @@ class _FakeProcessQuery:
 
     def filter(self, *conditions):
         self.filters.extend(conditions)
+        return self
+
+    def order_by(self, *conditions):
         return self
 
     def all(self):
@@ -177,6 +186,9 @@ def _fake_process_model(rows):
         {
             "id": _FakeProcessColumn("id"),
             "company_id": _FakeProcessColumn("company_id"),
+            "is_active": _FakeProcessColumn("is_active"),
+            "code": _FakeProcessColumn("code"),
+            "name": _FakeProcessColumn("name"),
             "query": _FakeProcessQuery(rows),
         },
     )
@@ -227,3 +239,80 @@ def test_commercial_contract_accepts_approval_of_authenticated_actor():
         metadata_json={"commercial_contract_v1": _commercial_contract()},
         actor_user_id=3,
     )
+
+
+def test_commercial_process_candidates_are_limited_to_company(monkeypatch):
+    commercial_process = SimpleNamespace(
+        id=10,
+        company_id=9,
+        code="VRS.P.010",
+        name="Gerir Vendas",
+        is_active=True,
+        responsible="Responsável Comercial",
+        owner_employee_id=21,
+        macro=SimpleNamespace(name="Comercial", area=SimpleNamespace(name="Finalísticos")),
+    )
+    foreign_process = SimpleNamespace(
+        id=11,
+        company_id=77,
+        code="FOR.P.001",
+        name="Processo de outro tenant",
+        is_active=True,
+        responsible=None,
+        owner_employee_id=None,
+        macro=None,
+    )
+    monkeypatch.setattr(
+        contracts_catalog_service_module,
+        "Process",
+        _fake_process_model([commercial_process, foreign_process]),
+    )
+
+    candidates = ContractsCatalogService.list_commercial_offer_process_candidates(9)
+
+    assert candidates == [
+        {
+            "id": 10,
+            "code": "VRS.P.010",
+            "name": "Gerir Vendas",
+            "is_active": True,
+            "responsible": "Responsável Comercial",
+            "owner_employee_id": 21,
+            "macroprocess": "Comercial",
+            "process_area": "Finalísticos",
+        }
+    ]
+
+
+def test_commercial_offer_guidance_does_not_invent_processes_or_approvals(monkeypatch):
+    class _FakeItem:
+        id = 31
+        company_id = 9
+        metadata_json = {"commercial_contract_v1": {"status": "draft"}}
+
+        @staticmethod
+        def to_dict():
+            return {"id": 31, "company_id": 9, "name": "Oferta em estruturação"}
+
+    monkeypatch.setattr(ContractsCatalogService, "get_item", lambda company_id, item_id: _FakeItem())
+    monkeypatch.setattr(ContractsCatalogService, "_is_selectable_level", lambda item: True)
+    monkeypatch.setattr(
+        ContractsCatalogService,
+        "get_commercial_contract_readiness",
+        lambda item: {"status": "missing", "ready_for_activation": False, "reasons": ["Contrato ausente."]},
+    )
+    monkeypatch.setattr(
+        ContractsCatalogService,
+        "list_commercial_offer_process_candidates",
+        lambda company_id: [{"id": 10, "name": "Gerir Vendas"}],
+    )
+
+    guidance = ContractsCatalogService.get_commercial_offer_contract_guidance(9, 31)
+
+    assert guidance["process_candidates"] == [{"id": 10, "name": "Gerir Vendas"}]
+    assert guidance["next_action"]["key"] == "build_draft_with_human_evidence"
+    assert guidance["current_contract"] == {"status": "draft"}
+    assert {section["key"] for section in guidance["required_sections"]} == {
+        "positioning", "scope", "execution", "evidence", "governance"
+    }
+    assert "decisão humana" in guidance["human_gate"]

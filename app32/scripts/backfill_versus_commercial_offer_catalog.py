@@ -15,7 +15,7 @@ os.environ.setdefault("APP_BOOTSTRAP_DB_SCHEMA", "0")
 
 from app import create_app  # noqa: E402
 from models import Company, db  # noqa: E402
-from models.contracts import ContractCatalogItem  # noqa: E402
+from models.contracts import ContractCatalogItem, ContractItem  # noqa: E402
 
 
 CATALOG_BLUEPRINT = (
@@ -100,6 +100,46 @@ def _catalog_items_by_code(company_id: int) -> dict[str, ContractCatalogItem]:
     }
 
 
+def _build_safety_snapshot(company_id: int, by_code: dict[str, ContractCatalogItem]) -> dict:
+    """Registra os elementos que o backfill nunca pode alterar silenciosamente."""
+    performance_hub = by_code.get("1.01.001")
+    contract_items = ContractItem.query.filter(ContractItem.company_id == company_id).all()
+    performance_hub_id = performance_hub.id if performance_hub else None
+    return {
+        "performance_hub": (
+            {
+                "id": performance_hub.id,
+                "code": performance_hub.code,
+                "name": performance_hub.name,
+                "is_active": bool(performance_hub.is_active),
+            }
+            if performance_hub
+            else None
+        ),
+        "contract_items_total": len(contract_items),
+        "contract_items_linked_to_performance_hub": sum(
+            1
+            for item in contract_items
+            if performance_hub_id and item.contract_catalog_item_id == performance_hub_id
+        ),
+    }
+
+
+def _assert_safety_preserved(before: dict, after: dict) -> None:
+    """Falha antes do commit se o saneamento ameaçar legado contratado."""
+    before_hub = before.get("performance_hub")
+    after_hub = after.get("performance_hub")
+    if before_hub:
+        if not after_hub:
+            raise RuntimeError("Performance Hub existente desapareceu durante o backfill.")
+        for key in ("id", "code"):
+            if before_hub.get(key) != after_hub.get(key):
+                raise RuntimeError(f"Performance Hub teve {key} alterado durante o backfill.")
+    for key in ("contract_items_total", "contract_items_linked_to_performance_hub"):
+        if before.get(key) != after.get(key):
+            raise RuntimeError(f"Backfill alterou referência contratual protegida: {key}.")
+
+
 def run(*, company_id: int, expected_company_name: str | None, dry_run: bool) -> dict:
     company = Company.query.filter(Company.id == company_id).first()
     if not company:
@@ -110,6 +150,7 @@ def run(*, company_id: int, expected_company_name: str | None, dry_run: bool) ->
         )
 
     by_code = _catalog_items_by_code(company_id)
+    safety_before = _build_safety_snapshot(company_id, by_code)
     created: list[str] = []
     updated: list[str] = []
     unchanged: list[str] = []
@@ -173,6 +214,9 @@ def run(*, company_id: int, expected_company_name: str | None, dry_run: bool) ->
             changed = True
         (updated if changed else unchanged).append(item.code)
 
+    safety_after = _build_safety_snapshot(company_id, _catalog_items_by_code(company_id))
+    _assert_safety_preserved(safety_before, safety_after)
+
     result = {
         "company_id": company_id,
         "company_name": company.name,
@@ -180,6 +224,11 @@ def run(*, company_id: int, expected_company_name: str | None, dry_run: bool) ->
         "updated": updated,
         "unchanged": unchanged,
         "dry_run": dry_run,
+        "safety": {
+            "before": safety_before,
+            "after": safety_after,
+            "preserved": True,
+        },
     }
     if dry_run:
         db.session.rollback()

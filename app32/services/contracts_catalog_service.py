@@ -46,6 +46,33 @@ class ContractsCatalogService:
         "commercial_contract_v1",
         "commercial_contract_enforced",
     }
+    COMMERCIAL_OFFER_CONTRACT_SECTIONS = (
+        {
+            "key": "positioning",
+            "title": "Público, dor e promessa",
+            "fields": ("icp_summary", "buying_triggers", "problem_statement", "promised_outcome"),
+        },
+        {
+            "key": "scope",
+            "title": "Escopo, entregáveis e dependências",
+            "fields": ("scope_in", "scope_out", "deliverables", "client_dependencies"),
+        },
+        {
+            "key": "execution",
+            "title": "Execução e capacidade",
+            "fields": ("execution_model", "versus_capabilities", "process_links"),
+        },
+        {
+            "key": "evidence",
+            "title": "Indicadores, valor e encerramento",
+            "fields": ("indicator_contract", "business_review_policy", "closure_criteria", "evidence_requirements"),
+        },
+        {
+            "key": "governance",
+            "title": "Preço, aprovação e ativação",
+            "fields": ("pricing_policy", "approved_by_user_id", "approved_at", "status"),
+        },
+    )
 
     @staticmethod
     def _normalize_bool(value: object) -> bool:
@@ -422,6 +449,76 @@ class ContractsCatalogService:
                 continue
             filtered.append(item)
         return filtered
+
+    @staticmethod
+    def list_commercial_offer_process_candidates(company_id: int) -> list[dict]:
+        """Lista somente processos do tenant aptos a serem vinculados à oferta.
+
+        A seleção é deliberadamente uma leitura MCP-first: o consultor e os
+        squads escolhem ids reais do mapa de processos, em vez de inferi-los a
+        partir de nomes ou preencher chaves manuais no contrato operacional.
+        """
+        processes = (
+            Process.query.filter(Process.company_id == company_id)
+            .order_by(Process.is_active.desc(), Process.code.asc(), Process.name.asc())
+            .all()
+        )
+        candidates = []
+        for process in processes:
+            macro = getattr(process, "macro", None)
+            area = getattr(macro, "area", None) if macro else None
+            candidates.append(
+                {
+                    "id": process.id,
+                    "code": process.code,
+                    "name": process.name,
+                    "is_active": bool(process.is_active),
+                    "responsible": process.responsible,
+                    "owner_employee_id": process.owner_employee_id,
+                    "macroprocess": getattr(macro, "name", None),
+                    "process_area": getattr(area, "name", None),
+                }
+            )
+        return candidates
+
+    @staticmethod
+    def get_commercial_offer_contract_guidance(company_id: int, item_id: int) -> dict:
+        """Consolida a leitura necessária para montar o contrato da oferta.
+
+        Não propõe processos, donos ou promessas no lugar do consultor. Expõe
+        as chaves reais do tenant, a prontidão atual e o roteiro oficial para
+        que o CLI, os squads e o consultor decidam com a mesma evidência.
+        """
+        item = ContractsCatalogService.get_item(company_id, item_id)
+        if not item or not ContractsCatalogService._is_selectable_level(item):
+            raise ValueError("Produto/serviço não localizado para a empresa ativa.")
+
+        readiness = ContractsCatalogService.get_commercial_contract_readiness(item)
+        if readiness.get("ready_for_activation"):
+            next_action = {
+                "key": "revalidate_before_contracting",
+                "message": "Reler a oferta, os processos e os gates antes de cada contratação.",
+            }
+        elif readiness.get("status") == "missing":
+            next_action = {
+                "key": "build_draft_with_human_evidence",
+                "message": "Montar o rascunho com evidências humanas e selecionar processos reais do tenant.",
+            }
+        else:
+            next_action = {
+                "key": "resolve_operational_gaps",
+                "message": "Tratar as pendências de prontidão antes de ativar ou contratar a oferta.",
+            }
+
+        return {
+            "item": item.to_dict(),
+            "readiness": readiness,
+            "current_contract": (item.metadata_json or {}).get("commercial_contract_v1"),
+            "process_candidates": ContractsCatalogService.list_commercial_offer_process_candidates(company_id),
+            "required_sections": [dict(section) for section in ContractsCatalogService.COMMERCIAL_OFFER_CONTRACT_SECTIONS],
+            "next_action": next_action,
+            "human_gate": "O CLI pode ler, pesquisar e preparar o rascunho; promessa, preço, aprovação e ativação exigem decisão humana autorizada.",
+        }
 
     @staticmethod
     def get_item(company_id: int, item_id: int) -> Optional[ContractCatalogItem]:

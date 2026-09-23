@@ -65,6 +65,18 @@ class CompanyListResource(Resource):
             ]
 
             if not linked_company_ids:
+                if paginated:
+                    page = max(request.args.get('page', 1, type=int) or 1, 1)
+                    per_page = min(max(request.args.get('per_page', 50, type=int) or 50, 1), 100)
+                    return {
+                        'items': [],
+                        'pagination': {
+                            'page': page,
+                            'per_page': per_page,
+                            'total': 0,
+                            'has_more': False,
+                        },
+                    }, 200
                 return [], 200
 
             query = query.filter(Company.id.in_(linked_company_ids))
