@@ -18,6 +18,11 @@ on:
         required: true
         default: false
         type: boolean
+      remediate_chartjs_runtime_drift:
+        description: "Contingência aprovada: preservar e remover somente o drift Chart.js legado"
+        required: true
+        default: false
+        type: boolean
       deployment_id:
         description: "ID de correlação do ledger MCP (obrigatório para agentes)"
         required: false
@@ -92,6 +97,11 @@ jobs:
       - name: 🛡️ Validar proveniência e correlação
         shell: bash
         run: |
+          if [ "${{ inputs.remediate_chartjs_runtime_drift }}" = "true" ] && \
+             { [ "$ACTOR" = "gv-codex-deploy[bot]" ] || [ "$ACTOR" = "gv-claude-deploy[bot]" ]; }; then
+            echo "Contingência de drift Chart.js exige operador humano; agentes não podem autorizá-la."
+            exit 1
+          fi
           case "$ACTOR" in
             "gv-codex-deploy[bot]"|"gv-claude-deploy[bot]")
               if [ -z "$DEPLOYMENT_ID" ]; then
@@ -128,6 +138,53 @@ jobs:
             set -e
             echo "📂 Acessando diretório do projeto..."
             cd ${{ secrets.PROJECT_PATH }}
+
+            # Contingência estritamente limitada ao resíduo de uma versão anterior
+            # do deploy que copiou Chart.js para o root público. O snapshot é
+            # criado antes de qualquer remoção e qualquer drift adicional aborta.
+            if [ "${{ inputs.remediate_chartjs_runtime_drift }}" = "true" ]; then
+              REPO="$(pwd)"
+              DRIFT_STATUS="$(git -C "$REPO" status --porcelain=v1)"
+              mapfile -t UNTRACKED < <(git -C "$REPO" ls-files --others --exclude-standard)
+
+              if ! git -C "$REPO" diff --quiet || ! git -C "$REPO" diff --cached --quiet || \
+                 [ "$DRIFT_STATUS" != "?? static/vendor/chartjs/" ] || \
+                 [ "${#UNTRACKED[@]}" -ne 2 ] || \
+                 [ "${UNTRACKED[0]}" != "static/vendor/chartjs/chart.umd.min.js" ] || \
+                 [ "${UNTRACKED[1]}" != "static/vendor/chartjs/chartjs-adapter-date-fns.bundle.min.js" ]; then
+                echo "❌ Drift não corresponde exatamente aos dois assets Chart.js legados; contingência recusada."
+                git -C "$REPO" status --porcelain=v1
+                exit 1
+              fi
+
+              CHART_DIR="$REPO/static/vendor/chartjs"
+              if [ ! -f "$CHART_DIR/chart.umd.min.js" ] || [ -L "$CHART_DIR/chart.umd.min.js" ] || \
+                 [ ! -f "$CHART_DIR/chartjs-adapter-date-fns.bundle.min.js" ] || [ -L "$CHART_DIR/chartjs-adapter-date-fns.bundle.min.js" ]; then
+                echo "❌ Assets Chart.js não são arquivos regulares seguros para a contingência."
+                exit 1
+              fi
+
+              STAMP="$(date +%Y%m%d-%H%M%S)"
+              SNAPSHOT_DIR="$REPO/../backups/worktree-drift-$STAMP"
+              umask 077
+              mkdir -p "$SNAPSHOT_DIR"
+              printf '%s\n' "$DRIFT_STATUS" > "$SNAPSHOT_DIR/status-before.txt"
+              tar -C "$REPO" -czf "$SNAPSHOT_DIR/chartjs-runtime-assets.tar.gz" \
+                static/vendor/chartjs/chart.umd.min.js \
+                static/vendor/chartjs/chartjs-adapter-date-fns.bundle.min.js
+              sha256sum "$SNAPSHOT_DIR/chartjs-runtime-assets.tar.gz" > "$SNAPSHOT_DIR/chartjs-runtime-assets.sha256"
+              printf 'snapshot=%s\ncreated_at=%s\n' "$SNAPSHOT_DIR" "$(date --iso-8601=seconds)" > "$SNAPSHOT_DIR/manifest.txt"
+
+              rm -f -- "$CHART_DIR/chart.umd.min.js" "$CHART_DIR/chartjs-adapter-date-fns.bundle.min.js"
+              rmdir -- "$CHART_DIR"
+
+              if [ -n "$(git -C "$REPO" status --porcelain=v1)" ]; then
+                echo "❌ Worktree ainda possui alterações após a contingência; deploy interrompido."
+                git -C "$REPO" status --porcelain=v1
+                exit 1
+              fi
+              echo "✅ Drift Chart.js legado preservado e removido com escopo controlado: $SNAPSHOT_DIR"
+            fi
 
             if [ -f "app32/scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via app32/scripts/deploy_configr.sh"
