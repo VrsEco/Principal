@@ -60,6 +60,34 @@ deploy_configr.sh → app.gestaoversus.com.br
 - `production` exige RBAC `deployment:request`, aprovação de ambiente GitHub e
   uma aprovação MCP vinculada à solicitação. Apenas `main` protegida é aceita.
 
+## Aprovação única de release
+
+O Squad Engenharia solicita ao operador uma **aprovação de release** antes de
+criar o primeiro efeito externo. A aprovação é uma decisão única, limitada a
+uma liberação, e deve registrar: objetivo, repositório/branch de destino,
+impacto, modo (`quick`/`standard`/`full`), migrations, reinício de MCP,
+tratamento de drift e a faixa de mudanças que será commitada.
+
+Com uma resposta inequívoca do operador — por exemplo, “autorizo o commit e
+deploy desta liberação” — ficam autorizadas somente as etapas daquele escopo:
+
+1. criar o commit e publicar a branch de trabalho;
+2. abrir e mesclar a PR para `main` protegida;
+3. disparar `.github/workflows/deploy-app32.yml`;
+4. aprovar o gate técnico do ambiente `production` e executar o workflow;
+5. registrar o ledger e validar os smokes públicos declarados.
+
+O gate `production` do GitHub não é removido nem contornado: a sua aprovação
+na UI é a materialização técnica da mesma decisão já registrada. Nenhuma
+credencial é revelada, copiada ou usada fora do workflow oficial.
+
+A autorização não é uma permissão permanente. Ela expira ao término do run e
+deve ser renovada para mudança de escopo, SHA/branch diferente, modo diferente,
+migration não declarada, reinício de MCP, exceção de drift não declarada,
+alteração de segredo/permissão ou correção de uma falha. Um retry do mesmo SHA,
+com os mesmos parâmetros e sem alteração corretiva, permanece vinculado à
+autorização original.
+
 ## Ledger PostgreSQL e multi-tenancy
 
 A tabela `deployment_ledger` deve conter, no mínimo:
@@ -103,6 +131,9 @@ validam schema e delegam ao service. A regra de política não vive na rota.
    permissões públicas de `static/vendor`.
 5. Depois do restart: `healthz` 200 e smoke HTTP 200 dos assets críticos,
    incluindo tipo JavaScript para Chart.js. Falha encerra o run como vermelho.
+6. O workflow e o ledger devem reter o ID/texto da aprovação, ator autenticado,
+   SHA efetivo, parâmetros e evidências para demonstrar que cada efeito ficou
+   dentro do escopo autorizado.
 
 ## Operação e contingência
 

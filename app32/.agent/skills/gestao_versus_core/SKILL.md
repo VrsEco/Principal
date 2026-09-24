@@ -32,6 +32,10 @@ description: Controle obrigatório do Gestão Versus: governança, roteamento e 
 - A solicitação passa pelo MCP de Deploy com identidade autenticada,
   `company_id`, autorização e trilha de auditoria. GitHub Actions é o único
   executor de produção; SSH manual é contingência formalmente registrada.
+- A aprovação única de release definida em `deploy_gestao_versus` e na SPEC
+  canônica vincula o Squad inteiro: ela cobre commit→PR→merge→workflow→smoke
+  somente dentro do SHA e parâmetros aprovados; o gate `production` continua
+  obrigatório e novas variáveis de impacto exigem nova aprovação.
 
 ## Sapiens e MCP remoto
 - Use domínio canônico (`routine`, `processes`, `finance`); normalize aliases antes de RBAC, telemetria e workflow.
