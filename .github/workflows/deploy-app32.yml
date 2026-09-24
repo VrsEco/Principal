@@ -23,6 +23,11 @@ on:
         required: true
         default: false
         type: boolean
+      remediate_process_architecture_runtime_drift:
+        description: "Contingência humana: snapshot e restauração do asset de processos legado"
+        required: true
+        default: false
+        type: boolean
       deployment_id:
         description: "ID de correlação do ledger MCP (obrigatório para agentes)"
         required: false
@@ -90,6 +95,7 @@ jobs:
     env:
       DEPLOYMENT_ID: ${{ inputs.deployment_id }}
       ACTOR: ${{ github.actor }}
+      TRIGGERING_ACTOR: ${{ github.triggering_actor }}
       CALLBACK_URL: ${{ vars.APP32_DEPLOY_CALLBACK_URL }}
       OIDC_AUDIENCE: ${{ vars.APP32_DEPLOY_OIDC_AUDIENCE }}
       APP32_PUBLIC_BASE_URL: ${{ vars.APP32_PUBLIC_BASE_URL }}
@@ -101,6 +107,18 @@ jobs:
              { [ "$ACTOR" = "gv-codex-deploy[bot]" ] || [ "$ACTOR" = "gv-claude-deploy[bot]" ]; }; then
             echo "Contingência de drift Chart.js exige operador humano; agentes não podem autorizá-la."
             exit 1
+          fi
+          if [ "${{ inputs.remediate_process_architecture_runtime_drift }}" = "true" ]; then
+            if [ "$ACTOR" != "VrsEco" ] || [ "$TRIGGERING_ACTOR" != "VrsEco" ] || \
+               [ "${{ github.ref }}" != "refs/heads/main" ]; then
+              echo "Contingência process_architecture.js exige dispatch humano VrsEco em main."
+              exit 1
+            fi
+            if [ "${{ inputs.remediate_chartjs_runtime_drift }}" = "true" ] || \
+               [ "${{ inputs.mode }}" != "quick" ] || [ "${{ inputs.restart_mcp }}" != "false" ]; then
+              echo "Contingência process_architecture.js exige modo quick, restart_mcp=false e nenhuma outra contingência."
+              exit 1
+            fi
           fi
           case "$ACTOR" in
             "gv-codex-deploy[bot]"|"gv-claude-deploy[bot]")
@@ -120,6 +138,16 @@ jobs:
 
       - name: ✅ Checkout code
         uses: actions/checkout@v4
+
+      - name: 🔒 Confirmar blob alvo da contingência de processos
+        if: ${{ inputs.remediate_process_architecture_runtime_drift }}
+        shell: bash
+        run: |
+          actual="$(git hash-object static/js/process_architecture.js)"
+          if [ "$actual" != "6290998521a2e28d64cd94223698184ebfcdd20c" ]; then
+            echo "Asset alvo divergiu do blob aprovado; contingência recusada."
+            exit 1
+          fi
 
       - name: 🧾 Ledger — iniciar (recusa deploy não aprovado, de outro SHA ou de outro run)
         if: env.DEPLOYMENT_ID != ''
@@ -206,16 +234,129 @@ jobs:
               echo "✅ Drift Chart.js legado preservado e removido com escopo controlado: $SNAPSHOT_DIR"
             fi
 
+            # Contingência temporária: o boot antigo copiou o JS legado para
+            # o static público. Nunca aceitar conteúdo diferente do blob
+            # identificado, nem qualquer outro drift no checkout.
+            if [ "${{ inputs.remediate_process_architecture_runtime_drift }}" = "true" ]; then
+              START_DIR="$(pwd -P)"
+              REPO="$(git -C "$START_DIR" rev-parse --show-toplevel)"
+              ASSET="static/js/process_architecture.js"
+              ASSET_PATH="$REPO/$ASSET"
+              EXPECTED_STALE_BLOB="8b5c5f783a22a010d757a051b3e22709bce0b3ed"
+              DRIFT_STATUS="$(git -C "$REPO" status --porcelain=v1)"
+              UNTRACKED="$(git -C "$REPO" ls-files --others --exclude-standard)"
+              if git -C "$REPO" diff --quiet; then DIFF_EXIT=0; else DIFF_EXIT=$?; fi
+              if git -C "$REPO" diff --cached --quiet; then STAGED_DIFF_EXIT=0; else STAGED_DIFF_EXIT=$?; fi
+
+              if [ ! -f "$ASSET_PATH" ] || [ -L "$ASSET_PATH" ] || \
+                 [ -L "$REPO/static" ] || [ -L "$REPO/static/js" ]; then
+                echo "❌ Asset de processos ausente ou ligado por symlink; contingência recusada."
+                exit 1
+              fi
+              ACTUAL_BLOB="$(git -C "$REPO" hash-object "$ASSET_PATH")"
+              REMOTE_MAIN_SHA="$(git -C "$REPO" ls-remote origin refs/heads/main | cut -f1)"
+              printf 'ℹ️ Drift: status=<%s> untracked=<%s> diff=%s staged=%s blob=%s main=%s\n' \
+                "$DRIFT_STATUS" "$UNTRACKED" "$DIFF_EXIT" "$STAGED_DIFF_EXIT" "$ACTUAL_BLOB" "$REMOTE_MAIN_SHA"
+
+              if [ "$DRIFT_STATUS" != " M static/js/process_architecture.js" ] || \
+                 [ -n "$UNTRACKED" ] || [ "$DIFF_EXIT" -ne 1 ] || [ "$STAGED_DIFF_EXIT" -ne 0 ] || \
+                 [ "$ACTUAL_BLOB" != "$EXPECTED_STALE_BLOB" ] || \
+                 [ "$REMOTE_MAIN_SHA" != "${{ github.sha }}" ]; then
+                echo "❌ Drift, blob ou SHA de main fora da janela aprovada; nenhuma restauração executada."
+                exit 1
+              fi
+
+              if [ ! -d "$REPO/../backups" ] || [ -L "$REPO/../backups" ]; then
+                echo "❌ Diretório externo de backups ausente ou ligado por symlink."
+                exit 1
+              fi
+              BACKUPS="$(realpath -e "$REPO/../backups")"
+              case "$BACKUPS" in
+                "$REPO"|"$REPO"/*) echo "❌ Backup não pode ficar dentro do checkout."; exit 1 ;;
+              esac
+              STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+              SNAPSHOT_DIR="$BACKUPS/worktree-drift-process-architecture-${{ github.run_id }}-$STAMP"
+              PREVIOUS_UMASK="$(umask)"
+              umask 077
+              if [ -e "$SNAPSHOT_DIR" ]; then
+                echo "❌ Diretório de snapshot já existe; contingência recusada."
+                exit 1
+              fi
+              mkdir -m 0700 -- "$SNAPSHOT_DIR"
+              printf '%s\n' "$DRIFT_STATUS" > "$SNAPSHOT_DIR/status-before.txt"
+              cat -- "$ASSET_PATH" > "$SNAPSHOT_DIR/process_architecture.js"
+              git -C "$REPO" diff --binary -- "$ASSET" > "$SNAPSHOT_DIR/process_architecture.patch"
+              printf 'snapshot=%s\ncreated_at=%s\nsource=%s\nold_blob=%s\nhead_sha=%s\ntarget_sha=%s\nrun_id=%s\nactor=%s\n' \
+                "$SNAPSHOT_DIR" "$(date --iso-8601=seconds)" "$ASSET" "$ACTUAL_BLOB" \
+                "$(git -C "$REPO" rev-parse HEAD)" "${{ github.sha }}" "${{ github.run_id }}" "$ACTOR" \
+                > "$SNAPSHOT_DIR/manifest.txt"
+              if [ ! -s "$SNAPSHOT_DIR/process_architecture.patch" ] || \
+                 [ "$(git -C "$REPO" hash-object "$SNAPSHOT_DIR/process_architecture.js")" != "$EXPECTED_STALE_BLOB" ]; then
+                echo "❌ Snapshot incompleto; nenhuma restauração executada."
+                exit 1
+              fi
+              (cd "$SNAPSHOT_DIR" && \
+                sha256sum process_architecture.js process_architecture.patch status-before.txt manifest.txt > SHA256SUMS && \
+                sha256sum -c SHA256SUMS)
+              if [ "$(git -C "$REPO" hash-object "$ASSET_PATH")" != "$EXPECTED_STALE_BLOB" ]; then
+                echo "❌ Asset mudou após o snapshot; nenhuma restauração executada."
+                exit 1
+              fi
+              umask "$PREVIOUS_UMASK"
+
+              git -C "$REPO" checkout -- "$ASSET"
+              if [ -n "$(git -C "$REPO" status --porcelain=v1)" ]; then
+                echo "❌ Worktree ainda possui alterações após a restauração controlada."
+                git -C "$REPO" status --porcelain=v1
+                exit 1
+              fi
+              echo "✅ Drift legado preservado e restaurado: $SNAPSHOT_DIR"
+              cat "$SNAPSHOT_DIR/SHA256SUMS"
+
+              # O script instalado no host ainda pode ser anterior à validação
+              # DEPLOY_EXPECTED_SHA. Fazemos bootstrap do SHA exato somente
+              # após o snapshot e com o worktree comprovadamente limpo.
+              git -C "$REPO" fetch origin +refs/heads/main:refs/remotes/origin/main
+              FETCHED_MAIN_SHA="$(git -C "$REPO" rev-parse origin/main)"
+              if [ "$FETCHED_MAIN_SHA" != "${{ github.sha }}" ]; then
+                echo "❌ main avançou entre preflight e fetch; reset de bootstrap recusado."
+                exit 1
+              fi
+              if [ -n "$(git -C "$REPO" status --porcelain=v1)" ]; then
+                echo "❌ Novo drift surgiu durante o fetch; reset de bootstrap recusado."
+                git -C "$REPO" status --porcelain=v1
+                exit 1
+              fi
+              git -C "$REPO" reset --hard "${{ github.sha }}"
+              if ! grep -q 'DEPLOY_EXPECTED_SHA' "$REPO/app32/scripts/deploy_configr.sh"; then
+                echo "❌ Script oficial atualizado não contém guarda de SHA; deploy interrompido."
+                exit 1
+              fi
+              # O host pode iniciar o workflow com umask 077. O caminho é
+              # público no Nginx; garantir leitura sem expor outros arquivos.
+              chmod 0755 "$REPO/static" "$REPO/static/js"
+              chmod 0644 "$ASSET_PATH"
+            fi
+
             if [ -f "app32/scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via app32/scripts/deploy_configr.sh"
-              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" bash app32/scripts/deploy_configr.sh
+              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" DEPLOY_EXPECTED_SHA="${{ github.sha }}" bash app32/scripts/deploy_configr.sh
             elif [ -f "scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via scripts/deploy_configr.sh"
-              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" bash scripts/deploy_configr.sh
+              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" DEPLOY_EXPECTED_SHA="${{ github.sha }}" bash scripts/deploy_configr.sh
             else
               echo "❌ Script oficial de deploy não encontrado."
               find . -maxdepth 3 -name "deploy_configr.sh" -print
               exit 1
+            fi
+            if [ "${{ inputs.remediate_process_architecture_runtime_drift }}" = "true" ] && \
+               [ "$(git -C "$REPO" rev-parse HEAD)" != "${{ github.sha }}" ]; then
+              echo "❌ SHA implantado diverge do run aprovado."
+              exit 1
+            fi
+            if [ "${{ inputs.remediate_process_architecture_runtime_drift }}" = "true" ]; then
+              chmod 0755 "$REPO/static" "$REPO/static/js"
+              chmod 0644 "$REPO/static/js/process_architecture.js"
             fi
 
       - name: 🔎 Smoke pós-deploy (health + assets críticos)
@@ -227,6 +368,21 @@ jobs:
           status=$?
           echo "evidence=$evidence" >> "$GITHUB_OUTPUT"
           exit "$status"
+
+      - name: 🔎 Conferir bytes públicos do asset de processos
+        if: ${{ inputs.remediate_process_architecture_runtime_drift }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${APP32_PUBLIC_BASE_URL:-https://app.gestaoversus.com.br}"
+          expected="$(git hash-object static/js/process_architecture.js)"
+          actual="$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' \
+            "${base%/}/static/js/process_architecture.js?run=${{ github.run_id }}" | git hash-object --stdin)"
+          if [ "$actual" != "$expected" ]; then
+            echo "Asset público diverge do SHA aprovado: expected=$expected actual=$actual"
+            exit 1
+          fi
+          echo "✅ Asset de processos publicado com blob $actual"
 
       - name: 🧾 Ledger — concluir com sucesso
         if: env.DEPLOYMENT_ID != ''

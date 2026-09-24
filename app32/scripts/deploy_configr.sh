@@ -109,7 +109,21 @@ if [ "${DEPLOY_VALIDATE_ONLY:-0}" = "1" ]; then
 fi
 
 git -C "$REPO" fetch origin +refs/heads/main:refs/remotes/origin/main
-git -C "$REPO" reset --hard origin/main
+RESET_TARGET="origin/main"
+if [ -n "${DEPLOY_EXPECTED_SHA:-}" ]; then
+    if [[ ! "$DEPLOY_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+        echo "❌ DEPLOY_EXPECTED_SHA inválido; reset recusado."
+        exit 1
+    fi
+    FETCHED_SHA="$(git -C "$REPO" rev-parse origin/main)"
+    if [ "$FETCHED_SHA" != "$DEPLOY_EXPECTED_SHA" ]; then
+        echo "❌ origin/main avançou: SHA obtido $FETCHED_SHA diverge do aprovado $DEPLOY_EXPECTED_SHA. Reset recusado."
+        exit 1
+    fi
+    RESET_TARGET="$DEPLOY_EXPECTED_SHA"
+    echo "✅ SHA do release confirmado antes do reset: $RESET_TARGET"
+fi
+git -C "$REPO" reset --hard "$RESET_TARGET"
 
 validate_runtime_layout
 
