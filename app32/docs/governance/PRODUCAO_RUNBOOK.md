@@ -238,3 +238,14 @@ runtime do respectivo agente.
 SSH manual é exceção de incidente. Exige aprovação explícita, snapshot de
 worktree drift, registro no ledger e validação pós-deploy. Não reutilizar esse
 acesso para fluxo normal de agentes.
+
+### Drift remoto pelo workflow oficial
+
+Quando o workflow bloquear por worktree remoto sujo, **não use SSH manual**.
+Um operador humano pode reexecutar `deploy-app32.yml` marcando
+`preserve_remote_drift=true`. A opção só alcança o host após a aprovação do
+ambiente `production`, cria o snapshot privado em `$BASE/backups/` antes do
+`git reset --hard` e registra no manifesto: SHA anterior, aprovador e URL do
+run. A opção é bloqueada para `gv-codex-deploy[bot]` e
+`gv-claude-deploy[bot]`; agentes continuam obrigados ao ledger MCP e não podem
+autorizar exceções de drift.

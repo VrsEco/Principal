@@ -25,6 +25,8 @@ WEB_HEALTH_URL="http://127.0.0.1/healthz"
 WEB_HEALTH_HOST="app.gestaoversus.com.br"
 DEPLOY_MODE="${DEPLOY_MODE:-quick}"
 RESTART_MCP="${RESTART_MCP:-false}"
+DEPLOY_ALLOW_DIRTY="${DEPLOY_ALLOW_DIRTY:-false}"
+DEPLOY_CREATE_DIRTY_SNAPSHOT="${DEPLOY_CREATE_DIRTY_SNAPSHOT:-false}"
 
 case "$DEPLOY_MODE" in
     quick|standard|full) ;;
@@ -59,19 +61,61 @@ validate_runtime_layout() {
 }
 
 # Um reset hard exige worktree limpo. A única exceção é uma janela controlada
-# com snapshot já criado fora do checkout, declarada explicitamente pelo operador.
+# aprovada no ambiente GitHub `production`. Nela o próprio script cria o
+# snapshot fora do checkout, antes de qualquer reset. Isso evita que a ação
+# precise receber SSH interativo ou que um reset silencioso descarte o drift.
+create_dirty_worktree_snapshot() {
+    local stamp snapshot_dir untracked_archive
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    snapshot_dir="$BASE/backups/worktree-drift-$stamp"
+    untracked_archive="$snapshot_dir/untracked-files.tar.gz"
+
+    # Backups podem incluir arquivos ignorados; nunca os exponha no log nem
+    # permita leitura por outros usuários do host.
+    (umask 077; mkdir -p "$snapshot_dir")
+    chmod 0700 "$snapshot_dir"
+
+    git -C "$REPO" status --porcelain=v1 > "$snapshot_dir/status.txt"
+    git -C "$REPO" diff --binary > "$snapshot_dir/worktree.patch"
+    git -C "$REPO" diff --cached --binary > "$snapshot_dir/staged.patch"
+
+    # Preserva não rastreados sem imprimi-los na saída do GitHub Actions.
+    # O arquivo compactado permanece com permissões privadas no host.
+    (
+        cd "$REPO"
+        git ls-files --others --exclude-standard -z |
+            tar --null --files-from=- -czf "$untracked_archive" 2>/dev/null || true
+    )
+    [ -f "$untracked_archive" ] && chmod 0600 "$untracked_archive"
+
+    {
+        printf 'snapshot=%s\n' "$snapshot_dir"
+        printf 'created_at=%s\n' "$(date --iso-8601=seconds)"
+        printf 'release_before_reset=%s\n' "$(git -C "$REPO" rev-parse HEAD)"
+        printf 'approved_by=%s\n' "${DEPLOY_DRIFT_APPROVED_BY:-unavailable}"
+        printf 'workflow_run=%s\n' "${DEPLOY_DRIFT_WORKFLOW_RUN:-unavailable}"
+    } > "$snapshot_dir/manifest.txt"
+    chmod 0600 "$snapshot_dir/manifest.txt" "$snapshot_dir/status.txt" \
+        "$snapshot_dir/worktree.patch" "$snapshot_dir/staged.patch"
+    test -s "$snapshot_dir/manifest.txt"
+    printf '%s\n' "$snapshot_dir/manifest.txt"
+}
+
 # Isso permite recuperar de processos legados que ainda escrevem assets no root,
 # sem transformar alterações não auditadas em reset silencioso.
 WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain)"
 if [ -n "$WORKTREE_DRIFT" ]; then
     DIRTY_SNAPSHOT="${DEPLOY_DIRTY_SNAPSHOT:-}"
+    if [ -z "$DIRTY_SNAPSHOT" ] && [ "$DEPLOY_ALLOW_DIRTY" = "true" ] && [ "$DEPLOY_CREATE_DIRTY_SNAPSHOT" = "true" ]; then
+        DIRTY_SNAPSHOT="$(create_dirty_worktree_snapshot)"
+    fi
     SNAPSHOT_REAL="$(realpath -m "$DIRTY_SNAPSHOT" 2>/dev/null || true)"
     case "$SNAPSHOT_REAL" in
         "$BASE"/backups/*) ;;
         *) SNAPSHOT_REAL="" ;;
     esac
 
-    if [ "${DEPLOY_ALLOW_DIRTY:-false}" != "true" ] || [ -z "$SNAPSHOT_REAL" ] || [ ! -s "$SNAPSHOT_REAL" ]; then
+    if [ "$DEPLOY_ALLOW_DIRTY" != "true" ] || [ -z "$SNAPSHOT_REAL" ] || [ ! -s "$SNAPSHOT_REAL" ]; then
         echo "❌ Worktree remoto possui alterações. Deploy interrompido antes do reset."
         echo "   Preserve o drift em $BASE/backups e use a exceção controlada somente na janela aprovada."
         exit 1

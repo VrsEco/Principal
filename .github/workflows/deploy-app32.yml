@@ -18,6 +18,11 @@ on:
         required: true
         default: false
         type: boolean
+      preserve_remote_drift:
+        description: "Criar snapshot auditável do drift remoto antes do reset (exceção aprovada)"
+        required: true
+        default: false
+        type: boolean
       deployment_id:
         description: "ID de correlação do ledger MCP (obrigatório para agentes)"
         required: false
@@ -50,6 +55,7 @@ jobs:
             echo "- Ref: \`${{ github.ref }}\`"
             echo "- SHA: \`${{ github.sha }}\`"
             echo "- Modo: \`${{ inputs.mode }}\` | restart_mcp: \`${{ inputs.restart_mcp }}\`"
+            echo "- Preservar drift remoto: \`${{ inputs.preserve_remote_drift }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 🛡️ Validar proveniência do agente
@@ -67,6 +73,10 @@ jobs:
           fi
           if [ -n "$correlation_id" ] && [ "$is_deploy_bot" != true ]; then
             echo "Somente GitHub Apps do Squad Engenharia podem usar deployment_id MCP."
+            exit 1
+          fi
+          if [ "${{ inputs.preserve_remote_drift }}" = "true" ] && [ "$is_deploy_bot" = true ]; then
+            echo "Exceção de drift é exclusiva de dispatch humano aprovado no ambiente production."
             exit 1
           fi
 
@@ -113,6 +123,10 @@ jobs:
             echo "Somente GitHub Apps do Squad Engenharia podem usar deployment_id MCP."
             exit 1
           fi
+          if [ "${{ inputs.preserve_remote_drift }}" = "true" ] && [ "$is_deploy_bot" = true ]; then
+            echo "Exceção de drift é exclusiva de dispatch humano aprovado no ambiente production."
+            exit 1
+          fi
 
       - name: ✅ Checkout code
         uses: actions/checkout@v4
@@ -132,10 +146,10 @@ jobs:
 
             if [ -f "app32/scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via app32/scripts/deploy_configr.sh"
-              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" bash app32/scripts/deploy_configr.sh
+              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" DEPLOY_ALLOW_DIRTY="${{ inputs.preserve_remote_drift }}" DEPLOY_CREATE_DIRTY_SNAPSHOT="${{ inputs.preserve_remote_drift }}" DEPLOY_DRIFT_APPROVED_BY="${{ github.actor }}" DEPLOY_DRIFT_WORKFLOW_RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" bash app32/scripts/deploy_configr.sh
             elif [ -f "scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via scripts/deploy_configr.sh"
-              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" bash scripts/deploy_configr.sh
+              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" DEPLOY_ALLOW_DIRTY="${{ inputs.preserve_remote_drift }}" DEPLOY_CREATE_DIRTY_SNAPSHOT="${{ inputs.preserve_remote_drift }}" DEPLOY_DRIFT_APPROVED_BY="${{ github.actor }}" DEPLOY_DRIFT_WORKFLOW_RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" bash scripts/deploy_configr.sh
             else
               echo "❌ Script oficial de deploy não encontrado."
               find . -maxdepth 3 -name "deploy_configr.sh" -print
@@ -151,4 +165,5 @@ jobs:
             echo "- Actor verificável: \`${{ github.actor }}\`"
             echo "- Triggering actor verificável: \`${{ github.triggering_actor }}\`"
             echo "- Correlation ID MCP: \`${{ inputs.deployment_id || 'manual-unlinked' }}\`"
+            echo "- Exceção de drift solicitada: \`${{ inputs.preserve_remote_drift }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
