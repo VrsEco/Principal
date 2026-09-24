@@ -81,9 +81,9 @@ P1_STRATEGY_TEMPLATE_CONTRACTS = [
 ]
 
 P1_STRATEGY_JS_ENDPOINT_CONTRACTS = [
-    ("app32/static/js/indicators.js", "/api/indicator-groups"),
     ("static/js/indicators.js", "/api/indicator-groups"),
-    ("app32/static/js/indicators.js", "/api/plans"),
+    ("static/js/indicators.js", "/api/indicator-groups"),
+    ("static/js/indicators.js", "/api/plans"),
     ("static/js/indicators.js", "/api/plans"),
 ]
 

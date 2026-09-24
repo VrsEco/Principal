@@ -23,11 +23,6 @@ on:
         required: true
         default: false
         type: boolean
-      remediate_process_architecture_runtime_drift:
-        description: "Contingência aprovada: preservar e reverter somente static/js/process_architecture.js"
-        required: true
-        default: false
-        type: boolean
       deployment_id:
         description: "ID de correlação do ledger MCP (obrigatório para agentes)"
         required: false
@@ -144,11 +139,15 @@ jobs:
             echo "📂 Acessando diretório do projeto..."
             cd ${{ secrets.PROJECT_PATH }}
 
-            if [ "${{ inputs.remediate_chartjs_runtime_drift }}" = "true" ] && \
-               [ "${{ inputs.remediate_process_architecture_runtime_drift }}" = "true" ]; then
-              echo "❌ Selecione somente uma contingência de drift por deploy."
-              exit 1
-            fi
+            # O boot legado preservava mtime/ctime de cópias de assets e podia
+            # deixar o índice com falso positivo. Atualizar o stat-cache não
+            # toca conteúdo nem staging; alterações reais continuam visíveis e
+            # são recusadas pelas guardas abaixo e pelo script oficial.
+            set +e
+            git update-index --refresh --quiet
+            INDEX_REFRESH_EXIT=$?
+            set -e
+            echo "ℹ️ Índice Git atualizado antes da avaliação de drift (refresh_exit=$INDEX_REFRESH_EXIT)."
 
             # Contingência estritamente limitada ao resíduo de uma versão anterior
             # do deploy que copiou Chart.js para o root público. O snapshot é
@@ -203,55 +202,6 @@ jobs:
                 exit 1
               fi
               echo "✅ Drift Chart.js legado preservado e removido com escopo controlado: $SNAPSHOT_DIR"
-            fi
-
-            # Contingência para uma única edição rastreada no asset de arquitetura.
-            # A cópia e o diff binário são preservados fora do checkout antes de
-            # restaurar exclusivamente a versão registrada em origin/main.
-            if [ "${{ inputs.remediate_process_architecture_runtime_drift }}" = "true" ]; then
-              REPO="$(pwd -P)"
-              DRIFT_STATUS="$(git -C "$REPO" status --porcelain=v1)"
-              UNTRACKED="$(git -C "$REPO" ls-files --others --exclude-standard)"
-
-              if git -C "$REPO" diff --quiet -- static/js/process_architecture.js; then
-                DIFF_EXIT=0
-              else
-                DIFF_EXIT=$?
-              fi
-              if git -C "$REPO" diff --cached --quiet; then
-                STAGED_DIFF_EXIT=0
-              else
-                STAGED_DIFF_EXIT=$?
-              fi
-
-              if [ "$DRIFT_STATUS" != " M static/js/process_architecture.js" ] || \
-                 [ -n "$UNTRACKED" ] || [ "$DIFF_EXIT" -ne 1 ] || [ "$STAGED_DIFF_EXIT" -ne 0 ] || \
-                 [ ! -f "$REPO/static/js/process_architecture.js" ] || [ -L "$REPO/static/js/process_architecture.js" ]; then
-                echo "❌ Drift não corresponde exatamente à edição rastreada aprovada de static/js/process_architecture.js; contingência recusada."
-                printf 'ℹ️ drift_status=<%s>\\n' "$DRIFT_STATUS"
-                printf 'ℹ️ untracked=<%s>\\n' "$UNTRACKED"
-                printf 'ℹ️ diff_exit=%s staged_diff_exit=%s\\n' "$DIFF_EXIT" "$STAGED_DIFF_EXIT"
-                exit 1
-              fi
-
-              STAMP="$(date +%Y%m%d-%H%M%S)"
-              SNAPSHOT_DIR="$REPO/../backups/worktree-drift-$STAMP"
-              umask 077
-              mkdir -p "$SNAPSHOT_DIR"
-              printf '%s\\n' "$DRIFT_STATUS" > "$SNAPSHOT_DIR/status-before.txt"
-              cp --preserve=mode,timestamps -- "$REPO/static/js/process_architecture.js" "$SNAPSHOT_DIR/process_architecture.js"
-              git -C "$REPO" diff --binary -- static/js/process_architecture.js > "$SNAPSHOT_DIR/process_architecture.patch"
-              sha256sum "$SNAPSHOT_DIR/process_architecture.js" "$SNAPSHOT_DIR/process_architecture.patch" > "$SNAPSHOT_DIR/SHA256SUMS"
-              printf 'snapshot=%s\\ncreated_at=%s\\nsource=static/js/process_architecture.js\\n' \
-                "$SNAPSHOT_DIR" "$(date --iso-8601=seconds)" > "$SNAPSHOT_DIR/manifest.txt"
-
-              git -C "$REPO" checkout -- static/js/process_architecture.js
-              if [ -n "$(git -C "$REPO" status --porcelain=v1)" ]; then
-                echo "❌ Worktree ainda possui alterações após a contingência; deploy interrompido."
-                git -C "$REPO" status --porcelain=v1
-                exit 1
-              fi
-              echo "✅ Drift process_architecture.js preservado e restaurado com escopo controlado: $SNAPSHOT_DIR"
             fi
 
             if [ -f "app32/scripts/deploy_configr.sh" ]; then

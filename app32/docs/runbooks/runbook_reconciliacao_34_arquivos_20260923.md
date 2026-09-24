@@ -31,12 +31,12 @@ inspecionados, não prova ausência de outras referências ou execução dinâmi
 | `app32/services/scheduler_service.py` | Coberto pela candidata OAuth/histórico de migrations; revisar diff antes da publicação |
 | `app32/services/user_employee_service.py` | Coberto pela candidata OAuth/histórico de migrations; revisar diff antes da publicação |
 | `app32/templates/auth/profile.html` | Coberto pela candidata OAuth/histórico de migrations; revisar diff antes da publicação |
-| `static/css/sapiens_knowledge.css` | Bloco UI separado; conservar snapshot e comparar com app32/static antes de promover |
-| `static/js/companies.js` | Bloco UI separado; conservar snapshot e comparar com app32/static antes de promover |
-| `static/js/financial_automation_center.js` | Bloco UI separado; conservar snapshot e comparar com app32/static antes de promover |
-| `static/js/financial_borderos_list.js` | Bloco UI separado; conservar snapshot e comparar com app32/static antes de promover |
-| `static/js/my-work.js` | Bloco UI separado; conservar snapshot e comparar com app32/static antes de promover |
-| `static/js/process_architecture.js` | Bloco UI separado; conservar snapshot e comparar com app32/static antes de promover |
+| `static/css/sapiens_knowledge.css` | Bloco UI separado; static/ é a origem canônica versionada antes de promover |
+| `static/js/companies.js` | Bloco UI separado; static/ é a origem canônica versionada antes de promover |
+| `static/js/financial_automation_center.js` | Bloco UI separado; static/ é a origem canônica versionada antes de promover |
+| `static/js/financial_borderos_list.js` | Bloco UI separado; static/ é a origem canônica versionada antes de promover |
+| `static/js/my-work.js` | Bloco UI separado; static/ é a origem canônica versionada antes de promover |
+| `static/js/process_architecture.js` | Bloco UI separado; static/ é a origem canônica versionada antes de promover |
 | `app32/RELEASE_MANIFEST.txt` | Artefato operacional; preservar e verificar referências antes de remover |
 | `app32/codex_remote_mcp_surface_smoke_worker.py` | Artefato operacional; preservar e verificar referências antes de remover |
 | `app32/migrations/versions/20260919_0001_create_financial_reconciliation_playbooks.py` | Coberto pela candidata OAuth/histórico de migrations; revisar diff antes da publicação |
@@ -61,7 +61,7 @@ independentes e testes antes de transformar o checkout remoto em revisão limpa.
 Os 35 testes OAuth não cobrem os blocos UI/financeiro/utilitários.
 
 ## Validação incremental dos blocos preservados
-- Seis assets do snapshot coincidem byte a byte (normalizando CRLF) com app32/static.
+- Os assets públicos usam static/ como origem canônica versionada.
   Cópias da raiz reconciliadas localmente; cinco JS passaram em node --check.
 - Playbooks: persistência/edição/listagem e isolamento testados com empresas
   sintéticas em PostgreSQL restaurado. Evidência local: backups/playbook-validation-48aa93bdc3d7467a913c7aaa2cf6a01f.

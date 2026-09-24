@@ -82,7 +82,7 @@ P2_API_AGENTS_ROUTE_CONTRACTS = [
 ]
 
 P2_API_AGENTS_JS_ENDPOINTS = [
-    ('app32/static/js/companies.js', '/api/companies?all=true'),
+    ('static/js/companies.js', '/api/companies?all=true'),
     ('static/js/companies.js', '/api/companies?all=true'),
 ]
 
