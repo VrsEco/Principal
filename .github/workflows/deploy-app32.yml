@@ -143,15 +143,23 @@ jobs:
             # do deploy que copiou Chart.js para o root público. O snapshot é
             # criado antes de qualquer remoção e qualquer drift adicional aborta.
             if [ "${{ inputs.remediate_chartjs_runtime_drift }}" = "true" ]; then
-              REPO="$(pwd)"
+              START_DIR="$(pwd -P)"
+              REPO="$(git -C "$START_DIR" rev-parse --show-toplevel)"
               DRIFT_STATUS="$(git -C "$REPO" status --porcelain=v1)"
-              mapfile -t UNTRACKED < <(git -C "$REPO" ls-files --others --exclude-standard)
+              UNTRACKED="$(git -C "$REPO" ls-files --others --exclude-standard)"
+              EXPECTED_UNTRACKED=$'static/vendor/chartjs/chart.umd.min.js\nstatic/vendor/chartjs/chartjs-adapter-date-fns.bundle.min.js'
 
-              if ! git -C "$REPO" diff --quiet || ! git -C "$REPO" diff --cached --quiet || \
+              if git -C "$REPO" diff --quiet; then DIFF_EXIT=0; else DIFF_EXIT=$?; fi
+              if git -C "$REPO" diff --cached --quiet; then STAGED_DIFF_EXIT=0; else STAGED_DIFF_EXIT=$?; fi
+
+              echo "ℹ️ Evidência da contingência Chart.js: start_dir=$START_DIR repo=$REPO"
+              printf 'ℹ️ drift_status=<%s>\n' "$DRIFT_STATUS"
+              printf 'ℹ️ untracked=<%s>\n' "$UNTRACKED"
+              printf 'ℹ️ diff_exit=%s staged_diff_exit=%s\n' "$DIFF_EXIT" "$STAGED_DIFF_EXIT"
+
+              if [ "$DIFF_EXIT" -ne 0 ] || [ "$STAGED_DIFF_EXIT" -ne 0 ] || \
                  [ "$DRIFT_STATUS" != "?? static/vendor/chartjs/" ] || \
-                 [ "${#UNTRACKED[@]}" -ne 2 ] || \
-                 [ "${UNTRACKED[0]}" != "static/vendor/chartjs/chart.umd.min.js" ] || \
-                 [ "${UNTRACKED[1]}" != "static/vendor/chartjs/chartjs-adapter-date-fns.bundle.min.js" ]; then
+                 [ "$UNTRACKED" != "$EXPECTED_UNTRACKED" ]; then
                 echo "❌ Drift não corresponde exatamente aos dois assets Chart.js legados; contingência recusada."
                 git -C "$REPO" status --porcelain=v1
                 exit 1
