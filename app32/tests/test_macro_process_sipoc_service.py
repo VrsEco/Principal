@@ -25,7 +25,7 @@ class _FakePublishedQuery:
         return self.row
 
 
-def test_validate_snapshot_for_publish_requires_boundaries_and_lanes(monkeypatch):
+def test_snapshot_gaps_are_suggestions_and_do_not_block_publication(monkeypatch):
     snapshot = SimpleNamespace(start_boundary=None, end_boundary="", id=201)
     monkeypatch.setattr(
         macro_process_sipoc_service,
@@ -39,11 +39,11 @@ def test_validate_snapshot_for_publish_requires_boundaries_and_lanes(monkeypatch
         },
     )
 
-    errors = macro_process_sipoc_service.validate_snapshot_for_publish(snapshot)
+    suggestions = macro_process_sipoc_service.get_publication_suggestions(snapshot)
 
-    assert "Preencha o início do macroprocesso." in errors
-    assert "Preencha o fim do macroprocesso." in errors
-    assert "Cadastre pelo menos 3 processos filhos ou grandes etapas no macroprocesso." in errors
+    assert macro_process_sipoc_service.validate_snapshot_for_publish(snapshot) == []
+    assert any("início do macroprocesso" in suggestion for suggestion in suggestions)
+    assert any("3 ou mais processos filhos" in suggestion for suggestion in suggestions)
 
 
 def test_default_title_uses_macro_code_when_available():

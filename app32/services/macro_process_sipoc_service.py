@@ -255,24 +255,30 @@ def archive_sipoc_snapshot(*, macro_process_id: int, company_id: int, sipoc_id: 
 
 
 def validate_snapshot_for_publish(snapshot: MacroProcessSipocSnapshot) -> list[str]:
+    """Mantém o contrato de publicação sem impor a estrutura metodológica."""
+    return []
+
+
+def get_publication_suggestions(snapshot: MacroProcessSipocSnapshot) -> list[str]:
+    """Retorna recomendações SIPOC que não impedem a publicação."""
     errors: list[str] = []
     if not _normalize_text(snapshot.start_boundary):
-        errors.append("Preencha o início do macroprocesso.")
+        errors.append("Sugestão: informe o início do macroprocesso para deixar clara a fronteira da cadeia.")
     if not _normalize_text(snapshot.end_boundary):
-        errors.append("Preencha o fim do macroprocesso.")
+        errors.append("Sugestão: informe o fim do macroprocesso para deixar clara a fronteira da cadeia.")
     lane_counts = snapshot_lane_counts(snapshot)
     if lane_counts.get("supplier", 0) < 1:
-        errors.append("Cadastre ao menos 1 fornecedor.")
+        errors.append("Sugestão: registre ao menos um fornecedor quando ele contribuir para a compreensão do SIPOC.")
     if lane_counts.get("input", 0) < 1:
-        errors.append("Cadastre ao menos 1 entrada.")
+        errors.append("Sugestão: registre ao menos uma entrada quando ela contribuir para a compreensão do SIPOC.")
     if lane_counts.get("process", 0) < 3:
-        errors.append("Cadastre pelo menos 3 processos filhos ou grandes etapas no macroprocesso.")
+        errors.append("Sugestão metodológica: geralmente 3 ou mais processos filhos ou grandes etapas tornam a cadeia mais legível.")
     if lane_counts.get("process", 0) > 7:
-        errors.append("O SIPOC recomenda no máximo 7 processos filhos ou grandes etapas no macroprocesso.")
+        errors.append("Sugestão metodológica: considere agrupar os processos filhos ou grandes etapas para facilitar a leitura do SIPOC.")
     if lane_counts.get("output", 0) < 1:
-        errors.append("Cadastre ao menos 1 saída.")
+        errors.append("Sugestão: registre ao menos uma saída quando ela contribuir para a compreensão do SIPOC.")
     if lane_counts.get("customer", 0) < 1:
-        errors.append("Cadastre ao menos 1 cliente.")
+        errors.append("Sugestão: registre ao menos um cliente quando ele contribuir para a compreensão do SIPOC.")
     return errors
 
 
@@ -335,7 +341,8 @@ def serialize_snapshot(snapshot: MacroProcessSipocSnapshot | None) -> dict | Non
         "items": grouped_items,
         "lane_counts": snapshot_lane_counts(snapshot),
         "regulatory_items": [serialize_regulatory_item(item) for item in regulatory_items],
-        "publication_errors": validate_snapshot_for_publish(snapshot) if snapshot.status == 'draft' else [],
+        "publication_errors": [],
+        "publication_suggestions": get_publication_suggestions(snapshot) if snapshot.status == 'draft' else [],
     }
 
 

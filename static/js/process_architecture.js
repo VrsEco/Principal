@@ -590,7 +590,7 @@ function renderMacroSipoc() {
     const laneHelp = {
         supplier: 'Quem fornece insumos, aprovações, dados ou requisitos para a cadeia começar.',
         input: 'Entradas executivas, documentos, parâmetros e demandas que abastecem o macroprocesso.',
-        process: 'Entre 3 e 7 processos filhos ou grandes etapas da cadeia. Aqui o SIPOC enquadra a arquitetura ponta a ponta.',
+        process: 'Sugestão metodológica: agrupe as etapas quando isso facilitar a leitura. Não há limite para a quantidade de processos filhos ou grandes etapas.',
         output: 'Resultados, entregas e artefatos gerados pela cadeia do macroprocesso.',
         customer: 'Quem recebe, depende ou consome as saídas geradas pela cadeia.'
     };
@@ -627,11 +627,11 @@ function renderMacroSipoc() {
                 <textarea id="macroSipocNotes" class="form-control" rows="5" placeholder="Observações complementares do macroprocesso...">${escapeHtml(snapshot.notes || '')}</textarea>
             </div>
         </div>
-        ${snapshot.status === 'draft' && snapshot.publication_errors?.length ? `
+        ${snapshot.status === 'draft' && snapshot.publication_suggestions?.length ? `
             <div class="alert alert-warning" style="margin-top: 1rem;">
-                <strong>Pendências para publicação:</strong>
+                <strong>Sugestões de modelagem (não impedem a publicação):</strong>
                 <ul style="margin: 0.5rem 0 0 1rem;">
-                    ${snapshot.publication_errors.map(error => `<li>${escapeHtml(error)}</li>`).join('')}
+                    ${snapshot.publication_suggestions.map(suggestion => `<li>${escapeHtml(suggestion)}</li>`).join('')}
                 </ul>
             </div>
         ` : ''}

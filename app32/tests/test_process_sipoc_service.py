@@ -25,7 +25,7 @@ class _FakePublishedQuery:
         return self.row
 
 
-def test_validate_snapshot_for_publish_requires_boundaries_and_lanes(monkeypatch):
+def test_snapshot_gaps_are_suggestions_and_do_not_block_publication(monkeypatch):
     snapshot = SimpleNamespace(start_boundary=None, end_boundary="", id=91)
     monkeypatch.setattr(
         process_sipoc_service,
@@ -39,18 +39,14 @@ def test_validate_snapshot_for_publish_requires_boundaries_and_lanes(monkeypatch
         },
     )
 
-    errors = process_sipoc_service.validate_snapshot_for_publish(snapshot)
+    suggestions = process_sipoc_service.get_publication_suggestions(snapshot)
 
-    assert "Preencha o início do processo." in errors
-    assert "Preencha o fim do processo." in errors
-    assert "Cadastre ao menos 1 fornecedor." in errors
-    assert "Cadastre ao menos 1 entrada." in errors
-    assert "Cadastre pelo menos 3 atividades de alto nível no processo." in errors
-    assert "Cadastre ao menos 1 saída." in errors
-    assert "Cadastre ao menos 1 cliente." in errors
+    assert process_sipoc_service.validate_snapshot_for_publish(snapshot) == []
+    assert any("início do processo" in suggestion for suggestion in suggestions)
+    assert any("3 ou mais atividades" in suggestion for suggestion in suggestions)
 
 
-def test_validate_snapshot_for_publish_accepts_valid_minimum_structure(monkeypatch):
+def test_valid_structure_does_not_generate_suggestions(monkeypatch):
     snapshot = SimpleNamespace(start_boundary="Recebimento da demanda", end_boundary="Entrega ao cliente", id=92)
     monkeypatch.setattr(
         process_sipoc_service,
@@ -64,9 +60,9 @@ def test_validate_snapshot_for_publish_accepts_valid_minimum_structure(monkeypat
         },
     )
 
-    errors = process_sipoc_service.validate_snapshot_for_publish(snapshot)
+    suggestions = process_sipoc_service.get_publication_suggestions(snapshot)
 
-    assert errors == []
+    assert suggestions == []
 
 
 def test_build_book_sipoc_context_returns_latest_published_snapshot(monkeypatch):
