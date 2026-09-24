@@ -250,8 +250,17 @@ def list_project_tasks_secure(
     company_id: int | None = None,
     include_deleted: bool = False,
     limit: int = 50,
+    mine_only: bool = False,
+    open_only: bool = False,
+    company_ref: str | None = None,
 ):
     resolved_company_id = int(company_id or get_active_company_id() or 0) or None
+    if company_ref is not None:
+        # Revalidar para chamadas internas que não passam pelo wrapper MCP.
+        from src.core.mcp_runtime import resolve_mcp_execution_context
+        resolved_company_id = resolve_mcp_execution_context(
+            {"company_ref": company_ref, "company_id": company_id}
+        ).company_id
     principal, decision = _authorize_project_task_mcp(
         tool_name="list_project_tasks_secure",
         action="read",
@@ -267,6 +276,9 @@ def list_project_tasks_secure(
         project_id=int(project_id) if project_id else None,
         include_deleted=bool(include_deleted),
         limit=limit,
+        mine_only=mine_only,
+        open_only=open_only,
+        actor_user_id=principal.get("user_id"),
     )
     if error:
         return {"success": False, "error": error}

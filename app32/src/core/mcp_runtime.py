@@ -239,6 +239,26 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
     principal_id = _coerce_optional_int(http_request_context.get("principal_id"))
     requested_company_id, requested_company_source = _resolve_requested_company_id(raw_payload, http_request_context)
     principal_grant_mode = _principal_grant_gate_enabled() and principal_id is not None
+    if raw_payload.get("company_ref") is not None:
+        from services.mcp_company_reference_service import resolve_company_reference
+
+        # Referência explícita prevalece sobre seleção anterior de sessão,
+        # mas não pode contradizer company_id explícito no mesmo payload.
+        explicit_id = _coerce_optional_int(raw_payload.get("company_id"))
+        if raw_payload.get("company_id") is not None and explicit_id is None:
+            raise ValueError("company_id inválido.")
+        requested_company_id = resolve_company_reference(
+            raw_payload["company_ref"],
+            principal_id=principal_id if principal_grant_mode else None,
+            user_id=legacy_user_id,
+            explicit_id=explicit_id,
+            accessible_company_ids=(
+                _coerce_optional_int_list(http_request_context["accessible_company_ids"])
+                if "accessible_company_ids" in http_request_context and not principal_grant_mode
+                else None
+            ),
+        )
+        requested_company_source = "payload.company_ref"
     channel = str(
         (http_request_context.get("channel") or "mcp_http")
         if authenticated_http_context

@@ -78,6 +78,9 @@ class ProjectTaskMCPService:
         project_id: int | None = None,
         include_deleted: bool = False,
         limit: int = 50,
+        mine_only: bool = False,
+        open_only: bool = False,
+        actor_user_id: int | None = None,
     ) -> tuple[dict[str, Any], str | None]:
         safe_limit = _coerce_positive_int(
             limit,
@@ -91,6 +94,29 @@ class ProjectTaskMCPService:
         if project_id:
             query = query.filter(ProjectTask.project_id == int(project_id))
 
+        employee_id = None
+        if mine_only:
+            from models.employee import Employee
+
+            if not actor_user_id:
+                return {}, "Usuário autenticado obrigatório para consultar minhas atividades."
+            employee = Employee.query.filter(
+                Employee.user_id == int(actor_user_id),
+                Employee.company_id == int(company_id),
+                Employee.status.in_(("active", "vacation")),
+            ).one_or_none()
+            if employee is None:
+                return {}, "Colaborador ativo não encontrado para o usuário nesta empresa."
+            employee_id = int(employee.id)
+            # Nunca inferir autoria pelo texto legado `who` ou pelo nome.
+            query = query.filter(ProjectTask.employee_id == employee_id)
+        if open_only:
+            query = query.filter(
+                func.coalesce(ProjectTask.status, "planned").notin_(("completed", "cancelled")),
+                func.coalesce(ProjectTask.stage, "inbox").notin_(("completed", "cancelled")),
+                ProjectTask.completion_date.is_(None),
+            )
+
         tasks = query.order_by(ProjectTask.updated_at.desc(), ProjectTask.id.desc()).limit(safe_limit).all()
         return {
             "items": [ProjectTaskMCPService._serialize_task(task) for task in tasks],
@@ -99,6 +125,9 @@ class ProjectTaskMCPService:
             "company_id": int(company_id),
             "project_id": int(project_id) if project_id else None,
             "include_deleted": bool(include_deleted),
+            "mine_only": bool(mine_only),
+            "open_only": bool(open_only),
+            "employee_id": employee_id,
         }, None
 
     @staticmethod

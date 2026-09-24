@@ -995,15 +995,21 @@ def create_project_task(project_code: str, task_name: str, responsible_name: str
 
 
 @tool
-def list_project_tasks_secure(project_id: int = None, company_id: int = None, include_deleted: bool = False, limit: int = 50):
+def list_project_tasks_secure(project_id: int = None, company_id: int = None, include_deleted: bool = False, limit: int = 50, mine_only: bool = False, open_only: bool = False, company_ref: str = None):
     """
     Lista atividades de projeto com filtro tenant-safe e suporte opcional a itens soft-deletados.
+    Para "minhas atividades em aberto", use mine_only=True e open_only=True.
+    Sem mine_only, a listagem é da empresa, não do usuário autenticado.
+    company_ref aceita ID textual, código, nome exato ou "código - nome" da empresa autorizada.
     """
     return task_ops_domain.list_project_tasks_secure(
         project_id=project_id,
         company_id=company_id,
         include_deleted=include_deleted,
         limit=limit,
+        mine_only=mine_only,
+        open_only=open_only,
+        company_ref=company_ref,
     )
 
 
