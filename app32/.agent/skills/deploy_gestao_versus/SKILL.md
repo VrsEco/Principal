@@ -38,24 +38,5 @@ Use esta skill para deploy, publicação em produção, atualização de site e 
 - Antes de concluir, valide health e todos os assets críticos declarados no
   release; ausência de `200` encerra o deploy como falha.
 
-## Aprovação única de release
-- O Squad Engenharia deve solicitar uma única **aprovação de release** antes
-  do primeiro efeito externo, com escopo explícito: alteração/release alvo,
-  branch de destino, modo, reinício de MCP, migrations e tratamento de drift.
-- A resposta inequívoca do operador (por exemplo, “autorizo o commit e
-  deploy”) autoriza, para **aquele escopo e uma única liberação**, criar o
-  commit, publicar a branch, abrir e mesclar PR, disparar o workflow oficial,
-  registrar o ledger e executar os smokes pós-deploy.
-- A aprovação de ambiente `production` do GitHub continua obrigatória como
-  controle técnico. Ela materializa a mesma aprovação de release; não exige
-  nova decisão de negócio quando os parâmetros e o SHA permanecem no escopo.
-- A autorização expira ao final do run. Nova aprovação é obrigatória para
-  mudança de escopo, SHA/branch diferente, modo diferente, migration não
-  declarada, reinício de MCP, uso de exceção de drift não declarada, falha que
-  demande alteração corretiva ou qualquer alteração de segredo/permissão.
-- Registre no ledger: texto/ID da aprovação, `requested_by_subject`,
-  `github.actor`, SHA final, run, parâmetros efetivos e evidências. A
-  identidade autenticada prevalece sobre qualquer nome informado em texto.
-
 ## Script principal
 - `C:\GestaoVersus\app32\scripts\deploy_configr.sh`

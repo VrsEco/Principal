@@ -1692,6 +1692,42 @@ for _tool_name in (
         tags=("work_journey", "delete"),
     )
 
+# Control plane de deploy do Squad Engenharia (SPEC controle_deploy_agentes_squad_v1).
+# Somente surface admin; nenhuma tool registra sucesso/falha (callback OIDC do workflow).
+_DEPLOY_SCOPES = (ToolScope.MCP_ADMIN.value,)
+_register_mcp_support_capability(
+    "request_agent_deployment",
+    domain="governance",
+    action="create",
+    scopes=_DEPLOY_SCOPES,
+    risk=ToolRiskLevel.MEDIUM,
+    permissions=("deployment.request",),
+    tags=("deployment", "control_plane", "pending_approval"),
+    required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+)
+_register_mcp_support_capability(
+    "approve_agent_deployment",
+    domain="governance",
+    action="approve",
+    scopes=_DEPLOY_SCOPES,
+    risk=ToolRiskLevel.CRITICAL,
+    permissions=("deployment.approve",),
+    human_gate=True,
+    human_gate_reason="Aprovar deploy de produção exige confirmação humana explícita.",
+    tags=("deployment", "control_plane", "dispatch"),
+    required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+)
+for _tool_name in ("get_agent_deployment", "list_agent_deployments"):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="governance",
+        action="read",
+        scopes=_DEPLOY_SCOPES,
+        permissions=("deployment.read",),
+        tags=("deployment", "control_plane"),
+        required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    )
+
 _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("consultive", "consultive"),
     ("consultivo", "consultive"),
@@ -1789,6 +1825,8 @@ def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
         # a reunião nem ProjectTask já sincronizada.
         return "update"
 
+    if lowered == "approve_agent_deployment":
+        return "approve"
     if lowered == "review_strategy_maturation_item_tool":
         return "review"
     if lowered in {

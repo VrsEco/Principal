@@ -18,11 +18,6 @@ on:
         required: true
         default: false
         type: boolean
-      preserve_remote_drift:
-        description: "Criar snapshot auditável do drift remoto antes do reset (exceção aprovada)"
-        required: true
-        default: false
-        type: boolean
       deployment_id:
         description: "ID de correlação do ledger MCP (obrigatório para agentes)"
         required: false
@@ -45,40 +40,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🧾 Registrar contexto imutável do release
+        env:
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
         run: |
           {
             echo "## Contexto do deploy"
-            echo "- Correlation ID: \`${{ inputs.deployment_id || 'manual-unlinked' }}\`"
+            echo "- Correlation ID: \`${DEPLOYMENT_ID:-manual-unlinked}\`"
             echo "- Actor: \`${{ github.actor }}\`"
             echo "- Triggering actor: \`${{ github.triggering_actor }}\`"
             echo "- Run: \`${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\`"
             echo "- Ref: \`${{ github.ref }}\`"
             echo "- SHA: \`${{ github.sha }}\`"
             echo "- Modo: \`${{ inputs.mode }}\` | restart_mcp: \`${{ inputs.restart_mcp }}\`"
-            echo "- Preservar drift remoto: \`${{ inputs.preserve_remote_drift }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: 🛡️ Validar proveniência do agente
-        shell: bash
-        run: |
-          actor="${{ github.actor }}"
-          correlation_id="${{ inputs.deployment_id }}"
-          is_deploy_bot=false
-          case "$actor" in
-            "gv-codex-deploy[bot]"|"gv-claude-deploy[bot]") is_deploy_bot=true ;;
-          esac
-          if [ "$is_deploy_bot" = true ] && [ -z "$correlation_id" ]; then
-            echo "Deploy de agente sem deployment_id MCP é bloqueado."
-            exit 1
-          fi
-          if [ -n "$correlation_id" ] && [ "$is_deploy_bot" != true ]; then
-            echo "Somente GitHub Apps do Squad Engenharia podem usar deployment_id MCP."
-            exit 1
-          fi
-          if [ "${{ inputs.preserve_remote_drift }}" = "true" ] && [ "$is_deploy_bot" = true ]; then
-            echo "Exceção de drift é exclusiva de dispatch humano aprovado no ambiente production."
-            exit 1
-          fi
 
       - name: ✅ Checkout code
         uses: actions/checkout@v4
@@ -105,31 +79,42 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
+    permissions:
+      contents: read
+      id-token: write # somente para o callback OIDC ao ledger; sem segredo de longa duração
+    env:
+      DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+      ACTOR: ${{ github.actor }}
+      CALLBACK_URL: ${{ vars.APP32_DEPLOY_CALLBACK_URL }}
+      OIDC_AUDIENCE: ${{ vars.APP32_DEPLOY_OIDC_AUDIENCE }}
+      APP32_PUBLIC_BASE_URL: ${{ vars.APP32_PUBLIC_BASE_URL }}
     steps:
-      - name: 🛡️ Validar proveniência do agente
+      - name: 🛡️ Validar proveniência e correlação
         shell: bash
         run: |
-          actor="${{ github.actor }}"
-          correlation_id="${{ inputs.deployment_id }}"
-          is_deploy_bot=false
-          case "$actor" in
-            "gv-codex-deploy[bot]"|"gv-claude-deploy[bot]") is_deploy_bot=true ;;
+          case "$ACTOR" in
+            "gv-codex-deploy[bot]"|"gv-claude-deploy[bot]")
+              if [ -z "$DEPLOYMENT_ID" ]; then
+                echo "Deploy de agente sem deployment_id MCP é bloqueado."
+                exit 1
+              fi ;;
           esac
-          if [ "$is_deploy_bot" = true ] && [ -z "$correlation_id" ]; then
-            echo "Deploy de agente sem deployment_id MCP é bloqueado."
+          if [ -n "$DEPLOYMENT_ID" ] && ! [[ "$DEPLOYMENT_ID" =~ ^[0-9a-f]{32}$ ]]; then
+            echo "deployment_id inválido."
             exit 1
           fi
-          if [ -n "$correlation_id" ] && [ "$is_deploy_bot" != true ]; then
-            echo "Somente GitHub Apps do Squad Engenharia podem usar deployment_id MCP."
-            exit 1
-          fi
-          if [ "${{ inputs.preserve_remote_drift }}" = "true" ] && [ "$is_deploy_bot" = true ]; then
-            echo "Exceção de drift é exclusiva de dispatch humano aprovado no ambiente production."
+          if [ -n "$DEPLOYMENT_ID" ] && { [ -z "$CALLBACK_URL" ] || [ -z "$OIDC_AUDIENCE" ]; }; then
+            echo "Callback do ledger não configurado (APP32_DEPLOY_CALLBACK_URL/APP32_DEPLOY_OIDC_AUDIENCE)."
             exit 1
           fi
 
       - name: ✅ Checkout code
         uses: actions/checkout@v4
+
+      - name: 🧾 Ledger — iniciar (recusa deploy não aprovado, de outro SHA ou de outro run)
+        if: env.DEPLOYMENT_ID != ''
+        shell: bash
+        run: bash app32/scripts/deploy_callback.sh started
 
       - name: 🚀 Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -144,58 +129,42 @@ jobs:
             echo "📂 Acessando diretório do projeto..."
             cd ${{ secrets.PROJECT_PATH }}
 
-            # Bootstrap: o script no host ainda pode ser anterior à lógica de
-            # snapshot. O snapshot é criado aqui, antes de invocá-lo, somente
-            # após a aprovação do ambiente production e apenas no dispatch humano.
-            if [ "${{ inputs.preserve_remote_drift }}" = "true" ]; then
-              # PROJECT_PATH pode ser o runtime ($WWW/app32), e não a raiz
-              # Git ($WWW). Derivar o checkout real preserva o contrato do
-              # deploy_configr.sh: snapshots auditáveis ficam em $BASE/backups.
-              REPO="$(git rev-parse --show-toplevel)"
-              BASE="$(cd "$REPO/.." && pwd -P)"
-              WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain=v1)"
-              if [ -n "$WORKTREE_DRIFT" ]; then
-                STAMP="$(date +%Y%m%d-%H%M%S)"
-                SNAPSHOT_DIR="$BASE/backups/worktree-drift-$STAMP"
-                UNTRACKED_ARCHIVE="$SNAPSHOT_DIR/untracked-files.tar.gz"
-
-                (umask 077; mkdir -p "$SNAPSHOT_DIR")
-                chmod 0700 "$SNAPSHOT_DIR"
-                git -C "$REPO" status --porcelain=v1 > "$SNAPSHOT_DIR/status.txt"
-                git -C "$REPO" diff --binary > "$SNAPSHOT_DIR/worktree.patch"
-                git -C "$REPO" diff --cached --binary > "$SNAPSHOT_DIR/staged.patch"
-                (
-                  cd "$REPO"
-                  git ls-files --others --exclude-standard -z |
-                    tar --null --files-from=- -czf "$UNTRACKED_ARCHIVE" 2>/dev/null || true
-                )
-                [ -f "$UNTRACKED_ARCHIVE" ] && chmod 0600 "$UNTRACKED_ARCHIVE"
-                {
-                  printf 'snapshot=%s\n' "$SNAPSHOT_DIR"
-                  printf 'created_at=%s\n' "$(date --iso-8601=seconds)"
-                  printf 'release_before_reset=%s\n' "$(git -C "$REPO" rev-parse HEAD)"
-                  printf 'approved_by=%s\n' "${{ github.actor }}"
-                  printf 'workflow_run=%s\n' "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                } > "$SNAPSHOT_DIR/manifest.txt"
-                chmod 0600 "$SNAPSHOT_DIR/manifest.txt" "$SNAPSHOT_DIR/status.txt" \
-                  "$SNAPSHOT_DIR/worktree.patch" "$SNAPSHOT_DIR/staged.patch"
-                test -s "$SNAPSHOT_DIR/manifest.txt"
-                export DEPLOY_DIRTY_SNAPSHOT="$SNAPSHOT_DIR/manifest.txt"
-                echo "✅ Snapshot privado do drift criado antes do deploy."
-              fi
-            fi
-
             if [ -f "app32/scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via app32/scripts/deploy_configr.sh"
-              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" DEPLOY_ALLOW_DIRTY="${{ inputs.preserve_remote_drift }}" DEPLOY_CREATE_DIRTY_SNAPSHOT="${{ inputs.preserve_remote_drift }}" DEPLOY_DRIFT_APPROVED_BY="${{ github.actor }}" DEPLOY_DRIFT_WORKFLOW_RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" bash app32/scripts/deploy_configr.sh
+              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" bash app32/scripts/deploy_configr.sh
             elif [ -f "scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via scripts/deploy_configr.sh"
-              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" DEPLOY_ALLOW_DIRTY="${{ inputs.preserve_remote_drift }}" DEPLOY_CREATE_DIRTY_SNAPSHOT="${{ inputs.preserve_remote_drift }}" DEPLOY_DRIFT_APPROVED_BY="${{ github.actor }}" DEPLOY_DRIFT_WORKFLOW_RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" bash scripts/deploy_configr.sh
+              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" bash scripts/deploy_configr.sh
             else
               echo "❌ Script oficial de deploy não encontrado."
               find . -maxdepth 3 -name "deploy_configr.sh" -print
               exit 1
             fi
+
+      - name: 🔎 Smoke pós-deploy (health + assets críticos)
+        id: smoke
+        shell: bash
+        run: |
+          set +e
+          evidence="$(bash app32/scripts/deploy_smoke.sh)"
+          status=$?
+          echo "evidence=$evidence" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: 🧾 Ledger — concluir com sucesso
+        if: env.DEPLOYMENT_ID != ''
+        shell: bash
+        env:
+          EVIDENCE_JSON: ${{ steps.smoke.outputs.evidence }}
+        run: bash app32/scripts/deploy_callback.sh succeeded
+
+      - name: 🧾 Ledger — registrar falha
+        if: failure() && env.DEPLOYMENT_ID != ''
+        shell: bash
+        env:
+          EVIDENCE_JSON: ${{ steps.smoke.outputs.evidence }}
+          FAILURE_REASON: workflow_failed
+        run: bash app32/scripts/deploy_callback.sh failed || true
 
       - name: 🧾 Registrar resultado do deploy
         if: always()
@@ -205,6 +174,5 @@ jobs:
             echo "- Status do job: \`${{ job.status }}\`"
             echo "- Actor verificável: \`${{ github.actor }}\`"
             echo "- Triggering actor verificável: \`${{ github.triggering_actor }}\`"
-            echo "- Correlation ID MCP: \`${{ inputs.deployment_id || 'manual-unlinked' }}\`"
-            echo "- Exceção de drift solicitada: \`${{ inputs.preserve_remote_drift }}\`"
+            echo "- Correlation ID MCP: \`${DEPLOYMENT_ID:-manual-unlinked}\`"
           } >> "$GITHUB_STEP_SUMMARY"

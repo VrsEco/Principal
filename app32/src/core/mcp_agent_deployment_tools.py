@@ -1,6 +1,19 @@
-"""Tools MCP do control plane de deploy do Squad Engenharia."""
+"""Tools MCP do control plane de deploy do Squad Engenharia.
+
+As tools só adaptam o contexto autenticado e delegam ao service. Não existe
+tool para registrar sucesso/falha: isso é exclusivo do callback OIDC do
+workflow oficial. O tenant vem do contexto validado pelo wrapper MCP, nunca de
+um ``company_id`` livre do agente; o ``actor_kind`` é derivado do client_id.
+"""
 from __future__ import annotations
 from typing import Any
+
+AGENT_DEPLOYMENT_TOOL_NAMES = (
+    "request_agent_deployment",
+    "approve_agent_deployment",
+    "get_agent_deployment",
+    "list_agent_deployments",
+)
 
 
 def _identity():
@@ -11,25 +24,34 @@ def _identity():
     return identity
 
 
+def _company_id() -> int | None:
+    from src.intelligence.tool_context import get_sapiens_context
+    return get_sapiens_context().company_id
+
+
 def register_agent_deployment_mcp_tools(mcp: Any) -> None:
     @mcp.tool()
-    def request_agent_deployment(company_id: int, actor_kind: str, target_sha: str,
-                                 mode: str = "quick", restart_mcp: bool = False) -> dict:
-        """Registra solicitação de deploy. GitHub Actions é o único executor."""
+    def request_agent_deployment(target_sha: str, mode: str = "quick", restart_mcp: bool = False,
+                                 migration_confirmed: bool = False) -> dict:
+        """Solicita deploy (fica pendente de aprovação humana). GitHub Actions é o único executor."""
         from services.agent_deployment_service import create_agent_deployment
-        return create_agent_deployment(company_id=company_id, identity=_identity(), actor_kind=actor_kind,
-                                       target_sha=target_sha, mode=mode, restart_mcp=restart_mcp)
+        return create_agent_deployment(company_id=_company_id(), identity=_identity(), target_sha=target_sha,
+                                       mode=mode, restart_mcp=restart_mcp, migration_confirmed=migration_confirmed)
 
     @mcp.tool()
-    def list_agent_deployments(company_id: int, limit: int = 20) -> dict:
-        """Lista deploys do tenant autenticado sem expor registros de outras empresas."""
-        from services.agent_deployment_service import list_agent_deployments
-        return {"company_id": company_id, "items": list_agent_deployments(company_id=company_id, identity=_identity(), limit=limit)}
+    def approve_agent_deployment(deployment_id: int) -> dict:
+        """Aprova (somente humano) e dispara o workflow oficial de deploy."""
+        from services.agent_deployment_service import approve_agent_deployment as approve
+        return approve(company_id=_company_id(), identity=_identity(), deployment_id=deployment_id)
 
     @mcp.tool()
-    def record_agent_deployment_run(company_id: int, deployment_id: int, github_run_url: str,
-                                    status: str) -> dict:
-        """Registra o run GitHub correlacionado pelo mesmo agente autenticado."""
-        from services.agent_deployment_service import record_agent_deployment_run
-        return record_agent_deployment_run(company_id=company_id, identity=_identity(), deployment_id=deployment_id,
-                                           github_run_url=github_run_url, status=status)
+    def get_agent_deployment(deployment_id: int) -> dict:
+        """Consulta um deploy do tenant de governança com a trilha de eventos."""
+        from services.agent_deployment_service import get_agent_deployment as get_one
+        return get_one(company_id=_company_id(), identity=_identity(), deployment_id=deployment_id)
+
+    @mcp.tool()
+    def list_agent_deployments(limit: int = 20) -> dict:
+        """Lista deploys do tenant de governança sem expor registros de outras empresas."""
+        from services.agent_deployment_service import list_agent_deployments as list_items
+        return {"items": list_items(company_id=_company_id(), identity=_identity(), limit=limit)}

@@ -214,10 +214,10 @@ from .incentive import (
 )
 
 from .identity_provisioning_outbox import IdentityProvisioningOutbox, OAuthConnectionRecoveryAudit
-from .agent_deployment import AgentDeployment
+from .agent_deployment import AgentDeployment, AgentDeploymentEvent
 
 __all__ = [
-    'IdentityProvisioningOutbox', 'OAuthConnectionRecoveryAudit', 'AgentDeployment',
+    'IdentityProvisioningOutbox', 'OAuthConnectionRecoveryAudit', 'AgentDeployment', 'AgentDeploymentEvent',
     'EmployeeQualificationEvidence',
     'UsageTelemetryHourly',
     'RoleCostProfile',
