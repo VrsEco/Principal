@@ -144,6 +144,44 @@ jobs:
             echo "📂 Acessando diretório do projeto..."
             cd ${{ secrets.PROJECT_PATH }}
 
+            # Bootstrap: o script no host ainda pode ser anterior à lógica de
+            # snapshot. O snapshot é criado aqui, antes de invocá-lo, somente
+            # após a aprovação do ambiente production e apenas no dispatch humano.
+            if [ "${{ inputs.preserve_remote_drift }}" = "true" ]; then
+              REPO="$(pwd -P)"
+              BASE="$(cd "$REPO/.." && pwd -P)"
+              WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain=v1)"
+              if [ -n "$WORKTREE_DRIFT" ]; then
+                STAMP="$(date +%Y%m%d-%H%M%S)"
+                SNAPSHOT_DIR="$BASE/backups/worktree-drift-$STAMP"
+                UNTRACKED_ARCHIVE="$SNAPSHOT_DIR/untracked-files.tar.gz"
+
+                (umask 077; mkdir -p "$SNAPSHOT_DIR")
+                chmod 0700 "$SNAPSHOT_DIR"
+                git -C "$REPO" status --porcelain=v1 > "$SNAPSHOT_DIR/status.txt"
+                git -C "$REPO" diff --binary > "$SNAPSHOT_DIR/worktree.patch"
+                git -C "$REPO" diff --cached --binary > "$SNAPSHOT_DIR/staged.patch"
+                (
+                  cd "$REPO"
+                  git ls-files --others --exclude-standard -z |
+                    tar --null --files-from=- -czf "$UNTRACKED_ARCHIVE" 2>/dev/null || true
+                )
+                [ -f "$UNTRACKED_ARCHIVE" ] && chmod 0600 "$UNTRACKED_ARCHIVE"
+                {
+                  printf 'snapshot=%s\n' "$SNAPSHOT_DIR"
+                  printf 'created_at=%s\n' "$(date --iso-8601=seconds)"
+                  printf 'release_before_reset=%s\n' "$(git -C "$REPO" rev-parse HEAD)"
+                  printf 'approved_by=%s\n' "${{ github.actor }}"
+                  printf 'workflow_run=%s\n' "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                } > "$SNAPSHOT_DIR/manifest.txt"
+                chmod 0600 "$SNAPSHOT_DIR/manifest.txt" "$SNAPSHOT_DIR/status.txt" \
+                  "$SNAPSHOT_DIR/worktree.patch" "$SNAPSHOT_DIR/staged.patch"
+                test -s "$SNAPSHOT_DIR/manifest.txt"
+                export DEPLOY_DIRTY_SNAPSHOT="$SNAPSHOT_DIR/manifest.txt"
+                echo "✅ Snapshot privado do drift criado antes do deploy."
+              fi
+            fi
+
             if [ -f "app32/scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via app32/scripts/deploy_configr.sh"
               DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" DEPLOY_ALLOW_DIRTY="${{ inputs.preserve_remote_drift }}" DEPLOY_CREATE_DIRTY_SNAPSHOT="${{ inputs.preserve_remote_drift }}" DEPLOY_DRIFT_APPROVED_BY="${{ github.actor }}" DEPLOY_DRIFT_WORKFLOW_RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" bash app32/scripts/deploy_configr.sh
