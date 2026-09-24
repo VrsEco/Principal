@@ -23,5 +23,20 @@ Use esta skill para deploy, publicação em produção, atualização de site e 
 - validacao de MCP remoto em producao deve cobrir reachability HTTPS, auth negativa, auth positiva e segregacao por surface
 - se o objetivo for claude.ai, documentar URL publica final e pré-requisitos de auth/OAuth antes de encerrar o deploy
 
+## Controle por agentes do Squad Engenharia
+- Esta skill é a única superfície de publicação para agentes vinculados ao
+  Squad Engenharia, incluindo Codex e Claude.
+- Agentes solicitam deploy pelo MCP de Deploy; nunca recebem ou reutilizam
+  chave SSH de produção. Somente o GitHub Actions oficial executa o transporte
+  ao host.
+- A autoria é derivada de identidade autenticada (`subject` MCP e
+  `github.actor`/`github.triggering_actor`), jamais de texto declarado pelo
+  agente. O evento deve ser correlacionado a `deployment_id`, SHA e run.
+- Todo registro operacional usa `company_id`, RBAC, aprovação para produção e
+  evidências de preflight/pós-deploy. Drift exige snapshot e aprovação
+  auditáveis; não habilite exceção livre por variável de ambiente.
+- Antes de concluir, valide health e todos os assets críticos declarados no
+  release; ausência de `200` encerra o deploy como falha.
+
 ## Script principal
 - `C:\GestaoVersus\app32\scripts\deploy_configr.sh`
