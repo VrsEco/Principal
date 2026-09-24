@@ -9,7 +9,7 @@ def read(rel: str) -> str:
 
 
 def test_financial_direct_keeps_brazilian_date_input_contract():
-    for rel in ["static/js/financial_entry_direct.js", "app32/static/js/financial_entry_direct.js"]:
+    for rel in ["static/js/financial_entry_direct.js"]:
         source = read(rel)
         assert "return `${digits.slice(0, 2)}/${digits.slice(2)}`" in source
         assert "return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`" in source

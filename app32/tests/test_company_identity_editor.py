@@ -53,8 +53,8 @@ def test_identity_page_exposes_didactic_editor_and_efficient_chart_controls():
 
 
 def test_identity_editor_assets_keep_canonical_card_content_and_add_navigation():
-    javascript = (REPO_ROOT / "app32/static/js/company_identity.js").read_text(encoding="utf-8")
-    stylesheet = (REPO_ROOT / "app32/static/css/company_identity.css").read_text(encoding="utf-8")
+    javascript = (REPO_ROOT / "static/js/company_identity.js").read_text(encoding="utf-8")
+    stylesheet = (REPO_ROOT / "static/css/company_identity.css").read_text(encoding="utf-8")
 
     for contract in (
         "identity-node__title",

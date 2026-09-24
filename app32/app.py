@@ -44,67 +44,6 @@ def _should_run_runtime_bootstrap(config_name: str) -> bool:
     return config_name != "production"
 
 
-def _sync_public_static_assets(app: Flask) -> None:
-    """
-    Sincroniza os assets estáticos da aplicação para o diretório público raiz.
-
-    Contexto:
-    - O código Flask reside em C:\\GestaoVersus\\app32\\app32
-    - Os templates referenciam /static/...
-    - Em produção, o diretório público raiz pode servir C:\\GestaoVersus\\app32\\static
-      enquanto os assets versionados vivem em C:\\GestaoVersus\\app32\\app32\\static
-
-    Estratégia:
-    - Cópia incremental, não destrutiva
-    - Cria apenas arquivos inexistentes ou desatualizados
-    """
-    source_static = os.path.abspath(app.static_folder)
-    public_static = os.path.abspath(os.path.join(app.root_path, "..", "static"))
-
-    if source_static == public_static:
-        return
-
-    if not os.path.isdir(source_static):
-        app.logger.warning("Static source directory not found: %s", source_static)
-        return
-
-    os.makedirs(public_static, exist_ok=True)
-
-    copied_files = 0
-    for root, _, files in os.walk(source_static):
-        relative_root = os.path.relpath(root, source_static)
-        target_root = public_static if relative_root == "." else os.path.join(public_static, relative_root)
-        os.makedirs(target_root, exist_ok=True)
-
-        for filename in files:
-            source_file = os.path.join(root, filename)
-            target_file = os.path.join(target_root, filename)
-
-            should_copy = not os.path.exists(target_file)
-            if not should_copy:
-                try:
-                    source_stat = os.stat(source_file)
-                    target_stat = os.stat(target_file)
-                    should_copy = (
-                        source_stat.st_size != target_stat.st_size
-                        or source_stat.st_mtime > target_stat.st_mtime
-                    )
-                except OSError:
-                    should_copy = True
-
-            if should_copy:
-                shutil.copy2(source_file, target_file)
-                copied_files += 1
-
-    if copied_files:
-        app.logger.info(
-            "Static assets synchronized: %s files copied from %s to %s",
-            copied_files,
-            source_static,
-            public_static,
-        )
-
-
 def _resolve_public_upload_folder(app: Flask) -> str:
     """
     Resolve o diretório canônico dos uploads públicos.
@@ -225,7 +164,9 @@ def _backfill_user_channel_contacts():
 
 
 def create_app(config_name=None):
-    app = Flask(__name__)
+    # static/ é a única origem versionada e também o diretório servido pelo
+    # Nginx no Configr. Não existe cópia de assets no boot do processo.
+    app = Flask(__name__, static_folder="../static")
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     print("DEBUG: Registering Jinja filters...")
 
@@ -250,7 +191,7 @@ def create_app(config_name=None):
     
     app.config.from_object(app_configs[config_name])
     app.config["FLASK_CONFIG"] = config_name
-    _sync_public_static_assets(app)
+
 
     @app.get("/healthz")
     def healthz():

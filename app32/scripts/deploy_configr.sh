@@ -58,11 +58,30 @@ validate_runtime_layout() {
     fi
 }
 
+# Normaliza somente o cache de metadados do índice antes de decidir que há
+# drift. Isso não altera arquivos nem staging: Git compara o conteúdo antes de
+# atualizar o stat-cache. Evita falso positivo após cópias antigas de assets
+# que preservaram os mesmos bytes, mas alteraram mtime/ctime.
+WORKTREE_DRIFT_BEFORE_REFRESH="$(git -C "$REPO" status --porcelain)"
+if [ -n "$WORKTREE_DRIFT_BEFORE_REFRESH" ]; then
+    set +e
+    git -C "$REPO" update-index --refresh --quiet
+    INDEX_REFRESH_EXIT=$?
+    set -e
+    WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain)"
+    if [ -z "$WORKTREE_DRIFT" ]; then
+        echo "ℹ️  Índice Git normalizado: drift apenas de metadados, sem diferença de conteúdo (refresh_exit=$INDEX_REFRESH_EXIT)."
+    else
+        echo "ℹ️  Drift persiste após normalização do índice (refresh_exit=$INDEX_REFRESH_EXIT)."
+    fi
+else
+    WORKTREE_DRIFT=""
+fi
+
 # Um reset hard exige worktree limpo. A única exceção é uma janela controlada
 # com snapshot já criado fora do checkout, declarada explicitamente pelo operador.
 # Isso permite recuperar de processos legados que ainda escrevem assets no root,
 # sem transformar alterações não auditadas em reset silencioso.
-WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain)"
 if [ -n "$WORKTREE_DRIFT" ]; then
     DIRTY_SNAPSHOT="${DEPLOY_DIRTY_SNAPSHOT:-}"
     SNAPSHOT_REAL="$(realpath -m "$DIRTY_SNAPSHOT" 2>/dev/null || true)"

@@ -60,7 +60,7 @@ P1_PROCESSES_TEMPLATE_CONTRACTS = [
 ]
 
 P1_PROCESSES_JS_ENDPOINT_CONTRACTS = [
-    ("app32/static/js/processes.js", "/api/process-areas"),
+    ("static/js/processes.js", "/api/process-areas"),
     ("static/js/processes.js", "/api/process-areas"),
 ]
 
