@@ -436,6 +436,25 @@ def _register_tool(mcp: Any, tool: Any, *, policy_surface: str | None = None) ->
     make_wrapper(tool)
 
 
+def _control_plane_tool_allowed_on_surface(tool_name: str, surface: str | None) -> bool:
+    """Tools ``control_plane`` (ex.: deploy) só existem nas surfaces da sua capability.
+
+    Registrars compartilhados registram por nome em todas as surfaces; sem este
+    filtro uma tool oculta na descoberta continuaria invocável em ``user``.
+    """
+    get_capability = getattr(catalog, "get_tool_capability", None)
+    capability = get_capability(tool_name) if get_capability else None
+    if capability is None or "control_plane" not in getattr(capability, "tags", ()):
+        return True
+    if surface is None:
+        return False
+    try:
+        surface_scopes = get_surface_scope_filter(surface)
+    except ValueError:
+        return False
+    return any(capability.matches_scope(scope) for scope in surface_scopes)
+
+
 def _register_shared_registrars(
     mcp: Any,
     *,
@@ -462,6 +481,8 @@ def _register_shared_registrars(
             def _decorate(func):
                 tool_name = explicit_name or getattr(func, "__name__", "unknown_tool")
                 if self._allowed_names is not None and tool_name not in self._allowed_names:
+                    return func
+                if not _control_plane_tool_allowed_on_surface(tool_name, policy_surface):
                     return func
                 wrapped = wrap_mcp_callable(func, policy_surface=policy_surface)
                 setattr(wrapped, "__app32_tool_name__", tool_name)

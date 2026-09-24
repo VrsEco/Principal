@@ -262,6 +262,10 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
+    SimpleNamespace(name="request_agent_deployment", description="Solicita deploy pendente de aprovação humana; GitHub Actions é o único executor."),
+    SimpleNamespace(name="approve_agent_deployment", description="Aprova (somente humano) e dispara o workflow oficial de deploy."),
+    SimpleNamespace(name="get_agent_deployment", description="Consulta um deploy do tenant de governança com trilha de eventos."),
+    SimpleNamespace(name="list_agent_deployments", description="Lista deploys do tenant de governança."),
     SimpleNamespace(name="get_internal_audit_summary", description="Retorna os totais tenant-safe da Auditoria Interna."),
     SimpleNamespace(name="list_internal_audit_points", description="Lista pontos de Auditoria Interna do tenant com filtro de status."),
     SimpleNamespace(name="list_internal_audit_findings", description="Lista achados de Auditoria Interna do tenant com filtro de status."),

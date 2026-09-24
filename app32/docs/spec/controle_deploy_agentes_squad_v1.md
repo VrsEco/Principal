@@ -1,8 +1,8 @@
 # SPEC — Controle de Deploy por Agentes do Squad Engenharia v1
 
-**Status:** proposto para implementação controlada
-**Classe:** SPEC
-**Dono:** Squad Engenharia
+**Status:** implementação local concluída (não homologada em produção)  
+**Classe:** SPEC  
+**Dono:** Squad Engenharia  
 **Escopo:** toda publicação em `app.gestaoversus.com.br`, por humano, Codex ou Claude.
 
 ## Decisão
@@ -31,8 +31,8 @@ workflow oficial tem o segredo de transporte para o host.
 Codex / Claude / operador humano
         │ OAuth/JWT com subject verificável
         ▼
-MCP deployment.request
-        │ RBAC + company_id + política + aprovação
+MCP request/approve_agent_deployment
+        │ RBAC + company_id + política + aprovação humana
         ▼
 PostgreSQL deployment_ledger (fonte de verdade)
         │ dispatch autenticado por GitHub App
@@ -40,105 +40,93 @@ PostgreSQL deployment_ledger (fonte de verdade)
 GitHub Actions / deploy-app32.yml
         │ github.actor + github.triggering_actor + run_id + SHA
         ▼
-MCP deployment.record_stage / deployment.complete
+callback OIDC /webhook/agent-deployments/github
         ▼
 deploy_configr.sh → app.gestaoversus.com.br
 ```
 
 ## Identidade e autorização
 
-- Cada agente usa uma instalação/identidade separada de GitHub App: por
-  exemplo, `gv-codex-deploy[bot]` e `gv-claude-deploy[bot]`. Tokens são de
-  curta duração e ficam no runtime do respectivo agente; são proibidos tokens
-  compartilhados e chaves SSH distribuídas a agentes.
-- O MCP deriva `requested_by_subject` do JWT/OAuth e `agent_kind` da identidade
-  autenticada. Campos informados pelo chamador servem somente como contexto e
-  não substituem a identidade verificada.
-- O workflow grava `github.actor`, `github.triggering_actor`,
-  `github.run_id`, `github.run_attempt`, `github.sha` e `github.workflow_ref`.
-  Esses valores são evidências imutáveis da execução.
-- `production` exige RBAC `deployment:request`, aprovação de ambiente GitHub e
-  uma aprovação MCP vinculada à solicitação. Apenas `main` protegida é aceita.
-
-## Aprovação única de release
-
-O Squad Engenharia solicita ao operador uma **aprovação de release** antes de
-criar o primeiro efeito externo. A aprovação é uma decisão única, limitada a
-uma liberação, e deve registrar: objetivo, repositório/branch de destino,
-impacto, modo (`quick`/`standard`/`full`), migrations, reinício de MCP,
-tratamento de drift e a faixa de mudanças que será commitada.
-
-Com uma resposta inequívoca do operador — por exemplo, “autorizo o commit e
-deploy desta liberação” — ficam autorizadas somente as etapas daquele escopo:
-
-1. criar o commit e publicar a branch de trabalho;
-2. abrir e mesclar a PR para `main` protegida;
-3. disparar `.github/workflows/deploy-app32.yml`;
-4. aprovar o gate técnico do ambiente `production` e executar o workflow;
-5. registrar o ledger e validar os smokes públicos declarados.
-
-O gate `production` do GitHub não é removido nem contornado: a sua aprovação
-na UI é a materialização técnica da mesma decisão já registrada. Nenhuma
-credencial é revelada, copiada ou usada fora do workflow oficial.
-
-A autorização não é uma permissão permanente. Ela expira ao término do run e
-deve ser renovada para mudança de escopo, SHA/branch diferente, modo diferente,
-migration não declarada, reinício de MCP, exceção de drift não declarada,
-alteração de segredo/permissão ou correção de uma falha. Um retry do mesmo SHA,
-com os mesmos parâmetros e sem alteração corretiva, permanece vinculado à
-autorização original.
+- Agentes e humanos autenticam por OAuth. O servidor deriva `actor_kind`
+  (`codex`, `claude`, `human`) do `client_id` autenticado, mapeado em
+  `AGENT_DEPLOY_CLIENT_KINDS` (JSON `client_id → tipo`). Cliente não mapeado é
+  recusado (fail-closed). `actor_kind`, `company_id`, status e URL de run **não**
+  são parâmetros de nenhuma tool.
+- O tenant é o de governança (`AGENT_DEPLOY_GOVERNANCE_COMPANY_ID`) e precisa
+  coincidir com o contexto validado pelo wrapper MCP e com a identidade.
+- Agente solicita; somente `actor_kind=human` aprova. A tool de aprovação tem
+  human gate persistido do APP32 (payload exato) e RBAC `deployment.approve`.
+- O workflow prova origem por **OIDC do GitHub Actions** (sem segredo): o
+  callback exige assinatura RS256 do emissor GitHub, audiência
+  `AGENT_DEPLOY_OIDC_AUDIENCE`, `repository`, `ref=refs/heads/main`,
+  `event_name=workflow_dispatch`, `environment=production`, `workflow_ref` do
+  workflow oficial e `sha` igual ao `target_sha` aprovado (40 hex).
+- `github.actor`, `run_id`, `run_attempt`, `workflow_ref` e `sha` gravados no
+  ledger vêm exclusivamente desses claims verificados.
 
 ## Ledger PostgreSQL e multi-tenancy
 
-A tabela `deployment_ledger` deve conter, no mínimo:
+`agent_deployments` (estado corrente) e `agent_deployment_events`
+(append-only, com bloqueio no ORM e trigger PostgreSQL). `company_id` é
+NOT NULL em ambas; `correlation_id` (128 bits) é único e é o vínculo com o
+workflow — não é exposto às tools. Toda leitura/mutação de tool filtra
+`company_id`; o callback resolve o tenant pelo ledger, nunca pelo corpo.
 
-- `id` UUID, `company_id` **NOT NULL**, `environment`, `mode`, `target_sha`,
-  `target_ref`, `status`, `requested_at`, `started_at`, `finished_at`;
-- `requested_by_subject`, `agent_kind`, `approval_id`, `github_actor`,
-  `github_triggering_actor`, `github_run_id`, `github_run_attempt`;
-- `preflight_evidence`, `validation_evidence`, `failure_reason` e `created_by`.
+Status: `pending_approval → approved → dispatched → running → succeeded|failed`;
+`pending_approval → cancelled`; `approved|dispatched → failed`. A máquina de
+estados vive em `services/agent_deployment_policy.py`. `succeeded` exige
+`health_status=200` e smoke 200 de todos os assets declarados. Só há um deploy
+ativo por tenant. Falha de dispatch marca `failed` sem retry automático.
 
-Toda consulta e mutação filtra `company_id`. O tenant de governança do Gestão
-Versus é resolvido no servidor por configuração, nunca aceito livremente de
-um agente. Eventos de estágio são append-only; transição de status é validada
-por service, não por rota HTTP.
+## Contrato MCP (surface `admin`)
 
-## Contrato MCP
+| Tool | Finalidade | Permissão | Risco / gate |
+|---|---|---|---|
+| `request_agent_deployment` | cria pedido `pending_approval` (SHA completo; `full` exige `migration_confirmed`) | `deployment.request` | médio |
+| `approve_agent_deployment` | aprovação humana + dispatch do workflow | `deployment.approve` | crítico, human gate |
+| `get_agent_deployment` | pedido + trilha de eventos | `deployment.read` | baixo |
+| `list_agent_deployments` | lista do tenant | `deployment.read` | baixo |
 
-| Tool | Finalidade | Permissão mínima |
-|---|---|---|
-| `deployment.request` | cria pedido e inicia aprovação/dispatch | `deployment:request` |
-| `deployment.get` | consulta um pedido do mesmo `company_id` | `deployment:read` |
-| `deployment.record_stage` | uso exclusivo do workflow autenticado | service identity |
-| `deployment.complete` | fecha com sucesso/falha e evidências | service identity |
-| `deployment.approve_drift` | autoriza snapshot controlado | `deployment:approve_drift` |
+Não existe tool para registrar sucesso, falha ou URL de run: isso é exclusivo
+do callback `POST /webhook/agent-deployments/github` (rota fina: autentica o
+OIDC, valida o formato e delega a `apply_workflow_callback`). As tools são
+registradas somente nas surfaces da sua capability (tag `control_plane`).
 
-Rotas HTTP, quando necessárias para callback do GitHub, só autenticam,
-validam schema e delegam ao service. A regra de política não vive na rota.
+## Configuração do servidor (nunca em banco, prompt ou Git)
+
+`AGENT_DEPLOY_GOVERNANCE_COMPANY_ID`, `AGENT_DEPLOY_CLIENT_KINDS`,
+`AGENT_DEPLOY_GITHUB_REPOSITORY`, `AGENT_DEPLOY_OIDC_AUDIENCE`,
+`AGENT_DEPLOY_GITHUB_DISPATCH_TOKEN` (GitHub App/token de dispatch, só ambiente).
+No GitHub (variables do repositório): `APP32_DEPLOY_CALLBACK_URL`,
+`APP32_DEPLOY_OIDC_AUDIENCE`, `APP32_PUBLIC_BASE_URL`.
+
+## Riscos residuais conhecidos
+
+- Quem tiver permissão `workflow_dispatch` no GitHub ainda pode disparar o
+  workflow manualmente; um `deployment_id` só avança se estiver aprovado, for do
+  mesmo SHA/`main` e ainda não vinculado a run. Proteger o environment
+  `production` com revisores obrigatórios e restringir permissão de dispatch.
+- `main` que avançou depois da aprovação faz o callback `started` recusar o run
+  (SHA divergente); é preciso novo pedido.
+- Aprovação de drift (`deployment.approve_drift`) continua fora do v1.
 
 ## Política do workflow
 
 1. `concurrency` única para produção, sem cancelamento de release em curso.
 2. `quick`, `standard` e `full` são escolhidos por política de impacto; `full`
    exige confirmação adicional de migration.
-3. Drift bloqueia o deploy. A exceção humana controlada usa
-   `preserve_remote_drift=true`, exige a aprovação do ambiente `production` e
-   cria snapshot privado antes do reset. O workflow nunca recebe
-   `DEPLOY_ALLOW_DIRTY` como entrada livre. A opção é bloqueada para as GitHub
-   Apps do Squad; deploys de agente permanecem sujeitos ao ledger MCP e à sua
-   aprovação de drift.
+3. Drift bloqueia o deploy. A exceção requer snapshot externo, `approval_id` e
+   registro no ledger; não há `DEPLOY_ALLOW_DIRTY` livre em input.
 4. Antes do restart: confirmar SHA em `origin/main`, arquivos do release e
    permissões públicas de `static/vendor`.
 5. Depois do restart: `healthz` 200 e smoke HTTP 200 dos assets críticos,
    incluindo tipo JavaScript para Chart.js. Falha encerra o run como vermelho.
-6. O workflow e o ledger devem reter o ID/texto da aprovação, ator autenticado,
-   SHA efetivo, parâmetros e evidências para demonstrar que cada efeito ficou
-   dentro do escopo autorizado.
 
 ## Operação e contingência
 
 SSH manual é contingência de incidente: precisa de ticket/`deployment_id`,
-snapshot do drift e registro posterior via `deployment.record_stage`. Não é
+snapshot do drift e registro posterior no runbook com o `deployment_id`. A gravação da contingência
+no ledger (evento `manual_contingency`, autor humano) ainda não existe na v1. Não é
 um caminho alternativo de publicação. O runbook deve registrar o executor,
 o motivo, o SHA e as evidências de validação.
 

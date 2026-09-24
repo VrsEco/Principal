@@ -1339,6 +1339,10 @@ def register_blueprints(app):
     from api.webhooks.whatsapp_webhook import whatsapp_webhook_bp
     app.register_blueprint(whatsapp_webhook_bp, url_prefix='/webhook')
 
+    # Callback OIDC do workflow oficial de deploy (control plane de agentes)
+    from api.webhooks.agent_deployment_webhook import agent_deployment_webhook_bp
+    app.register_blueprint(agent_deployment_webhook_bp, url_prefix='/webhook')
+
     # Webhook Email (Sapiens)
     from api.webhooks.email_webhook import email_webhook_bp
     app.register_blueprint(email_webhook_bp, url_prefix='/webhook')
