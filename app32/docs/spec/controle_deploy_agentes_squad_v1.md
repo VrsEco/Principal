@@ -93,8 +93,12 @@ validam schema e delegam ao service. A regra de política não vive na rota.
 1. `concurrency` única para produção, sem cancelamento de release em curso.
 2. `quick`, `standard` e `full` são escolhidos por política de impacto; `full`
    exige confirmação adicional de migration.
-3. Drift bloqueia o deploy. A exceção requer snapshot externo, `approval_id` e
-   registro no ledger; não há `DEPLOY_ALLOW_DIRTY` livre em input.
+3. Drift bloqueia o deploy. A exceção humana controlada usa
+   `preserve_remote_drift=true`, exige a aprovação do ambiente `production` e
+   cria snapshot privado antes do reset. O workflow nunca recebe
+   `DEPLOY_ALLOW_DIRTY` como entrada livre. A opção é bloqueada para as GitHub
+   Apps do Squad; deploys de agente permanecem sujeitos ao ledger MCP e à sua
+   aprovação de drift.
 4. Antes do restart: confirmar SHA em `origin/main`, arquivos do release e
    permissões públicas de `static/vendor`.
 5. Depois do restart: `healthz` 200 e smoke HTTP 200 dos assets críticos,
