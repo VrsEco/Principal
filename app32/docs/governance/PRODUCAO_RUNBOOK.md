@@ -242,10 +242,14 @@ acesso para fluxo normal de agentes.
 ### Drift remoto pelo workflow oficial
 
 Quando o workflow bloquear por worktree remoto sujo, **não use SSH manual**.
-Um operador humano pode reexecutar `deploy-app32.yml` marcando
-`preserve_remote_drift=true`. A opção só alcança o host após a aprovação do
-ambiente `production`, cria o snapshot privado em `$BASE/backups/` antes do
-`git reset --hard` e registra no manifesto: SHA anterior, aprovador e URL do
-run. A opção é bloqueada para `gv-codex-deploy[bot]` e
-`gv-claude-deploy[bot]`; agentes continuam obrigados ao ledger MCP e não podem
-autorizar exceções de drift.
+Um operador humano pode marcar
+`remediate_chartjs_runtime_drift=true` exclusivamente quando o status remoto
+contiver **somente** `static/vendor/chartjs/chart.umd.min.js` e
+`static/vendor/chartjs/chartjs-adapter-date-fns.bundle.min.js` como não
+rastreáveis. A opção só alcança o host após a aprovação do ambiente
+`production`, cria um snapshot privado em `$BASE/backups/` (arquivo, checksum,
+status e manifesto) antes de remover individualmente os dois arquivos e exige
+worktree vazio antes do `git reset --hard`. Qualquer diff, arquivo adicional,
+link simbólico ou diretório não vazio aborta o run. A opção é bloqueada para
+`gv-codex-deploy[bot]` e `gv-claude-deploy[bot]`; agentes continuam obrigados
+ao ledger MCP e não podem autorizar exceções de drift.
