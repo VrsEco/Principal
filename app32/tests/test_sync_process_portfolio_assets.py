@@ -3,7 +3,27 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.sync_process_portfolio_assets import sync_process_portfolio_assets
+from scripts.sync_process_portfolio_assets import (
+    ASSET_FILENAMES,
+    PORTFOLIO_NAME,
+    _source_dir,
+    _target_dir,
+    sync_process_portfolio_assets,
+)
+
+
+def test_canonical_portfolio_assets_use_versioned_root_static():
+    repo_root = Path(__file__).resolve().parents[2]
+    source_dir = repo_root / "static" / "assets" / "process_portfolios" / PORTFOLIO_NAME
+
+    assert _source_dir() == source_dir
+    assert len(ASSET_FILENAMES) == 8
+    assert set(ASSET_FILENAMES) == {
+        "dashboard.jpg", "documents.jpg", "onboarding.jpg", "planning.jpg",
+        "screening.jpg", "signature.jpg", "team.jpg", "workstation.jpg",
+    }
+    assert [name for name in ASSET_FILENAMES if not (source_dir / name).is_file()] == []
+    assert _target_dir() == repo_root / "app32" / "uploads" / "pop" / PORTFOLIO_NAME
 
 
 def test_sync_process_portfolio_assets_copies_missing_files(monkeypatch, tmp_path):

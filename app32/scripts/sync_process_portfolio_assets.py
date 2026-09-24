@@ -25,7 +25,8 @@ def _repo_root() -> Path:
 
 
 def _source_dir() -> Path:
-    return _repo_root() / "static" / "assets" / "process_portfolios" / PORTFOLIO_NAME
+    # Fonte canônica do deploy: static da raiz do checkout Git.
+    return _repo_root().parent / "static" / "assets" / "process_portfolios" / PORTFOLIO_NAME
 
 
 def _upload_root() -> Path:
