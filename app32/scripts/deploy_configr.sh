@@ -27,6 +27,7 @@ DEPLOY_MODE="${DEPLOY_MODE:-quick}"
 RESTART_MCP="${RESTART_MCP:-false}"
 DEPLOY_ALLOW_DIRTY="${DEPLOY_ALLOW_DIRTY:-false}"
 DEPLOY_CREATE_DIRTY_SNAPSHOT="${DEPLOY_CREATE_DIRTY_SNAPSHOT:-false}"
+DEPLOY_DIRTY_SNAPSHOT_CREATED=""
 
 case "$DEPLOY_MODE" in
     quick|standard|full) ;;
@@ -98,7 +99,7 @@ create_dirty_worktree_snapshot() {
     chmod 0600 "$snapshot_dir/manifest.txt" "$snapshot_dir/status.txt" \
         "$snapshot_dir/worktree.patch" "$snapshot_dir/staged.patch"
     test -s "$snapshot_dir/manifest.txt"
-    printf '%s\n' "$snapshot_dir/manifest.txt"
+    DEPLOY_DIRTY_SNAPSHOT_CREATED="$snapshot_dir/manifest.txt"
 }
 
 # Isso permite recuperar de processos legados que ainda escrevem assets no root,
@@ -107,7 +108,8 @@ WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain)"
 if [ -n "$WORKTREE_DRIFT" ]; then
     DIRTY_SNAPSHOT="${DEPLOY_DIRTY_SNAPSHOT:-}"
     if [ -z "$DIRTY_SNAPSHOT" ] && [ "$DEPLOY_ALLOW_DIRTY" = "true" ] && [ "$DEPLOY_CREATE_DIRTY_SNAPSHOT" = "true" ]; then
-        DIRTY_SNAPSHOT="$(create_dirty_worktree_snapshot)"
+        create_dirty_worktree_snapshot
+        DIRTY_SNAPSHOT="$DEPLOY_DIRTY_SNAPSHOT_CREATED"
     fi
     SNAPSHOT_REAL="$(realpath -m "$DIRTY_SNAPSHOT" 2>/dev/null || true)"
     case "$SNAPSHOT_REAL" in
