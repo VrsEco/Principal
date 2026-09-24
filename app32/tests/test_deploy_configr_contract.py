@@ -13,7 +13,8 @@ def test_configr_deploy_targets_versioned_app_directory_and_fails_on_drift():
     assert 'REPO="$WWW"' in content
     assert 'APP="$WWW/app32"' in content
     assert 'git -C "$REPO" status --porcelain' in content
-    assert 'git -C "$REPO" update-index --refresh --quiet' in content
+    assert 'git -C "$REPO" update-index --refresh -q' in content
+    assert 'git -C "$REPO" update-index --refresh --quiet' not in content
     assert 'git -C "$REPO" reset --hard origin/main' in content
     assert 'DEPLOY_ALLOW_DIRTY' in content
     assert 'DEPLOY_DIRTY_SNAPSHOT' in content
@@ -22,8 +23,8 @@ def test_configr_deploy_targets_versioned_app_directory_and_fails_on_drift():
         'git -C "$REPO" reset --hard origin/main'
     )
     assert 'if [ ! -f "$APP/app.py" ] || [ ! -f "$APP/requirements.txt" ]; then' in content
-    assert 'chdir = $APP' in content
-    assert 'module = passenger_wsgi:application' in content
+    assert '"chdir": app_dir,' in content
+    assert '"module": "passenger_wsgi:application",' in content
 
 
 def test_configr_deploy_validates_isolated_versioned_runtime(tmp_path):
