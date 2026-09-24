@@ -208,6 +208,40 @@ check_web_readiness() {
     curl -fsS --max-time 5 -H "Host: $WEB_HEALTH_HOST" "$WEB_HEALTH_URL" >/dev/null
 }
 
+normalize_chartjs_public_assets() {
+    # O Nginx da Configr serve $WWW/static, enquanto o Flask sincroniza os
+    # arquivos versionados de $APP/static durante o boot. O umask do host pode
+    # deixar novos diretórios/arquivos em 700/600 e produzir 403 apesar do
+    # release estar correto. Normalize explicitamente a superfície pública.
+    CHARTJS_PUBLIC_DIR="$WWW/static/vendor/chartjs"
+    CHARTJS_FILE="$CHARTJS_PUBLIC_DIR/chart.umd.min.js"
+    CHARTJS_ADAPTER_FILE="$CHARTJS_PUBLIC_DIR/chartjs-adapter-date-fns.bundle.min.js"
+
+    if [ ! -f "$CHARTJS_FILE" ] || [ ! -f "$CHARTJS_ADAPTER_FILE" ]; then
+        echo "❌ ERRO: assets Chart.js ausentes no diretório público: $CHARTJS_PUBLIC_DIR"
+        return 1
+    fi
+
+    chmod 0755 "$WWW/static" "$WWW/static/vendor" "$CHARTJS_PUBLIC_DIR"
+    chmod 0644 "$CHARTJS_FILE" "$CHARTJS_ADAPTER_FILE"
+    echo "✅ Permissões públicas do Chart.js normalizadas."
+}
+
+validate_chartjs_public_assets() {
+    local asset_path http_code content_type
+    for asset_path in \
+        "/static/vendor/chartjs/chart.umd.min.js" \
+        "/static/vendor/chartjs/chartjs-adapter-date-fns.bundle.min.js"; do
+        http_code="$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' -H "Host: $WEB_HEALTH_HOST" "http://127.0.0.1$asset_path")"
+        content_type="$(curl -sS --max-time 10 -o /dev/null -w '%{content_type}' -H "Host: $WEB_HEALTH_HOST" "http://127.0.0.1$asset_path")"
+        if [ "$http_code" != "200" ] || [[ "$content_type" != *javascript* ]]; then
+            echo "❌ ERRO: smoke do asset falhou: $asset_path (HTTP $http_code; Content-Type: $content_type)"
+            return 1
+        fi
+        echo "✅ Asset público validado: $asset_path ($content_type)"
+    done
+}
+
 # 4. Reinício da Aplicação
 echo "🔄 Reiniciando servidor uWSGI (Configr)..."
 UWSGI_APP_INI="appgestaoversuscombr.45a4cd4b.configr.cloud.ini"
@@ -278,6 +312,9 @@ if [ "$WEB_READY" -ne 1 ]; then
     echo "   URL: $WEB_HEALTH_URL (Host: $WEB_HEALTH_HOST)"
     exit 1
 fi
+
+normalize_chartjs_public_assets
+validate_chartjs_public_assets
 
 # 5. Scheduler dedicado (fora dos workers uWSGI para impedir duplicidade)
 echo "⏰ Reiniciando scheduler dedicado do APP32..."

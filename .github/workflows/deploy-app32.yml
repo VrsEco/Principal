@@ -1,4 +1,5 @@
 name: 🚀 Deploy App32 to Production (Cloudez)
+run-name: "Deploy app32 (${{ inputs.mode }}) · ${{ github.actor }}"
 
 on:
   workflow_dispatch:
@@ -17,6 +18,18 @@ on:
         required: true
         default: false
         type: boolean
+      deployment_id:
+        description: "ID de correlação do ledger MCP (obrigatório para agentes)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app32-production
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -26,6 +39,37 @@ jobs:
     name: 🧪 Validate Code
     runs-on: ubuntu-latest
     steps:
+      - name: 🧾 Registrar contexto imutável do release
+        run: |
+          {
+            echo "## Contexto do deploy"
+            echo "- Correlation ID: \`${{ inputs.deployment_id || 'manual-unlinked' }}\`"
+            echo "- Actor: \`${{ github.actor }}\`"
+            echo "- Triggering actor: \`${{ github.triggering_actor }}\`"
+            echo "- Run: \`${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\`"
+            echo "- Ref: \`${{ github.ref }}\`"
+            echo "- SHA: \`${{ github.sha }}\`"
+            echo "- Modo: \`${{ inputs.mode }}\` | restart_mcp: \`${{ inputs.restart_mcp }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 🛡️ Validar proveniência do agente
+        shell: bash
+        run: |
+          actor="${{ github.actor }}"
+          correlation_id="${{ inputs.deployment_id }}"
+          is_deploy_bot=false
+          case "$actor" in
+            "gv-codex-deploy[bot]"|"gv-claude-deploy[bot]") is_deploy_bot=true ;;
+          esac
+          if [ "$is_deploy_bot" = true ] && [ -z "$correlation_id" ]; then
+            echo "Deploy de agente sem deployment_id MCP é bloqueado."
+            exit 1
+          fi
+          if [ -n "$correlation_id" ] && [ "$is_deploy_bot" != true ]; then
+            echo "Somente GitHub Apps do Squad Engenharia podem usar deployment_id MCP."
+            exit 1
+          fi
+
       - name: ✅ Checkout code
         uses: actions/checkout@v4
 
@@ -49,7 +93,27 @@ jobs:
     name: 🚀 Deploy via SSH
     needs: validate
     runs-on: ubuntu-latest
+    environment:
+      name: production
     steps:
+      - name: 🛡️ Validar proveniência do agente
+        shell: bash
+        run: |
+          actor="${{ github.actor }}"
+          correlation_id="${{ inputs.deployment_id }}"
+          is_deploy_bot=false
+          case "$actor" in
+            "gv-codex-deploy[bot]"|"gv-claude-deploy[bot]") is_deploy_bot=true ;;
+          esac
+          if [ "$is_deploy_bot" = true ] && [ -z "$correlation_id" ]; then
+            echo "Deploy de agente sem deployment_id MCP é bloqueado."
+            exit 1
+          fi
+          if [ -n "$correlation_id" ] && [ "$is_deploy_bot" != true ]; then
+            echo "Somente GitHub Apps do Squad Engenharia podem usar deployment_id MCP."
+            exit 1
+          fi
+
       - name: ✅ Checkout code
         uses: actions/checkout@v4
 
@@ -77,3 +141,14 @@ jobs:
               find . -maxdepth 3 -name "deploy_configr.sh" -print
               exit 1
             fi
+
+      - name: 🧾 Registrar resultado do deploy
+        if: always()
+        run: |
+          {
+            echo "## Resultado do deploy"
+            echo "- Status do job: \`${{ job.status }}\`"
+            echo "- Actor verificável: \`${{ github.actor }}\`"
+            echo "- Triggering actor verificável: \`${{ github.triggering_actor }}\`"
+            echo "- Correlation ID MCP: \`${{ inputs.deployment_id || 'manual-unlinked' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

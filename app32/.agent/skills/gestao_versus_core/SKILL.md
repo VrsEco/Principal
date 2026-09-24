@@ -25,6 +25,14 @@ description: Controle obrigatório do Gestão Versus: governança, roteamento e 
 - Arquitetura e boundary: Arquiteto; API/MCP: Backend API; dados: DBA; UI: Frontend; IA: AI Engineer.
 - Não expanda além de um líder e os apoios estritamente necessários.
 
+## Deploy de agentes do Squad Engenharia
+- Qualquer deploy solicitado por Codex ou Claude deve aplicar
+  `deploy_gestao_versus` e a SPEC
+  `app32/docs/spec/controle_deploy_agentes_squad_v1.md`.
+- A solicitação passa pelo MCP de Deploy com identidade autenticada,
+  `company_id`, autorização e trilha de auditoria. GitHub Actions é o único
+  executor de produção; SSH manual é contingência formalmente registrada.
+
 ## Sapiens e MCP remoto
 - Use domínio canônico (`routine`, `processes`, `finance`); normalize aliases antes de RBAC, telemetria e workflow.
 - `finance` não publica mutação em `user`; leituras executivas usam `admin` ou `analytics`. `analytics` é somente leitura; `ops` não substitui `admin`.

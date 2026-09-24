@@ -20,6 +20,7 @@ from src.core.mcp_http_auth import get_http_request_context, get_http_request_id
 from src.intelligence.knowledge_tools import knowledge_langchain_tools
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_analysis_catalog_tools import register_analysis_catalog_tools
+from src.core.mcp_agent_deployment_tools import register_agent_deployment_mcp_tools
 from src.core.mcp_commercial_tools import register_commercial_mcp_tools
 from src.core.mcp_consultive_assisted_analysis_tools import register_consultive_assisted_analysis_tools
 from src.core.mcp_runtime import wrap_mcp_callable
@@ -729,6 +730,7 @@ catalog = ToolCatalog(
     mcp_registrars=tuple(
         registrar
         for registrar in (
+        register_agent_deployment_mcp_tools,
         register_analysis_catalog_tools,
         register_commercial_mcp_tools,
         register_consultive_assisted_analysis_tools,

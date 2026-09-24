@@ -199,3 +199,42 @@ pip install --upgrade langchain langgraph   ← PROIBIDO no deploy.yml
 ---
 
 *Documento mantido pelo @ARQUITETO. Atualizar após cada incidente de produção.*
+
+---
+
+## 🤖 Deploy governado por agentes do Squad Engenharia
+
+> A partir da SPEC `docs/spec/controle_deploy_agentes_squad_v1.md`, Codex e
+> Claude não operam SSH de produção. A única execução permitida é o workflow
+> `deploy-app32.yml` no GitHub Actions, com identidade de GitHub App segregada.
+
+### Identidades e escopo
+
+| Agente | GitHub App | Repositório | Permissões |
+|---|---|---|---|
+| Codex | `gv-codex-deploy[bot]` | `VrsEco/Principal` | Contents: read; Actions: read/write |
+| Claude | `gv-claude-deploy[bot]` | `VrsEco/Principal` | Contents: read; Actions: read/write |
+
+Nunca compartilhar a chave privada entre agentes, inseri-la no repositório,
+ou transmiti-la em chat. A chave fica exclusivamente no cofre de segredos do
+runtime do respectivo agente.
+
+### Fluxo obrigatório
+
+1. O agente autenticado registra a intenção no MCP: `request_agent_deployment`,
+   com `company_id`, SHA, modo e `restart_mcp`.
+2. O MCP deriva autoria do subject e client autenticados e persiste um
+   `deployment_id`/`correlation_id` tenant-safe.
+3. A GitHub App correspondente dispara `deploy-app32.yml`, fornecendo o
+   `deployment_id`. O workflow bloqueia IDs MCP enviados por identidades que
+   não sejam as Apps autorizadas.
+4. O GitHub Actions executa o deploy oficial e registra actor, SHA, modo e
+   correlação no resumo imutável do run. Após o run, o mesmo agente usa
+   `record_agent_deployment_run` para anexar URL e resultado ao ledger.
+5. O deploy só é considerado concluído após healthz e smoke dos assets críticos.
+
+### Contingência
+
+SSH manual é exceção de incidente. Exige aprovação explícita, snapshot de
+worktree drift, registro no ledger e validação pós-deploy. Não reutilizar esse
+acesso para fluxo normal de agentes.
