@@ -144,7 +144,9 @@ jobs:
             # toca conteúdo nem staging; alterações reais continuam visíveis e
             # são recusadas pelas guardas abaixo e pelo script oficial.
             set +e
-            git update-index --refresh --quiet
+            # A forma curta -q é compatível com o Git do host Configr;
+            # --quiet não é reconhecido nessa versão.
+            git update-index --refresh -q
             INDEX_REFRESH_EXIT=$?
             set -e
             echo "ℹ️ Índice Git atualizado antes da avaliação de drift (refresh_exit=$INDEX_REFRESH_EXIT)."

@@ -65,7 +65,10 @@ validate_runtime_layout() {
 WORKTREE_DRIFT_BEFORE_REFRESH="$(git -C "$REPO" status --porcelain)"
 if [ -n "$WORKTREE_DRIFT_BEFORE_REFRESH" ]; then
     set +e
-    git -C "$REPO" update-index --refresh --quiet
+    # `--quiet` não existe em versões de Git presentes em hosts legados da
+    # Configr. A forma curta `-q` tem a mesma semântica para --refresh e é
+    # compatível com essas versões.
+    git -C "$REPO" update-index --refresh -q
     INDEX_REFRESH_EXIT=$?
     set -e
     WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain)"
