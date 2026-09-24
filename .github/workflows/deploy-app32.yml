@@ -148,7 +148,10 @@ jobs:
             # snapshot. O snapshot é criado aqui, antes de invocá-lo, somente
             # após a aprovação do ambiente production e apenas no dispatch humano.
             if [ "${{ inputs.preserve_remote_drift }}" = "true" ]; then
-              REPO="$(pwd -P)"
+              # PROJECT_PATH pode ser o runtime ($WWW/app32), e não a raiz
+              # Git ($WWW). Derivar o checkout real preserva o contrato do
+              # deploy_configr.sh: snapshots auditáveis ficam em $BASE/backups.
+              REPO="$(git rev-parse --show-toplevel)"
               BASE="$(cd "$REPO/.." && pwd -P)"
               WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain=v1)"
               if [ -n "$WORKTREE_DRIFT" ]; then
