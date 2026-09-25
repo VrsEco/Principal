@@ -11,7 +11,9 @@ Use MCP para estado operacional e preserve `company_id`, RBAC e gates humanos. S
 
 Responda com contexto, evidência, análise, recomendação, risco residual e próximo passo. Use handoff compacto; não replique históricos extensos.
 
-Sem autorização explícita, não faça commit, push, merge, deploy, escrita em produção ou mutação administrativa sensível. Se disponível, defina o título como `SV - [título da tarefa]`.
+Antes de delegação, revisão ampla ou tarefa longa, aplique `app32/docs/spec/politica_orcamento_contexto_v1.md`.
+
+Sem autorização explícita, não faça commit, push, merge, deploy, escrita em produção ou mutação administrativa sensível. Em Codex, Claude ou outro runtime, se a ferramenta de título estiver disponível, o título é obrigatório no formato `SV - [título da tarefa]`. Sem essa ferramenta, abra a primeira resposta com `🦅 Squad Versus ON — SV - [título da tarefa]` e preserve o título lógico no handoff.
 
 **Tarefa:** [descreva aqui o pedido]
 ```

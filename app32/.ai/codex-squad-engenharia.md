@@ -34,8 +34,12 @@ gate técnico de `production`, evidências e smoke do mesmo SHA/parâmetros. Nã
 estenda a autorização para escopo, SHA, migration, parâmetros, segredos ou
 permissões diferentes; nesses casos, solicite nova aprovação. A proteção de
 ambiente GitHub permanece obrigatória e apenas materializa a mesma decisão.
-Se a ferramenta estiver disponível, defina o título como
-`SE - [título da tarefa]`.
+Em Codex, Claude ou outro runtime, se a ferramenta de título estiver
+disponível, o título é obrigatório no formato `SE - [título da tarefa]`. Sem essa
+ferramenta, abra a primeira resposta com `🦅 Squad Engenharia ON — SE - [título da tarefa]`
+e preserve o título lógico no handoff.
+
+Antes de delegação, revisão ampla ou tarefa longa, aplique `app32/docs/spec/politica_orcamento_contexto_v1.md`.
 
 **Tarefa:** [descreva aqui o pedido]
 ```
