@@ -46,7 +46,7 @@ def test_active_associations_exclude_inactive_employee_and_company(monkeypatch):
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js não disponível")
 def test_collaborator_filter_groups_user_but_preserves_employee_ids():
-    script_path = APP_ROOT / "static" / "js" / "my-work.js"
+    script_path = ROOT_DIR / "static" / "js" / "my-work.js"
     node_script = f"""
 const fs = require('fs');
 const vm = require('vm');

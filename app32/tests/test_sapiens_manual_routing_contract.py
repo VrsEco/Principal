@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_guidance_questions_do_not_fall_through_to_operational_workflows():
-    script = (ROOT / "static" / "js" / "sapiens_knowledge.js").read_text(encoding="utf-8")
+    script = (ROOT.parent / "static" / "js" / "sapiens_knowledge.js").read_text(encoding="utf-8")
 
     assert "looksLikeGuidanceQuestion(question)" in script
     assert "activeScope === 'product' || looksLikeGuidanceQuestion(question)" in script

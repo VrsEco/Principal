@@ -27,7 +27,7 @@ def test_financial_automation_resource_forwards_opt_in_pagination():
 
 def test_financial_automation_center_requests_pages_and_appends_records():
     root = Path(__file__).resolve().parents[1]
-    script = (root / "static" / "js" / "financial_automation_center.js").read_text(encoding="utf-8")
+    script = (root.parent / "static" / "js" / "financial_automation_center.js").read_text(encoding="utf-8")
     template = (root / "templates" / "modules" / "financial" / "automation_center.html").read_text(encoding="utf-8")
     model = (root / "models" / "financial_automation.py").read_text(encoding="utf-8")
     migration = (root / "migrations" / "versions" / "20260913_1400_add_financial_automation_record_pagination_index.py").read_text(encoding="utf-8")

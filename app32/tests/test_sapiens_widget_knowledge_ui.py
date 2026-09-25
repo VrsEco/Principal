@@ -2,13 +2,15 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# Os assets versionados ficam em static/ na raiz do repositório, não em app32/static.
+STATIC_ROOT = Path(__file__).resolve().parents[2] / "static"
 
 
 def test_global_sapiens_widget_uses_same_knowledge_endpoint_as_full_page():
     template = (ROOT / "templates" / "components" / "sapiens_widget.html").read_text(
         encoding="utf-8"
     )
-    script = (ROOT / "static" / "js" / "sapiens_widget.js").read_text(
+    script = (STATIC_ROOT / "js" / "sapiens_widget.js").read_text(
         encoding="utf-8"
     )
 
@@ -25,7 +27,7 @@ def test_global_sapiens_widget_uses_same_knowledge_endpoint_as_full_page():
 
 
 def test_global_widget_renders_structured_answer_and_safe_internal_actions():
-    script = (ROOT / "static" / "js" / "sapiens_widget.js").read_text(
+    script = (STATIC_ROOT / "js" / "sapiens_widget.js").read_text(
         encoding="utf-8"
     )
 

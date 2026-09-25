@@ -26,7 +26,7 @@ def test_base_templates_load_global_input_formatters():
 
 def test_global_formatter_exposes_indicator_value_and_dynamic_input_contract():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    content = open(os.path.join(root, "static", "js", "input_formatters.js"), encoding="utf-8").read()
+    content = open(os.path.join(root, "..", "static", "js", "input_formatters.js"), encoding="utf-8").read()
 
     assert "function isCurrencyUnit(unit)" in content
     assert "function formatIndicatorValue(value, unit" in content

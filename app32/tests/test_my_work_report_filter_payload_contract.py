@@ -13,7 +13,7 @@ APP_ROOT = ROOT_DIR / "app32" if (ROOT_DIR / "app32").exists() else ROOT_DIR
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js não disponível")
 def test_my_work_report_payload_preserves_empty_project_and_process_selection():
-    script_path = APP_ROOT / "static" / "js" / "my-work.js"
+    script_path = ROOT_DIR / "static" / "js" / "my-work.js"
     node_script = f"""
 const fs = require('fs');
 const vm = require('vm');
@@ -79,7 +79,7 @@ def test_my_work_template_busts_calendar_date_asset_cache():
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js não disponível")
 def test_my_work_calendar_dates_do_not_shift_in_bahia_timezone():
-    script_path = APP_ROOT / "static" / "js" / "my-work.js"
+    script_path = ROOT_DIR / "static" / "js" / "my-work.js"
     node_script = f"""
 const fs = require('fs');
 const vm = require('vm');

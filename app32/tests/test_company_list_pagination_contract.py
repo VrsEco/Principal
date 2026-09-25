@@ -25,7 +25,7 @@ def test_company_list_empty_membership_returns_paginated_envelope():
 
 def test_companies_page_uses_server_filters_and_incremental_rendering():
     root = Path(__file__).resolve().parents[1]
-    script = (root / "static" / "js" / "companies.js").read_text(encoding="utf-8")
+    script = (root.parent / "static" / "js" / "companies.js").read_text(encoding="utf-8")
     template = (root / "templates" / "modules" / "companies" / "companies_v2.html").read_text(encoding="utf-8")
 
     assert "paginated: 'true'" in script

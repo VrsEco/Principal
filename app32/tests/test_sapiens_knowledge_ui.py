@@ -5,6 +5,8 @@ from flask_login import LoginManager, UserMixin
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# Os assets versionados ficam em static/ na raiz do repositório, não em app32/static.
+STATIC_ROOT = Path(__file__).resolve().parents[2] / "static"
 
 
 def test_sapiens_page_exposes_simple_knowledge_experience():
@@ -25,7 +27,7 @@ def test_sapiens_page_exposes_simple_knowledge_experience():
 
 
 def test_sapiens_knowledge_client_uses_structured_tenant_safe_endpoint():
-    script = (ROOT / "static" / "js" / "sapiens_knowledge.js").read_text(encoding="utf-8")
+    script = (STATIC_ROOT / "js" / "sapiens_knowledge.js").read_text(encoding="utf-8")
 
     assert "/api/agents/knowledge/answer" in script
     assert "company_id" not in script
@@ -52,8 +54,8 @@ def test_sapiens_page_links_to_training_curatorship():
 
 def test_sapiens_training_page_is_simple_and_review_driven():
     template = (ROOT / "templates" / "sapiens_training.html").read_text(encoding="utf-8")
-    script = (ROOT / "static" / "js" / "sapiens_training.js").read_text(encoding="utf-8")
-    style = (ROOT / "static" / "css" / "sapiens_training.css").read_text(encoding="utf-8")
+    script = (STATIC_ROOT / "js" / "sapiens_training.js").read_text(encoding="utf-8")
+    style = (STATIC_ROOT / "css" / "sapiens_training.css").read_text(encoding="utf-8")
 
     assert 'id="sapiensTraining"' in template
     assert "Feedbacks negativos" in template
