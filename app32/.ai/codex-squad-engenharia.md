@@ -8,6 +8,9 @@ Use este arquivo para ativar o Squad de Engenharia no Codex ou em outro runtime 
 Esta é uma tarefa do repositório Gestão Versus. Use
 `app32/.agent/skills/gestao_versus_core/SKILL.md` como entrada obrigatória e
 carregue referências adicionais somente quando forem necessárias ao pedido.
+Para reconciliação entre produção, Git e checkout local, aplique também
+`app32/docs/spec/reconciliação_baseline_configr_git_local_v1.md`; revalide
+seus SHAs históricos antes de agir. Este prompt é compartilhado com Claude.
 
 Ativar o Squad configura o roteamento; não convoca vários agentes automaticamente.
 Classifique a tarefa, escolha **um líder** e escale no máximo um apoio por vez,

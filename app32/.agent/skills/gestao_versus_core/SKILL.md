@@ -36,6 +36,9 @@ description: Controle obrigatório do Gestão Versus: governança, roteamento e 
   canônica vincula o Squad inteiro: ela cobre commit→PR→merge→workflow→smoke
   somente dentro do SHA e parâmetros aprovados; o gate `production` continua
   obrigatório e novas variáveis de impacto exigem nova aprovação.
+- Reconciliação Configr/Git/checkout deve seguir a SPEC
+  `app32/docs/spec/reconciliação_baseline_configr_git_local_v1.md`; SHAs
+  registrados são evidência histórica e devem ser revalidados.
 
 ## Sapiens e MCP remoto
 - Use domínio canônico (`routine`, `processes`, `finance`); normalize aliases antes de RBAC, telemetria e workflow.

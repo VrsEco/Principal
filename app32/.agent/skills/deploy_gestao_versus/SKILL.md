@@ -37,6 +37,9 @@ Use esta skill para deploy, publicação em produção, atualização de site e 
   auditáveis; não habilite exceção livre por variável de ambiente.
 - Antes de concluir, valide health e todos os assets críticos declarados no
   release; ausência de `200` encerra o deploy como falha.
+- Para reconciliação entre Configr, Git e checkout, aplique a SPEC
+  `app32/docs/spec/reconciliação_baseline_configr_git_local_v1.md`; status
+  Git vazio não comprova igualdade de arquivos ignored, banco ou runtime.
 
 ## Script principal
 - `C:\GestaoVersus\app32\scripts\deploy_configr.sh`

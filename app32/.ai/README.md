@@ -60,7 +60,7 @@ Não precisa fazer nada!
 1. Se via API: Use como system message
 2. Se via playground: Cole no início
 3. Para Squads, copie o prompt correspondente e preencha a tarefa:
-   - Engenharia: `.ai/codex-squad-engenharia.md`
+   - Engenharia (Codex e Claude): `.ai/codex-squad-engenharia.md`
    - Cliente: `.ai/claude-squad-cliente.md`
    - Versus: `.ai/antigravity-squad-versus.md`
 4. Não use `codex-squad-engenharia-laboratorio.md` fora do experimento AA.J.16
