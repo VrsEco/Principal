@@ -15,7 +15,7 @@ on:
 jobs:
   e2e-governance:
     name: E2E governance gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
       E2E_ENV_NAME: DEV_FULL
