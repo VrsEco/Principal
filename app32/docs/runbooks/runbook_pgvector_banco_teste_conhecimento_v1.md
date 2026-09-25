@@ -97,9 +97,26 @@ manual do produto (`product_help`).
 Remove-Item -Recurse -Force "$env:TEMP\pgvector_teste", "$env:TEMP\pgvector_pw.txt"
 ```
 
+## Evidência do ensaio (25/09/2026)
+
+Executado pela Opção B (Docker) com o container descartável `knowledge-vector-test`
+(`pgvector/pgvector:pg16`, `127.0.0.1:55432`, banco `knowledge_vector_test`), sem chamar a OpenAI:
+
+- `scripts/knowledge_vector_rehearsal.py`: todas as 7 verificações `OK` (upgrade `1400` + `1500`;
+  isolamento por tenant com vetores idênticos; checksum obsoleto descartado; rollback remove só a
+  projeção e preserva `knowledge_sources`/`knowledge_chunks` e a extensão).
+- `tests/test_knowledge_vector_skeleton.py`: 13 passam.
+- Suíte `*knowledge*`: 141 passam; 4 falham em `test_sapiens_knowledge_ui.py` e
+  `test_sapiens_widget_knowledge_ui.py`, falhas que já ocorrem na `main` sem este PR (leem
+  `app32/static/js/...`, hoje em `static/` na raiz).
+
 ## Limites
 
-- Este roteiro não foi executado com pgvector real (extensão ausente nesta máquina); os
-  comandos de compilação seguem a documentação do projeto pgvector e podem variar por versão.
-- A migration em **produção** só após este ensaio passar e com a extensão instalada pelo
-  responsável da infraestrutura.
+- O ensaio provou migration, isolamento e rollback em PostgreSQL 16 com pgvector. Não provou
+  desempenho, custo de embeddings nem o comportamento no PostgreSQL de **produção** (versão e
+  extensões podem diferir).
+- Pendente antes de mesclar/publicar: confirmar que o PostgreSQL de produção tem a extensão
+  `vector` disponível (`pg_available_extensions`), decisão de modelo e orçamento de embeddings
+  e exportar `KnowledgeEmbeddingUsageEvent` em `models/__init__.py`.
+- A migration em **produção** só com a extensão instalada pelo responsável da infraestrutura e
+  aprovação explícita; a `1400` falha de forma segura se a extensão estiver ausente.
