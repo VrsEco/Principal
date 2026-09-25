@@ -9,7 +9,7 @@ from .password_reset_token import PasswordResetToken
 from .user_mcp_token import UserMcpToken
 from .identity_principal import IdentityPrincipal, ExternalIdentity, PrincipalCompanyGrant
 from .instruction_registry import InstructionRegistryEntry, InstructionRegistryAuditLog
-from .knowledge import KnowledgeSource, KnowledgeSourceGrant, KnowledgeChunk, KnowledgeIndexRun, KnowledgeInteraction, KnowledgeFeedback, KnowledgeTrainingProposal
+from .knowledge import KnowledgeSource, KnowledgeSourceGrant, KnowledgeChunk, KnowledgeIndexRun, KnowledgeInteraction, KnowledgeFeedback, KnowledgeTrainingProposal, KnowledgeEmbeddingUsageEvent
 from .strategic_tree import StrategicTree, StrategicTreeNode, StrategicTreeContribution, StrategicTreeAuditEvent
 from .role import Role
 from .role_cost_profile import RoleCostProfile
@@ -224,7 +224,7 @@ __all__ = [
     'EmployeeRoleOccupancy',
     'db', 'Company', 'User', 'PasswordResetToken', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
     'InstructionRegistryEntry', 'InstructionRegistryAuditLog',
-    'KnowledgeSource', 'KnowledgeSourceGrant', 'KnowledgeChunk', 'KnowledgeIndexRun', 'KnowledgeInteraction', 'KnowledgeFeedback', 'KnowledgeTrainingProposal',
+    'KnowledgeSource', 'KnowledgeSourceGrant', 'KnowledgeChunk', 'KnowledgeIndexRun', 'KnowledgeInteraction', 'KnowledgeFeedback', 'KnowledgeTrainingProposal', 'KnowledgeEmbeddingUsageEvent',
     'StrategicTree', 'StrategicTreeNode', 'StrategicTreeContribution', 'StrategicTreeAuditEvent',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
     'Indicator', 'IndicatorEntityLink', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorGoalRoutine', 'IndicatorData',

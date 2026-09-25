@@ -110,13 +110,26 @@ Executado pela Opção B (Docker) com o container descartável `knowledge-vector
   `test_sapiens_widget_knowledge_ui.py`, falhas que já ocorrem na `main` sem este PR (leem
   `app32/static/js/...`, hoje em `static/` na raiz).
 
+### Repetição em PostgreSQL 14 (versão de produção)
+
+Produção roda PostgreSQL **14.24** (Ubuntu 22.04). O mesmo ensaio foi repetido com
+`pgvector/pgvector:pg14` (PostgreSQL 14.24, container `knowledge-vector-test-pg14`,
+`127.0.0.1:55433`): as 7 verificações `OK` e `test_knowledge_vector_skeleton.py` com 13 passando.
+
+### Constatação em produção (25/09/2026, somente leitura)
+
+`SELECT name, default_version, installed_version FROM pg_available_extensions WHERE name = 'vector'`
+no banco `bdversusv2` de produção (phpPgAdmin, usuário `app`) retornou **nenhuma linha**: o
+pacote do pgvector **não está instalado** no PostgreSQL de produção. A migration `1400` falharia
+de forma segura, mas interromperia o deploy. Não publicar este PR antes da instalação.
+
 ## Limites
 
-- O ensaio provou migration, isolamento e rollback em PostgreSQL 16 com pgvector. Não provou
-  desempenho, custo de embeddings nem o comportamento no PostgreSQL de **produção** (versão e
-  extensões podem diferir).
-- Pendente antes de mesclar/publicar: confirmar que o PostgreSQL de produção tem a extensão
-  `vector` disponível (`pg_available_extensions`), decisão de modelo e orçamento de embeddings
-  e exportar `KnowledgeEmbeddingUsageEvent` em `models/__init__.py`.
+- O ensaio provou migration, isolamento e rollback em PostgreSQL 14 e 16 com pgvector. Não
+  provou desempenho, custo de embeddings nem o comportamento no servidor de **produção**.
+- Pendente antes de mesclar/publicar: instalação do pacote do pgvector no PostgreSQL 14 de
+  produção pelo responsável da infraestrutura (e confirmar se o usuário da aplicação consegue
+  executar `CREATE EXTENSION vector` ou se isso exige superusuário), decisão de modelo e
+  orçamento de embeddings e exportar `KnowledgeEmbeddingUsageEvent` em `models/__init__.py`.
 - A migration em **produção** só com a extensão instalada pelo responsável da infraestrutura e
   aprovação explícita; a `1400` falha de forma segura se a extensão estiver ausente.
