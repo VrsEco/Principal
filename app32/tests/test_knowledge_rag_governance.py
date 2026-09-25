@@ -410,3 +410,63 @@ def test_hybrid_returns_nothing_for_low_similarity_neighbour_when_full_text_is_e
 
     result = _hybrid_service(fetcher).search("orcamento anual xpto", company_id=1, strategy="hybrid")
     assert result["results"] == []
+
+
+def _flood_with_system_docs(count=6):
+    docs = [
+        _source(1, f"doc{i}", "Lançamento de reembolso de viagens: reembolso viagens corporativas reembolso.", source_type="system_documentation", title=f"Especificação {i}")
+        for i in range(count)
+    ]
+    help_article = _source(1, "ajuda", "Para pedir reembolso de viagens abra Despesas.", source_type="product_help", title="Pedir reembolso")
+    db.session.add_all([*docs, help_article])
+    db.session.commit()
+    return help_article
+
+
+def test_answer_drops_system_docs_before_cutting_top_k(rag_app):
+    """Regressão do A/B: documentação técnica lotava o top-5 e a resposta ficava vazia."""
+    _flood_with_system_docs()
+    for strategy in ("full_text",):
+        result = KnowledgeQueryService().answer("reembolso viagens", company_id=1, limit=3, strategy=strategy)
+        assert [c["source_ref"] for c in result["citations"]] == ["ajuda"]
+
+
+def test_technical_question_keeps_system_docs(rag_app):
+    _flood_with_system_docs()
+    result = KnowledgeQueryService().answer("spec reembolso viagens", company_id=1, limit=3)
+    assert result["citations"] and all(c["source_ref"].startswith("doc") for c in result["citations"])
+
+
+def test_search_mode_still_returns_system_docs(rag_app):
+    _flood_with_system_docs()
+    result = KnowledgeQueryService().search("reembolso viagens", company_id=1, limit=3)
+    assert all(h["source_ref"].startswith("doc") for h in result["results"])
+
+
+def test_hybrid_rrf_rescues_paraphrase_the_full_text_missed_and_ranks_agreement_first(rag_app):
+    both = _source(1, "ambos", "Reembolso de viagens: pedir reembolso.", source_type="product_help", title="Reembolso")
+    only_vec = _source(1, "so_vetor", "Ressarcimento de despesas de deslocamento.", source_type="product_help", title="Ressarcimento")
+    db.session.add_all([both, only_vec])
+    db.session.commit()
+
+    def fetcher(plan, spec, embedding, *, user_id, employee_id):
+        return [(only_vec, only_vec.chunks[0], 0.90), (both, both.chunks[0], 0.80)]
+
+    result = _hybrid_service(fetcher).answer("reembolso viagens", company_id=1, limit=3, strategy="hybrid")
+    assert [c["source_ref"] for c in result["citations"]] == ["ambos"]
+    search = _hybrid_service(fetcher).search("reembolso viagens", company_id=1, limit=3, strategy="hybrid")
+    assert [h["source_ref"] for h in search["results"]] == ["ambos", "so_vetor"]
+
+
+def test_hybrid_answer_rescues_when_system_docs_fill_the_full_text_top_k(rag_app):
+    help_article = _flood_with_system_docs()
+    ghost = _source(1, "so_vetor2", "Ressarcimento de despesas de deslocamento.", source_type="product_help", title="Ressarcimento")
+    db.session.add(ghost)
+    db.session.commit()
+
+    def fetcher(plan, spec, embedding, *, user_id, employee_id):
+        return [(ghost, ghost.chunks[0], 0.85)]
+
+    result = _hybrid_service(fetcher).answer("reembolso viagens", company_id=1, limit=3, strategy="hybrid")
+    assert result["citations"], "híbrido não pode abster quando há artigo de ajuda (FTS ou vetor)"
+    assert result["citations"][0]["source_ref"] in {help_article.source_ref, "so_vetor2"}

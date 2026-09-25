@@ -1,0 +1,35 @@
+# Perguntas ampliadas para o A/B (scripts/knowledge_strategy_ab.py --questions <este arquivo>).
+# Formato: pergunta<TAB>esperado1|esperado2 (source_ref exato). Esperado "-" = a resposta correta é abster.
+# Base: os 71 artigos de product_help em 25/09/2026. Paráfrases (sem as palavras do título) foram incluídas
+# de propósito: é onde a busca vetorial deveria superar o full-text. Revisar com perguntas reais de usuários.
+como registro uma despesa que a empresa vai pagar?	financeiro.conta_a_pagar_lancamento|manual.navigation.financial-entries
+onde confiro se o extrato do banco bate com o sistema?	financeiro.conciliacao_bancaria
+quais boletos ainda não foram pagos?	financeiro.titulos_em_aberto|manual.navigation.financial-reports-agendamento
+como vejo minha lista de tarefas do dia?	rotina.meu_trabalho_atividades|manual.navigation.work-journey|manual.navigation.calendar
+como coloco um fluxo de trabalho no ar para todos verem?	processos.publicar_portal
+quero ver quanto entra e sai de dinheiro por dia	manual.navigation.financial-reports-fluxo-caixa
+como passo dinheiro de uma conta para outra?	manual.navigation.financial-transfers
+onde cadastro um novo cliente?	manual.navigation.contracts-customers
+como emito uma nota fiscal?	manual.navigation.contracts-invoices
+onde vejo o DRE da empresa?	manual.navigation.financial-reports-demonstrativo-resultados
+onde crio um contrato?	manual.navigation.contracts-list
+como faço a cobrança dos contratos do mês?	manual.navigation.contracts-billing
+onde vejo as cobranças que já foram emitidas?	manual.navigation.contracts-billing-done
+como cadastro uma conta bancária?	manual.navigation.financial-catalogs-bank-accounts
+onde fica o plano de contas?	manual.navigation.financial-catalogs-chart-accounts
+como agendo uma reunião?	manual.navigation.meetings
+onde acompanho meus projetos?	manual.navigation.projects
+como vejo o mapa dos processos da empresa?	manual.navigation.process-map
+onde registro uma ocorrência de um processo?	manual.navigation.process-occurrences
+como cadastro uma nova empresa?	manual.navigation.companies-new|manual.navigation.companies
+onde converso com o Sapiens?	manual.navigation.sapiens
+como vejo o orçamento planejado contra o realizado?	manual.navigation.financial-budget
+onde cadastro os produtos e serviços que vendo?	manual.navigation.contracts-catalogs-items-catalog-view-items
+como vejo o razão contábil?	manual.navigation.financial-reports-razao
+onde vejo o extrato bancário?	manual.navigation.financial-reports-extrato-bancario
+como faço um borderô?	manual.navigation.financial-borderos
+como automatizo regras financeiras?	manual.navigation.financial-automation
+qual é a previsão do tempo para amanhã?	-
+como faço a folha de pagamento dos funcionários?	-
+como emito uma passagem aérea?	-
+quem ganhou o campeonato brasileiro?	-
