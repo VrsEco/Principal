@@ -35,6 +35,9 @@ VECTOR_PILOT_COMPANIES_ENV = "KNOWLEDGE_VECTOR_PILOT_COMPANY_IDS"
 # Similaridade mínima (cosseno) para o vetor resgatar um trecho que o FTS não trouxe.
 VECTOR_MIN_SIMILARITY_ENV = "KNOWLEDGE_VECTOR_MIN_SIMILARITY"
 DEFAULT_VECTOR_MIN_SIMILARITY = 0.40
+# Peso da lista vetorial na fusão RRF (1.0 = mesmo peso do FTS). Permite calibrar sem mudar código.
+VECTOR_RRF_WEIGHT_ENV = "KNOWLEDGE_VECTOR_RRF_WEIGHT"
+DEFAULT_VECTOR_RRF_WEIGHT = 1.0
 
 # Dimensão fixada pela migration da projeção vetorial; trocar exige nova geração.
 KNOWLEDGE_EMBEDDING_DIMENSIONS = 1536
@@ -65,6 +68,14 @@ def _parse_min_similarity(raw: object) -> float:
     return value if 0.0 <= value <= 1.0 else DEFAULT_VECTOR_MIN_SIMILARITY
 
 
+def _parse_rrf_vector_weight(raw: object) -> float:
+    try:
+        value = float(str(raw).strip().replace(',', '.'))
+    except (TypeError, ValueError):
+        return DEFAULT_VECTOR_RRF_WEIGHT
+    return value if 0.0 < value <= 10.0 else DEFAULT_VECTOR_RRF_WEIGHT
+
+
 @dataclass(frozen=True)
 class VectorRetrievalConfig:
     """Feature flag da recuperação vetorial. Nasce desligada e sem modelo."""
@@ -72,6 +83,7 @@ class VectorRetrievalConfig:
     enabled: bool = False
     embedding: EmbeddingSpec | None = None
     min_similarity: float = DEFAULT_VECTOR_MIN_SIMILARITY
+    rrf_vector_weight: float = DEFAULT_VECTOR_RRF_WEIGHT
 
     @property
     def ready(self) -> bool:
@@ -85,12 +97,14 @@ class VectorRetrievalConfig:
         version = str(env.get(EMBEDDING_VERSION_ENV, "")).strip()
         generation_raw = str(env.get(INDEX_GENERATION_ENV, "")).strip()
         min_similarity = _parse_min_similarity(env.get(VECTOR_MIN_SIMILARITY_ENV))
+        rrf_vector_weight = _parse_rrf_vector_weight(env.get(VECTOR_RRF_WEIGHT_ENV))
         if not (enabled and model and version and generation_raw.isdigit()):
-            return cls(enabled=enabled, embedding=None, min_similarity=min_similarity)
+            return cls(enabled=enabled, embedding=None, min_similarity=min_similarity, rrf_vector_weight=rrf_vector_weight)
         return cls(
             enabled=True,
             embedding=EmbeddingSpec(model=model, version=version, index_generation=int(generation_raw)),
             min_similarity=min_similarity,
+            rrf_vector_weight=rrf_vector_weight,
         )
 
 
@@ -170,6 +184,7 @@ class HybridRankingPolicy:
 __all__ = [
     "DEFAULT_STRATEGIES",
     "DEFAULT_VECTOR_MIN_SIMILARITY",
+    "DEFAULT_VECTOR_RRF_WEIGHT",
     "EMBEDDINGS_TABLE",
     "EmbeddingSpec",
     "EvidenceOrigin",
@@ -184,6 +199,7 @@ __all__ = [
     "StrategyResolution",
     "VECTOR_BACKEND_IMPLEMENTED",
     "VECTOR_MIN_SIMILARITY_ENV",
+    "VECTOR_RRF_WEIGHT_ENV",
     "VECTOR_PILOT_COMPANIES_ENV",
     "VectorRetrievalConfig",
     "resolve_strategies",

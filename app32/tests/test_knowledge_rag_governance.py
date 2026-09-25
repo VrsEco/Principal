@@ -470,3 +470,24 @@ def test_hybrid_answer_rescues_when_system_docs_fill_the_full_text_top_k(rag_app
     result = _hybrid_service(fetcher).answer("reembolso viagens", company_id=1, limit=3, strategy="hybrid")
     assert result["citations"], "híbrido não pode abster quando há artigo de ajuda (FTS ou vetor)"
     assert result["citations"][0]["source_ref"] in {help_article.source_ref, "so_vetor2"}
+
+
+def test_rrf_vector_weight_lets_a_confident_vector_hit_outrank_a_weak_lexical_one(rag_app):
+    lexical = _source(1, "lex", "Reembolso de viagens corporativas.", source_type="product_help", title="Reembolso")
+    semantic = _source(1, "sem", "Ressarcimento de despesas de deslocamento.", source_type="product_help", title="Ressarcimento")
+    db.session.add_all([lexical, semantic])
+    db.session.commit()
+
+    def build(weight):
+        from services.knowledge import retrieval_strategy as rs
+
+        config = rs.VectorRetrievalConfig(
+            enabled=True, embedding=rs.EmbeddingSpec("m", "v1", 1, dimensions=2), rrf_vector_weight=weight
+        )
+        fetcher = lambda plan, spec, emb, *, user_id, employee_id: [(semantic, semantic.chunks[0], 0.9)]
+        return KnowledgeQueryService(embedding_provider=lambda q: [0.1, 0.2], vector_config=config, vector_fetcher=fetcher)
+
+    equal = build(1.0).search("reembolso viagens", company_id=1, limit=3, strategy="hybrid")
+    heavy = build(2.0).search("reembolso viagens", company_id=1, limit=3, strategy="hybrid")
+    assert [h["source_ref"] for h in equal["results"]] == ["lex", "sem"]  # empate: vale a ordem do FTS
+    assert [h["source_ref"] for h in heavy["results"]] == ["sem", "lex"]
