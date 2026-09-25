@@ -123,13 +123,30 @@ no banco `bdversusv2` de produção (phpPgAdmin, usuário `app`) retornou **nenh
 pacote do pgvector **não está instalado** no PostgreSQL de produção. A migration `1400` falharia
 de forma segura, mas interromperia o deploy. Não publicar este PR antes da instalação.
 
+### Resolução da infraestrutura (25/09/2026, ticket Configr #241421)
+
+O suporte do Configr respondeu no mesmo dia:
+
+- **pgvector 0.8.6 instalado** e a extensão `vector` **já criada** no banco `bdversusv2`, schema
+  `public` (`pg_available_extensions`: `vector | 0.8.6 | 0.8.6`, segundo o suporte). Compilado a
+  partir do código-fonte oficial para o PostgreSQL 14.24 do Ubuntu, porque o pacote PGDG não é
+  compatível com ele.
+- **Superusuário é necessário para `CREATE EXTENSION`**; o usuário `app` não consegue. Como a
+  extensão já existe, a migration `1400` (`CREATE EXTENSION IF NOT EXISTS vector`) apenas segue
+  adiante, sem exigir privilégio. O suporte testou tipo `vector`, operadores de distância e índices
+  HNSW/IVFFlat com o usuário `app`.
+- **Sem reinício** do PostgreSQL e sem indisponibilidade; nenhum outro banco foi alterado.
+- **Atualização do pgvector não é automática**: exige novo pedido ao suporte.
+
+Ainda não confirmado de forma independente por consulta nossa após a instalação; repetir a
+consulta acima em produção (somente leitura) antes do deploy `full`.
+
 ## Limites
 
 - O ensaio provou migration, isolamento e rollback em PostgreSQL 14 e 16 com pgvector. Não
   provou desempenho, custo de embeddings nem o comportamento no servidor de **produção**.
-- Pendente antes de mesclar/publicar: instalação do pacote do pgvector no PostgreSQL 14 de
-  produção pelo responsável da infraestrutura (e confirmar se o usuário da aplicação consegue
-  executar `CREATE EXTENSION vector` ou se isso exige superusuário), decisão de modelo e
-  orçamento de embeddings e exportar `KnowledgeEmbeddingUsageEvent` em `models/__init__.py`.
-- A migration em **produção** só com a extensão instalada pelo responsável da infraestrutura e
-  aprovação explícita; a `1400` falha de forma segura se a extensão estiver ausente.
+- Pendente antes de mesclar/publicar: decisão de modelo e orçamento de embeddings (sugestão:
+  `text-embedding-3-small`, 1536 dimensões nativas, chave dedicada com limite mensal de gasto,
+  primeira onda só `product_help`) e backup do banco antes do deploy `full`.
+- As migrations só rodam no deploy `full`; o `quick` publicaria o código sem as tabelas. A
+  funcionalidade permanece desligada por padrão (`KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED`).
