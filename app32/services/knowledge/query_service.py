@@ -439,7 +439,7 @@ class KnowledgeQueryService:
         if drop_technical:
             fts_rows, vector_rows = self._drop_technical_rows(question, fts_rows, vector_rows)
         config = self._vector_config or VectorRetrievalConfig.from_env()
-        return self._merge_hybrid(fts_rows, vector_rows, plan, min_similarity=config.min_similarity), []
+        return self._merge_hybrid(fts_rows, vector_rows, plan, min_similarity=config.min_similarity, vector_weight=config.rrf_vector_weight), []
 
     def _vector_rows(
         self,
@@ -518,6 +518,7 @@ class KnowledgeQueryService:
         plan: KnowledgeQueryPlan,
         *,
         min_similarity: float = 0.0,
+        vector_weight: float = 1.0,
     ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
         """Reciprocal Rank Fusion entre FTS e vetor (sem pesos a calibrar).
 
@@ -537,7 +538,7 @@ class KnowledgeQueryService:
         )
         for rank, (source, chunk, _similarity) in enumerate(eligible, start=1):
             entry = fused.setdefault(chunk.id, {"row": (source, chunk), "fts_rank": len(fts_rows) + rank, "score": 0.0})
-            entry["score"] += 1.0 / (k + rank)
+            entry["score"] += vector_weight / (k + rank)
         ranked = sorted(fused.values(), key=lambda entry: (-entry["score"], entry["fts_rank"]))
         return [(*entry["row"], entry["score"]) for entry in ranked[: plan.candidate_limit]]
 

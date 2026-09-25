@@ -187,3 +187,11 @@ def test_min_similarity_env_defaults_and_rejects_invalid_values():
     assert rs.VectorRetrievalConfig.from_env({**env, "KNOWLEDGE_VECTOR_MIN_SIMILARITY": "0,5"}).min_similarity == 0.5
     for bad in ("abc", "1.5", "-0.1", ""):
         assert rs.VectorRetrievalConfig.from_env({**env, "KNOWLEDGE_VECTOR_MIN_SIMILARITY": bad}).min_similarity == rs.DEFAULT_VECTOR_MIN_SIMILARITY
+
+
+def test_rrf_vector_weight_env_defaults_and_rejects_invalid_values():
+    env = {"KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED": "true"}
+    assert rs.VectorRetrievalConfig.from_env(env).rrf_vector_weight == rs.DEFAULT_VECTOR_RRF_WEIGHT
+    assert rs.VectorRetrievalConfig.from_env({**env, "KNOWLEDGE_VECTOR_RRF_WEIGHT": "2,5"}).rrf_vector_weight == 2.5
+    for bad in ("abc", "0", "-1", "11", ""):
+        assert rs.VectorRetrievalConfig.from_env({**env, "KNOWLEDGE_VECTOR_RRF_WEIGHT": bad}).rrf_vector_weight == rs.DEFAULT_VECTOR_RRF_WEIGHT
