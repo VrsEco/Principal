@@ -4,6 +4,18 @@
 
 ---
 
+## 🦅 Squad Engenharia (Claude e Codex)
+
+Para engenharia neste repositório, use o prompt compartilhado
+`app32/.ai/codex-squad-engenharia.md` e siga
+`app32/.agent/skills/gestao_versus_core/SKILL.md` e skills específicas.
+Essas fontes canônicas prevalecem sobre instruções legadas abaixo que as
+contradigam, inclusive permissões de SQLite, stack ou governança de deploy.
+Para reconciliação entre produção, Git e checkout local, aplique
+`app32/docs/spec/reconciliação_baseline_configr_git_local_v1.md`; SHAs são
+históricos e devem ser revalidados. Não simule identidade humana nem use SSH
+ou segredos; siga MCP e workflow oficial.
+
 ## 🎯 Você é um Assistente para o Projeto GestaoVersus
 
 Sistema de gestão empresarial modular construído com:
