@@ -19,6 +19,7 @@ from services.knowledge.retrieval_strategy import (
     STRATEGY_VECTOR,
     VectorRetrievalConfig,
     resolve_strategies,
+    vector_pilot_allows,
 )
 
 
@@ -135,6 +136,9 @@ logger = logging.getLogger(__name__)
 EmbeddingProvider = Callable[[str], Sequence[float]]
 VectorFetcher = Callable[..., list[tuple[KnowledgeSource, KnowledgeChunk, float]]]
 
+# Sentinela: `embedding_provider` omitido = resolver do ambiente; `None` explícito = sem provedor.
+_FROM_ENV: Any = object()
+
 
 class KnowledgeQueryService:
     """Planeja, recupera e compõe respostas citadas sem atravessar tenants."""
@@ -142,12 +146,17 @@ class KnowledgeQueryService:
     def __init__(
         self,
         *,
-        embedding_provider: EmbeddingProvider | None = None,
+        embedding_provider: EmbeddingProvider | None = _FROM_ENV,
         vector_config: VectorRetrievalConfig | None = None,
         vector_fetcher: VectorFetcher | None = None,
         ranking_policy: HybridRankingPolicy | None = None,
     ) -> None:
-        # Sem provedor injetado a recuperação é somente FTS (estado de produção atual).
+        if embedding_provider is _FROM_ENV:
+            # Import tardio: a fábrica só devolve provedor com flag, modelo e chave presentes;
+            # caso contrário a recuperação é somente FTS (estado atual de produção).
+            from services.knowledge.openai_embedding_provider import build_default_embedding_provider
+
+            embedding_provider = build_default_embedding_provider()
         self._embedding_provider = embedding_provider
         self._vector_config = vector_config
         self._vector_fetcher = vector_fetcher
@@ -181,6 +190,22 @@ class KnowledgeQueryService:
         "uma",
         "ver",
     }
+
+    def _default_strategy(
+        self, company_id: int | None, vector_config: VectorRetrievalConfig | None
+    ) -> str | None:
+        """Estratégia quando o chamador não pede uma: híbrida só com tudo pronto, senão o padrão (FTS).
+
+        Exige provedor de embeddings, flag + modelo/versão/geração e empresa no piloto (se houver
+        lista). Qualquer falta mantém a busca textual, que é o comportamento atual de produção.
+        """
+
+        if self._embedding_provider is None:
+            return None
+        config = vector_config or self._vector_config or VectorRetrievalConfig.from_env()
+        if not config.ready or not vector_pilot_allows(company_id):
+            return None
+        return STRATEGY_HYBRID
 
     def build_plan(
         self,
@@ -218,6 +243,8 @@ class KnowledgeQueryService:
         )
         source_limit = min(max(int(answer_source_limit), 1), self.MAX_SOURCE_LIMIT)
         scope = "company" if company_id is not None else "product"
+        if strategy is None:
+            strategy = self._default_strategy(company_id, vector_config)
         try:
             resolution = resolve_strategies(strategy, vector_config or self._vector_config)
         except ValueError as exc:
@@ -405,8 +432,8 @@ class KnowledgeQueryService:
         user_id: int | None,
         employee_id: int | None,
     ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
-        config = self._vector_config
-        if config is None or config.embedding is None or self._embedding_provider is None:
+        config = self._vector_config or VectorRetrievalConfig.from_env()
+        if config.embedding is None or self._embedding_provider is None:
             raise KnowledgeQueryError("Recuperação vetorial não configurada.")
         query_embedding = self._embedding_provider(question)
         self._record_query_usage(question, plan, config.embedding, user_id)
