@@ -36,8 +36,8 @@ def test_ai_mcp_console_template_declares_expected_sections():
 
 
 def test_ai_mcp_console_assets_declare_interaction_contract():
-    css = (_REPO_ROOT / "static" / "css" / "ai_mcp_console.css").read_text(encoding="utf-8")
-    script = (_REPO_ROOT / "static" / "js" / "ai_mcp_console.js").read_text(encoding="utf-8")
+    css = (_REPO_ROOT.parent / "static" / "css" / "ai_mcp_console.css").read_text(encoding="utf-8")
+    script = (_REPO_ROOT.parent / "static" / "js" / "ai_mcp_console.js").read_text(encoding="utf-8")
 
     assert ".ai-mcp-console-page" in css
     assert ".ai-mcp-connection-generator" in css

@@ -26,7 +26,7 @@ def test_bordero_resource_forwards_opt_in_pagination_and_server_filters():
 
 def test_bordero_page_uses_server_side_batches_and_full_filtered_summary():
     root = Path(__file__).resolve().parents[1]
-    script = (root / "static" / "js" / "financial_borderos_list.js").read_text(encoding="utf-8")
+    script = (root.parent / "static" / "js" / "financial_borderos_list.js").read_text(encoding="utf-8")
     template = (root / "templates" / "modules" / "financial" / "borderos_list.html").read_text(encoding="utf-8")
 
     assert "paginated: 'true'" in script

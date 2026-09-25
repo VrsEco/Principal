@@ -18,7 +18,7 @@ def test_sapiens_exposes_feature_flagged_strategic_tree_scope():
 
 
 def test_strategic_tree_client_is_tenant_implicit_safe_and_uses_csrf():
-    script = (ROOT / "static" / "js" / "strategic_tree.js").read_text(encoding="utf-8")
+    script = (ROOT.parent / "static" / "js" / "strategic_tree.js").read_text(encoding="utf-8")
 
     assert "/api/knowledge/strategic-trees" in script
     assert "company_id" not in script
@@ -29,7 +29,7 @@ def test_strategic_tree_client_is_tenant_implicit_safe_and_uses_csrf():
 
 
 def test_strategic_tree_layout_has_mobile_contract():
-    style = (ROOT / "static" / "css" / "strategic_tree.css").read_text(encoding="utf-8")
+    style = (ROOT.parent / "static" / "css" / "strategic_tree.css").read_text(encoding="utf-8")
 
     assert "grid-template-columns: 280px minmax(0, 1fr)" in style
     assert "@media (max-width: 680px)" in style
@@ -38,7 +38,7 @@ def test_strategic_tree_layout_has_mobile_contract():
 
 
 def test_sapiens_dispatches_scope_change_when_scope_is_selected():
-    script = (ROOT / "static" / "js" / "sapiens_knowledge.js").read_text(encoding="utf-8")
+    script = (ROOT.parent / "static" / "js" / "sapiens_knowledge.js").read_text(encoding="utf-8")
     event = "root.dispatchEvent(new CustomEvent('sapiens:scope-change'"
 
     assert script.count(event) == 1
