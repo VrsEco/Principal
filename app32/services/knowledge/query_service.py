@@ -422,7 +422,8 @@ class KnowledgeQueryService:
         except Exception:  # noqa: BLE001 - nunca vazar detalhe do provedor/SQL ao chamador
             logger.warning("knowledge vector retrieval failed; using full_text", exc_info=True)
             return fts_rows, ["vector_retrieval_failed"]
-        return self._merge_hybrid(fts_rows, vector_rows, plan), []
+        config = self._vector_config or VectorRetrievalConfig.from_env()
+        return self._merge_hybrid(fts_rows, vector_rows, plan, min_similarity=config.min_similarity), []
 
     def _vector_rows(
         self,
@@ -481,37 +482,25 @@ class KnowledgeQueryService:
         fts_rows: list[tuple[KnowledgeSource, KnowledgeChunk, float]],
         vector_rows: list[tuple[KnowledgeSource, KnowledgeChunk, float]],
         plan: KnowledgeQueryPlan,
+        *,
+        min_similarity: float = 0.0,
     ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
-        """Une candidatos já autorizados (ambos vêm do mesmo universo filtrado)."""
+        """FTS primeiro; o vetor só resgata o que o FTS não trouxe.
 
-        merged: dict[int, dict[str, Any]] = {}
-        for source, chunk, score in fts_rows:
-            merged.setdefault(chunk.id, {"source": source, "chunk": chunk})["lexical"] = float(score or 0)
-        for source, chunk, similarity in vector_rows:
-            merged.setdefault(chunk.id, {"source": source, "chunk": chunk})["vector"] = float(similarity)
-        if not merged:
-            return []
-        max_lexical = max((entry.get("lexical", 0.0) for entry in merged.values()), default=0.0) or 1.0
-        dated = sorted(
-            (entry["source"].source_updated_at for entry in merged.values() if entry["source"].source_updated_at),
-        )
-        span = (dated[-1] - dated[0]).total_seconds() if len(dated) > 1 else 0.0
-        ranked = []
-        for entry in merged.values():
-            source, chunk = entry["source"], entry["chunk"]
-            updated = source.source_updated_at
-            recency = 0.5 if not updated or span == 0 else (updated - dated[0]).total_seconds() / span
-            authority = {"official": 1.0, "internal": 2 / 3}.get(source.authority_level, 1 / 3)
-            score = self._ranking_policy.score(
-                authority=authority,
-                lexical=entry.get("lexical", 0.0) / max_lexical,
-                vector_similarity=entry.get("vector"),
-                recency=recency,
-            )
-            ranked.append((source, chunk, score))
-        ranked.sort(key=lambda item: (-item[2], item[1].chunk_order))
-        return ranked[: plan.candidate_limit]
+        A avaliação A/B em produção mostrou que a soma ponderada piorava o FTS (trechos sem vetor
+        ganhavam peso redistribuído e o vizinho mais próximo era devolvido sem limiar). Aqui a ordem
+        do FTS é preservada e o vetor acrescenta apenas candidatos com similaridade >= limiar, do mais
+        para o menos similar. Ambos vêm do mesmo universo já autorizado.
+        """
 
+        seen = {chunk.id for _, chunk, _ in fts_rows}
+        rescued = []
+        for source, chunk, similarity in sorted(vector_rows, key=lambda row: -float(row[2] or 0)):
+            if chunk.id in seen or float(similarity or 0) < min_similarity:
+                continue
+            seen.add(chunk.id)
+            rescued.append((source, chunk, float(similarity)))
+        return [*fts_rows, *rescued][: plan.candidate_limit]
     def _search_rows(
         self,
         question: str,

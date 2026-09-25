@@ -243,3 +243,13 @@ APP_BOOTSTRAP_RUNTIME_SERVICES=0 <python do virtualenv> scripts/knowledge_strate
   migração já roda em produção. O piloto provou que a busca vetorial executa e custa centavos de
   milésimo; **ainda não provou ganho de qualidade** (ver a avaliação A/B acima).
 - Atualizações do pgvector exigem novo pedido ao suporte do Configr.
+
+## Resultado do A/B de 25/09/2026 e correção da fusão híbrida
+
+Primeira medição em produção (empresa 9, 10 perguntas com esperado, modo `answer`): `full_text` acerto@1 = 9, MRR 0,90, 2 abstenções; `hybrid` acerto@1 = 6, MRR 0,60, 5 abstenções. Regra de decisão não atendida; piloto não ampliado.
+
+Causas confirmadas na reprodução local: (1) sem limiar de similaridade, o vizinho mais próximo era devolvido mesmo sem relação; (2) trechos sem vetor recebiam pesos redistribuídos e podiam superar artigos indexados. Os "sem resultado" de produção não reproduziram localmente.
+
+Correção: a estratégia `hybrid` agora preserva a ordem do FTS e o vetor só **resgata** trechos que o FTS não trouxe, com similaridade ≥ `KNOWLEDGE_VECTOR_MIN_SIMILARITY` (padrão 0,35; valor inválido volta ao padrão). Consequência: o híbrido nunca fica abaixo do FTS em abstenção. A soma ponderada (`HybridRankingPolicy`) segue no código, sem uso na fusão.
+
+Reavaliar após o deploy com `python scripts/knowledge_strategy_ab.py --company-id 9`; para inspecionar candidatos e similaridades, `--mode search --json`. Calibrar o limiar com esses números antes de ampliar o piloto.

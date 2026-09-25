@@ -32,6 +32,9 @@ EMBEDDING_VERSION_ENV = "KNOWLEDGE_EMBEDDING_VERSION"
 INDEX_GENERATION_ENV = "KNOWLEDGE_EMBEDDING_INDEX_GENERATION"
 # Piloto opcional: ids de empresa separados por vírgula. Vazio = todas as empresas quando a flag está ligada.
 VECTOR_PILOT_COMPANIES_ENV = "KNOWLEDGE_VECTOR_PILOT_COMPANY_IDS"
+# Similaridade mínima (cosseno) para o vetor resgatar um trecho que o FTS não trouxe.
+VECTOR_MIN_SIMILARITY_ENV = "KNOWLEDGE_VECTOR_MIN_SIMILARITY"
+DEFAULT_VECTOR_MIN_SIMILARITY = 0.35
 
 # Dimensão fixada pela migration da projeção vetorial; trocar exige nova geração.
 KNOWLEDGE_EMBEDDING_DIMENSIONS = 1536
@@ -54,12 +57,21 @@ class EmbeddingSpec:
     dimensions: int = KNOWLEDGE_EMBEDDING_DIMENSIONS
 
 
+def _parse_min_similarity(raw: object) -> float:
+    try:
+        value = float(str(raw).strip().replace(',', '.'))
+    except (TypeError, ValueError):
+        return DEFAULT_VECTOR_MIN_SIMILARITY
+    return value if 0.0 <= value <= 1.0 else DEFAULT_VECTOR_MIN_SIMILARITY
+
+
 @dataclass(frozen=True)
 class VectorRetrievalConfig:
     """Feature flag da recuperação vetorial. Nasce desligada e sem modelo."""
 
     enabled: bool = False
     embedding: EmbeddingSpec | None = None
+    min_similarity: float = DEFAULT_VECTOR_MIN_SIMILARITY
 
     @property
     def ready(self) -> bool:
@@ -72,11 +84,13 @@ class VectorRetrievalConfig:
         model = str(env.get(EMBEDDING_MODEL_ENV, "")).strip()
         version = str(env.get(EMBEDDING_VERSION_ENV, "")).strip()
         generation_raw = str(env.get(INDEX_GENERATION_ENV, "")).strip()
+        min_similarity = _parse_min_similarity(env.get(VECTOR_MIN_SIMILARITY_ENV))
         if not (enabled and model and version and generation_raw.isdigit()):
-            return cls(enabled=enabled, embedding=None)
+            return cls(enabled=enabled, embedding=None, min_similarity=min_similarity)
         return cls(
             enabled=True,
             embedding=EmbeddingSpec(model=model, version=version, index_generation=int(generation_raw)),
+            min_similarity=min_similarity,
         )
 
 
@@ -155,6 +169,7 @@ class HybridRankingPolicy:
 
 __all__ = [
     "DEFAULT_STRATEGIES",
+    "DEFAULT_VECTOR_MIN_SIMILARITY",
     "EMBEDDINGS_TABLE",
     "EmbeddingSpec",
     "EvidenceOrigin",
@@ -168,6 +183,7 @@ __all__ = [
     "SUPPORTED_STRATEGIES",
     "StrategyResolution",
     "VECTOR_BACKEND_IMPLEMENTED",
+    "VECTOR_MIN_SIMILARITY_ENV",
     "VECTOR_PILOT_COMPANIES_ENV",
     "VectorRetrievalConfig",
     "resolve_strategies",
