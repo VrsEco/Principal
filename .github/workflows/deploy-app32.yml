@@ -4,6 +4,11 @@ run-name: "Deploy app32 (${{ inputs.mode }}) · ${{ github.actor }}"
 on:
   workflow_dispatch:
     inputs:
+      diagnostic_only:
+        description: "Inventário somente leitura; não executa deploy"
+        required: true
+        default: false
+        type: boolean
       mode:
         description: "Modo do deploy"
         required: true
@@ -84,6 +89,7 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
   deploy:
+    if: ${{ !inputs.diagnostic_only }}
     name: 🚀 Deploy via SSH
     needs: validate
     runs-on: ubuntu-latest
@@ -409,3 +415,65 @@ jobs:
             echo "- Triggering actor verificável: \`${{ github.triggering_actor }}\`"
             echo "- Correlation ID MCP: \`${DEPLOYMENT_ID:-manual-unlinked}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  diagnostic:
+    name: Inventário somente leitura
+    if: ${{ inputs.diagnostic_only }}
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+    permissions:
+      contents: read
+    steps:
+      - name: Exigir operação humana e parâmetros sem mutação
+        env:
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          REF: ${{ github.ref }}
+          RESTART: ${{ inputs.restart_mcp }}
+          CHART_DRIFT: ${{ inputs.remediate_chartjs_runtime_drift }}
+          PROCESS_DRIFT: ${{ inputs.remediate_process_architecture_runtime_drift }}
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          test "$ACTOR" = VrsEco
+          test "$TRIGGERING_ACTOR" = VrsEco
+          test "$REF" = refs/heads/main
+          test "$RESTART" = false
+          test "$CHART_DRIFT" = false
+          test "$PROCESS_DRIFT" = false
+          test -z "$DEPLOYMENT_ID"
+      - name: Ler inventário Git sem atualizar índice
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          INVENTORY_ROOT: ${{ secrets.PROJECT_PATH }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          envs: INVENTORY_ROOT
+          command_timeout: 5m
+          script: |
+            set -eu
+            export GIT_OPTIONAL_LOCKS=0
+            test -d "$INVENTORY_ROOT"
+            cd -- "$INVENTORY_ROOT"
+            test "$(git rev-parse --is-inside-work-tree)" = true
+            printf 'HEAD='; git rev-parse HEAD
+            printf 'TREE='; git rev-parse HEAD^{tree}
+            printf 'UTC='; date -u +%FT%TZ
+            python3 - <<'PY'
+            import subprocess, json, hashlib
+            def git(*args):
+                return subprocess.check_output(['git', '--no-optional-locks', *args])
+            # JSON escapes control characters; no file contents, patches or environment values.
+            status = git('status', '--porcelain=v1', '-z', '--untracked-files=all')
+            print(json.dumps({'status_entries': status.decode('utf-8', 'replace').split('\0')[:-1]}, ensure_ascii=True))
+            for label, args in [('unstaged', ['diff', '--no-ext-diff', '--no-textconv', '--name-status', '-z']), ('staged', ['diff', '--cached', '--no-ext-diff', '--no-textconv', '--name-status', '-z'])]:
+                raw = git(*args)
+                print(json.dumps({label: raw.decode('utf-8', 'replace').split('\0')[:-1]}, ensure_ascii=True))
+            print('inventory_complete=true')
+            PY
