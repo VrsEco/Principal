@@ -250,6 +250,8 @@ Primeira medição em produção (empresa 9, 10 perguntas com esperado, modo `an
 
 Causas confirmadas na reprodução local: (1) sem limiar de similaridade, o vizinho mais próximo era devolvido mesmo sem relação; (2) trechos sem vetor recebiam pesos redistribuídos e podiam superar artigos indexados. Os "sem resultado" de produção não reproduziram localmente.
 
-Correção: a estratégia `hybrid` agora preserva a ordem do FTS e o vetor só **resgata** trechos que o FTS não trouxe, com similaridade ≥ `KNOWLEDGE_VECTOR_MIN_SIMILARITY` (padrão 0,35; valor inválido volta ao padrão). Consequência: o híbrido nunca fica abaixo do FTS em abstenção. A soma ponderada (`HybridRankingPolicy`) segue no código, sem uso na fusão.
+Segunda medição (após o PR #48, 36 perguntas): `full_text` e `hybrid` idênticos (acerto@1 18, MRR 0,50, 14 abstenções, 0 divergências). Diagnóstico no servidor: na maioria das perguntas o top-5 do FTS vinha inteiro de `system_documentation`; o `answer()` cortava no top-5 e só depois removia a documentação técnica, ficando vazio. O vetor achava o artigo certo (1º ou 2º lugar) em 25 de 27 perguntas com esperado; similaridades de acerto 0,40 a 0,73, de perguntas fora do escopo 0,20 a 0,49.
 
-Reavaliar após o deploy com `python scripts/knowledge_strategy_ab.py --company-id 9`; para inspecionar candidatos e similaridades, `--mode search --json`. Calibrar o limiar com esses números antes de ampliar o piloto.
+Correção definitiva (PR seguinte): no `answer()` a documentação técnica sai dos candidatos **antes** de fundir e cortar (só se a pergunta não é técnica e sobra outra evidência; `search` não muda). FTS e vetor são fundidos por Reciprocal Rank Fusion (k=60, sem pesos), e o vetor só entra com similaridade >= `KNOWLEDGE_VECTOR_MIN_SIMILARITY` (padrão 0,40; inválido volta ao padrão). Isso melhora também o `full_text` do `answer()`.
+
+Reavaliar após o deploy com `python scripts/knowledge_strategy_ab.py --company-id 9 --questions knowledge/golden_sets/ab_perguntas_pt_br_ampliado.tsv`. Regra de ampliação do piloto: hybrid >= full_text em acerto@1 e MRR (>= 30 perguntas com esperado) e sem piorar as perguntas fora do escopo (esperado `-`).

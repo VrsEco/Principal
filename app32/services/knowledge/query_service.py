@@ -166,6 +166,10 @@ class KnowledgeQueryService:
     MAX_QUERY_LENGTH = 500
     MAX_SOURCE_LIMIT = 8
     MAX_CANDIDATE_LIMIT = 50
+    _RRF_K = 60
+    _TECHNICAL_QUERY_TERMS = frozenset(
+        {"api", "arquitetura", "endpoint", "mcp", "paper", "spec", "técnico", "técnica", "tool"}
+    )
     _STOPWORDS = {
         "a",
         "as",
@@ -347,6 +351,7 @@ class KnowledgeQueryService:
             plan=plan,
             user_id=user_id,
             employee_id=employee_id,
+            drop_technical=True,
         )
         retrieved_hits = [
             self._serialize_hit(source, chunk, score=float(score or 0))
@@ -407,13 +412,20 @@ class KnowledgeQueryService:
         plan: KnowledgeQueryPlan,
         user_id: int | None,
         employee_id: int | None,
+        drop_technical: bool = False,
     ) -> tuple[list[tuple[KnowledgeSource, KnowledgeChunk, float]], list[str]]:
-        """FTS sempre; vetor só quando o plano o inclui, com recuo seguro para FTS."""
+        """FTS sempre; vetor só quando o plano o inclui, com recuo seguro para FTS.
+
+        `drop_technical` (só respostas): para pergunta não técnica, a documentação técnica sai dos
+        candidatos ANTES de fundir e cortar no top-k; senão ela lota o topo e a resposta fica vazia.
+        """
 
         fts_rows = self._search_rows(
             question, terms=terms, plan=plan, user_id=user_id, employee_id=employee_id
         )
         if not set(plan.strategies) & {STRATEGY_VECTOR, STRATEGY_HYBRID}:
+            if drop_technical:
+                fts_rows, _ = self._drop_technical_rows(question, fts_rows, [])
             return fts_rows, []
         try:
             vector_rows = self._vector_rows(
@@ -421,7 +433,11 @@ class KnowledgeQueryService:
             )
         except Exception:  # noqa: BLE001 - nunca vazar detalhe do provedor/SQL ao chamador
             logger.warning("knowledge vector retrieval failed; using full_text", exc_info=True)
+            if drop_technical:
+                fts_rows, _ = self._drop_technical_rows(question, fts_rows, [])
             return fts_rows, ["vector_retrieval_failed"]
+        if drop_technical:
+            fts_rows, vector_rows = self._drop_technical_rows(question, fts_rows, vector_rows)
         config = self._vector_config or VectorRetrievalConfig.from_env()
         return self._merge_hybrid(fts_rows, vector_rows, plan, min_similarity=config.min_similarity), []
 
@@ -477,6 +493,24 @@ class KnowledgeQueryService:
             estimated=estimated,
         )
 
+    def _drop_technical_rows(
+        self,
+        question: str,
+        fts_rows: list[tuple[KnowledgeSource, KnowledgeChunk, float]],
+        vector_rows: list[tuple[KnowledgeSource, KnowledgeChunk, float]],
+    ) -> tuple[list, list]:
+        """Pergunta não técnica: tira `system_documentation` dos candidatos se sobrar outra evidência."""
+
+        if not set(self._query_terms(question)).isdisjoint(self._TECHNICAL_QUERY_TERMS):
+            return fts_rows, vector_rows
+
+        def keep(row) -> bool:
+            return row[0].source_type != "system_documentation"
+
+        if not any(keep(row) for row in (*fts_rows, *vector_rows)):
+            return fts_rows, vector_rows
+        return [row for row in fts_rows if keep(row)], [row for row in vector_rows if keep(row)]
+
     def _merge_hybrid(
         self,
         fts_rows: list[tuple[KnowledgeSource, KnowledgeChunk, float]],
@@ -485,22 +519,28 @@ class KnowledgeQueryService:
         *,
         min_similarity: float = 0.0,
     ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
-        """FTS primeiro; o vetor só resgata o que o FTS não trouxe.
+        """Reciprocal Rank Fusion entre FTS e vetor (sem pesos a calibrar).
 
-        A avaliação A/B em produção mostrou que a soma ponderada piorava o FTS (trechos sem vetor
-        ganhavam peso redistribuído e o vizinho mais próximo era devolvido sem limiar). Aqui a ordem
-        do FTS é preservada e o vetor acrescenta apenas candidatos com similaridade >= limiar, do mais
-        para o menos similar. Ambos vêm do mesmo universo já autorizado.
+        Só entram do vetor os candidatos com similaridade >= limiar (o vizinho mais próximo sem
+        relação nunca vira resposta). Quem aparece nas duas listas sobe; empate desfaz pela ordem
+        do FTS. Ambos vêm do mesmo universo já autorizado. O score devolvido é o score RRF.
         """
 
-        seen = {chunk.id for _, chunk, _ in fts_rows}
-        rescued = []
-        for source, chunk, similarity in sorted(vector_rows, key=lambda row: -float(row[2] or 0)):
-            if chunk.id in seen or float(similarity or 0) < min_similarity:
-                continue
-            seen.add(chunk.id)
-            rescued.append((source, chunk, float(similarity)))
-        return [*fts_rows, *rescued][: plan.candidate_limit]
+        k = self._RRF_K
+        fused: dict[int, dict[str, Any]] = {}
+        for rank, (source, chunk, _score) in enumerate(fts_rows, start=1):
+            entry = fused.setdefault(chunk.id, {"row": (source, chunk), "fts_rank": rank, "score": 0.0})
+            entry["score"] += 1.0 / (k + rank)
+        eligible = sorted(
+            (row for row in vector_rows if float(row[2] or 0) >= min_similarity),
+            key=lambda row: -float(row[2] or 0),
+        )
+        for rank, (source, chunk, _similarity) in enumerate(eligible, start=1):
+            entry = fused.setdefault(chunk.id, {"row": (source, chunk), "fts_rank": len(fts_rows) + rank, "score": 0.0})
+            entry["score"] += 1.0 / (k + rank)
+        ranked = sorted(fused.values(), key=lambda entry: (-entry["score"], entry["fts_rank"]))
+        return [(*entry["row"], entry["score"]) for entry in ranked[: plan.candidate_limit]]
+
     def _search_rows(
         self,
         question: str,
@@ -600,19 +640,8 @@ class KnowledgeQueryService:
         """Mantém a resposta útil ao usuário sem misturar documentação técnica."""
         if not hits:
             return []
-        technical_terms = {
-            "api",
-            "arquitetura",
-            "endpoint",
-            "mcp",
-            "paper",
-            "spec",
-            "técnico",
-            "técnica",
-            "tool",
-        }
         query_terms = set(cls._query_terms(question))
-        if query_terms.isdisjoint(technical_terms):
+        if query_terms.isdisjoint(cls._TECHNICAL_QUERY_TERMS):
             non_technical = [
                 hit for hit in hits if hit.get("source_type") != "system_documentation"
             ]
