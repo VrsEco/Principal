@@ -52,7 +52,7 @@ env:
 jobs:
   validate:
     name: 🧪 Validate Code
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 🧾 Registrar contexto imutável do release
         env:
@@ -92,7 +92,7 @@ jobs:
     if: ${{ !inputs.diagnostic_only }}
     name: 🚀 Deploy via SSH
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: production
     permissions:
@@ -420,7 +420,7 @@ jobs:
     name: Inventário somente leitura
     if: ${{ inputs.diagnostic_only }}
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment:
       name: production
