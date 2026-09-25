@@ -22,6 +22,7 @@ jobs:
       E2E_BASE_URL: http://localhost.invalid
       E2E_USERNAME: ci-user
       E2E_PASSWORD: ci-password
+      OPENAI_API_KEY: ci-not-a-real-key
       E2E_COMPANY_ID: '9'
       E2E_DESTRUCTIVE_ACTIONS_ALLOWED: 'true'
       E2E_REQUIRES_ISOLATED_TENANT: 'true'
