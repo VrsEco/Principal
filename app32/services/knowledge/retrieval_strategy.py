@@ -35,6 +35,10 @@ VECTOR_PILOT_COMPANIES_ENV = "KNOWLEDGE_VECTOR_PILOT_COMPANY_IDS"
 # Similaridade mínima (cosseno) para o vetor resgatar um trecho que o FTS não trouxe.
 VECTOR_MIN_SIMILARITY_ENV = "KNOWLEDGE_VECTOR_MIN_SIMILARITY"
 DEFAULT_VECTOR_MIN_SIMILARITY = 0.40
+# Limiar mais estrito só para trechos que APENAS o vetor trouxe (sem confirmação do FTS): barra resgates
+# errados quando o FTS não acha nada (ex.: "transferir entre contas" -> "Lançar conta a pagar"). Não pega
+# vizinho que o FTS também traz (ex.: "folha de pagamento"). Vazio = desligado (vale o limiar geral).
+VECTOR_SOLO_MIN_SIMILARITY_ENV = "KNOWLEDGE_VECTOR_SOLO_MIN_SIMILARITY"
 # Peso da lista vetorial na fusão RRF (1.0 = mesmo peso do FTS). Permite calibrar sem mudar código.
 VECTOR_RRF_WEIGHT_ENV = "KNOWLEDGE_VECTOR_RRF_WEIGHT"
 DEFAULT_VECTOR_RRF_WEIGHT = 1.0
@@ -76,6 +80,16 @@ def _parse_rrf_vector_weight(raw: object) -> float:
     return value if 0.0 < value <= 10.0 else DEFAULT_VECTOR_RRF_WEIGHT
 
 
+def _parse_solo_min_similarity(raw: object) -> float | None:
+    if raw is None or not str(raw).strip():
+        return None
+    try:
+        value = float(str(raw).strip().replace(',', '.'))
+    except ValueError:
+        return None
+    return value if 0.0 <= value <= 1.0 else None
+
+
 @dataclass(frozen=True)
 class VectorRetrievalConfig:
     """Feature flag da recuperação vetorial. Nasce desligada e sem modelo."""
@@ -84,6 +98,7 @@ class VectorRetrievalConfig:
     embedding: EmbeddingSpec | None = None
     min_similarity: float = DEFAULT_VECTOR_MIN_SIMILARITY
     rrf_vector_weight: float = DEFAULT_VECTOR_RRF_WEIGHT
+    solo_min_similarity: float | None = None
 
     @property
     def ready(self) -> bool:
@@ -98,13 +113,18 @@ class VectorRetrievalConfig:
         generation_raw = str(env.get(INDEX_GENERATION_ENV, "")).strip()
         min_similarity = _parse_min_similarity(env.get(VECTOR_MIN_SIMILARITY_ENV))
         rrf_vector_weight = _parse_rrf_vector_weight(env.get(VECTOR_RRF_WEIGHT_ENV))
+        solo_min_similarity = _parse_solo_min_similarity(env.get(VECTOR_SOLO_MIN_SIMILARITY_ENV))
         if not (enabled and model and version and generation_raw.isdigit()):
-            return cls(enabled=enabled, embedding=None, min_similarity=min_similarity, rrf_vector_weight=rrf_vector_weight)
+            return cls(
+                enabled=enabled, embedding=None, min_similarity=min_similarity,
+                rrf_vector_weight=rrf_vector_weight, solo_min_similarity=solo_min_similarity,
+            )
         return cls(
             enabled=True,
             embedding=EmbeddingSpec(model=model, version=version, index_generation=int(generation_raw)),
             min_similarity=min_similarity,
             rrf_vector_weight=rrf_vector_weight,
+            solo_min_similarity=solo_min_similarity,
         )
 
 
@@ -200,6 +220,7 @@ __all__ = [
     "VECTOR_BACKEND_IMPLEMENTED",
     "VECTOR_MIN_SIMILARITY_ENV",
     "VECTOR_RRF_WEIGHT_ENV",
+    "VECTOR_SOLO_MIN_SIMILARITY_ENV",
     "VECTOR_PILOT_COMPANIES_ENV",
     "VectorRetrievalConfig",
     "resolve_strategies",
