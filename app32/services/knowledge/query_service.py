@@ -2,14 +2,24 @@ from __future__ import annotations
 
 import re
 import uuid
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable, Sequence
 
 from sqlalchemy import and_, case, exists, func, or_, select
 
 from models import db
 from models.knowledge import KnowledgeChunk, KnowledgeSource, KnowledgeSourceGrant
+from services.knowledge.retrieval_strategy import (
+    DEFAULT_STRATEGIES,
+    EvidenceOrigin,
+    HybridRankingPolicy,
+    STRATEGY_HYBRID,
+    STRATEGY_VECTOR,
+    VectorRetrievalConfig,
+    resolve_strategies,
+)
 
 
 class KnowledgeQueryError(ValueError):
@@ -30,6 +40,8 @@ class KnowledgeQueryPlan:
     strategies: tuple[str, ...]
     candidate_limit: int
     answer_source_limit: int
+    requested_strategy: str = "full_text"
+    fallback_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -39,6 +51,9 @@ class KnowledgeQueryPlan:
             "include_product": self.include_product,
             "source_types": list(self.source_types),
             "strategies": list(self.strategies),
+            "requested_strategy": self.requested_strategy,
+            "fallback_reason": self.fallback_reason,
+            "evidence_origin": EvidenceOrigin.RAG.value,
             "entities": [],
             "time": {"mode": "current", "from": None, "to": None},
             "filters": {},
@@ -49,8 +64,94 @@ class KnowledgeQueryPlan:
         }
 
 
+def authorized_universe_conditions(
+    plan: KnowledgeQueryPlan,
+    *,
+    user_id: int | None,
+    employee_id: int | None,
+    now: datetime,
+) -> list[Any]:
+    """Universo autorizado (tenant, grants, status, vigência, coerência ACL).
+
+    É a única definição de "o que pode ser recuperado": FTS e qualquer recuperação
+    vetorial futura devem aplicá-la *antes* de calcular relevância/distância.
+    Espera um SELECT com ``KnowledgeSource`` juntado a ``KnowledgeChunk``.
+    """
+
+    grant_targets = [KnowledgeSourceGrant.grant_scope == "company"]
+    if user_id is not None:
+        grant_targets.append(
+            and_(
+                KnowledgeSourceGrant.grant_scope == "user",
+                KnowledgeSourceGrant.user_id == user_id,
+            )
+        )
+    if employee_id is not None:
+        grant_targets.append(
+            and_(
+                KnowledgeSourceGrant.grant_scope == "employee",
+                KnowledgeSourceGrant.employee_id == employee_id,
+            )
+        )
+    authorized_grant = exists(
+        select(KnowledgeSourceGrant.id).where(
+            KnowledgeSourceGrant.knowledge_source_id == KnowledgeSource.id,
+            KnowledgeSourceGrant.company_id == plan.company_id,
+            or_(*grant_targets),
+        )
+    )
+    visibility_filters = []
+    if plan.include_product:
+        visibility_filters.append(KnowledgeSource.knowledge_scope == "product")
+    if plan.company_id is not None:
+        visibility_filters.append(
+            (KnowledgeSource.knowledge_scope == "company")
+            & (KnowledgeSource.company_id == plan.company_id)
+            & authorized_grant
+        )
+    if not visibility_filters:
+        visibility_filters.append(False)
+
+    conditions = [
+        KnowledgeSource.deleted_at.is_(None),
+        KnowledgeSource.status.in_(("active", "published")),
+        or_(KnowledgeSource.valid_from.is_(None), KnowledgeSource.valid_from <= now),
+        or_(KnowledgeSource.valid_to.is_(None), KnowledgeSource.valid_to >= now),
+        # Drift de tenant/escopo entre fonte e chunk falha fechado.
+        KnowledgeChunk.knowledge_scope == KnowledgeSource.knowledge_scope,
+        or_(
+            and_(KnowledgeChunk.company_id.is_(None), KnowledgeSource.company_id.is_(None)),
+            KnowledgeChunk.company_id == KnowledgeSource.company_id,
+        ),
+        or_(*visibility_filters),
+    ]
+    if plan.source_types:
+        conditions.append(KnowledgeSource.source_type.in_(plan.source_types))
+    return conditions
+
+
+logger = logging.getLogger(__name__)
+
+EmbeddingProvider = Callable[[str], Sequence[float]]
+VectorFetcher = Callable[..., list[tuple[KnowledgeSource, KnowledgeChunk, float]]]
+
+
 class KnowledgeQueryService:
     """Planeja, recupera e compõe respostas citadas sem atravessar tenants."""
+
+    def __init__(
+        self,
+        *,
+        embedding_provider: EmbeddingProvider | None = None,
+        vector_config: VectorRetrievalConfig | None = None,
+        vector_fetcher: VectorFetcher | None = None,
+        ranking_policy: HybridRankingPolicy | None = None,
+    ) -> None:
+        # Sem provedor injetado a recuperação é somente FTS (estado de produção atual).
+        self._embedding_provider = embedding_provider
+        self._vector_config = vector_config
+        self._vector_fetcher = vector_fetcher
+        self._ranking_policy = ranking_policy or HybridRankingPolicy()
 
     MIN_QUERY_LENGTH = 3
     MAX_QUERY_LENGTH = 500
@@ -91,6 +192,8 @@ class KnowledgeQueryService:
         require_company: bool = True,
         query_kind: str = "answer",
         include_product: bool = True,
+        strategy: str | None = None,
+        vector_config: VectorRetrievalConfig | None = None,
     ) -> tuple[str, KnowledgeQueryPlan]:
         normalized_question = " ".join(str(question or "").split())
         if len(normalized_question) < self.MIN_QUERY_LENGTH:
@@ -115,7 +218,19 @@ class KnowledgeQueryService:
         )
         source_limit = min(max(int(answer_source_limit), 1), self.MAX_SOURCE_LIMIT)
         scope = "company" if company_id is not None else "product"
-        strategies = ("sql", "full_text")
+        try:
+            resolution = resolve_strategies(strategy, vector_config or self._vector_config)
+        except ValueError as exc:
+            raise KnowledgeQueryError(str(exc)) from exc
+        strategies = resolution.strategies
+        fallback_reason = resolution.fallback_reason
+        if (
+            fallback_reason is None
+            and set(strategies) & {STRATEGY_VECTOR, STRATEGY_HYBRID}
+            and self._embedding_provider is None
+        ):
+            strategies = DEFAULT_STRATEGIES
+            fallback_reason = "embedding_provider_missing"
         return normalized_question, KnowledgeQueryPlan(
             query_kind=query_kind,
             knowledge_scope=scope,
@@ -125,6 +240,8 @@ class KnowledgeQueryService:
             strategies=strategies,
             candidate_limit=min(source_limit * 6, self.MAX_CANDIDATE_LIMIT),
             answer_source_limit=source_limit,
+            requested_strategy=resolution.requested,
+            fallback_reason=fallback_reason,
         )
 
     def search(
@@ -138,6 +255,7 @@ class KnowledgeQueryService:
         user_id: int | None = None,
         employee_id: int | None = None,
         include_product: bool = True,
+        strategy: str | None = None,
     ) -> dict[str, Any]:
         normalized_question, plan = self.build_plan(
             question,
@@ -147,9 +265,10 @@ class KnowledgeQueryService:
             require_company=require_company,
             query_kind="search",
             include_product=include_product,
+            strategy=strategy,
         )
         terms = self._query_terms(normalized_question)
-        rows = self._search_rows(
+        rows, runtime_warnings = self._retrieve(
             normalized_question,
             terms=terms,
             plan=plan,
@@ -166,7 +285,9 @@ class KnowledgeQueryService:
             "knowledge_scope": plan.knowledge_scope,
             "query_plan": plan.to_dict(),
             "results": results,
-            "warnings": [] if results else ["Nenhuma evidência autorizada foi encontrada."],
+            "warnings": self._plan_warnings(plan)
+            + runtime_warnings
+            + ([] if results else ["Nenhuma evidência autorizada foi encontrada."]),
         }
 
     def answer(
@@ -180,6 +301,7 @@ class KnowledgeQueryService:
         user_id: int | None = None,
         employee_id: int | None = None,
         include_product: bool = True,
+        strategy: str | None = None,
     ) -> dict[str, Any]:
         normalized_question, plan = self.build_plan(
             question,
@@ -189,9 +311,10 @@ class KnowledgeQueryService:
             require_company=require_company,
             query_kind="answer",
             include_product=include_product,
+            strategy=strategy,
         )
         terms = self._query_terms(normalized_question)
-        rows = self._search_rows(
+        rows, runtime_warnings = self._retrieve(
             normalized_question,
             terms=terms,
             plan=plan,
@@ -222,6 +345,7 @@ class KnowledgeQueryService:
                 "version": hit["version"],
                 "valid_from": hit["valid_from"],
                 "canonical_uri": hit["canonical_uri"],
+                "evidence_origin": EvidenceOrigin.RAG.value,
             }
             citations.append(citation)
             claim_text = self._claim_text(hit["content"])
@@ -242,11 +366,124 @@ class KnowledgeQueryService:
             "trust_signals": trust_signals,
             "claims": claims,
             "citations": citations,
-            "warnings": [],
+            "warnings": self._plan_warnings(plan) + runtime_warnings,
             "related_objects": [],
             "actions": actions,
             "query_plan": plan.to_dict(),
         }
+
+    def _retrieve(
+        self,
+        question: str,
+        *,
+        terms: tuple[str, ...],
+        plan: KnowledgeQueryPlan,
+        user_id: int | None,
+        employee_id: int | None,
+    ) -> tuple[list[tuple[KnowledgeSource, KnowledgeChunk, float]], list[str]]:
+        """FTS sempre; vetor só quando o plano o inclui, com recuo seguro para FTS."""
+
+        fts_rows = self._search_rows(
+            question, terms=terms, plan=plan, user_id=user_id, employee_id=employee_id
+        )
+        if not set(plan.strategies) & {STRATEGY_VECTOR, STRATEGY_HYBRID}:
+            return fts_rows, []
+        try:
+            vector_rows = self._vector_rows(
+                question, plan=plan, user_id=user_id, employee_id=employee_id
+            )
+        except Exception:  # noqa: BLE001 - nunca vazar detalhe do provedor/SQL ao chamador
+            logger.warning("knowledge vector retrieval failed; using full_text", exc_info=True)
+            return fts_rows, ["vector_retrieval_failed"]
+        return self._merge_hybrid(fts_rows, vector_rows, plan), []
+
+    def _vector_rows(
+        self,
+        question: str,
+        *,
+        plan: KnowledgeQueryPlan,
+        user_id: int | None,
+        employee_id: int | None,
+    ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
+        config = self._vector_config
+        if config is None or config.embedding is None or self._embedding_provider is None:
+            raise KnowledgeQueryError("Recuperação vetorial não configurada.")
+        query_embedding = self._embedding_provider(question)
+        self._record_query_usage(question, plan, config.embedding, user_id)
+        if self._vector_fetcher is not None:
+            return list(
+                self._vector_fetcher(
+                    plan, config.embedding, query_embedding, user_id=user_id, employee_id=employee_id
+                )
+            )
+        from services.knowledge.vector_retrieval import build_vector_candidates_statement
+
+        if db.session.get_bind().dialect.name != "postgresql":
+            raise KnowledgeQueryError("Recuperação vetorial exige PostgreSQL.")
+        statement = build_vector_candidates_statement(
+            plan,
+            config.embedding,
+            query_embedding,
+            user_id=user_id,
+            employee_id=employee_id,
+            now=datetime.utcnow(),
+        )
+        return [(row[0], row[1], float(row[2] or 0)) for row in db.session.execute(statement)]
+
+    def _record_query_usage(self, question, plan, spec, user_id) -> None:
+        """Registra data/hora e tokens da consulta (sem o texto); best effort."""
+
+        from services.knowledge.embedding_usage import estimate_tokens, record_usage_event
+
+        provider = self._embedding_provider
+        reported = getattr(provider, "last_tokens", None)
+        estimated = bool(getattr(provider, "last_estimated", True)) if reported else True
+        record_usage_event(
+            kind="query",
+            company_id=plan.company_id,
+            user_id=user_id,
+            model=spec.model,
+            version=spec.version,
+            index_generation=spec.index_generation,
+            tokens=reported if reported else estimate_tokens(question),
+            estimated=estimated,
+        )
+
+    def _merge_hybrid(
+        self,
+        fts_rows: list[tuple[KnowledgeSource, KnowledgeChunk, float]],
+        vector_rows: list[tuple[KnowledgeSource, KnowledgeChunk, float]],
+        plan: KnowledgeQueryPlan,
+    ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
+        """Une candidatos já autorizados (ambos vêm do mesmo universo filtrado)."""
+
+        merged: dict[int, dict[str, Any]] = {}
+        for source, chunk, score in fts_rows:
+            merged.setdefault(chunk.id, {"source": source, "chunk": chunk})["lexical"] = float(score or 0)
+        for source, chunk, similarity in vector_rows:
+            merged.setdefault(chunk.id, {"source": source, "chunk": chunk})["vector"] = float(similarity)
+        if not merged:
+            return []
+        max_lexical = max((entry.get("lexical", 0.0) for entry in merged.values()), default=0.0) or 1.0
+        dated = sorted(
+            (entry["source"].source_updated_at for entry in merged.values() if entry["source"].source_updated_at),
+        )
+        span = (dated[-1] - dated[0]).total_seconds() if len(dated) > 1 else 0.0
+        ranked = []
+        for entry in merged.values():
+            source, chunk = entry["source"], entry["chunk"]
+            updated = source.source_updated_at
+            recency = 0.5 if not updated or span == 0 else (updated - dated[0]).total_seconds() / span
+            authority = {"official": 1.0, "internal": 2 / 3}.get(source.authority_level, 1 / 3)
+            score = self._ranking_policy.score(
+                authority=authority,
+                lexical=entry.get("lexical", 0.0) / max_lexical,
+                vector_similarity=entry.get("vector"),
+                recency=recency,
+            )
+            ranked.append((source, chunk, score))
+        ranked.sort(key=lambda item: (-item[2], item[1].chunk_order))
+        return ranked[: plan.candidate_limit]
 
     def _search_rows(
         self,
@@ -258,47 +495,11 @@ class KnowledgeQueryService:
         employee_id: int | None,
     ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
         now = datetime.utcnow()
-        grant_targets = [
-            KnowledgeSourceGrant.grant_scope == "company",
-        ]
-        if user_id is not None:
-            grant_targets.append(
-                and_(
-                    KnowledgeSourceGrant.grant_scope == "user",
-                    KnowledgeSourceGrant.user_id == user_id,
-                )
-            )
-        if employee_id is not None:
-            grant_targets.append(
-                and_(
-                    KnowledgeSourceGrant.grant_scope == "employee",
-                    KnowledgeSourceGrant.employee_id == employee_id,
-                )
-            )
-        authorized_grant = exists(
-            select(KnowledgeSourceGrant.id).where(
-                KnowledgeSourceGrant.knowledge_source_id == KnowledgeSource.id,
-                KnowledgeSourceGrant.company_id == plan.company_id,
-                or_(*grant_targets),
-            )
-        )
         authority_rank = case(
             (KnowledgeSource.authority_level == "official", 3),
             (KnowledgeSource.authority_level == "internal", 2),
             else_=1,
         )
-        visibility_filters = []
-        if plan.include_product:
-            visibility_filters.append(KnowledgeSource.knowledge_scope == "product")
-        if plan.company_id is not None:
-            visibility_filters.append(
-                (KnowledgeSource.knowledge_scope == "company")
-                & (KnowledgeSource.company_id == plan.company_id)
-                & authorized_grant
-            )
-        if not visibility_filters:
-            visibility_filters.append(False)
-
         query = (
             db.session.query(KnowledgeSource, KnowledgeChunk)
             .join(
@@ -306,15 +507,11 @@ class KnowledgeQueryService:
                 KnowledgeChunk.knowledge_source_id == KnowledgeSource.id,
             )
             .filter(
-                KnowledgeSource.deleted_at.is_(None),
-                KnowledgeSource.status.in_(("active", "published")),
-                or_(KnowledgeSource.valid_from.is_(None), KnowledgeSource.valid_from <= now),
-                or_(KnowledgeSource.valid_to.is_(None), KnowledgeSource.valid_to >= now),
-                or_(*visibility_filters),
+                *authorized_universe_conditions(
+                    plan, user_id=user_id, employee_id=employee_id, now=now
+                )
             )
         )
-        if plan.source_types:
-            query = query.filter(KnowledgeSource.source_type.in_(plan.source_types))
 
         dialect_name = db.session.get_bind().dialect.name
         if dialect_name == "postgresql":
@@ -359,6 +556,10 @@ class KnowledgeQueryService:
             .limit(plan.candidate_limit)
             .all()
         )
+
+    @staticmethod
+    def _plan_warnings(plan: KnowledgeQueryPlan) -> list[str]:
+        return [plan.fallback_reason] if plan.fallback_reason else []
 
     @classmethod
     def _query_terms(cls, question: str) -> tuple[str, ...]:
@@ -485,6 +686,7 @@ class KnowledgeQueryService:
             "route_key": source.route_key,
             "navigation_target": source.navigation_target,
             "metadata": dict(source.metadata_json or {}),
+            "evidence_origin": EvidenceOrigin.RAG.value,
             "score": round(score, 6),
         }
 
@@ -500,7 +702,7 @@ class KnowledgeQueryService:
             "trust_signals": [],
             "claims": [],
             "citations": [],
-            "warnings": ["knowledge_gap"],
+            "warnings": ["knowledge_gap", *KnowledgeQueryService._plan_warnings(plan)],
             "related_objects": [],
             "actions": [],
             "query_plan": plan.to_dict(),

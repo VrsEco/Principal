@@ -101,3 +101,13 @@ Perguntas douradas mínimas:
 - `Como que eu faço pra ver os títulos financeiros em aberto?`;
 - `Como eu faço para conciliar uma conta bancária?`;
 - `Como publico um processo no Portal de Processos?`.
+
+## Projeção vetorial (pgvector) — desligada por padrão
+
+- Flag: `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED` ausente/`false` = somente FTS. Não ligar em
+  produção antes do piloto descrito em `docs/spec/rag_mcp_governado_squads_v1.md` §16.4.
+- Pré-requisito: extensão `pgvector` instalada no PostgreSQL. Sem ela a revision `20260924_1400`
+  aborta com mensagem clara e não altera nenhuma tabela.
+- Rollback: `alembic downgrade 20260924_1300` remove somente `knowledge_chunk_embeddings`;
+  fontes, chunks, grants e a extensão permanecem. Depois do rollback o FTS segue atendendo.
+- Nenhum backfill é automático; reindexação vetorial exige geração (`index_generation`) nova.

@@ -515,3 +515,35 @@ class KnowledgeTrainingProposal(db.Model):
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class KnowledgeEmbeddingUsageEvent(db.Model):
+    """Um registro por chamada de embedding (indexação ou consulta), para custo por empresa/data.
+
+    Nunca guarda o texto enviado; `query_id` liga à interação auditada quando existir.
+    """
+
+    __tablename__ = "knowledge_embedding_usage_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    occurred_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    company_id = db.Column(
+        db.Integer,
+        db.ForeignKey("companies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    user_id = db.Column(db.Integer, nullable=True)
+    kind = db.Column(db.String(20), nullable=False, index=True)  # index | query
+    run_id = db.Column(
+        db.Integer,
+        db.ForeignKey("knowledge_index_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    query_id = db.Column(db.String(64), nullable=True)
+    embedding_model = db.Column(db.String(120), nullable=False)
+    embedding_version = db.Column(db.String(40), nullable=False)
+    index_generation = db.Column(db.Integer, nullable=False)
+    tokens = db.Column(db.Integer, nullable=False, default=0)
+    estimated = db.Column(db.Boolean, nullable=False, default=True)

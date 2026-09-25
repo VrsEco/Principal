@@ -1,0 +1,152 @@
+# Runbook — pgvector em banco de TESTE descartável (Conhecimento Corporativo)
+
+**Objetivo:** provar, fora de produção e fora do banco de desenvolvimento (porta 5432), que a
+migration `20260924_1400`/`1500`, o isolamento por tenant na consulta vetorial e o rollback
+funcionam. **Não** aplica nada em produção e **não** chama a OpenAI.
+
+Pré-requisitos desta máquina (verificados em 2026-09-24): PostgreSQL 14 em
+`C:\Program Files\PostgreSQL\14`, Visual Studio 2022 instalado, sem Docker, `git` disponível.
+O PostgreSQL 14 local **não** traz os arquivos do pgvector; é preciso instalá-los uma vez.
+
+## Opção A — compilar o pgvector no PostgreSQL 14 local (sem Docker)
+
+Abra o **"x64 Native Tools Command Prompt for VS 2022" como Administrador** e execute:
+
+```bat
+set "PGROOT=C:\Program Files\PostgreSQL\14"
+cd %TEMP%
+git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git
+cd pgvector
+nmake /F Makefile.win
+nmake /F Makefile.win install
+```
+
+- Use a tag estável mais recente listada em <https://github.com/pgvector/pgvector/releases>
+  (a `v0.8.0` acima é um exemplo; se a tag não existir, troque).
+- Se `nmake` não for encontrado, falta o componente **"Desenvolvimento para desktop com C++"**
+  do Visual Studio (Visual Studio Installer → Modificar).
+- A instalação apenas copia arquivos para a pasta do PostgreSQL. **Nenhum banco existente é
+  alterado**: a extensão só passa a existir num banco quando alguém executa `CREATE EXTENSION`.
+
+## Opção B — Docker (padrão dos DATABASE_STANDARDS)
+
+Instale o Docker Desktop e suba um PostgreSQL com pgvector já incluído, em porta própria:
+
+```bash
+docker run --name knowledge-vector-test -e POSTGRES_PASSWORD=teste -p 127.0.0.1:55432:5432 -d pgvector/pgvector:pg16
+docker exec knowledge-vector-test psql -U postgres -c "CREATE DATABASE knowledge_vector_test"
+```
+
+Nesse caso pule a criação do cluster abaixo e use a senha `teste`.
+
+## Cluster descartável (Opção A) — porta 55432
+
+No PowerShell (o cluster fica numa pasta temporária, separada do banco de desenvolvimento):
+
+```powershell
+$pg = "C:\Program Files\PostgreSQL\14\bin"
+$dir = "$env:TEMP\pgvector_teste"
+Set-Content -Path "$env:TEMP\pgvector_pw.txt" -Value "teste" -NoNewline
+& "$pg\initdb.exe" -D $dir -U postgres --pwfile="$env:TEMP\pgvector_pw.txt" -A md5 -E UTF8
+& "$pg\pg_ctl.exe" -D $dir -o "-p 55432 -c listen_addresses=127.0.0.1" -l "$env:TEMP\pgvector_teste.log" start
+$env:PGPASSWORD = "teste"
+& "$pg\psql.exe" -h 127.0.0.1 -p 55432 -U postgres -c "CREATE DATABASE knowledge_vector_test"
+& "$pg\psql.exe" -h 127.0.0.1 -p 55432 -U postgres -d knowledge_vector_test -c "SELECT * FROM pg_available_extensions WHERE name='vector'"
+```
+
+A última consulta deve retornar **uma linha**. Se vier vazia, a Opção A não foi instalada.
+
+## Ensaio
+
+```powershell
+cd C:\GestaoVersus\app32\app32
+$env:APP32_KNOWLEDGE_VECTOR_TEST_DATABASE_URL = "postgresql+psycopg2://postgres:teste@127.0.0.1:55432/knowledge_vector_test"
+python scripts/knowledge_vector_rehearsal.py
+python -m pytest tests/test_knowledge_vector_skeleton.py -p no:flask -q
+```
+
+O script recusa qualquer banco que não seja local, em porta diferente de 5432 e com nome
+terminado em `_test`. Resultado esperado (todas as linhas `OK`):
+
+- upgrade `1400` + `1500` aplicado;
+- consulta vetorial da empresa 1 enxerga só o dado da empresa 1 (e a 2 só o da 2), mesmo com
+  vetores idênticos;
+- vetor com checksum obsoleto é descartado;
+- rollback remove só a projeção; `knowledge_sources`/`knowledge_chunks` e a extensão permanecem.
+
+## Backfill de ponta a ponta com custo mínimo (opcional, exige sua chave)
+
+Só depois do ensaio acima. Simulação primeiro (não chama a OpenAI):
+
+```powershell
+$env:KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED = "true"
+$env:KNOWLEDGE_EMBEDDING_MODEL = "text-embedding-3-small"
+$env:KNOWLEDGE_EMBEDDING_VERSION = "v1"
+$env:KNOWLEDGE_EMBEDDING_INDEX_GENERATION = "1"
+python scripts/knowledge_embedding_backfill.py
+```
+
+Para gravar de verdade use `--execute --max-chunks 5` e `OPENAI_API_KEY` **definida por você**
+no ambiente da sessão (não a coloque em arquivos versionados). O job só envia trechos do
+manual do produto (`product_help`).
+
+## Encerrar e limpar
+
+```powershell
+& "C:\Program Files\PostgreSQL\14\bin\pg_ctl.exe" -D "$env:TEMP\pgvector_teste" -m fast stop
+Remove-Item -Recurse -Force "$env:TEMP\pgvector_teste", "$env:TEMP\pgvector_pw.txt"
+```
+
+## Evidência do ensaio (25/09/2026)
+
+Executado pela Opção B (Docker) com o container descartável `knowledge-vector-test`
+(`pgvector/pgvector:pg16`, `127.0.0.1:55432`, banco `knowledge_vector_test`), sem chamar a OpenAI:
+
+- `scripts/knowledge_vector_rehearsal.py`: todas as 7 verificações `OK` (upgrade `1400` + `1500`;
+  isolamento por tenant com vetores idênticos; checksum obsoleto descartado; rollback remove só a
+  projeção e preserva `knowledge_sources`/`knowledge_chunks` e a extensão).
+- `tests/test_knowledge_vector_skeleton.py`: 13 passam.
+- Suíte `*knowledge*`: 141 passam; 4 falham em `test_sapiens_knowledge_ui.py` e
+  `test_sapiens_widget_knowledge_ui.py`, falhas que já ocorrem na `main` sem este PR (leem
+  `app32/static/js/...`, hoje em `static/` na raiz).
+
+### Repetição em PostgreSQL 14 (versão de produção)
+
+Produção roda PostgreSQL **14.24** (Ubuntu 22.04). O mesmo ensaio foi repetido com
+`pgvector/pgvector:pg14` (PostgreSQL 14.24, container `knowledge-vector-test-pg14`,
+`127.0.0.1:55433`): as 7 verificações `OK` e `test_knowledge_vector_skeleton.py` com 13 passando.
+
+### Constatação em produção (25/09/2026, somente leitura)
+
+`SELECT name, default_version, installed_version FROM pg_available_extensions WHERE name = 'vector'`
+no banco `bdversusv2` de produção (phpPgAdmin, usuário `app`) retornou **nenhuma linha**: o
+pacote do pgvector **não está instalado** no PostgreSQL de produção. A migration `1400` falharia
+de forma segura, mas interromperia o deploy. Não publicar este PR antes da instalação.
+
+### Resolução da infraestrutura (25/09/2026, ticket Configr #241421)
+
+O suporte do Configr respondeu no mesmo dia:
+
+- **pgvector 0.8.6 instalado** e a extensão `vector` **já criada** no banco `bdversusv2`, schema
+  `public` (`pg_available_extensions`: `vector | 0.8.6 | 0.8.6`, segundo o suporte). Compilado a
+  partir do código-fonte oficial para o PostgreSQL 14.24 do Ubuntu, porque o pacote PGDG não é
+  compatível com ele.
+- **Superusuário é necessário para `CREATE EXTENSION`**; o usuário `app` não consegue. Como a
+  extensão já existe, a migration `1400` (`CREATE EXTENSION IF NOT EXISTS vector`) apenas segue
+  adiante, sem exigir privilégio. O suporte testou tipo `vector`, operadores de distância e índices
+  HNSW/IVFFlat com o usuário `app`.
+- **Sem reinício** do PostgreSQL e sem indisponibilidade; nenhum outro banco foi alterado.
+- **Atualização do pgvector não é automática**: exige novo pedido ao suporte.
+
+Ainda não confirmado de forma independente por consulta nossa após a instalação; repetir a
+consulta acima em produção (somente leitura) antes do deploy `full`.
+
+## Limites
+
+- O ensaio provou migration, isolamento e rollback em PostgreSQL 14 e 16 com pgvector. Não
+  provou desempenho, custo de embeddings nem o comportamento no servidor de **produção**.
+- Pendente antes de mesclar/publicar: decisão de modelo e orçamento de embeddings (sugestão:
+  `text-embedding-3-small`, 1536 dimensões nativas, chave dedicada com limite mensal de gasto,
+  primeira onda só `product_help`) e backup do banco antes do deploy `full`.
+- As migrations só rodam no deploy `full`; o `quick` publicaria o código sem as tabelas. A
+  funcionalidade permanece desligada por padrão (`KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED`).

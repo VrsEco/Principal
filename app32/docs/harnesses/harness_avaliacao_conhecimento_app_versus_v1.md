@@ -196,3 +196,14 @@ python -m pytest `
   .\app32\tests\test_core_mcp_knowledge_tools.py `
   -q -p no:cacheprovider
 ```
+
+## Suíte esqueleto pgvector e governança RAG
+
+- `tests/test_knowledge_rag_governance.py`: cross-tenant FTS, tenant ausente, grants
+  user/colaborador, fonte expirada/removida, drift fonte↔chunk, prompt injection inerte,
+  `versus_internal` recusado, paridade de surfaces/RBAC e congelamento do Chroma legado.
+- `tests/test_knowledge_vector_skeleton.py`: flag desligada, fallback de plano, statement
+  vetorial filtrado antes do `ORDER BY`, contratos da migration `20260924_1400`.
+- Integração PG/pgvector (skip sem `APP32_KNOWLEDGE_VECTOR_TEST_DATABASE_URL`): isolamento por
+  tenant na consulta vetorial e ida-e-volta de upgrade/downgrade em cluster descartável.
+- Execução: `python -m pytest tests/test_knowledge_*.py -p no:flask`.
