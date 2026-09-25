@@ -375,3 +375,38 @@ def test_vector_provider_failure_falls_back_to_full_text_without_leaking_error(r
     assert [h["source_ref"] for h in result["results"]] == ["lex"]
     assert "vector_retrieval_failed" in result["warnings"]
     assert "chave-secreta" not in repr(result)
+
+
+def test_hybrid_keeps_full_text_order_and_only_rescues_above_min_similarity(rag_app):
+    lexical, semantic = _seed_two_chunks()
+    unrelated = _source(1, "off", "Politica de ferias e beneficios.")
+    db.session.add(unrelated)
+    db.session.commit()
+
+    def fetcher(plan, spec, embedding, *, user_id, employee_id):
+        # vizinho fraco (abaixo do limiar) nunca entra; o forte entra depois do FTS
+        return [
+            (unrelated, unrelated.chunks[0], 0.20),
+            (semantic, semantic.chunks[0], 0.80),
+            (lexical, lexical.chunks[0], 0.99),
+        ]
+
+    result = _hybrid_service(fetcher).search("reembolso viagens", company_id=1, strategy="hybrid")
+    assert [h["source_ref"] for h in result["results"]] == ["lex", "sem"]
+
+
+def test_hybrid_never_abstains_when_full_text_finds_something(rag_app):
+    _seed_two_chunks()
+    full_text = _search("reembolso viagens", 1, strategy="full_text")
+    hybrid = _hybrid_service(lambda *a, **k: []).search("reembolso viagens", company_id=1, strategy="hybrid")
+    assert [h["source_ref"] for h in hybrid["results"]] == [h["source_ref"] for h in full_text["results"]]
+
+
+def test_hybrid_returns_nothing_for_low_similarity_neighbour_when_full_text_is_empty(rag_app):
+    _, semantic = _seed_two_chunks()
+
+    def fetcher(plan, spec, embedding, *, user_id, employee_id):
+        return [(semantic, semantic.chunks[0], 0.12)]
+
+    result = _hybrid_service(fetcher).search("orcamento anual xpto", company_id=1, strategy="hybrid")
+    assert result["results"] == []
