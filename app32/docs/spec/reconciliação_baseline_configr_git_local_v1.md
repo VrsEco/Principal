@@ -65,13 +65,24 @@ Evidência histórica; revalidar antes de cada release.
 - Decisão de custo aprovada pelo operador (a executar somente ao habilitar): `text-embedding-3-small` (1536 dimensões nativas, compatível com `vector(1536)`), primeira onda limitada a `product_help`, chave da OpenAI dedicada com limite mensal de gasto definido no painel do provedor (sugestão US$ 10), `KNOWLEDGE_EMBEDDING_PRICE_PER_MILLION_USD` para estimar custo. Estimativa: corpus da primeira onda de cerca de 3,6 mil tokens (custo de indexação desprezível); custo recorrente dominado pelas consultas. Os preços por milhão de tokens devem ser conferidos na página do provedor no momento da habilitação.
 - Antes de habilitar: comparar precisão contra o golden set com a flag ligada em empresa de teste (SPEC do RAG). O agente não manipula a chave da OpenAI.
 
-### Pendências abertas (após o #1467)
+### Pendências abertas (após o #1467; o item 1 foi atualizado depois, ver "Atualização após o #41")
 
-1. Habilitação do RAG (chave dedicada, variáveis `KNOWLEDGE_*`, empresa piloto, golden set); backfill apenas com simulação primeiro e `--max-chunks` pequeno. **Só configuração não basta:** em runtime `KnowledgeQueryService()` é criado sem provedor de embeddings (recua para busca textual com `embedding_provider_missing`) e a atualização automática não gera embeddings; falta um PR que injete o provedor. Plano e ordem no runbook `runbook_pgvector_banco_teste_conhecimento_v1.md`, seção "Plano de habilitação em produção".
+1. Habilitação do RAG (chave dedicada, variáveis `KNOWLEDGE_*`, empresa piloto, golden set); backfill apenas com simulação primeiro e `--max-chunks` pequeno. **Só configuração não bastava** na `main` daquele momento: `KnowledgeQueryService()` era criado sem provedor de embeddings e a atualização automática não gera embeddings. O provedor foi ligado depois, pelo #41. Plano e ordem no runbook `runbook_pgvector_banco_teste_conhecimento_v1.md`, seção "Plano de habilitação em produção".
 2. **Não** executar `git rm --cached` nos arquivos do ChromaDB (`app32/data/chroma_db*`, `data/chroma_db/chroma.sqlite3`): `src/intelligence/rag.py` lê `./data/chroma_db` em runtime e o próximo deploy apagaria os arquivos do servidor. Decidir antes o destino desses dados.
 3. Aposentar o checkout legado (`codex/root-reconciled-20260923`, clone raso e com objeto ausente no `fsck`) com aprovação do operador, mantendo o backup externo; usar um clone completo e limpo de `main` como ponto de partida.
 4. Avisos do Actions: `actions/checkout@v4` e `actions/setup-python@v5` ainda rodam forçados em Node 24; migrar as versões quando conveniente.
 5. Continuam **não verificados**: validação visual dos gráficos, equivalência de banco (além da versão de migração e das tabelas do RAG), arquivos ignorados, nginx, dependências do host e a origem exata do dump de backup.
+
+### Atualização após o #41 (25/09/2026)
+
+Evidência histórica; revalidar antes de cada release.
+
+- **#40** (plano de habilitação do RAG e lacuna de código) e **#41** (provedor de embeddings ligado ao runtime, desligado por padrão) mesclados; `main` = `8e13d50cfcd35efd5d9bf3172e7cfc40c72abf16`. Sem migrações e sem mudança de dependências.
+- Run #1468 (`quick`, `restart_mcp=true`, `ubuntu-24.04`) publicou esse SHA: https://github.com/VrsEco/Principal/actions/runs/36156799209. Migrações preservadas no modo `quick`; MCP reiniciado (novo PID) e `/mcp/healthz` respondeu. O run saiu de um clique acidental do operador, com os parâmetros do plano aprovado, e passou pelo gate `production`.
+- Inventário somente leitura #1469: https://github.com/VrsEco/Principal/actions/runs/36157295654. `HEAD` = `8e13d50cfcd35efd5d9bf3172e7cfc40c72abf16`, `TREE` = `3e6513197105489d36b8668c423385bea6a41a9b` (idêntico ao tree do commit no Git), `status`, `unstaged` e `staged` vazios. As mesmas limitações do #1458 se aplicam.
+- **Estado do RAG:** código completo em produção e **desligado**; sem nenhuma variável `KNOWLEDGE_*` no servidor, a fábrica devolve `None` e a busca segue textual. Para habilitar (passos do operador, ver o runbook): projeto dedicado no provedor com limite mensal; chave em `KNOWLEDGE_OPENAI_API_KEY` (tem precedência sobre `OPENAI_API_KEY`, que outras funções do app podem usar); `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED`, `KNOWLEDGE_EMBEDDING_MODEL`, `KNOWLEDGE_EMBEDDING_VERSION`, `KNOWLEDGE_EMBEDDING_INDEX_GENERATION`; piloto por empresa em `KNOWLEDGE_VECTOR_PILOT_COMPANY_IDS`; backfill manual (a atualização automática não gera embeddings). Com tudo ligado, cada pergunta envia o texto ao provedor de embeddings.
+- **Legado:** triagem read-only em `C:\GestaoVersus\reconciliation-backups\triagem-legado-20260925\TRIAGEM-legado.md` (36 branches sem cópia no GitHub; 31 com patches únicos). O checkout legado hospeda 151 worktrees e não deve ser removido antes da triagem por branch.
+- Continuam **não verificados**: validação visual dos gráficos, equivalência de banco além da versão de migração e das tabelas do RAG, arquivos ignorados, nginx, dependências do host e a origem exata do dump de backup #299.
 
 ## Limites e atualização
 
