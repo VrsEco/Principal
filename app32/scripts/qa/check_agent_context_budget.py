@@ -15,6 +15,11 @@ MANDATORY_FILES = {
     ".agent/router/routing-matrix.md": 400,
 }
 SPEC_PATH = "docs/spec/politica_orcamento_contexto_v1.md"
+SQUAD_PROMPTS = (
+    ".ai/codex-squad-engenharia.md",
+    ".ai/claude-squad-cliente.md",
+    ".ai/antigravity-squad-versus.md",
+)
 WORD_RE = re.compile(r"\S+")
 HEADING_RE = re.compile(r"(?m)^#{1,6}\s+(.+?)\s*$")
 
@@ -54,6 +59,13 @@ def audit(root: Path) -> dict[str, Any]:
     core = root / ".agent/skills/gestao_versus_core/SKILL.md"
     if core.is_file() and SPEC_PATH not in core.read_text(encoding="utf-8"):
         violations.append({"file": str(core.relative_to(root)), "rule": "spec_reference", "message": "skill não referencia a SPEC canônica"})
+
+    for relative_path in SQUAD_PROMPTS:
+        path = root / relative_path
+        if not path.is_file():
+            violations.append({"file": relative_path, "rule": "squad_prompt", "message": "prompt de Squad ausente"})
+        elif SPEC_PATH not in path.read_text(encoding="utf-8"):
+            violations.append({"file": relative_path, "rule": "squad_spec_reference", "message": "prompt não referencia a SPEC canônica"})
 
     return {
         "ok": not violations,
