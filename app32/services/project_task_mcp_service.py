@@ -211,7 +211,9 @@ class ProjectTaskMCPService:
         task_id: int,
         changes: dict[str, Any],
     ) -> tuple[dict[str, Any] | None, str | None]:
-        normalized_changes = dict(changes or {})
+        if not isinstance(changes, dict) or not changes:
+            return None, "Atualização exige um objeto não vazio."
+        normalized_changes = dict(changes)
         invalid_fields = sorted(set(normalized_changes) - ProjectTaskMCPService.UPDATE_ALLOWED_FIELDS)
         if invalid_fields:
             return None, f"Campos não permitidos na atualização MCP: {', '.join(invalid_fields)}"
@@ -219,6 +221,30 @@ class ProjectTaskMCPService:
         max_fields = _coerce_positive_int(os.environ.get("APP32_MCP_MAX_UPDATE_FIELDS"), 6)
         if len(normalized_changes) > max_fields:
             return None, f"Atualização excede o limite seguro de {max_fields} campos por operação."
+
+        for field, allowed in {
+            "status": {"planned", "in_progress", "completed", "cancelled"},
+            "stage": {"inbox", "waiting", "executing", "pending", "suspended", "completed"},
+            "priority": {"low", "normal", "high", "urgent"},
+        }.items():
+            if field in normalized_changes:
+                value = normalized_changes[field]
+                if not isinstance(value, str) or value.strip() not in allowed:
+                    return None, f"Valor inválido para {field}."
+                normalized_changes[field] = value.strip()
+        if "task_name" in normalized_changes:
+            value = normalized_changes["task_name"]
+            if not isinstance(value, str) or not value.strip():
+                return None, "Nome da atividade não pode ser vazio."
+        if "status" in normalized_changes and "stage" in normalized_changes:
+            if (normalized_changes["status"] == "completed") != (normalized_changes["stage"] == "completed"):
+                return None, "Status e etapa de conclusão incompatíveis."
+        # Validate dates before touching the ORM object: a rejected payload must
+        # not leave dirty attributes that a later operation could commit.
+        if "due_date" in normalized_changes:
+            parsed_due_date, due_date_error = ProjectTaskService.parse_due_date(normalized_changes["due_date"])
+            if due_date_error:
+                return None, due_date_error
 
         task, error = ProjectTaskMCPService.get_task(company_id=company_id, task_id=task_id)
         if error:
@@ -234,9 +260,6 @@ class ProjectTaskMCPService:
         if "responsible_name" in normalized_changes:
             task.who = str(normalized_changes["responsible_name"]).strip() or None
         if "due_date" in normalized_changes:
-            parsed_due_date, due_date_error = ProjectTaskService.parse_due_date(normalized_changes.get("due_date"))
-            if due_date_error:
-                return None, due_date_error
             task.due_date = parsed_due_date
         if "description" in normalized_changes:
             task.how = str(normalized_changes["description"]).strip() or None
@@ -249,10 +272,18 @@ class ProjectTaskMCPService:
         if "stage" in normalized_changes:
             task.stage = str(normalized_changes["stage"]).strip() or task.stage
 
+        if normalized_changes.get("status") == "completed":
+            task.stage = "completed"
+        elif "status" in normalized_changes and task.stage == "completed":
+            task.stage = "executing" if task.status == "in_progress" else "inbox"
+        elif "stage" in normalized_changes and task.stage != "completed" and task.status == "completed":
+            task.status = "in_progress" if task.stage == "executing" else "planned"
         if task.stage == "completed":
             task.status = "completed"
             if task.completion_date is None:
                 task.completion_date = datetime.utcnow().date()
+        elif "stage" in normalized_changes or "status" in normalized_changes:
+            task.completion_date = None
 
         if task.project:
             task.project.update_progress()
