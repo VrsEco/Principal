@@ -138,15 +138,59 @@ O suporte do Configr respondeu no mesmo dia:
 - **Sem reinício** do PostgreSQL e sem indisponibilidade; nenhum outro banco foi alterado.
 - **Atualização do pgvector não é automática**: exige novo pedido ao suporte.
 
-Ainda não confirmado de forma independente por consulta nossa após a instalação; repetir a
-consulta acima em produção (somente leitura) antes do deploy `full`.
+Confirmado depois por consulta própria, somente leitura, em produção (25/09/2026):
+`vector | 0.8.6 | 0.8.6` em `bdversusv2`.
+
+## Estado em produção (25/09/2026, após o deploy `full` #1466)
+
+- PR #34 mesclado e publicado; migrações `20260924_1400` e `1500` aplicadas em `bdversusv2`
+  (`alembic_version = 20260924_1500`; tabelas `knowledge_chunk_embeddings` e
+  `knowledge_embedding_usage_events` criadas). Backup manual #299 antes do deploy.
+- A funcionalidade está **desligada**: sem `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED` e sem variáveis
+  `KNOWLEDGE_*` ou chave de embeddings no servidor.
+
+## Plano de habilitação em produção (não executado)
+
+**Lacunas de código que impedem a habilitação apenas por configuração** (verificadas em
+`origin/main`, `804678278`):
+
+1. **Nenhum provedor de embeddings é injetado em runtime.** `KnowledgeQueryService()` é criado sem
+   `embedding_provider` em `src/core/mcp_knowledge_tools.py`, `src/intelligence/knowledge_tools.py`
+   e `services/knowledge/interaction_service.py`. Sem provedor, a recuperação recua para busca
+   textual (`embedding_provider_missing`). Ligar a flag e a chave não altera a resposta. É preciso
+   um PR que crie o provedor a partir da configuração (flag ligada, modelo/versão/geração e chave
+   presentes; caso contrário `None`) e o injete de forma única nesses pontos, com tempo limite e
+   número de tentativas explícitos (hoje o `OpenAIEmbeddingProvider` usa os padrões do cliente) e
+   falha fechada para busca textual.
+2. **A atualização automática não gera embeddings.** `services/knowledge/auto_update_service.py`
+   não referencia embeddings; trechos novos ou alterados ficam sem vetor (o checksum obsoleto é
+   descartado com segurança) até alguém rodar `scripts/knowledge_embedding_backfill.py`. Decidir
+   entre rodar o backfill após cada atualização ou integrá-lo ao serviço.
+3. **Índice vetorial.** A migração `1400` não cria índice HNSW; ele só entra após medição no golden
+   set (piloto). Com o corpus atual (cerca de 3,6 mil tokens) a busca exata basta.
+
+**Passos, na ordem** (cada um exige aprovação do operador; o agente não manipula a chave):
+
+1. Implementar e testar a lacuna 1 (PR próprio, testes com provedor falso; sem rede nem chave).
+2. Operador cria, no painel do provedor, um projeto dedicado com **limite mensal de gasto**
+   (sugestão US$ 10) e uma chave própria; grava a chave no `.env` do servidor. Definir
+   `KNOWLEDGE_EMBEDDING_MODEL=text-embedding-3-small`, `KNOWLEDGE_EMBEDDING_VERSION=v1`,
+   `KNOWLEDGE_EMBEDDING_INDEX_GENERATION=1` e `KNOWLEDGE_EMBEDDING_PRICE_PER_MILLION_USD` (conferir
+   o preço vigente no provedor). **Não** ligar ainda `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED`.
+3. Simulação: `python scripts/knowledge_embedding_backfill.py` (não chama o provedor). Depois
+   `--execute --max-chunks 5` e conferir os tokens e o custo estimado em
+   `knowledge_embedding_usage_events` e em `knowledge_index_runs.metadata_json`.
+4. Backfill completo da primeira onda (`product_help`), depois de conferir o custo do passo 3.
+5. Ligar `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED=true`, reiniciar o web e o MCP e validar em empresa
+   piloto, comparando a precisão com o golden set (`knowledge/golden_sets/`) contra a busca
+   textual. Só então decidir o índice HNSW e a ampliação para outras fontes.
+6. **Reversão:** desligar a flag e reiniciar volta à busca textual imediatamente. As tabelas podem
+   ficar; o `downgrade` das migrações remove só a projeção vetorial (ensaiado nesta máquina).
 
 ## Limites
 
-- O ensaio provou migration, isolamento e rollback em PostgreSQL 14 e 16 com pgvector. Não
-  provou desempenho, custo de embeddings nem o comportamento no servidor de **produção**.
-- Pendente antes de mesclar/publicar: decisão de modelo e orçamento de embeddings (sugestão:
-  `text-embedding-3-small`, 1536 dimensões nativas, chave dedicada com limite mensal de gasto,
-  primeira onda só `product_help`) e backup do banco antes do deploy `full`.
-- As migrations só rodam no deploy `full`; o `quick` publicaria o código sem as tabelas. A
-  funcionalidade permanece desligada por padrão (`KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED`).
+- O ensaio provou migration, isolamento e rollback em PostgreSQL 14 e 16 com pgvector, e a
+  migração já roda em produção. Não provou desempenho, custo real de embeddings nem o efeito da
+  recuperação vetorial sobre a qualidade das respostas.
+- Habilitar exige o código do passo 1 do plano; sem ele a flag não tem efeito.
+- Atualizações do pgvector exigem novo pedido ao suporte do Configr.

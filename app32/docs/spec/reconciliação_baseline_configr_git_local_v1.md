@@ -67,7 +67,7 @@ Evidência histórica; revalidar antes de cada release.
 
 ### Pendências abertas (após o #1467)
 
-1. Habilitação do RAG (chave dedicada, variáveis `KNOWLEDGE_*`, empresa piloto, golden set); backfill apenas com simulação primeiro e `--max-chunks` pequeno.
+1. Habilitação do RAG (chave dedicada, variáveis `KNOWLEDGE_*`, empresa piloto, golden set); backfill apenas com simulação primeiro e `--max-chunks` pequeno. **Só configuração não basta:** em runtime `KnowledgeQueryService()` é criado sem provedor de embeddings (recua para busca textual com `embedding_provider_missing`) e a atualização automática não gera embeddings; falta um PR que injete o provedor. Plano e ordem no runbook `runbook_pgvector_banco_teste_conhecimento_v1.md`, seção "Plano de habilitação em produção".
 2. **Não** executar `git rm --cached` nos arquivos do ChromaDB (`app32/data/chroma_db*`, `data/chroma_db/chroma.sqlite3`): `src/intelligence/rag.py` lê `./data/chroma_db` em runtime e o próximo deploy apagaria os arquivos do servidor. Decidir antes o destino desses dados.
 3. Aposentar o checkout legado (`codex/root-reconciled-20260923`, clone raso e com objeto ausente no `fsck`) com aprovação do operador, mantendo o backup externo; usar um clone completo e limpo de `main` como ponto de partida.
 4. Avisos do Actions: `actions/checkout@v4` e `actions/setup-python@v5` ainda rodam forçados em Node 24; migrar as versões quando conveniente.
