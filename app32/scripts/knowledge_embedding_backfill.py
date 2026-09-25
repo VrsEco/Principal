@@ -29,16 +29,26 @@ def main(argv: list[str] | None = None) -> int:
     load_dotenv()
     from app import create_app
     from services.knowledge.embedding_backfill_service import BackfillRefused, EmbeddingBackfillService
-    from services.knowledge.openai_embedding_provider import OpenAIEmbeddingProvider
+    from services.knowledge.openai_embedding_provider import OpenAIEmbeddingProvider, resolve_embedding_api_key
     from services.knowledge.retrieval_strategy import VectorRetrievalConfig
 
     config = VectorRetrievalConfig.from_env()
     if config.embedding is None:
         print("Configuração incompleta: defina a flag, modelo, versão e geração (ver docstring).", file=sys.stderr)
         return 2
-    embedder = OpenAIEmbeddingProvider(model=config.embedding.model).embed_many if args.execute else None
     app = create_app()
     with app.app_context():
+        embedder = None
+        if args.execute:
+            # Mesma ordem de chave do runtime: KNOWLEDGE_OPENAI_API_KEY, integrações do app, OPENAI_API_KEY.
+            available, api_key = resolve_embedding_api_key()
+            if not available:
+                print(
+                    "Sem chave de embeddings (KNOWLEDGE_OPENAI_API_KEY, integrações do app ou OPENAI_API_KEY).",
+                    file=sys.stderr,
+                )
+                return 4
+            embedder = OpenAIEmbeddingProvider(model=config.embedding.model, api_key=api_key).embed_many
         try:
             report = EmbeddingBackfillService(embedder=embedder).run(
                 config.embedding, max_chunks=args.max_chunks, dry_run=not args.execute

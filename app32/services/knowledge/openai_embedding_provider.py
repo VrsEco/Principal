@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
-from typing import Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 
 from services.knowledge.embedding_usage import estimate_tokens
 from services.knowledge.retrieval_strategy import KNOWLEDGE_EMBEDDING_DIMENSIONS, VectorRetrievalConfig
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "text-embedding-3-small"  # 1536 dimensões, igual à projeção pgvector
 MAX_BATCH = 64
@@ -78,24 +81,63 @@ class OpenAIEmbeddingProvider:
         return vectors[0]
 
 
+def resolve_app_openai_key() -> str | None:
+    """Chave OpenAI configurada na tela de integrações do app (serviço `ai`), a mesma do restante do app.
+
+    Sem contexto de aplicação/banco (ou sem chave) devolve `None`; nunca levanta nem loga a chave.
+    """
+
+    try:
+        from utils.integration_settings import resolve_openai_api_key
+
+        return str(resolve_openai_api_key() or "").strip() or None
+    except Exception:  # noqa: BLE001 - sem app/banco não há chave; a recuperação cai para busca textual
+        logger.debug("knowledge embeddings: chave das integrações indisponível", exc_info=True)
+        return None
+
+
+def resolve_embedding_api_key(
+    environ: Mapping[str, str] | None = None,
+    *,
+    app_key_resolver: Callable[[], str | None] | None = None,
+) -> tuple[bool, str | None]:
+    """Escolhe a chave dos embeddings: `(há_chave, chave_explícita)`.
+
+    Ordem: `KNOWLEDGE_OPENAI_API_KEY` (dedicada), a chave das integrações do app (serviço `ai`, a
+    mesma que o restante do app usa) e, por fim, `OPENAI_API_KEY` (aí a chave explícita é `None` e o
+    SDK a lê sozinho). A consulta às integrações só ocorre sem chave dedicada.
+    """
+
+    env = os.environ if environ is None else environ
+    dedicated = str(env.get(DEDICATED_API_KEY_ENV, "")).strip()
+    if dedicated:
+        return True, dedicated
+    app_key = (app_key_resolver or resolve_app_openai_key)()
+    if app_key:
+        return True, app_key
+    return bool(str(env.get(API_KEY_ENV, "")).strip()), None
+
+
 def build_default_embedding_provider(
     environ: Mapping[str, str] | None = None,
+    *,
+    app_key_resolver: Callable[[], str | None] | None = None,
 ) -> OpenAIEmbeddingProvider | None:
     """Provedor de runtime a partir do ambiente; `None` (busca textual) se algo faltar.
 
-    Exige, juntos: flag ligada, modelo, versão e geração configurados e uma chave no ambiente
-    (`KNOWLEDGE_OPENAI_API_KEY` tem precedência sobre `OPENAI_API_KEY`). Nada é chamado aqui; o
-    SDK só é criado na primeira consulta.
+    Exige, juntos: flag ligada, modelo, versão e geração configurados e uma chave (ver
+    `resolve_embedding_api_key`). As integrações só são consultadas com tudo pronto. Nada é
+    chamado aqui; o SDK só é criado na primeira consulta.
     """
 
     env = os.environ if environ is None else environ
     config = VectorRetrievalConfig.from_env(env)
     if not config.ready or config.embedding is None:
         return None
-    dedicated = str(env.get(DEDICATED_API_KEY_ENV, "")).strip()
-    if not dedicated and not str(env.get(API_KEY_ENV, "")).strip():
+    available, api_key = resolve_embedding_api_key(env, app_key_resolver=app_key_resolver)
+    if not available:
         return None
-    return OpenAIEmbeddingProvider(model=config.embedding.model, api_key=dedicated or None)
+    return OpenAIEmbeddingProvider(model=config.embedding.model, api_key=api_key)
 
 
 __all__ = [
@@ -107,4 +149,6 @@ __all__ = [
     "MAX_BATCH",
     "OpenAIEmbeddingProvider",
     "build_default_embedding_provider",
+    "resolve_app_openai_key",
+    "resolve_embedding_api_key",
 ]
