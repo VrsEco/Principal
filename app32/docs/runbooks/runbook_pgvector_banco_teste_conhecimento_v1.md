@@ -180,10 +180,17 @@ Confirmado depois por consulta própria, somente leitura, em produção (25/09/2
 
 1. Publicar o código da lacuna 1 (PR do branch acima, 16 testes novos com o SDK simulado; sem rede
    nem chave) por deploy `quick` (não há migrações), com a flag ainda desligada.
-2. Operador cria, no painel do provedor, um projeto dedicado com **limite mensal de gasto**
-   (sugestão US$ 10) e uma chave própria; grava a chave no `.env` do servidor como
-   `KNOWLEDGE_OPENAI_API_KEY` (dedicada; tem precedência sobre `OPENAI_API_KEY`, que outras funções
-   do app podem já usar, e é a que o limite mensal do projeto realmente cobre). Definir
+2. **Chave.** O app já tem uma chave OpenAI funcionando, gerida na tela de integrações (serviço
+   `ai`); o mesmo resolvedor que o restante do app usa (`resolve_openai_api_key`, com o banco como
+   fonte) é agora consultado pelo runtime e pelo backfill, então **não é preciso criar outra chave
+   para começar**. Ordem: `KNOWLEDGE_OPENAI_API_KEY` (opcional, dedicada) > chave das integrações
+   do app > `OPENAI_API_KEY` do ambiente. Consequência: o limite mensal de gasto do projeto dessa
+   chave cobre o app inteiro. Para um teto só do conhecimento, o operador cria no painel do
+   provedor um projeto dedicado com **limite mensal** (sugestão US$ 10) e grava a chave no `.env`
+   do servidor como `KNOWLEDGE_OPENAI_API_KEY`. Trocar a chave nas integrações (desativar uma e
+   ativar outra) vale para o app e para o RAG sem novo deploy, mas o runtime consulta as
+   integrações uma vez por criação do serviço de consulta (uma leitura simples do banco por
+   pergunta enquanto a flag estiver ligada e não houver chave dedicada). Definir
    `KNOWLEDGE_EMBEDDING_MODEL=text-embedding-3-small`, `KNOWLEDGE_EMBEDDING_VERSION=v1`,
    `KNOWLEDGE_EMBEDDING_INDEX_GENERATION=1`, `KNOWLEDGE_VECTOR_PILOT_COMPANY_IDS=<ids da empresa
    piloto>` e `KNOWLEDGE_EMBEDDING_PRICE_PER_MILLION_USD` (conferir o preço vigente no provedor).
