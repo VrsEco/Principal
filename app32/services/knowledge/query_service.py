@@ -5,7 +5,8 @@ import uuid
 import logging
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Any, Callable, Iterable, Sequence
+from types import SimpleNamespace
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from sqlalchemy import and_, case, exists, func, or_, select
 
@@ -15,6 +16,7 @@ from services.knowledge.retrieval_strategy import (
     DEFAULT_STRATEGIES,
     EvidenceOrigin,
     HybridRankingPolicy,
+    STRATEGY_FULL_TEXT,
     STRATEGY_HYBRID,
     STRATEGY_VECTOR,
     VectorRetrievalConfig,
@@ -404,6 +406,96 @@ class KnowledgeQueryService:
             "query_plan": plan.to_dict(),
         }
 
+    def candidates(
+        self,
+        question: str,
+        *,
+        company_id: int | None,
+        limit: int = 5,
+        require_company: bool = True,
+        user_id: int | None = None,
+        employee_id: int | None = None,
+        include_product: bool = True,
+    ) -> dict[str, Any]:
+        """Diagnóstico do A/B: candidatos BRUTOS do caminho de resposta, FTS e vetor separados.
+
+        Antes de limiar, descarte técnico e fusão, com a similaridade de cada trecho vetorial. Com isso
+        `replay_answer` refaz a resposta para qualquer peso/limiar sem nova consulta nem embedding.
+        """
+
+        normalized_question, plan = self.build_plan(
+            question,
+            company_id=company_id,
+            answer_source_limit=limit,
+            require_company=require_company,
+            query_kind="answer",
+            include_product=include_product,
+            strategy=STRATEGY_HYBRID,
+        )
+        terms = self._query_terms(normalized_question)
+        fts_rows = self._search_rows(
+            normalized_question, terms=terms, plan=plan, user_id=user_id, employee_id=employee_id
+        )
+        vector_rows = (
+            self._vector_rows(normalized_question, plan=plan, user_id=user_id, employee_id=employee_id)
+            if STRATEGY_HYBRID in plan.strategies
+            else []
+        )
+
+        def dump(rows):
+            return [
+                dict(self._serialize_hit(source, chunk, score=float(score or 0)), chunk_id=chunk.id)
+                for source, chunk, score in rows
+            ]
+
+        return {
+            "normalized_question": normalized_question,
+            "candidate_limit": plan.candidate_limit,
+            "answer_source_limit": plan.answer_source_limit,
+            "fallback_reason": plan.fallback_reason,
+            "fts": dump(fts_rows),
+            "vector": dump(vector_rows),
+        }
+
+    def replay_answer(
+        self,
+        candidates: Mapping[str, Any],
+        *,
+        strategy: str,
+        min_similarity: float,
+        vector_weight: float,
+        solo_min_similarity: float | None = None,
+    ) -> list[dict[str, Any]]:
+        """Refaz a seleção de `answer()` sobre o que `candidates()` gravou (sem banco nem provedor)."""
+
+        question = candidates["normalized_question"]
+        by_id: dict[Any, dict[str, Any]] = {}
+
+        def rows(items):
+            out = []
+            for hit in items:
+                by_id[hit["chunk_id"]] = hit
+                out.append(
+                    (SimpleNamespace(source_type=hit["source_type"]), SimpleNamespace(id=hit["chunk_id"]), float(hit["score"] or 0))
+                )
+            return out
+
+        fts_rows, vector_rows = rows(candidates["fts"]), rows(candidates["vector"])
+        if strategy == STRATEGY_FULL_TEXT:
+            fused, _ = self._drop_technical_rows(question, fts_rows, [])
+        else:
+            fts_rows, vector_rows = self._drop_technical_rows(question, fts_rows, vector_rows)
+            fused = self._merge_hybrid(
+                fts_rows,
+                vector_rows,
+                SimpleNamespace(candidate_limit=candidates["candidate_limit"]),
+                min_similarity=min_similarity,
+                vector_weight=vector_weight,
+                solo_min_similarity=solo_min_similarity,
+            )
+        retrieved = [by_id[chunk.id] for _source, chunk, _score in fused[: candidates["answer_source_limit"]]]
+        return self._select_answer_hits(question, retrieved)
+
     def _retrieve(
         self,
         question: str,
@@ -439,7 +531,7 @@ class KnowledgeQueryService:
         if drop_technical:
             fts_rows, vector_rows = self._drop_technical_rows(question, fts_rows, vector_rows)
         config = self._vector_config or VectorRetrievalConfig.from_env()
-        return self._merge_hybrid(fts_rows, vector_rows, plan, min_similarity=config.min_similarity, vector_weight=config.rrf_vector_weight), []
+        return self._merge_hybrid(fts_rows, vector_rows, plan, min_similarity=config.min_similarity, vector_weight=config.rrf_vector_weight, solo_min_similarity=config.solo_min_similarity), []
 
     def _vector_rows(
         self,
@@ -519,12 +611,15 @@ class KnowledgeQueryService:
         *,
         min_similarity: float = 0.0,
         vector_weight: float = 1.0,
+        solo_min_similarity: float | None = None,
     ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
-        """Reciprocal Rank Fusion entre FTS e vetor (sem pesos a calibrar).
+        """Reciprocal Rank Fusion entre FTS e vetor (peso do vetor configurável; 1 = mesmo peso).
 
         Só entram do vetor os candidatos com similaridade >= limiar (o vizinho mais próximo sem
-        relação nunca vira resposta). Quem aparece nas duas listas sobe; empate desfaz pela ordem
-        do FTS. Ambos vêm do mesmo universo já autorizado. O score devolvido é o score RRF.
+        relação nunca vira resposta). `solo_min_similarity` (opcional, maior) vale só para quem o FTS
+        não trouxe: sem confirmação lexical exige-se mais. Quem aparece nas duas listas sobe; empate
+        desfaz pela ordem do FTS, então com peso 1 o 1º do FTS só cai para um trecho que as duas listas
+        trazem. Ambos vêm do mesmo universo já autorizado. O score devolvido é o score RRF.
         """
 
         k = self._RRF_K
@@ -532,8 +627,14 @@ class KnowledgeQueryService:
         for rank, (source, chunk, _score) in enumerate(fts_rows, start=1):
             entry = fused.setdefault(chunk.id, {"row": (source, chunk), "fts_rank": rank, "score": 0.0})
             entry["score"] += 1.0 / (k + rank)
+        fts_ids = {chunk.id for _source, chunk, _score in fts_rows}
+        solo_floor = max(min_similarity, solo_min_similarity or 0.0)
         eligible = sorted(
-            (row for row in vector_rows if float(row[2] or 0) >= min_similarity),
+            (
+                row
+                for row in vector_rows
+                if float(row[2] or 0) >= (min_similarity if row[1].id in fts_ids else solo_floor)
+            ),
             key=lambda row: -float(row[2] or 0),
         )
         for rank, (source, chunk, _similarity) in enumerate(eligible, start=1):

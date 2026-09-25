@@ -267,3 +267,35 @@ Configuração adotada no `.env` do servidor (deploy #1477, quick com restart do
 Perguntas fora do escopo (esperado `-`) com essa configuração: 3 de 4 abstêm (tempo, passagem aérea, futebol); "folha de pagamento" ainda recebe "Lançar conta a pagar" (similaridade 0,49, domínio vizinho). Limitação conhecida: subir o limiar para 0,50 a eliminaria, mas cortaria acertos entre 0,41 e 0,49.
 
 Limites da evidência: amostra de 36 perguntas escritas pela engenharia; o híbrido acerta cerca de dois terços. Antes de ampliar o piloto: 30 ou mais perguntas reais de usuários da empresa 9 sem o híbrido perder para o full_text. Próxima alavanca: qualidade dos artigos (as telas de navegação são curtas), não mais calibração. Reversão: remover as linhas `KNOWLEDGE_VECTOR_RRF_WEIGHT` e `KNOWLEDGE_VECTOR_MIN_SIMILARITY` (voltam a 1.0 e 0,40) ou a flag `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED` (volta ao full_text), e deploy quick com restart do MCP.
+
+## Perguntas reais e troca do peso para 1 (25/09/2026, ajuste fino)
+
+Fonte de perguntas reais: `knowledge_interactions`. Na empresa 9 havia só 8 perguntas distintas, nenhuma avaliada pelo usuário e algumas vindas de testes da engenharia. A regra de 30 ou mais perguntas reais depende de coleta ativa (formulário para usuários da empresa 9, escrito sem mostrar os títulos dos artigos); essas perguntas servem só para validar, nunca para escrever conteúdo. Exportação somente leitura: `python scripts/knowledge_interactions_export.py --company-id 9 --out /tmp/perguntas.tsv` (esperado preenchido só quando a avaliação foi `correct`; o resto é para curadoria humana).
+
+Mecânica do peso RRF (k=60): o 1º de cada lista vale peso/61. Com peso > 1, o 1º do vetor sempre supera o 1º do FTS quando o vetor não traz o mesmo trecho; com peso 1 há empate e o FTS vence no desempate. Na prática o peso decide quem manda no 1º lugar quando as listas discordam.
+
+Medição com as 7 perguntas reais + 5 do golden set (limiar 0,45):
+
+| | full_text | hybrid peso 2 | hybrid peso 1 |
+|---|---|---|---|
+| Reais (12) | 9 | 10 | 11 |
+| Sintéticas (36, do conjunto ampliado) | 20 | 24 | 21 |
+| Perguntas em que o hybrid fica pior que o full_text | — | 2 ("lançamento financeiro" vira Conciliação bancária) | 0 |
+
+Decisão: **peso 1**. O peso 2 foi escolhido nas paráfrases sintéticas (que favorecem o vetor) e troca respostas certas do FTS em perguntas reais, que usam o vocabulário do produto. Com peso 1, o 1º do FTS só é trocado por um trecho que as duas listas trazem, ou quando o FTS não acha nada. Ação do operador: no `.env` do servidor, `KNOWLEDGE_VECTOR_RRF_WEIGHT=1` (limiar 0,45 mantido) e o mesmo deploy quick com restart do MCP.
+
+Erros restantes no peso 1: resgates só do vetor quando o FTS não acha nada (ex.: "transferir entre contas" e "automatizar regras" recebem "Lançar conta a pagar"). Para esses existe `KNOWLEDGE_VECTOR_SOLO_MIN_SIMILARITY` (opcional, vazio = desligado): limiar maior só para trechos que o FTS não trouxe. Ele não resolve "folha de pagamento", porque o FTS também traz o artigo (pelo radical de "pagamento"); o caminho para temas fora do produto é um artigo de fronteira ("não fazemos X; faça Y").
+
+### Calibração offline (sem repetir consultas)
+
+1. No servidor, grave os candidatos brutos do caminho de resposta (FTS e vetor, com a similaridade de cada trecho):
+
+   `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED=true FLASK_CONFIG=production APP_BOOTSTRAP_DB_SCHEMA=0 APP_BOOTSTRAP_RUNTIME_SERVICES=0 python scripts/knowledge_strategy_ab.py --company-id 9 --questions X.tsv --mode candidates --out /tmp/cand.json`
+
+2. Refaça a resposta para uma grade de peso, limiar e limiar só-vetor, sem app, sem banco e sem embeddings (`off` = desligado):
+
+   `python scripts/knowledge_strategy_ab.py --replay /tmp/cand.json --weights 1,2 --min-sims 0.40,0.45 --solo-mins off,0.50,0.55`
+
+O replay usa as mesmas funções do `answer()` (descarte técnico, fusão RRF e seleção), e um teste garante que a resposta refeita é igual à real. Validação na primeira vez: a linha `peso 1 lim 0.45 solo off` deve bater com o A/B de peso 1 do mesmo arquivo de perguntas.
+
+Um arquivo passado em `--questions` ou `--cases` que não existe agora é erro. Antes era ignorado em silêncio, e a rodada media só o golden set.

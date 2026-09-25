@@ -315,11 +315,11 @@ def test_legacy_chroma_importers_are_frozen_to_the_known_set():
 
 # --- Recuperação híbrida (provedor injetado; produção não injeta nenhum) ----------
 
-def _hybrid_service(fetcher, provider=lambda q: [0.1, 0.2]):
+def _hybrid_service(fetcher, provider=lambda q: [0.1, 0.2], **config_overrides):
     from services.knowledge import retrieval_strategy as rs
 
     config = rs.VectorRetrievalConfig(
-        enabled=True, embedding=rs.EmbeddingSpec("m", "v1", 1, dimensions=2)
+        enabled=True, embedding=rs.EmbeddingSpec("m", "v1", 1, dimensions=2), **config_overrides
     )
     return KnowledgeQueryService(
         embedding_provider=provider, vector_config=config, vector_fetcher=fetcher
@@ -393,6 +393,19 @@ def test_hybrid_keeps_full_text_order_and_only_rescues_above_min_similarity(rag_
 
     result = _hybrid_service(fetcher).search("reembolso viagens", company_id=1, strategy="hybrid")
     assert [h["source_ref"] for h in result["results"]] == ["lex", "sem"]
+
+
+def test_solo_min_similarity_abstains_on_vector_only_neighbour_but_keeps_fts_confirmed(rag_app):
+    lexical, semantic = _seed_two_chunks()
+
+    def fetcher(plan, spec, embedding, *, user_id, employee_id):
+        return [(semantic, semantic.chunks[0], 0.49), (lexical, lexical.chunks[0], 0.47)]
+
+    # sem limiar solo: o vizinho 0.49 (só vetor) é resgatado; com solo 0.55 ele sai, o confirmado pelo FTS fica
+    open_refs = [h["source_ref"] for h in _hybrid_service(fetcher).search("reembolso viagens", company_id=1, strategy="hybrid")["results"]]
+    strict = _hybrid_service(fetcher, solo_min_similarity=0.55).search("reembolso viagens", company_id=1, strategy="hybrid")
+    assert "sem" in open_refs
+    assert [h["source_ref"] for h in strict["results"]] == ["lex"]
 
 
 def test_hybrid_never_abstains_when_full_text_finds_something(rag_app):
@@ -491,3 +504,33 @@ def test_rrf_vector_weight_lets_a_confident_vector_hit_outrank_a_weak_lexical_on
     heavy = build(2.0).search("reembolso viagens", company_id=1, limit=3, strategy="hybrid")
     assert [h["source_ref"] for h in equal["results"]] == ["lex", "sem"]  # empate: vale a ordem do FTS
     assert [h["source_ref"] for h in heavy["results"]] == ["sem", "lex"]
+
+
+def test_replay_answer_reproduces_answer_for_each_config(rag_app):
+    """O replay offline (A/B) tem de dar a MESMA resposta que answer() em cada peso/limiar/estratégia."""
+    from services.knowledge import retrieval_strategy as rs
+
+    lexical, semantic = _seed_two_chunks()
+
+    def fetcher(plan, spec, embedding, *, user_id, employee_id):
+        # só o vetor traz "sem": peso > 1 faz ele passar o 1º do FTS; peso 1 empata e o FTS vence
+        return [(semantic, semantic.chunks[0], 0.80)]
+
+    recorded = _hybrid_service(fetcher).candidates("reembolso viagens", company_id=1)
+    assert [h["source_ref"] for h in recorded["vector"]] == ["sem"]
+    assert recorded["vector"][0]["score"] == 0.8
+
+    seen = set()
+    for weight, min_sim, solo in [(1.0, 0.4, None), (2.0, 0.4, None), (2.0, 0.9, None), (2.0, 0.4, 0.85)]:
+        service = _hybrid_service(fetcher, min_similarity=min_sim, rrf_vector_weight=weight, solo_min_similarity=solo)
+        for strategy in ("full_text", "hybrid"):
+            live = [c["source_ref"] for c in service.answer("reembolso viagens", company_id=1, strategy=strategy)["citations"]]
+            replayed = [
+                h["source_ref"]
+                for h in service.replay_answer(
+                    recorded, strategy=strategy, min_similarity=min_sim, vector_weight=weight, solo_min_similarity=solo
+                )
+            ]
+            assert replayed == live, (weight, min_sim, solo, strategy)
+            seen.add(tuple(live))
+    assert ("lex",) in seen and any(refs[:1] == ("sem",) for refs in seen)  # a grade exercita os dois desfechos
