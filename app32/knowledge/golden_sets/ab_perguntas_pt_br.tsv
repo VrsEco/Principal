@@ -1,0 +1,11 @@
+# Perguntas para o A/B de estratégias (scripts/knowledge_strategy_ab.py).
+# Formato: pergunta<TAB>esperado1|esperado2   (esperado casa por source_ref exato ou trecho do título)
+# Esperado "-" = a resposta correta é a abstenção. Sem esperado = só compara as estratégias entre si.
+# Baseado nos artigos e nas entradas de navegação vistas em produção em 25/09/2026; revisar e ampliar.
+como faço um lançamento financeiro?	Lançamento Rápido|Lançar conta a pagar
+como lanço uma conta a pagar?	Lançar conta a pagar
+como faço uma conciliação bancária?	Realizar uma conciliação bancária
+onde vejo os títulos financeiros em aberto?	Consultar títulos financeiros em aberto
+como faço o faturamento mensal?
+como publico um processo no portal?
+como cadastro um projeto?	-

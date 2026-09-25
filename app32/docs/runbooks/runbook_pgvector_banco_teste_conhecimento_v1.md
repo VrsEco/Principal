@@ -205,11 +205,41 @@ Confirmado depois por consulta própria, somente leitura, em produção (25/09/2
 6. **Reversão:** desligar a flag e reiniciar volta à busca textual imediatamente. As tabelas podem
    ficar; o `downgrade` das migrações remove só a projeção vetorial (ensaiado nesta máquina).
 
+## Piloto em produção e avaliação A/B (25/09/2026)
+
+Estado: backfill do `product_help` executado pelo operador (76 de 76 trechos, `run_id` 131902 e
+131903, 10.891 tokens reais; o estimador da simulação subestima cerca de 1,8×), flag ligada e piloto
+na empresa 9. O catálogo `product_help` inclui as entradas de navegação compiladas do menu
+(`manual_catalog_compiler`), não só os arquivos JSON de `knowledge/product_help/`.
+
+Primeira comparação (2 perguntas, empresa 8 em busca textual × empresa 9 em híbrida, mesmo
+universo de fontes; dados de `knowledge_interactions`): "como faço um lançamento financeiro?" citou
+"Acessar Lançamento Rápido" na textual e "Realizar uma conciliação bancária" na híbrida (a textual
+foi a resposta mais direta); "como cadastro um projeto?" deu 0 citações nas duas. Amostra pequena:
+é um sinal, não uma prova.
+
+**Como decidir com dados:** `scripts/knowledge_strategy_ab.py` roda as mesmas perguntas em cada
+estratégia para uma empresa e compara a fonte citada com a esperada (acerto no 1º resultado, no
+top-k e MRR), listando as divergências. No servidor, a flag vale só para o processo:
+
+```text
+KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED=true FLASK_CONFIG=production APP_BOOTSTRAP_DB_SCHEMA=0 \
+APP_BOOTSTRAP_RUNTIME_SERVICES=0 <python do virtualenv> scripts/knowledge_strategy_ab.py --company-id 9
+```
+
+- Casos: o golden set (`knowledge/golden_sets/sapiens_fase1_product_help_pt_br.json`) mais
+  `knowledge/golden_sets/ab_perguntas_pt_br.tsv` (`pergunta<TAB>esperado1|esperado2`; esperado
+  `-` = a resposta correta é a abstenção; sem esperado = só compara as estratégias). Amplie o TSV
+  com as perguntas reais dos usuários antes de decidir.
+- Modo `answer` (padrão) mede o que o usuário vê; `--mode search` mede só o ranking. `--json` dá
+  a saída completa. Só lê; cada consulta híbrida registra 1 evento `query` (~10 tokens).
+- Regra sugerida: ampliar o piloto somente se, em pelo menos 30 perguntas com esperado, o híbrido
+  for igual ou melhor que a textual em acerto@1 e MRR. Se for pior, ajustar o ranking (por exemplo
+  mais peso ao textual, ou vetor apenas como reserva quando a busca textual vem vazia) ou desligar.
+
 ## Limites
 
 - O ensaio provou migration, isolamento e rollback em PostgreSQL 14 e 16 com pgvector, e a
-  migração já roda em produção. Não provou desempenho, custo real de embeddings nem o efeito da
-  recuperação vetorial sobre a qualidade das respostas.
-- Na `main` atual a flag ainda não tem efeito; só passa a ter depois de publicar o código do
-  passo 1 do plano (branch `codex/rag-embedding-provider-wiring`).
+  migração já roda em produção. O piloto provou que a busca vetorial executa e custa centavos de
+  milésimo; **ainda não provou ganho de qualidade** (ver a avaliação A/B acima).
 - Atualizações do pgvector exigem novo pedido ao suporte do Configr.
