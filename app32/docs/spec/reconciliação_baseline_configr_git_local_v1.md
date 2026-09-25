@@ -41,12 +41,37 @@ Evidência histórica; revalidar antes de cada release.
   - dado sensível, nunca commitar: `data/chroma_db/chroma.sqlite3`; e material de auditoria em `reconciliation-review/`, que não pertence ao produto.
 - Backup do estado local antes de qualquer alteração: cópia de 75 arquivos com hashes conferidos, armazenada fora do repositório (não incorporar ao Git).
 
-### Pendências para validação do Squad de Engenharia
+### Pendências para validação do Squad de Engenharia (posição após o #33; superadas pela "Atualização final" abaixo)
 
 1. **PR #34 (RAG/pgvector):** não mesclar nem publicar antes de ensaio em PostgreSQL de teste com a extensão pgvector (runbook `runbook_pgvector_banco_teste_conhecimento_v1.md`) e decisão sobre o custo de embeddings. A migração `20260924_1400` falha de forma segura sem a extensão. `KnowledgeEmbeddingUsageEvent` não está exportado em `models/__init__.py`; revisar. O ambiente de teste precisa de `OPENAI_API_KEY` (pode ser fictícia) para coletar alguns testes.
 2. **Quatro testes de UI já falham na `main` pura** e não vêm deste trabalho: `tests/test_sapiens_knowledge_ui.py` (2) e `tests/test_sapiens_widget_knowledge_ui.py` (2) leem `app32/static/js/...`, mas os assets agora ficam em `static/` na raiz. Tratar em tarefa separada.
 3. **Aposentar o checkout legado** somente após conferir o backup; criar novo ponto de partida limpo a partir de `main`.
 4. Validação visual dos gráficos e equivalência de banco, ignored e runtime continuam **não verificadas** neste registro.
+
+## Atualização final 25/09/2026 — RAG implantado e estado atual
+
+Evidência histórica; revalidar antes de cada release.
+
+- PRs mesclados depois do #33: #35 (esta SPEC), #36 (16 testes de UI/contrato passam a ler `static/` da raiz), #37 (remoção de 4 gitlinks órfãos `.codex_deploy_*`, que geravam o aviso "git exit code 128" no checkout do Actions) e #38 (runners fixados em `ubuntu-24.04`, antecipando a migração do `ubuntu-latest` em 19/10/2026). Run #1464 (`quick`, `restart_mcp=false`, runner `ubuntu-24.04`) publicou `a153de739188c130c1557266921c03921714f66d`: https://github.com/VrsEco/Principal/actions/runs/36146332630. Inventário #1465: `HEAD` igual ao SHA e status vazio: https://github.com/VrsEco/Principal/actions/runs/36146761445.
+- **Infraestrutura pgvector:** ticket Configr #241421. O suporte compilou e instalou o pgvector 0.8.6 para o PostgreSQL 14.24 do servidor e criou a extensão `vector` no banco `bdversusv2` (schema `public`). O usuário `app` não pode executar `CREATE EXTENSION`, mas a migração `1400` usa `IF NOT EXISTS`. Sem reinício do PostgreSQL. Atualizações do pgvector não são automáticas; exigem novo pedido ao suporte. Confirmado por consulta própria somente leitura em `pg_available_extensions`: `vector | 0.8.6 | 0.8.6`.
+- **PR #34 (RAG governado com pgvector, desligado por padrão)** mesclado em `e20264f2f95c774bf7437dc6f3cbcee0e4741b29` e publicado pelo run #1466 (modo `full`, `restart_mcp=true`; migrações só rodam em `full`): https://github.com/VrsEco/Principal/actions/runs/36149299945. Migrações `20260924_1300 -> 1400 -> 1500`. Em `bdversusv2` (226 MB): `alembic_version` passou a `20260924_1500` e as duas tabelas do RAG passaram a existir (245 para 247 tabelas em `public`). Antes do deploy: backup manual, run #299 (`db_backup_20260925_113855.sql.gz`), com `gzip -t` no script. O log do backup não imprime o nome do banco; que o dump seja do `bdversusv2` é muito provável, mas **não foi provado**.
+- **Governança:** o run #1466 foi disparado por engano pelo agente (clique por posição no navegador); os parâmetros coincidiram com o plano aprovado, o gate `production` foi aprovado pelo operador e nada foi implantado antes disso. Regra a manter: o agente **não** dispara workflow de produção (nem o inventário); prepara o formulário e o operador dispara. Ao marcar campos no navegador, usar o estado do formulário (não coordenadas) e conferir os valores antes de entregar.
+- Inventário somente leitura #1467: https://github.com/VrsEco/Principal/actions/runs/36150956998. `HEAD` = `e20264f2f95c774bf7437dc6f3cbcee0e4741b29`, `TREE` = `1c0cb135923935edf3e9d477fdd805b00bcc5426` (idêntico ao tree do commit no Git), `status`, `unstaged` e `staged` vazios. Git `main` e Configr alinhados ao nível de commit e tree. As mesmas limitações do #1458 se aplicam.
+- `/healthz` e `/mcp/healthz` públicos em 200 com `ok=true` após o #1466.
+
+### Estado do RAG e decisões registradas
+
+- Funcionalidade **desligada** (`KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED` ausente). Nenhuma variável `KNOWLEDGE_*` e nenhuma chave de embeddings foi configurada no servidor.
+- Decisão de custo aprovada pelo operador (a executar somente ao habilitar): `text-embedding-3-small` (1536 dimensões nativas, compatível com `vector(1536)`), primeira onda limitada a `product_help`, chave da OpenAI dedicada com limite mensal de gasto definido no painel do provedor (sugestão US$ 10), `KNOWLEDGE_EMBEDDING_PRICE_PER_MILLION_USD` para estimar custo. Estimativa: corpus da primeira onda de cerca de 3,6 mil tokens (custo de indexação desprezível); custo recorrente dominado pelas consultas. Os preços por milhão de tokens devem ser conferidos na página do provedor no momento da habilitação.
+- Antes de habilitar: comparar precisão contra o golden set com a flag ligada em empresa de teste (SPEC do RAG). O agente não manipula a chave da OpenAI.
+
+### Pendências abertas (após o #1467)
+
+1. Habilitação do RAG (chave dedicada, variáveis `KNOWLEDGE_*`, empresa piloto, golden set); backfill apenas com simulação primeiro e `--max-chunks` pequeno.
+2. **Não** executar `git rm --cached` nos arquivos do ChromaDB (`app32/data/chroma_db*`, `data/chroma_db/chroma.sqlite3`): `src/intelligence/rag.py` lê `./data/chroma_db` em runtime e o próximo deploy apagaria os arquivos do servidor. Decidir antes o destino desses dados.
+3. Aposentar o checkout legado (`codex/root-reconciled-20260923`, clone raso e com objeto ausente no `fsck`) com aprovação do operador, mantendo o backup externo; usar um clone completo e limpo de `main` como ponto de partida.
+4. Avisos do Actions: `actions/checkout@v4` e `actions/setup-python@v5` ainda rodam forçados em Node 24; migrar as versões quando conveniente.
+5. Continuam **não verificados**: validação visual dos gráficos, equivalência de banco (além da versão de migração e das tabelas do RAG), arquivos ignorados, nginx, dependências do host e a origem exata do dump de backup.
 
 ## Limites e atualização
 
