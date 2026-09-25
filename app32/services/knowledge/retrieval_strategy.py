@@ -30,6 +30,8 @@ VECTOR_FLAG_ENV = "KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED"
 EMBEDDING_MODEL_ENV = "KNOWLEDGE_EMBEDDING_MODEL"
 EMBEDDING_VERSION_ENV = "KNOWLEDGE_EMBEDDING_VERSION"
 INDEX_GENERATION_ENV = "KNOWLEDGE_EMBEDDING_INDEX_GENERATION"
+# Piloto opcional: ids de empresa separados por vírgula. Vazio = todas as empresas quando a flag está ligada.
+VECTOR_PILOT_COMPANIES_ENV = "KNOWLEDGE_VECTOR_PILOT_COMPANY_IDS"
 
 # Dimensão fixada pela migration da projeção vetorial; trocar exige nova geração.
 KNOWLEDGE_EMBEDDING_DIMENSIONS = 1536
@@ -83,6 +85,20 @@ class StrategyResolution:
     requested: str
     strategies: tuple[str, ...]
     fallback_reason: str | None = None
+
+
+def vector_pilot_allows(company_id: int | None, environ: Mapping[str, str] | None = None) -> bool:
+    """Piloto por empresa: lista vazia libera todas; lista definida libera só as nela.
+
+    Falha fechada: sem empresa (`None`) ou com valor inválido não entra no piloto quando há lista.
+    """
+
+    env = os.environ if environ is None else environ
+    raw = str(env.get(VECTOR_PILOT_COMPANIES_ENV, "")).strip()
+    if not raw:
+        return True
+    allowed = {int(item) for item in raw.split(",") if item.strip().isdigit()}
+    return isinstance(company_id, int) and not isinstance(company_id, bool) and company_id in allowed
 
 
 def resolve_strategies(
@@ -152,6 +168,8 @@ __all__ = [
     "SUPPORTED_STRATEGIES",
     "StrategyResolution",
     "VECTOR_BACKEND_IMPLEMENTED",
+    "VECTOR_PILOT_COMPANIES_ENV",
     "VectorRetrievalConfig",
     "resolve_strategies",
+    "vector_pilot_allows",
 ]

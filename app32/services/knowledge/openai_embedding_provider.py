@@ -1,25 +1,44 @@
 from __future__ import annotations
 
-from typing import Sequence
+import os
+from typing import Mapping, Sequence
 
 from services.knowledge.embedding_usage import estimate_tokens
-from services.knowledge.retrieval_strategy import KNOWLEDGE_EMBEDDING_DIMENSIONS
+from services.knowledge.retrieval_strategy import KNOWLEDGE_EMBEDDING_DIMENSIONS, VectorRetrievalConfig
 
 DEFAULT_MODEL = "text-embedding-3-small"  # 1536 dimensões, igual à projeção pgvector
 MAX_BATCH = 64
+API_KEY_ENV = "OPENAI_API_KEY"
+# Chave dedicada ao conhecimento, para um projeto do provedor com limite mensal próprio. Quando
+# definida, tem precedência sobre `OPENAI_API_KEY` (que outras funções do app podem estar usando).
+DEDICATED_API_KEY_ENV = "KNOWLEDGE_OPENAI_API_KEY"
+# Limites explícitos: a consulta do usuário não pode esperar minutos pelo provedor. Falha => busca textual.
+DEFAULT_TIMEOUT_SECONDS = 8.0
+DEFAULT_MAX_RETRIES = 1
 
 
 class OpenAIEmbeddingProvider:
-    """Adapter de embeddings OpenAI. Nunca instanciado por padrão em produção.
+    """Adapter de embeddings OpenAI. Só é criado em runtime com flag, modelo e chave presentes.
 
-    A chave vem somente do ambiente (`OPENAI_API_KEY`, lida pelo SDK); não é logada,
-    persistida nem recebida por parâmetro. O tráfego é sempre explícito: cada chamada
-    envia texto à OpenAI e devolve o uso real de tokens para o ledger de consumo.
+    A chave vem somente do ambiente: `KNOWLEDGE_OPENAI_API_KEY` (dedicada) ou, na falta dela,
+    `OPENAI_API_KEY` lida pelo SDK. Nunca é logada nem persistida. O tráfego é sempre explícito:
+    cada chamada envia texto à OpenAI e devolve o uso real de tokens para o ledger de consumo.
     """
 
-    def __init__(self, *, model: str = DEFAULT_MODEL, client=None) -> None:
+    def __init__(
+        self,
+        *,
+        model: str = DEFAULT_MODEL,
+        client=None,
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        api_key: str | None = None,
+    ) -> None:
         self.model = model
         self._client = client
+        self._timeout = timeout
+        self._max_retries = max_retries
+        self._api_key = api_key or None
         self.last_tokens: int = 0
         self.last_estimated: bool = True
 
@@ -27,7 +46,10 @@ class OpenAIEmbeddingProvider:
         if self._client is None:
             from openai import OpenAI  # import tardio: sem SDK/chave nada é chamado
 
-            self._client = OpenAI()
+            options: dict = {"timeout": self._timeout, "max_retries": self._max_retries}
+            if self._api_key:
+                options["api_key"] = self._api_key
+            self._client = OpenAI(**options)
         return self._client
 
     def embed_many(self, texts: Sequence[str]) -> tuple[list[list[float]], int, bool]:
@@ -56,4 +78,33 @@ class OpenAIEmbeddingProvider:
         return vectors[0]
 
 
-__all__ = ["DEFAULT_MODEL", "MAX_BATCH", "OpenAIEmbeddingProvider"]
+def build_default_embedding_provider(
+    environ: Mapping[str, str] | None = None,
+) -> OpenAIEmbeddingProvider | None:
+    """Provedor de runtime a partir do ambiente; `None` (busca textual) se algo faltar.
+
+    Exige, juntos: flag ligada, modelo, versão e geração configurados e uma chave no ambiente
+    (`KNOWLEDGE_OPENAI_API_KEY` tem precedência sobre `OPENAI_API_KEY`). Nada é chamado aqui; o
+    SDK só é criado na primeira consulta.
+    """
+
+    env = os.environ if environ is None else environ
+    config = VectorRetrievalConfig.from_env(env)
+    if not config.ready or config.embedding is None:
+        return None
+    dedicated = str(env.get(DEDICATED_API_KEY_ENV, "")).strip()
+    if not dedicated and not str(env.get(API_KEY_ENV, "")).strip():
+        return None
+    return OpenAIEmbeddingProvider(model=config.embedding.model, api_key=dedicated or None)
+
+
+__all__ = [
+    "API_KEY_ENV",
+    "DEDICATED_API_KEY_ENV",
+    "DEFAULT_MAX_RETRIES",
+    "DEFAULT_MODEL",
+    "DEFAULT_TIMEOUT_SECONDS",
+    "MAX_BATCH",
+    "OpenAIEmbeddingProvider",
+    "build_default_embedding_provider",
+]

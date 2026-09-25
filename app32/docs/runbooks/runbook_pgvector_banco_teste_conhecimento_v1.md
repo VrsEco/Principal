@@ -154,14 +154,21 @@ Confirmado depois por consulta própria, somente leitura, em produção (25/09/2
 **Lacunas de código que impedem a habilitação apenas por configuração** (verificadas em
 `origin/main`, `804678278`):
 
-1. **Nenhum provedor de embeddings é injetado em runtime.** `KnowledgeQueryService()` é criado sem
-   `embedding_provider` em `src/core/mcp_knowledge_tools.py`, `src/intelligence/knowledge_tools.py`
-   e `services/knowledge/interaction_service.py`. Sem provedor, a recuperação recua para busca
-   textual (`embedding_provider_missing`). Ligar a flag e a chave não altera a resposta. É preciso
-   um PR que crie o provedor a partir da configuração (flag ligada, modelo/versão/geração e chave
-   presentes; caso contrário `None`) e o injete de forma única nesses pontos, com tempo limite e
-   número de tentativas explícitos (hoje o `OpenAIEmbeddingProvider` usa os padrões do cliente) e
-   falha fechada para busca textual.
+1. **Nenhum provedor de embeddings era injetado em runtime** (verificado em `804678278`).
+   `KnowledgeQueryService()` é criado sem `embedding_provider` em `src/core/mcp_knowledge_tools.py`,
+   `src/intelligence/knowledge_tools.py` e `services/knowledge/interaction_service.py`; sem
+   provedor a recuperação recua para busca textual (`embedding_provider_missing`), e nenhum
+   chamador pede a estratégia `hybrid`, então ligar a flag e a chave não alterava a resposta.
+   **Resolvida no branch `codex/rag-embedding-provider-wiring`** (desligada por padrão, sem mudar o
+   comportamento atual): o serviço resolve o provedor do ambiente por
+   `build_default_embedding_provider()` (exige, juntos, flag ligada, modelo/versão/geração e
+   `OPENAI_API_KEY`; senão `None`), passar `embedding_provider=None` explícito continua significando
+   "sem provedor", o SDK é criado só na primeira consulta com tempo limite de 8 s e 1 tentativa, e
+   qualquer falha recua para busca textual (`vector_retrieval_failed`). Sem estratégia pedida, o
+   padrão passa a ser `hybrid` **apenas** com tudo pronto e a empresa dentro do piloto
+   (`KNOWLEDGE_VECTOR_PILOT_COMPANY_IDS`, ids separados por vírgula; vazio libera todas as empresas
+   quando a flag está ligada, e uma lista inválida bloqueia todas). Consequência: cada pergunta
+   passa a enviar o texto da pergunta ao provedor de embeddings (custo pequeno, mas recorrente).
 2. **A atualização automática não gera embeddings.** `services/knowledge/auto_update_service.py`
    não referencia embeddings; trechos novos ou alterados ficam sem vetor (o checksum obsoleto é
    descartado com segurança) até alguém rodar `scripts/knowledge_embedding_backfill.py`. Decidir
@@ -171,12 +178,16 @@ Confirmado depois por consulta própria, somente leitura, em produção (25/09/2
 
 **Passos, na ordem** (cada um exige aprovação do operador; o agente não manipula a chave):
 
-1. Implementar e testar a lacuna 1 (PR próprio, testes com provedor falso; sem rede nem chave).
+1. Publicar o código da lacuna 1 (PR do branch acima, 16 testes novos com o SDK simulado; sem rede
+   nem chave) por deploy `quick` (não há migrações), com a flag ainda desligada.
 2. Operador cria, no painel do provedor, um projeto dedicado com **limite mensal de gasto**
-   (sugestão US$ 10) e uma chave própria; grava a chave no `.env` do servidor. Definir
+   (sugestão US$ 10) e uma chave própria; grava a chave no `.env` do servidor como
+   `KNOWLEDGE_OPENAI_API_KEY` (dedicada; tem precedência sobre `OPENAI_API_KEY`, que outras funções
+   do app podem já usar, e é a que o limite mensal do projeto realmente cobre). Definir
    `KNOWLEDGE_EMBEDDING_MODEL=text-embedding-3-small`, `KNOWLEDGE_EMBEDDING_VERSION=v1`,
-   `KNOWLEDGE_EMBEDDING_INDEX_GENERATION=1` e `KNOWLEDGE_EMBEDDING_PRICE_PER_MILLION_USD` (conferir
-   o preço vigente no provedor). **Não** ligar ainda `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED`.
+   `KNOWLEDGE_EMBEDDING_INDEX_GENERATION=1`, `KNOWLEDGE_VECTOR_PILOT_COMPANY_IDS=<ids da empresa
+   piloto>` e `KNOWLEDGE_EMBEDDING_PRICE_PER_MILLION_USD` (conferir o preço vigente no provedor).
+   **Não** ligar ainda `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED`.
 3. Simulação: `python scripts/knowledge_embedding_backfill.py` (não chama o provedor). Depois
    `--execute --max-chunks 5` e conferir os tokens e o custo estimado em
    `knowledge_embedding_usage_events` e em `knowledge_index_runs.metadata_json`.
@@ -192,5 +203,6 @@ Confirmado depois por consulta própria, somente leitura, em produção (25/09/2
 - O ensaio provou migration, isolamento e rollback em PostgreSQL 14 e 16 com pgvector, e a
   migração já roda em produção. Não provou desempenho, custo real de embeddings nem o efeito da
   recuperação vetorial sobre a qualidade das respostas.
-- Habilitar exige o código do passo 1 do plano; sem ele a flag não tem efeito.
+- Na `main` atual a flag ainda não tem efeito; só passa a ter depois de publicar o código do
+  passo 1 do plano (branch `codex/rag-embedding-provider-wiring`).
 - Atualizações do pgvector exigem novo pedido ao suporte do Configr.
