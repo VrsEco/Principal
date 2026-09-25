@@ -257,3 +257,13 @@ Correção definitiva (PR seguinte): no `answer()` a documentação técnica sai
 Reavaliar após o deploy com `python scripts/knowledge_strategy_ab.py --company-id 9 --questions knowledge/golden_sets/ab_perguntas_pt_br_ampliado.tsv`. Regra de ampliação do piloto: hybrid >= full_text em acerto@1 e MRR (>= 30 perguntas com esperado) e sem piorar as perguntas fora do escopo (esperado `-`).
 
 Terceira medição (após o PR #49, 36 perguntas): `full_text` acerto@1 20, MRR 0,556, 6 abstenções; `hybrid` acerto@1 22, MRR 0,611, 3 abstenções, 8 divergências (o híbrido acerta Fluxo de Caixa e Clientes onde o FTS falha). Regra de ampliação atendida em número, mas o 1º lugar ainda erra muito: o FTS `OR` casa termos genéricos ("empresa", "agendo") e, com peso igual no RRF, empata com o vetor. Calibração sem deploy: `KNOWLEDGE_VECTOR_RRF_WEIGHT` (padrão 1.0; >1 dá mais peso ao vetor) e `KNOWLEDGE_VECTOR_MIN_SIMILARITY`, passados na linha de comando do A/B (`VAR=valor python scripts/knowledge_strategy_ab.py ...`).
+
+## Configuração do piloto após a calibração (25/09/2026)
+
+Varredura no servidor (36 perguntas, empresa 9; full_text fixo em acerto@1 20, MRR 0,556): peso 1 / limiar 0,40 = 22 (MRR 0,611); peso 1 / 0,45 = 21; peso 2 / 0,40 = 23; peso 2 / 0,45 = 24 (MRR 0,667); peso 3 = igual ao 2 (saturado). O peso 2 é melhor que o 1 nos dois limiares; o efeito do limiar é de uma pergunta (ruído).
+
+Configuração adotada no `.env` do servidor (deploy #1477, quick com restart do MCP, código `137919e69`): `KNOWLEDGE_VECTOR_RRF_WEIGHT=2` e `KNOWLEDGE_VECTOR_MIN_SIMILARITY=0.45`, junto com a flag e o piloto na empresa 9. Medição sem variáveis na linha de comando confirmou: hybrid acerto@1 24/36, MRR 0,667, 4 abstenções, contra full_text 20/36, MRR 0,556, 6 abstenções.
+
+Perguntas fora do escopo (esperado `-`) com essa configuração: 3 de 4 abstêm (tempo, passagem aérea, futebol); "folha de pagamento" ainda recebe "Lançar conta a pagar" (similaridade 0,49, domínio vizinho). Limitação conhecida: subir o limiar para 0,50 a eliminaria, mas cortaria acertos entre 0,41 e 0,49.
+
+Limites da evidência: amostra de 36 perguntas escritas pela engenharia; o híbrido acerta cerca de dois terços. Antes de ampliar o piloto: 30 ou mais perguntas reais de usuários da empresa 9 sem o híbrido perder para o full_text. Próxima alavanca: qualidade dos artigos (as telas de navegação são curtas), não mais calibração. Reversão: remover as linhas `KNOWLEDGE_VECTOR_RRF_WEIGHT` e `KNOWLEDGE_VECTOR_MIN_SIMILARITY` (voltam a 1.0 e 0,40) ou a flag `KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED` (volta ao full_text), e deploy quick com restart do MCP.
