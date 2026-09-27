@@ -642,3 +642,43 @@ features:
       - "analytics"
       - "ops"
     detalhe_disponivel: false
+
+  - id: "gestao_projetos"
+    nome: "Gestão Estratégica — Gestão de Projetos"
+    dominio: "projects"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Execução > Gestão de Projetos"
+    rotas_app:
+      - "/project-portfolios"
+      - "/projects"
+      - "/projects/analysis"
+    objetivo: "Gerenciar projetos e portfolios da empresa, acompanhando prazos, responsaveis, orcamento e progresso, com analise consolidada da carteira."
+    quando_usar:
+      - "criar ou organizar um projeto"
+      - "agrupar projetos num portfólio"
+      - "acompanhar progresso e tarefas de um projeto"
+      - "consultar análise consolidada da carteira de projetos"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "name"
+      opcionais:
+        - "plan_id"
+        - "portfolio_id"
+        - "owner"
+        - "status"
+        - "priority"
+        - "deadline"
+        - "budget"
+        - "okr_links"
+    saidas:
+      - "lista_de_projetos"
+      - "detalhe_do_projeto"
+      - "lista_de_tarefas_do_projeto"
+      - "analise_consolidada_de_portfolio"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_projetos.md"
