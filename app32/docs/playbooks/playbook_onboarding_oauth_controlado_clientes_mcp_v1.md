@@ -63,8 +63,20 @@ client público desta jornada.
 - Scopes: `mcp:access`, `mcp:user`; adicionar `mcp:analytics` e/ou
   `mcp:finance` somente quando o caso de uso e o RBAC APP32 exigirem.
 - Catálogo remoto `user`: `list_user_app32_capabilities`,
-  `get_company_profile`, `list_meetings`, `list_projects` e
-  `list_project_tasks_secure`.
+  `get_company_profile`, `list_meetings`, `list_projects`,
+  `list_project_tasks_secure`, `bootstrap_session_context`,
+  `list_feature_catalog`, `get_feature_guide`, `get_feature_examples`,
+  `get_feature_constraints`, `describe_app32_domain_playbooks_tool`,
+  `describe_app32_surface_playbooks_tool` e `list_process_hierarchy`
+  (expansão aprovada por Fabiano Diretor em 2026-09-27, ver
+  `docs/handoffs/handoff_squad_cliente_2026-09-27_expansao_mcp_versus_manual_ia.md`).
+- Cohort de mutação de processos (cohort/scope próprio, não misturado ao
+  catálogo de leitura acima): `create_process_area`, `create_macro_process`,
+  `update_macro_process` e `create_process`. Descoberta exige scope
+  `mcp:user` (já padrão do client piloto) mais a permissão RBAC específica de
+  cada tool (`process.area.create`, `process.macro.create`,
+  `process.macro.update`, `process.create`); `create_process` é HIGH risk com
+  `human_gate=True`.
 
 Esses parâmetros não concedem acesso sozinhos. O `company_id` requerido pela
 tool é revalidado contra o grant do principal a cada chamada.

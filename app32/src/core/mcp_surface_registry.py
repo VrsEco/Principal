@@ -58,6 +58,57 @@ PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES: tuple[str, ...] = (
 # A rota OAuth user não consome esta constante.
 PILOT_USER_FINANCE_READ_TOOL_NAMES = PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES
 
+# Leitura de manual técnico (feature catalog + playbooks de domínio/surface) e
+# hierarquia de processos. Grupo "somente leitura": mesmo padrão de
+# PILOT_USER_TOOL_NAMES, sempre exposto na coorte (sem gate condicional extra),
+# pois nenhuma delas carrega dado sensível por tenant além do que já é exigido
+# como contexto de sessão. `list_process_hierarchy` continua exigindo
+# `company_id` resolvido e revalidando tenant/RBAC no wrapper de execução, como
+# qualquer outra tool publicada na surface `user`.
+# Aprovação: Fabiano Diretor, 2026-09-27 (ver
+# docs/handoffs/handoff_squad_cliente_2026-09-27_expansao_mcp_versus_manual_ia.md).
+PILOT_MANUAL_READ_TOOL_NAMES: tuple[str, ...] = (
+    "bootstrap_session_context",
+    "list_feature_catalog",
+    "get_feature_guide",
+    "get_feature_examples",
+    "get_feature_constraints",
+    "describe_app32_domain_playbooks_tool",
+    "describe_app32_surface_playbooks_tool",
+    "list_process_hierarchy",
+)
+
+# Subconjunto de PILOT_MANUAL_READ_TOOL_NAMES publicado via registrador MCP
+# (não é LangChain tool, portanto não aparece em `_tool_map()`). Usado para
+# filtrar `_register_shared_registrars` sem expor o catálogo cru completo dos
+# registradores compartilhados. `list_process_hierarchy` fica de fora porque é
+# uma LangChain tool legada, já coberta pelo fluxo de `tool_names`.
+_MANUAL_REGISTRAR_TOOL_NAMES: tuple[str, ...] = (
+    "bootstrap_session_context",
+    "list_feature_catalog",
+    "get_feature_guide",
+    "get_feature_examples",
+    "get_feature_constraints",
+    "describe_app32_domain_playbooks_tool",
+    "describe_app32_surface_playbooks_tool",
+)
+
+# Mutação de processos é uma coorte OAuth própria e exclusiva da surface
+# `user`, seguindo o mesmo padrão de PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES
+# (finance): descoberta condicionada a scope OAuth dedicado (`mcp:user`, já
+# concedido por padrão ao client piloto) e à permissão RBAC específica de cada
+# tool (`process.area.create`, `process.macro.create`, `process.macro.update`,
+# `process.create`), revalidada por chamada via `_has_authenticated_mcp_permission`.
+# Não é misturada ao grupo de leitura. `create_process` mantém `human_gate=True`
+# no catálogo de capacidades (risco HIGH).
+# Aprovação: Fabiano Diretor, 2026-09-27 (ver handoff citado acima).
+PILOT_PROCESS_MUTATION_TOOL_NAMES: tuple[str, ...] = (
+    "create_process_area",
+    "create_macro_process",
+    "update_macro_process",
+    "create_process",
+)
+
 
 def _has_authenticated_mcp_permission(permission: str) -> bool:
     """Verifica discovery por principal, sem aceitar permissão do cliente."""
@@ -136,14 +187,21 @@ def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
         return set()
     if identity is None:
         # Offline registry only; permission resolver still denies without a principal.
-        token_scopes = {"mcp:access", "mcp:analytics", "mcp:finance"}
+        # `mcp:user` entra no fallback porque é scope padrão (não opcional) do
+        # client OAuth piloto, ao contrário de `mcp:analytics`/`mcp:finance`.
+        token_scopes = {"mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"}
     if "mcp:access" not in token_scopes:
         return set()
     visible = set()
     permission_results: dict[str, bool] = {}
     for name in sorted(requested_names):
         capability = catalog.get_tool_capability(name)
-        scope = "mcp:finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else "mcp:analytics"
+        if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES:
+            scope = "mcp:finance"
+        elif name in PILOT_PROCESS_MUTATION_TOOL_NAMES:
+            scope = "mcp:user"
+        else:
+            scope = "mcp:analytics"
         if capability is not None and scope in token_scopes:
             for permission in capability.permissions:
                 if permission not in permission_results:
@@ -155,8 +213,12 @@ def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
 
 def get_unified_manifest(domain: str | None = None, include_tools: bool = True) -> dict[str, Any]:
     """Same discovery set as tools/list; execution is always revalidated per tenant."""
-    names = set(PILOT_USER_TOOL_NAMES)
-    names.update(_visible_privileged_tool_names(frozenset(PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES)))
+    names = set(PILOT_USER_TOOL_NAMES) | set(PILOT_MANUAL_READ_TOOL_NAMES)
+    names.update(
+        _visible_privileged_tool_names(
+            frozenset((*PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES, *PILOT_PROCESS_MUTATION_TOOL_NAMES))
+        )
+    )
     capabilities = []
     for name in sorted(names):
         capability = catalog.get_tool_capability(name)
@@ -679,18 +741,26 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
     """
     if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    exposed_names = (*PILOT_USER_TOOL_NAMES, *PILOT_MANUAL_READ_TOOL_NAMES)
     mcp = _build_policy_fast_mcp(
         name,
         "user",
-        exposed_tool_names=PILOT_USER_TOOL_NAMES,
+        exposed_tool_names=exposed_names,
+        conditional_tool_names=PILOT_PROCESS_MUTATION_TOOL_NAMES,
     )
     register_mcp_surface_tools(
         mcp,
         "user",
-        include_shared_registrars=False,
+        include_shared_registrars=True,
         include_admin_diagnostics=False,
-        tool_names=PILOT_USER_TOOL_NAMES,
+        tool_names=exposed_names,
+        shared_registrar_tool_names=_MANUAL_REGISTRAR_TOOL_NAMES,
     )
+    tools_by_name = _tool_map()
+    for tool_name in PILOT_PROCESS_MUTATION_TOOL_NAMES:
+        tool = tools_by_name.get(tool_name)
+        if tool is not None:
+            _register_tool(mcp, tool, policy_surface="user")
     return mcp
 
 
@@ -758,18 +828,20 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
     """
     if FastMCP is None:  # pragma: no cover
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    exposed_names = (*PILOT_USER_TOOL_NAMES, *PILOT_MANUAL_READ_TOOL_NAMES)
+    conditional_names = (*PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES, *PILOT_PROCESS_MUTATION_TOOL_NAMES)
     mcp = _build_policy_fast_mcp(
         name,
         "user",
-        exposed_tool_names=PILOT_USER_TOOL_NAMES,
-        conditional_tool_names=PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES,
+        exposed_tool_names=exposed_names,
+        conditional_tool_names=conditional_names,
     )
     register_mcp_surface_tools(
         mcp,
         "user",
         include_shared_registrars=False,
         include_admin_diagnostics=False,
-        tool_names=PILOT_USER_TOOL_NAMES,
+        tool_names=exposed_names,
         unified_discovery=True,
     )
     tools_by_name = _tool_map()
@@ -781,6 +853,15 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         tool = tools_by_name.get(tool_name)
         if tool is not None:
             _register_tool(mcp, tool, policy_surface="finance")
+    for tool_name in PILOT_PROCESS_MUTATION_TOOL_NAMES:
+        tool = tools_by_name.get(tool_name)
+        if tool is not None:
+            _register_tool(mcp, tool, policy_surface="user")
+    _register_shared_registrars(
+        mcp,
+        tool_names=set(_MANUAL_REGISTRAR_TOOL_NAMES),
+        policy_surface="user",
+    )
     _register_shared_registrars(
         mcp,
         tool_names=set(PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES),
