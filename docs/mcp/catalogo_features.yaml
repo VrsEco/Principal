@@ -109,6 +109,10 @@ features:
   - id: "processos_copiloto_fluxo"
     nome: "Copiloto de Fluxo BPMN"
     dominio: "processes"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Execução > Gestão de Processos > Análise BPMS"
+    rotas_app:
+      - "/bpms-analysis"
     objetivo: "Analisar fluxo BPMN, apontar gaps de lanes/POPs/gateways e sugerir automações ou conexões APP32/internet com revisão humana."
     quando_usar:
       - "revisar modelagem de fluxo"
@@ -682,3 +686,69 @@ features:
       - "analytics"
     detalhe_disponivel: true
     guia_ref: "features/gestao_projetos.md"
+
+  - id: "gestao_processos_estrutura"
+    nome: "Gestão Estratégica — Gestão de Processos (Estrutura)"
+    dominio: "processes"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Execução > Gestão de Processos"
+    rotas_app:
+      - "/process-map"
+      - "/processes"
+      - "/process-portal"
+    objetivo: "Estruturar e visualizar a hierarquia de processos (Areas, Macroprocessos, Processos) via mapa visual, lista de modelagem e portal compacto."
+    quando_usar:
+      - "consultar hierarquia de processos"
+      - "criar área, macroprocesso ou processo"
+      - "visualizar mapa de processos (big picture) ou portal compacto"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "area_id"
+        - "macro_process_id"
+        - "responsible"
+        - "description"
+    saidas:
+      - "hierarquia_de_processos"
+      - "area_criada"
+      - "macroprocesso_criado_ou_atualizado"
+      - "processo_criado"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_processos_estrutura.md"
+
+  - id: "gestao_processos_execucao"
+    nome: "Gestão Estratégica — Gestão de Processos (Execução e Instâncias)"
+    dominio: "processes"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Execução > Gestão de Processos"
+    rotas_app:
+      - "/process-routines"
+      - "/process-instances"
+    objetivo: "Configurar vinculo rotina/POP-processo e acompanhar instancias de execucao (abertas, atrasadas, encerradas)."
+    quando_usar:
+      - "vincular rotina/POP a um processo"
+      - "listar instâncias de processo abertas ou atrasadas"
+      - "encerrar instância de processo com evidência"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "status"
+        - "due_before"
+        - "assigned_to"
+        - "instance_id"
+        - "evidence"
+    saidas:
+      - "lista_de_instancias_abertas"
+      - "resultado_do_encerramento"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_processos_execucao.md"
