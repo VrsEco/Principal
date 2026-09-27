@@ -416,6 +416,80 @@ features:
     detalhe_disponivel: true
     guia_ref: "features/financeiro_central_automacao.md"
 
+  - id: "financeiro_cadastros"
+    nome: "Gestão Financeira — Cadastros"
+    dominio: "finance"
+    ramo_menu: "Gestão Financeira"
+    caminho_menu: "Gestão Financeira > Cadastros"
+    rotas_app:
+      - "/financial/catalogs/counterparties"
+      - "/financial/catalogs/bank-accounts"
+      - "/financial/catalogs/chart-accounts"
+      - "/financial/catalogs/cost-centers"
+      - "/financial/catalogs/payment-methods"
+      - "/financial/catalogs/correction-indexes"
+      - "/financial/catalogs/discount-rules"
+      - "/financial/catalogs/account-categories"
+      - "/financial/catalogs/asset-accounts"
+    objetivo: "Gerenciar cadastros basicos usados por todo o modulo financeiro: favorecidos, contas bancarias, plano de contas, centros de resultado e cadastros de apoio."
+    quando_usar:
+      - "cadastrar favorecido, conta bancária ou item do plano de contas"
+      - "organizar hierarquia de plano de contas e centros de resultado"
+      - "cadastrar formas financeiras, correções, descontos, categorias ou contas patrimoniais"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "parent_id"
+    saidas:
+      - "lista_do_cadastro"
+      - "detalhe_do_item"
+      - "resultado_da_operacao"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_cadastros.md"
+
+  - id: "financeiro_relatorios"
+    nome: "Gestão Financeira — Relatórios"
+    dominio: "finance"
+    ramo_menu: "Gestão Financeira"
+    caminho_menu: "Gestão Financeira > Relatórios"
+    rotas_app:
+      - "/financial"
+      - "/financial/dashboard"
+      - "/financial/reports/agendamento"
+      - "/financial/reports/extrato-bancario"
+      - "/financial/reports/dossie-extrato-bancario"
+      - "/financial/reports/demonstrativo-resultados"
+      - "/financial/reports/demonstrativo-resultados-02"
+      - "/financial/reports/fluxo-caixa"
+      - "/financial/reports/razao"
+      - "/financial/reports/capital-circulante-liquido"
+    objetivo: "Consultar posicao financeira via dashboard executivo e relatorios especializados (titulos, extrato, DRE, fluxo de caixa, razao, capital circulante)."
+    quando_usar:
+      - "interpretar o dashboard financeiro"
+      - "escolher o relatório certo para a necessidade"
+      - "aplicar filtros de período/conta/centro de resultado em relatório"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "periodo"
+        - "bank_account_id"
+        - "chart_account_id"
+        - "cost_center_id"
+    saidas:
+      - "relatorio_gerado"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_relatorios.md"
+
   - id: "gestao_comercial_contratos"
     nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
     dominio: "governance"
@@ -468,32 +542,6 @@ features:
       - "faturamentos_gerados"
       - "workspace_fiscal"
       - "planilha_base64"
-    surfaces:
-      - "user"
-      - "admin"
-      - "analytics"
-    detalhe_disponivel: false
-
-  - id: "financeiro_operacional"
-    nome: "Financeiro Operacional e Orçamentário"
-    dominio: "finance"
-    objetivo: "Relatorios e dashboard executivo financeiro. Conciliacao bancaria, bordero, transferencia bancaria, orcamento matricial, agendamentos, lancamento rapido e a central de automacao/classificacao tem features proprias (financeiro_conciliacao_bancaria, financeiro_bordero, financeiro_transferencia_bancaria, financeiro_orcamento_matricial, financeiro_agendamentos, financeiro_lancamento_rapido, financeiro_central_automacao)."
-    quando_usar:
-      - "gerar relatórios e dashboard executivo financeiro"
-    entradas:
-      obrigatorias:
-        - "company_id"
-      opcionais:
-        - "user_id"
-        - "filters"
-        - "payload"
-        - "periodo"
-    saidas:
-      - "registros_financeiros"
-      - "titulos"
-      - "relatorios"
-      - "matriz_orcamentaria"
-      - "resumo_executivo"
     surfaces:
       - "user"
       - "admin"
