@@ -222,6 +222,39 @@ features:
     detalhe_disponivel: true
     guia_ref: "features/financeiro_conciliacao_bancaria.md"
 
+  - id: "financeiro_bordero"
+    nome: "Gestão Financeira — Borderô"
+    dominio: "finance"
+    ramo_menu: "Gestão Financeira"
+    caminho_menu: "Gestão Financeira > Movimentos > Borderô"
+    rotas_app:
+      - "/financial/borderos"
+    objetivo: "Agrupar titulos financeiros a pagar ou a receber num unico lote para revisar, processar e dar baixa em conjunto."
+    quando_usar:
+      - "criar borderô agrupando títulos a pagar ou a receber"
+      - "adicionar ou remover itens de um borderô aberto"
+      - "dar baixa nos itens de um borderô"
+      - "editar ou excluir um borderô"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "bordero_type"
+      opcionais:
+        - "items"
+        - "name"
+        - "description"
+        - "created_date"
+    saidas:
+      - "lista_de_borderos"
+      - "detalhe_do_bordero"
+      - "resultado_da_baixa"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_bordero.md"
+
   - id: "gestao_comercial_contratos"
     nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
     dominio: "governance"
@@ -283,10 +316,10 @@ features:
   - id: "financeiro_operacional"
     nome: "Financeiro Operacional e Orçamentário"
     dominio: "finance"
-    objetivo: "Executar e consultar cadastros, títulos, lançamentos, borderôs, orçamento, conciliação, classificação, fechamento e relatórios."
+    objetivo: "Executar e consultar cadastros, títulos, lançamentos, orçamento, classificação e fechamento financeiro. Conciliação bancária e borderô têm features próprias (financeiro_conciliacao_bancaria, financeiro_bordero)."
     quando_usar:
       - "consultar ou criar títulos financeiros"
-      - "operar lançamentos, liquidações, borderôs e conciliações"
+      - "operar lançamentos e liquidações avulsas"
       - "gerar relatórios e dashboard executivo financeiro"
       - "trabalhar com orçamento matricial ou classificação automática"
     entradas:
