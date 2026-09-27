@@ -3,6 +3,26 @@
 ## Status
 Versão inicial v1 produzida no contexto do card `AA.J.15.1`.
 
+### Atualização de cobertura — conector `mcp-versus` (2026-09-27)
+Aprovação de Fabiano Diretor (ver
+`docs/handoffs/handoff_squad_cliente_2026-09-27_expansao_mcp_versus_manual_ia.md`)
+expandiu o allowlist do conector OAuth piloto `mcp-versus`
+(`src/core/mcp_surface_registry.py`) para incluir, além do catálogo `user`
+mínimo já existente:
+- **Leitura de manual/documentação** (grupo somente leitura, sempre exposto):
+  `bootstrap_session_context`, `list_feature_catalog`, `get_feature_guide`,
+  `get_feature_examples`, `get_feature_constraints`,
+  `describe_app32_domain_playbooks_tool`,
+  `describe_app32_surface_playbooks_tool` e `list_process_hierarchy`.
+- **Mutação de processos** (cohort/scope próprio, descoberta condicionada a
+  scope OAuth `mcp:user` + permissão RBAC por tool): `create_process_area`,
+  `create_macro_process`, `update_macro_process` e `create_process`
+  (HIGH risk, `human_gate=True`).
+
+O restante do domínio `processes` (BPMN, copilot de fluxo, melhoria contínua)
+e todo o domínio Work Journey/`routine` permanecem fora do allowlist do
+`mcp-versus` — não fizeram parte do escopo aprovado nesta rodada.
+
 ## Objetivo
 Inventariar as capabilities atuais do APP32/MCP, classificar a prontidão para uso por squads externos e apontar gaps críticos para o MVP operacional assistido.
 

@@ -10,6 +10,8 @@ from flask import Flask
 
 import src.core.mcp_surface_registry as registry
 from src.core.mcp_runtime import MCPExecutionContext
+from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
+from src.intelligence.tooling.capabilities import infer_tool_action
 
 
 @pytest.fixture(autouse=True)
@@ -54,8 +56,13 @@ def test_pilot_user_server_exposes_only_the_reviewed_tenant_safe_catalog():
 
     assert {tool.name for tool in tools} == {
         *registry.PILOT_USER_TOOL_NAMES,
+        *registry.PILOT_MANUAL_READ_TOOL_NAMES,
         "list_user_app32_capabilities",
     }
+    # Sem principal autenticado, mutação de processos não é descoberta.
+    assert not set(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES).intersection(
+        {tool.name for tool in tools}
+    )
 
 
 def test_oauth_user_server_keeps_the_same_reviewed_remote_catalog():
@@ -64,11 +71,15 @@ def test_oauth_user_server_keeps_the_same_reviewed_remote_catalog():
 
     assert {tool.name for tool in tools} == {
         *registry.PILOT_USER_TOOL_NAMES,
+        *registry.PILOT_MANUAL_READ_TOOL_NAMES,
         "list_user_app32_capabilities",
     }
     assert not {
         *registry.PILOT_USER_FINANCE_READ_TOOL_NAMES,
     }.intersection({tool.name for tool in tools})
+    assert not set(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES).intersection(
+        {tool.name for tool in tools}
+    )
 
 
 def test_oauth_analytics_finance_server_exposes_only_reviewed_read_catalog():
@@ -199,6 +210,123 @@ def test_pilot_user_finance_tools_are_never_discovered_even_if_grant_has_permiss
     assert not set(registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES).intersection(
         {tool.name for tool in tools}
     )
+
+
+def test_oauth_unified_server_exposes_manual_read_and_process_mutation_cohort_only(monkeypatch):
+    """(a) Descoberta expõe exatamente manual (8, incluindo list_process_hierarchy)
+    + as 4 mutações de processos no cohort próprio; nada mais de processes/Work
+    Journey vaza para o conector mcp-versus."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance")),
+    )
+
+    server = registry.build_oauth_unified_mcp_server()
+    tools = {tool.name for tool in asyncio.run(server.list_tools())}
+
+    assert set(registry.PILOT_MANUAL_READ_TOOL_NAMES) == {
+        "bootstrap_session_context",
+        "list_feature_catalog",
+        "get_feature_guide",
+        "get_feature_examples",
+        "get_feature_constraints",
+        "describe_app32_domain_playbooks_tool",
+        "describe_app32_surface_playbooks_tool",
+        "list_process_hierarchy",
+    }
+    assert set(registry.PILOT_MANUAL_READ_TOOL_NAMES).issubset(tools)
+    assert set(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES).issubset(tools)
+
+    other_process_tool_names = {
+        capability.name for capability in registry.catalog.iter_capabilities(domain="processes")
+    } - set(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES) - {"list_process_hierarchy"}
+    assert other_process_tool_names, "sanity: catálogo real deve ter outras tools de processes fora do cohort"
+    assert not other_process_tool_names.intersection(tools)
+
+    work_journey_tool_names = {
+        capability.name
+        for capability in registry.catalog.iter_capabilities()
+        if "work_journey" in capability.tags
+    }
+    assert work_journey_tool_names, "sanity: catálogo real deve ter tools de work_journey"
+    assert not work_journey_tool_names.intersection(tools)
+
+
+def test_list_process_hierarchy_denies_cross_tenant_company_id():
+    """(b) Negativo cross-tenant: company_id solicitado fora do grant do
+    principal nunca executa list_process_hierarchy, no mesmo padrão de
+    `test_tool_policy_blocks_cross_tenant_even_for_mcp_surface`."""
+    capability = registry.catalog.get_tool_capability("list_process_hierarchy")
+    assert capability is not None
+
+    decision = evaluate_tool_policy(
+        {"user_id": 5, "company_id": 7, "role": "colaborador", "channel": "claude_remote"},
+        ToolPolicyRequest(
+            tool_name=capability.name,
+            surface="user",
+            domain=capability.domain,
+            action=infer_tool_action(capability.name, capability.domain),
+            risk=getattr(capability.risk, "value", capability.risk),
+            requested_company_id=99,
+            accessible_company_ids=(7,),
+            required_permissions=capability.permissions,
+            required_context=capability.required_context,
+        ),
+    )
+
+    assert decision.allowed is False
+
+
+def test_process_mutation_tools_never_leak_outside_their_cohort(monkeypatch):
+    """(c) Espelha o teste de isolamento já existente para finance: mesmo com
+    todas as permissões concedidas, as 4 mutações de processos não aparecem em
+    coortes OAuth alheias ao seu escopo aprovado."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance")),
+    )
+
+    finance_analytics_tools = {
+        tool.name for tool in asyncio.run(registry.build_oauth_analytics_finance_mcp_server().list_tools())
+    }
+    finance_tools = {
+        tool.name for tool in asyncio.run(registry.build_oauth_finance_mcp_server().list_tools())
+    }
+
+    assert not set(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES).intersection(finance_analytics_tools)
+    assert not set(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES).intersection(finance_tools)
+
+    # E o inverso: finance não vaza para o cohort de processos.
+    process_server_tools = {
+        tool.name for tool in asyncio.run(registry.build_pilot_user_mcp_server().list_tools())
+    }
+    assert not set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).intersection(process_server_tools)
+
+
+def test_process_mutation_discovery_requires_oauth_scope_and_permission(monkeypatch):
+    """Gate duplo (scope OAuth + permissão RBAC), no mesmo padrão do teste
+    equivalente para finance (`_visible_privileged_tool_names`)."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:analytics", "mcp:finance")),
+    )
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES))
+    assert visible == set(), "sem mcp:user o scope OAuth não cobre a mutação de processos"
+
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user")),
+    )
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES))
+    assert visible == set(), "sem permissão RBAC por tool a mutação de processos não é descoberta"
+
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES))
+    assert visible == set(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES)
 
 
 @dataclass
