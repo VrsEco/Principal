@@ -386,6 +386,36 @@ features:
     detalhe_disponivel: true
     guia_ref: "features/financeiro_lancamento_rapido.md"
 
+  - id: "financeiro_central_automacao"
+    nome: "Gestão Financeira — Central de Automação"
+    dominio: "finance"
+    ramo_menu: "Gestão Financeira"
+    caminho_menu: "Gestão Financeira > Movimentos > Central de Automação"
+    rotas_app:
+      - "/financial/automation"
+    objetivo: "Importar documentos financeiros e usar regras de automacao/classificacao para gerar titulos e lancamentos, com revisao humana."
+    quando_usar:
+      - "importar lote de documentos financeiros"
+      - "revisar registros extraídos antes de confirmar"
+      - "criar ou editar regra de classificação/automação"
+      - "consultar histórico de execuções de regras"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "filters"
+    saidas:
+      - "lista_de_lotes"
+      - "registros_extraidos"
+      - "lista_de_regras"
+      - "historico_de_execucoes"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_central_automacao.md"
+
   - id: "gestao_comercial_contratos"
     nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
     dominio: "governance"
@@ -447,10 +477,9 @@ features:
   - id: "financeiro_operacional"
     nome: "Financeiro Operacional e Orçamentário"
     dominio: "finance"
-    objetivo: "Classificacao automatica e relatorios/dashboard executivo financeiro. Conciliacao bancaria, bordero, transferencia bancaria, orcamento matricial, agendamentos (titulos) e lancamento rapido tem features proprias (financeiro_conciliacao_bancaria, financeiro_bordero, financeiro_transferencia_bancaria, financeiro_orcamento_matricial, financeiro_agendamentos, financeiro_lancamento_rapido)."
+    objetivo: "Relatorios e dashboard executivo financeiro. Conciliacao bancaria, bordero, transferencia bancaria, orcamento matricial, agendamentos, lancamento rapido e a central de automacao/classificacao tem features proprias (financeiro_conciliacao_bancaria, financeiro_bordero, financeiro_transferencia_bancaria, financeiro_orcamento_matricial, financeiro_agendamentos, financeiro_lancamento_rapido, financeiro_central_automacao)."
     quando_usar:
       - "gerar relatórios e dashboard executivo financeiro"
-      - "trabalhar com classificação automática de lançamentos"
     entradas:
       obrigatorias:
         - "company_id"
