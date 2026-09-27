@@ -518,6 +518,10 @@ Consulta financeira por IA é uma jornada analítica, não extensão da surface
 allowlisted e somente leitura; preparar ou importar dados não autoriza criar,
 editar, liquidar ou excluir lançamentos.
 
+### 9.3. Fallback via navegador quando o MCP não tem tool
+
+Quando o MCP retornar erro ou não tiver tool configurada para uma ação, a IA pode usar o navegador (autenticado como o usuário) como fallback pontual, nunca em lote e nunca para contornar um `human_gate` já modelado numa tool MCP existente. As regras normativas completas — condição de ativação, limite de uma ação por confirmação, registro obrigatório e a regra anti-repetição que evita que o fallback vire hábito permanente — estão em `docs/spec/fallback_navegador_ia_v1.md`.
+
 ### Princípio MCP First
 
 Quando a IA precisar consultar estado operacional real do sistema, o caminho preferencial deve ser:
