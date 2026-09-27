@@ -354,6 +354,38 @@ features:
     detalhe_disponivel: true
     guia_ref: "features/financeiro_agendamentos.md"
 
+  - id: "financeiro_lancamento_rapido"
+    nome: "Gestão Financeira — Lançamento Rápido"
+    dominio: "finance"
+    ramo_menu: "Gestão Financeira"
+    caminho_menu: "Gestão Financeira > Movimentos > Lançamento Rápido"
+    rotas_app:
+      - "/financial/entries"
+    objetivo: "Registrar em um unico passo um movimento financeiro ja efetivado (pago ou recebido), criando titulo, lancamento e baixa juntos."
+    quando_usar:
+      - "registrar pagamento ou recebimento já realizado"
+      - "explicar diferença entre lançamento rápido e agendamento"
+      - "ratear lançamento entre contas/centros de resultado"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "bank_account_id"
+        - "entry_type"
+      opcionais:
+        - "counterparty_id"
+        - "chart_account_id"
+        - "cost_center_id"
+        - "allocations"
+    saidas:
+      - "lista_de_lancamentos"
+      - "resultado_do_lancamento"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_lancamento_rapido.md"
+
   - id: "gestao_comercial_contratos"
     nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
     dominio: "governance"
@@ -415,9 +447,8 @@ features:
   - id: "financeiro_operacional"
     nome: "Financeiro Operacional e Orçamentário"
     dominio: "finance"
-    objetivo: "Operar lançamento rápido/avulso, classificação automática e relatórios/dashboard executivo financeiro. Conciliação bancária, borderô, transferência bancária, orçamento matricial e agendamentos (títulos) têm features próprias (financeiro_conciliacao_bancaria, financeiro_bordero, financeiro_transferencia_bancaria, financeiro_orcamento_matricial, financeiro_agendamentos)."
+    objetivo: "Classificacao automatica e relatorios/dashboard executivo financeiro. Conciliacao bancaria, bordero, transferencia bancaria, orcamento matricial, agendamentos (titulos) e lancamento rapido tem features proprias (financeiro_conciliacao_bancaria, financeiro_bordero, financeiro_transferencia_bancaria, financeiro_orcamento_matricial, financeiro_agendamentos, financeiro_lancamento_rapido)."
     quando_usar:
-      - "lançar movimento financeiro avulso/direto, sem agendamento"
       - "gerar relatórios e dashboard executivo financeiro"
       - "trabalhar com classificação automática de lançamentos"
     entradas:
