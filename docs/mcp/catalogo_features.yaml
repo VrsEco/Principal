@@ -255,6 +255,37 @@ features:
     detalhe_disponivel: true
     guia_ref: "features/financeiro_bordero.md"
 
+  - id: "financeiro_transferencia_bancaria"
+    nome: "Gestão Financeira — Transferência Bancária"
+    dominio: "finance"
+    ramo_menu: "Gestão Financeira"
+    caminho_menu: "Gestão Financeira > Movimentos > Transferência Bancária"
+    rotas_app:
+      - "/financial/transfers"
+    objetivo: "Registrar movimentacao de caixa entre duas contas bancarias da propria empresa, sem afetar o resultado (DRE)."
+    quando_usar:
+      - "registrar transferência entre contas bancárias da empresa"
+      - "explicar por que transferência não entra no DRE"
+      - "editar ou excluir uma transferência já registrada"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "source_bank_account_id"
+        - "destination_bank_account_id"
+        - "occurred_on"
+      opcionais:
+        - "document_number"
+    saidas:
+      - "lista_de_transferencias"
+      - "detalhe_da_transferencia"
+      - "resultado_da_operacao"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_transferencia_bancaria.md"
+
   - id: "gestao_comercial_contratos"
     nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
     dominio: "governance"
@@ -316,7 +347,7 @@ features:
   - id: "financeiro_operacional"
     nome: "Financeiro Operacional e Orçamentário"
     dominio: "finance"
-    objetivo: "Executar e consultar cadastros, títulos, lançamentos, orçamento, classificação e fechamento financeiro. Conciliação bancária e borderô têm features próprias (financeiro_conciliacao_bancaria, financeiro_bordero)."
+    objetivo: "Executar e consultar cadastros, títulos, lançamentos, orçamento, classificação e fechamento financeiro. Conciliação bancária, borderô e transferência bancária têm features próprias (financeiro_conciliacao_bancaria, financeiro_bordero, financeiro_transferencia_bancaria)."
     quando_usar:
       - "consultar ou criar títulos financeiros"
       - "operar lançamentos e liquidações avulsas"
