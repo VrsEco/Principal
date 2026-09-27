@@ -3,6 +3,9 @@
 ## Metadados
 - `feature_id`: `processos_copiloto_fluxo`
 - `dominio`: `processes`
+- `ramo_menu`: `Gestão Estratégica`
+- `caminho_menu`: `Gestão Estratégica > Execução > Gestão de Processos > Análise BPMS`
+- `rota_app`: `/bpms-analysis`
 - `surfaces_permitidas`: `user`, `admin`
 - `sensibilidade`: `media`
 - `company_id_obrigatorio`: `sim`
