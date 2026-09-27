@@ -57,6 +57,7 @@ from src.intelligence.tools_domains import task_ops as task_ops_domain
 from src.intelligence.tools_domains import project_ops as project_ops_domain
 from src.intelligence.tools_domains import meeting_ops as meeting_ops_domain
 from src.intelligence.tools_domains import process_ops as process_ops_domain
+from src.intelligence.tools_domains import process_instance_ops as process_instance_ops_domain
 from src.intelligence.tools_domains import work_ops as work_ops_domain
 from src.intelligence.tools_domains import strategy_ops as strategy_ops_domain
 from src.intelligence.tools_domains import analytics_ops as analytics_ops_domain
@@ -495,6 +496,55 @@ def list_process_hierarchy(company_id: int = None):
     :param company_id: Opcional ID da empresa. Se não fornecido, usa a empresa ativa da sessão.
     """
     return process_ops_domain.list_process_hierarchy(company_id=company_id)
+
+
+@tool
+def list_open_process_instances(
+    company_id: int = None,
+    status: str = None,
+    due_before: str = None,
+    assigned_to: int = None,
+):
+    """
+    Lista instâncias de processo abertas/atrasadas da empresa (pending, in_progress, overdue por padrão).
+    Retorna, por instância: processo, rotina, status, prazo, dias de atraso, responsável e a
+    referência de manual (manual_reference_json) do contrato de execução vinculado, quando existir.
+    :param company_id: Opcional. Se não fornecido, usa a empresa ativa da sessão.
+    :param status: Opcional. Um status ou lista/CSV de status (default: pending, in_progress, overdue).
+    :param due_before: Opcional. Data limite (YYYY-MM-DD) para due_date.
+    :param assigned_to: Opcional. ID de colaborador responsável/executor/dono para filtrar.
+    """
+    return process_instance_ops_domain.list_open_process_instances(
+        company_id=company_id,
+        status=status,
+        due_before=due_before,
+        assigned_to=assigned_to,
+    )
+
+
+@tool
+def close_process_instance(
+    instance_id: int,
+    evidence: int,
+    company_id: int = None,
+    closure_status: str = "completed",
+):
+    """
+    Encerra uma instância de processo. Exige evidência de conclusão já existente
+    (ID de um ProcessActivityArtifactExecution com status completed e
+    execution_scope='process_instance' vinculado à instância) — a tool nunca fabrica evidência.
+    Mutação sensível: requer confirmação humana antes de executar.
+    :param instance_id: ID da instância de processo a encerrar, na empresa ativa.
+    :param evidence: ID do artefato de execução (ProcessActivityArtifactExecution) que comprova o encerramento.
+    :param company_id: Obrigatório quando o canal não tiver contexto tenant autenticado.
+    :param closure_status: Status final: completed, cancelled ou failed (default completed).
+    """
+    return process_instance_ops_domain.close_process_instance(
+        company_id=company_id,
+        instance_id=instance_id,
+        evidence=evidence,
+        closure_status=closure_status,
+    )
 
 
 @tool
@@ -1290,6 +1340,8 @@ tools = [
     get_company_registration_diagnostics,
     update_company_status,
     list_process_hierarchy,
+    list_open_process_instances,
+    close_process_instance,
     # Fase 1 — Planning
     list_plans,
     get_plan_diagnostics,
