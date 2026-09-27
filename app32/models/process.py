@@ -606,6 +606,7 @@ class ProcessActivityExecutionContract(db.Model):
     rest_config_json = db.Column(db.JSON, nullable=True)
     mcp_config_json = db.Column(db.JSON, nullable=True)
     ai_config_json = db.Column(db.JSON, nullable=True)
+    manual_reference_json = db.Column(db.JSON, nullable=False, default=dict)
     auto_service_key = db.Column(db.String(120), nullable=True)
     requires_human_gate = db.Column(db.Boolean, default=False)
     allows_pause = db.Column(db.Boolean, default=True)
@@ -634,6 +635,7 @@ class ProcessActivityExecutionContract(db.Model):
             'rest_config_json': self.rest_config_json or {},
             'mcp_config_json': self.mcp_config_json or {},
             'ai_config_json': self.ai_config_json or {},
+            'manual_reference_json': self.manual_reference_json or {},
             'auto_service_key': self.auto_service_key,
             'requires_human_gate': bool(self.requires_human_gate),
             'allows_pause': bool(self.allows_pause),

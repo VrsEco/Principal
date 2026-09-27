@@ -267,6 +267,7 @@ class ProcessActivityExecutionContractSchema(ma.SQLAlchemyAutoSchema):
     rest_config_json = fields.Dict(allow_none=True)
     mcp_config_json = fields.Dict(allow_none=True)
     ai_config_json = fields.Dict(allow_none=True)
+    manual_reference_json = fields.Dict(allow_none=True)
     completion_rules_json = fields.Dict(allow_none=True)
     created_at = fields.DateTime(format='iso', dump_only=True)
     updated_at = fields.DateTime(format='iso', dump_only=True)
