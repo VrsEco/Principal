@@ -192,6 +192,8 @@ features:
     dominio: "finance"
     ramo_menu: "Gestão Financeira"
     caminho_menu: "Gestão Financeira > Movimentos > Conciliação Bancária"
+    rotas_app:
+      - "/financial/reconciliation"
     objetivo: "Conciliar lançamentos bancários importados (extrato) com títulos e lançamentos do sistema."
     quando_usar:
       - "importar e revisar extrato bancário"

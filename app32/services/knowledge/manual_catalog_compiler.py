@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from services.knowledge.contracts import SourceChunkDocument, SourceDocument
+from services.mcp_feature_catalog_service import MCPFeatureCatalogService
 
 
 @dataclass(frozen=True)
@@ -57,12 +58,20 @@ class ManualCatalogCompiler:
         (("/portal",), "portal", "Portal"),
     )
 
-    def __init__(self, app_root: str | Path | None = None):
+    CURATED_CUTOFF_HEADING = "## Uso por IA / MCP"
+
+    def __init__(
+        self,
+        app_root: str | Path | None = None,
+        *,
+        feature_catalog_service: MCPFeatureCatalogService | None = None,
+    ):
         self.app_root = Path(app_root or Path(__file__).resolve().parents[2])
         self.sidebar_files = (
             self.app_root / "templates" / "partials" / "sidebar_standard.html",
             self.app_root / "templates" / "partials" / "sidebar" / "_routine_management.html",
         )
+        self.feature_catalog_service = feature_catalog_service or MCPFeatureCatalogService()
 
     def discover_entries(self) -> tuple[ManualNavigationEntry, ...]:
         entries: dict[str, ManualNavigationEntry] = {}
@@ -105,7 +114,7 @@ class ManualCatalogCompiler:
         for entry in self.discover_entries():
             if urlsplit(entry.navigation_target).path in excluded_paths:
                 continue
-            content = self._content(entry)
+            content = self._curated_content_for(entry)
             checksum = self._checksum(content)
             source_ref = f"manual.navigation.{self._slugify(entry.navigation_target)}"
             documents.append(
@@ -182,6 +191,48 @@ class ManualCatalogCompiler:
             "missing_targets": missing,
             "duplicate_targets": duplicates,
         }
+
+    def _curated_content_for(self, entry: ManualNavigationEntry) -> str:
+        """Retorna o conteúdo para a entrada de menu, preferindo o guia curado do MCP.
+
+        Busca no catálogo MCP (`docs/mcp/catalogo_features.yaml`, via
+        `MCPFeatureCatalogService.find_feature_by_route`) uma feature cujo campo
+        `rotas_app` contenha a rota de navegação desta entrada. Se encontrar, lê o
+        `guide_markdown` da feature (`guia_ref`) e corta o texto antes do heading
+        exato "## Uso por IA / MCP" (nível 2, em linha própria) -- essa seção é
+        técnica, voltada à IA/MCP, e não deve ser exposta ao Sapiens/usuário final.
+        Se mais de uma feature declarar a mesma rota em `rotas_app`, a primeira que
+        casar na ordem do YAML vence (sem teste de unicidade nesta rodada). Se não
+        houver feature correspondente, o guide não tiver `guia_ref` ou o arquivo não
+        existir, mantém o fallback genérico (`_content`).
+        """
+        route = urlsplit(entry.navigation_target).path
+        try:
+            feature = self.feature_catalog_service.find_feature_by_route(route)
+        except Exception:
+            feature = None
+        if not feature:
+            return self._content(entry)
+
+        guide_ref = str(feature.get("guia_ref") or "").strip()
+        if not guide_ref:
+            return self._content(entry)
+
+        guide_path = (self.feature_catalog_service.guides_root.parent / guide_ref).resolve()
+        if not guide_path.exists():
+            return self._content(entry)
+
+        markdown = guide_path.read_text(encoding="utf-8")
+        return self._cut_before_heading(markdown, self.CURATED_CUTOFF_HEADING)
+
+    @staticmethod
+    def _cut_before_heading(markdown: str, heading: str) -> str:
+        """Corta `markdown` antes do heading exato (linha própria); sem o heading, retorna tudo."""
+        lines = markdown.splitlines()
+        for index, line in enumerate(lines):
+            if line.strip() == heading.strip():
+                return "\n".join(lines[:index]).rstrip() + "\n"
+        return markdown
 
     @staticmethod
     def _content(entry: ManualNavigationEntry) -> str:

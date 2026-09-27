@@ -44,13 +44,16 @@ Ajudar o usuário a conciliar lançamentos bancários importados (extrato) com t
 
 ## Como orientar o usuário
 1. Acessar **Gestão Financeira > Movimentos > Conciliação Bancária** no menu.
-2. Selecionar a conta bancária e o lote de extrato já importado.
-3. O sistema sugere automaticamente correspondências entre linhas do extrato e títulos do sistema, com uma pontuação de confiança.
-4. Para cada sugestão, o usuário pode: confirmar a correspondência sugerida, ajustar manualmente quando o sistema não acertar sozinho, ou liquidar diretamente um título em aberto a partir da linha do extrato.
-5. Quando várias linhas pertencem ao mesmo pagamento agrupado (ex: um borderô bancário), usar a opção de reconciliar em grupo.
-6. Se algo for conciliado por engano, é possível cancelar a conciliação de uma linha específica ou de um lote inteiro — o lançamento original não é apagado, só desfaz o vínculo.
+2. Em **Upload de Arquivos**, selecionar a conta bancária, escolher o formato do extrato (**OFX, XLSX, XLS ou CSV**), informar o **código do lote** e enviar o arquivo.
+3. Selecionar o lote importado para abrir o workspace de conciliação, organizado em quatro áreas: **Extrato do banco**, **Extrato do sistema**, **Títulos em aberto** e **Painel de decisão**.
+4. O sistema sugere automaticamente correspondências entre linhas do extrato e títulos do sistema, apresentadas no Painel de decisão com uma pontuação de confiança.
+5. Para cada sugestão, o usuário pode: confirmar a correspondência sugerida, ajustar manualmente quando o sistema não acertar sozinho, ou liquidar diretamente um título em aberto a partir da linha do extrato.
+6. Quando várias linhas pertencem ao mesmo pagamento agrupado (ex: um borderô bancário), usar a opção de reconciliar em grupo.
+7. Se algo for conciliado por engano, é possível cancelar a conciliação de uma linha específica ou de um lote inteiro — o lançamento original não é apagado, só desfaz o vínculo.
 
-Explique sempre em dois lados: **extrato** (o que o banco informou) e **sistema** (o que já está lançado) — o objetivo da conciliação é fechar os dois lados um a um.
+Explique sempre em dois lados: **extrato do banco** (o que o banco informou) e **extrato do sistema** (o que já está lançado) — o objetivo da conciliação é fechar os dois lados um a um, revisando valores, datas e favorecidos em **Títulos em aberto** e **Painel de decisão** antes de confirmar qualquer vínculo ou baixa.
+
+Importante distinguir **perguntar** de **executar**: responder "como conciliar" (este guia) é só orientação e não tem nenhum efeito no sistema; confirmação operacional só é pedida quando o usuário de fato aciona vínculo, baixa, criação de lançamento ou cancelamento no APP.
 
 ## Uso por IA / MCP
 Hoje esta feature é **operacional apenas no APP** — não há tool MCP dedicada ao motor de correspondência (matching) em si. Via MCP, a IA pode:
@@ -63,6 +66,8 @@ Qualquer evolução futura que exponha conciliação via MCP deve seguir o mesmo
 ## Validações e restrições
 - `company_id` obrigatório; nunca cruzar contas bancárias ou lançamentos entre empresas
 - toda liquidação ou conciliação sugerida pela IA precisa de confirmação humana antes de ser efetivada no APP
+- **perguntar não é executar**: explicar o fluxo (este guia) nunca produz vínculo, baixa, criação de lançamento ou cancelamento; a confirmação é sempre um ato humano explícito no APP
+- upload de extrato aceita apenas os formatos **OFX, XLSX, XLS ou CSV**; qualquer outro formato deve ser recusado antes do envio
 - ajuste de valor por índice de correção (juros/multa) segue a mesma trilha de auditoria dos lançamentos normais
 - cancelar uma conciliação preserva o histórico de auditoria; não apaga o lançamento original
 
