@@ -187,6 +187,39 @@ features:
     detalhe_disponivel: true
     guia_ref: "features/financeiro_fluxo_caixa.md"
 
+  - id: "financeiro_conciliacao_bancaria"
+    nome: "Gestão Financeira — Conciliação Bancária"
+    dominio: "finance"
+    ramo_menu: "Gestão Financeira"
+    caminho_menu: "Gestão Financeira > Movimentos > Conciliação Bancária"
+    objetivo: "Conciliar lançamentos bancários importados (extrato) com títulos e lançamentos do sistema."
+    quando_usar:
+      - "importar e revisar extrato bancário"
+      - "confirmar ou ajustar correspondência entre extrato e sistema"
+      - "liquidar título em aberto a partir de linha do extrato"
+      - "reconciliar em grupo (borderô)"
+      - "cancelar conciliação feita por engano"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "bank_account_id"
+      opcionais:
+        - "batch_id"
+        - "search_query"
+        - "amount_filter"
+        - "movement_nature"
+    saidas:
+      - "linhas_do_extrato"
+      - "titulos_em_aberto"
+      - "sugestoes_de_match"
+      - "resultado_da_conciliacao"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_conciliacao_bancaria.md"
+
   - id: "gestao_comercial_contratos"
     nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
     dominio: "governance"
