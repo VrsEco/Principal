@@ -317,6 +317,43 @@ features:
     detalhe_disponivel: true
     guia_ref: "features/financeiro_orcamento_matricial.md"
 
+  - id: "financeiro_agendamentos"
+    nome: "Gestão Financeira — Agendamentos"
+    dominio: "finance"
+    ramo_menu: "Gestão Financeira"
+    caminho_menu: "Gestão Financeira > Movimentos > Agendamentos"
+    rotas_app:
+      - "/financial/schedules"
+    objetivo: "Cadastrar e gerenciar titulos financeiros a pagar ou a receber, avulsos ou recorrentes."
+    quando_usar:
+      - "criar título financeiro a pagar ou a receber"
+      - "configurar título recorrente"
+      - "pausar ou reativar agendamento"
+      - "gerar lançamento ou baixa a partir de título vencido"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "entry_type"
+        - "movement_nature"
+      opcionais:
+        - "bank_account_id"
+        - "counterparty_id"
+        - "chart_account_id"
+        - "cost_center_id"
+        - "process_instance_id"
+        - "routine_id"
+    saidas:
+      - "lista_de_agendamentos"
+      - "detalhe_do_agendamento"
+      - "lancamento_gerado"
+      - "resultado_da_baixa"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_agendamentos.md"
+
   - id: "gestao_comercial_contratos"
     nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
     dominio: "governance"
@@ -378,10 +415,9 @@ features:
   - id: "financeiro_operacional"
     nome: "Financeiro Operacional e Orçamentário"
     dominio: "finance"
-    objetivo: "Executar e consultar cadastros, títulos, lançamentos e classificação financeira. Conciliação bancária, borderô, transferência bancária e orçamento matricial têm features próprias (financeiro_conciliacao_bancaria, financeiro_bordero, financeiro_transferencia_bancaria, financeiro_orcamento_matricial)."
+    objetivo: "Operar lançamento rápido/avulso, classificação automática e relatórios/dashboard executivo financeiro. Conciliação bancária, borderô, transferência bancária, orçamento matricial e agendamentos (títulos) têm features próprias (financeiro_conciliacao_bancaria, financeiro_bordero, financeiro_transferencia_bancaria, financeiro_orcamento_matricial, financeiro_agendamentos)."
     quando_usar:
-      - "consultar ou criar títulos financeiros"
-      - "operar lançamentos e liquidações avulsas"
+      - "lançar movimento financeiro avulso/direto, sem agendamento"
       - "gerar relatórios e dashboard executivo financeiro"
       - "trabalhar com classificação automática de lançamentos"
     entradas:
