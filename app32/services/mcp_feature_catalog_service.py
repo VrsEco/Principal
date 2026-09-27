@@ -204,6 +204,27 @@ class MCPFeatureCatalogService:
             "notes": self._extract_bullet_section(guide["guide_markdown"], "Validações e restrições"),
         }
 
+    def find_feature_by_route(self, route: str) -> dict[str, Any] | None:
+        """Localiza a primeira feature cujo campo `rotas_app` contenha a rota informada.
+
+        Agnóstico de surface: destinado a consumidores internos (ex.: o compiler de
+        manual do Sapiens) que precisam de conteúdo curado por rota do APP, e não pela
+        permissão de superfície MCP. Se mais de uma feature declarar a mesma rota em
+        `rotas_app`, a primeira que casar na ordem em que aparece no YAML vence.
+        """
+        normalized_route = str(route or "").strip()
+        if not normalized_route:
+            return None
+        for feature in self._catalog().get("features") or []:
+            rotas_app = {
+                str(item).strip()
+                for item in (feature.get("rotas_app") or [])
+                if str(item).strip()
+            }
+            if normalized_route in rotas_app:
+                return feature
+        return None
+
     def _catalog(self) -> dict[str, Any]:
         if not self.catalog_path.exists():
             raise MCPFeatureCatalogNotFoundError("Catálogo MCP não encontrado.")
