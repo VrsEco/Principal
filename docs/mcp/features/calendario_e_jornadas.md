@@ -47,9 +47,21 @@ Organizar a jornada de trabalho de cada colaborador (blocos fixos de agenda, reg
 5. Em **Análise da Eficiência**, consultar indicadores de eficiência da equipe.
 
 ## Uso por IA / MCP
-Hoje **não existe nenhuma tool MCP** para calendário, jornada, análise de capacidade ou eficiência no `mcp-versus` — toda a operação é feita exclusivamente pela interface web.
+**Correção em relação a uma versão anterior deste guia:** existem, sim, tools MCP reais e completas para este domínio — só não estão publicadas no allowlist do `mcp-versus` (piloto OAuth). Elas já rodam nas surfaces internas `user`/`admin`/`analytics` completas (`src/core/mcp_work_journey_tools.py` e `src/core/mcp_work_journey_analytics_tools.py`, registradas em `src/intelligence/tool_catalog.py`), mas o `mcp_surface_registry.py` do piloto não as inclui em nenhum cohort — é o mesmo padrão de gap já identificado e corrigido em `processes`/`meetings`.
 
-**Achado importante:** o cálculo de capacidade (Análise das Jornadas) usa estimativas fixas por tipo de compromisso quando não há dado real mais preciso (ex.: 1h por atividade de projeto, 2h por instância de processo, 1h por reunião, capacidade semanal padrão de 40h) — é uma aproximação, não uma medição exata de tempo gasto. Isso é importante para não prometer precisão que a funcionalidade não tem, caso essa exposição via MCP seja avaliada no futuro.
+Tools já implementadas no domínio `routine` (28 no total; nenhuma exposta em `mcp-versus`):
+- **Board e blocos**: `get_work_journey_board_tool`, `list_work_journey_blocks_tool`, `save_work_journey_block_tool`, `delete_work_journey_block_tool`
+- **Regras**: `list_work_journey_rules_tool`, `save_work_journey_rule_tool`, `delete_work_journey_rule_tool`
+- **Itens e tarefas manuais**: `update_work_journey_item_tool`, `list_work_journey_manual_tasks_tool`, `create_work_journey_manual_task_tool`, `delete_work_journey_manual_task_tool`
+- **Transferências e ausências**: `create_work_journey_transfer_request_tool`, `approve_work_journey_transfer_request_tool`, `list_work_journey_transfers_tool`, `create_work_journey_absence_request_tool`, `approve_work_journey_absence_request_tool`, `list_work_journey_absences_tool`
+- **Agenda**: `get_work_journey_agenda_tool`, `generate_work_journey_agenda_tool`, `lock_work_journey_agenda_tool`, `unlock_work_journey_agenda_tool`, `move_work_journey_agenda_item_tool`
+- **Vínculo rotina↔jornada**: `list_routine_journey_bindings_tool`, `save_routine_journey_binding_tool`, `list_employee_process_routines_for_journey_tool`
+- **Calendário de eventos**: `list_work_calendar_events_tool`, `create_work_calendar_event_tool`, `update_work_calendar_event_tool`, `delete_work_calendar_event_tool`
+- **Analytics**: `list_work_journey_task_inventory_tool`, `get_work_journey_capacity_report_tool` (mesmo cálculo de capacidade da tela Análise das Jornadas), `get_process_routines_analysis_tool`, `get_efficiency_collaborators_analysis_tool`
+
+Todas já resolvem escopo por colaborador (`resolve_actor_scope`/`ensure_employee_mutation_allowed`) do mesmo jeito que a UI — colaborador comum só opera a própria jornada, gestor/acesso total pode operar de outros. Se e quando a exposição via `mcp-versus` for aprovada, o padrão recomendado é o mesmo já usado para `processes`/`meetings`: cohort de leitura sempre exposto (board, agenda, analytics), cohort de mutação simples (blocos, regras, tarefas manuais, eventos de calendário) e cohort de mutação sensível com `human_gate` para aprovação de transferência/ausência e geração/trava de agenda.
+
+**Achado importante:** o cálculo de capacidade (Análise das Jornadas / `get_work_journey_capacity_report_tool`) usa estimativas fixas por tipo de compromisso quando não há dado real mais preciso (ex.: 1h por atividade de projeto, 2h por instância de processo, 1h por reunião, capacidade semanal padrão de 40h) — é uma aproximação, não uma medição exata de tempo gasto. Isso é importante para não prometer precisão que a funcionalidade não tem.
 
 ## Validações e restrições
 - `company_id` obrigatório; jornada/calendário de outra empresa nunca é retornado
