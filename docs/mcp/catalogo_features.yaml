@@ -1009,3 +1009,38 @@ features:
       - "analytics"
     detalhe_disponivel: true
     guia_ref: "features/auditoria_interna.md"
+
+  - id: "planejamento_estrategico"
+    nome: "Planejamento Estratégico — Identidade Organizacional e Planos"
+    dominio: "strategy"
+    ramo_menu: "Planejamento Estratégico"
+    caminho_menu: "Planejamento Estratégico"
+    rotas_app:
+      - "/companies/{company_id}/identity"
+      - "/plans"
+    objetivo: "Definir a identidade organizacional (missao, visao, valores) e conduzir planos estrategicos (crescimento ou implantacao) com OKRs globais e de area, diagnostico de progresso e relatorio final."
+    quando_usar:
+      - "consultar ou editar missão, visão e valores da empresa"
+      - "criar ou acompanhar um plano estratégico (crescimento ou implantação)"
+      - "definir OKRs e resultados-chave globais ou de uma área"
+      - "consultar diagnóstico de progresso de um plano"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "plan_id"
+        - "section_key"
+        - "okr_title"
+        - "key_result_title"
+        - "deadline"
+    saidas:
+      - "identidade_organizacional"
+      - "lista_de_planos"
+      - "diagnostico_do_plano"
+      - "okrs_e_resultados_chave"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/planejamento_estrategico.md"
