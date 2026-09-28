@@ -58,13 +58,20 @@ def test_pilot_user_server_exposes_only_the_reviewed_tenant_safe_catalog():
         *registry.PILOT_USER_TOOL_NAMES,
         *registry.PILOT_MANUAL_READ_TOOL_NAMES,
         *registry.PILOT_PROCESS_INSTANCE_READ_TOOL_NAMES,
+        *registry.PILOT_MEETING_READ_TOOL_NAMES,
         "list_user_app32_capabilities",
     }
-    # Sem principal autenticado, mutação de processos/instâncias não é descoberta.
+    # Sem principal autenticado, mutação de processos/instâncias/reuniões não é descoberta.
     assert not set(registry.PILOT_PROCESS_MUTATION_TOOL_NAMES).intersection(
         {tool.name for tool in tools}
     )
     assert not set(registry.PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES).intersection(
+        {tool.name for tool in tools}
+    )
+    assert not set(registry.PILOT_MEETING_MUTATION_TOOL_NAMES).intersection(
+        {tool.name for tool in tools}
+    )
+    assert not set(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES).intersection(
         {tool.name for tool in tools}
     )
 
@@ -77,6 +84,7 @@ def test_oauth_user_server_keeps_the_same_reviewed_remote_catalog():
         *registry.PILOT_USER_TOOL_NAMES,
         *registry.PILOT_MANUAL_READ_TOOL_NAMES,
         *registry.PILOT_PROCESS_INSTANCE_READ_TOOL_NAMES,
+        *registry.PILOT_MEETING_READ_TOOL_NAMES,
         "list_user_app32_capabilities",
     }
     assert not {
@@ -86,6 +94,12 @@ def test_oauth_user_server_keeps_the_same_reviewed_remote_catalog():
         {tool.name for tool in tools}
     )
     assert not set(registry.PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES).intersection(
+        {tool.name for tool in tools}
+    )
+    assert not set(registry.PILOT_MEETING_MUTATION_TOOL_NAMES).intersection(
+        {tool.name for tool in tools}
+    )
+    assert not set(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES).intersection(
         {tool.name for tool in tools}
     )
 
@@ -392,6 +406,175 @@ def test_process_instance_mutation_discovery_requires_oauth_scope_and_permission
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
     visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES))
     assert visible == set(registry.PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES)
+
+
+def test_oauth_unified_server_exposes_meeting_read_and_mutation_cohorts_only(monkeypatch):
+    """Descoberta expõe exatamente leitura (get_meeting, além de list_meetings
+    já presente em PILOT_USER_TOOL_NAMES) + mutação simples (11 tools) +
+    mutação sensível (5 tools, com human_gate) no cohort próprio; nenhuma
+    outra tool de meetings (log_meeting_discussion, delete_meeting_secure)
+    vaza para o conector mcp-versus."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance")),
+    )
+
+    server = registry.build_oauth_unified_mcp_server()
+    tools = {tool.name for tool in asyncio.run(server.list_tools())}
+
+    assert set(registry.PILOT_MEETING_READ_TOOL_NAMES) == {"get_meeting"}
+    assert "list_meetings" in registry.PILOT_USER_TOOL_NAMES
+    assert set(registry.PILOT_MEETING_MUTATION_TOOL_NAMES) == {
+        "create_meeting",
+        "update_meeting",
+        "create_meeting_topic",
+        "update_meeting_topic",
+        "delete_meeting_topic",
+        "create_meeting_decision",
+        "update_meeting_decision",
+        "delete_meeting_decision",
+        "create_meeting_activity",
+        "update_meeting_activity",
+        "delete_meeting_activity",
+    }
+    assert set(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES) == {
+        "schedule_meeting",
+        "start_meeting",
+        "finish_meeting",
+        "sync_meeting_activities_to_project",
+        "send_meeting_minutes",
+    }
+    assert "list_meetings" in tools
+    assert set(registry.PILOT_MEETING_READ_TOOL_NAMES).issubset(tools)
+    assert set(registry.PILOT_MEETING_MUTATION_TOOL_NAMES).issubset(tools)
+    assert set(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES).issubset(tools)
+
+    for tool_name in registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES:
+        capability = registry.catalog.get_tool_capability(tool_name)
+        assert capability is not None
+        assert capability.human_gate is True, f"{tool_name} deve manter human_gate=True"
+
+    for tool_name in registry.PILOT_MEETING_MUTATION_TOOL_NAMES:
+        capability = registry.catalog.get_tool_capability(tool_name)
+        assert capability is not None
+        assert capability.human_gate is False, f"{tool_name} não deve ter gate novo"
+
+    other_meeting_tool_names = (
+        {capability.name for capability in registry.catalog.iter_capabilities(domain="meetings")}
+        - set(registry.PILOT_MEETING_MUTATION_TOOL_NAMES)
+        - set(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES)
+        - set(registry.PILOT_MEETING_READ_TOOL_NAMES)
+        - {"list_meetings"}
+    )
+    assert other_meeting_tool_names, "sanity: catálogo real deve ter outras tools de meetings fora do cohort"
+    assert not other_meeting_tool_names.intersection(tools)
+    assert "log_meeting_discussion" in other_meeting_tool_names
+    assert "delete_meeting_secure" in other_meeting_tool_names
+
+
+def test_get_meeting_denies_cross_tenant_company_id():
+    """Mesmo isolamento cross-tenant do cohort de leitura de reuniões."""
+    capability = registry.catalog.get_tool_capability("get_meeting")
+    assert capability is not None
+
+    decision = evaluate_tool_policy(
+        {"user_id": 5, "company_id": 7, "role": "colaborador", "channel": "claude_remote"},
+        ToolPolicyRequest(
+            tool_name=capability.name,
+            surface="user",
+            domain=capability.domain,
+            action=infer_tool_action(capability.name, capability.domain),
+            risk=getattr(capability.risk, "value", capability.risk),
+            requested_company_id=99,
+            accessible_company_ids=(7,),
+            required_permissions=capability.permissions,
+            required_context=capability.required_context,
+        ),
+    )
+
+    assert decision.allowed is False
+
+
+def test_meeting_mutation_tools_never_leak_outside_their_cohort(monkeypatch):
+    """Espelha o teste de isolamento de processos/finance: mesmo com todas as
+    permissões concedidas, as mutações de reuniões não aparecem em coortes
+    OAuth alheias ao seu escopo aprovado."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance")),
+    )
+
+    finance_analytics_tools = {
+        tool.name for tool in asyncio.run(registry.build_oauth_analytics_finance_mcp_server().list_tools())
+    }
+    finance_tools = {
+        tool.name for tool in asyncio.run(registry.build_oauth_finance_mcp_server().list_tools())
+    }
+
+    assert not set(registry.PILOT_MEETING_MUTATION_TOOL_NAMES).intersection(finance_analytics_tools)
+    assert not set(registry.PILOT_MEETING_MUTATION_TOOL_NAMES).intersection(finance_tools)
+    assert not set(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES).intersection(finance_analytics_tools)
+    assert not set(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES).intersection(finance_tools)
+
+    # E o inverso: finance não vaza para o cohort de reuniões.
+    meeting_server_tools = {
+        tool.name for tool in asyncio.run(registry.build_pilot_user_mcp_server().list_tools())
+    }
+    assert not set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).intersection(meeting_server_tools)
+
+
+def test_meeting_mutation_discovery_requires_oauth_scope_and_permission(monkeypatch):
+    """Gate duplo (scope OAuth + permissão RBAC), no mesmo padrão do teste
+    equivalente para processos/finance."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:analytics", "mcp:finance")),
+    )
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_MEETING_MUTATION_TOOL_NAMES))
+    assert visible == set(), "sem mcp:user o scope OAuth não cobre a mutação simples de reuniões"
+
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user")),
+    )
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_MEETING_MUTATION_TOOL_NAMES))
+    assert visible == set(), "sem permissão RBAC por tool a mutação simples de reuniões não é descoberta"
+
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_MEETING_MUTATION_TOOL_NAMES))
+    assert visible == set(registry.PILOT_MEETING_MUTATION_TOOL_NAMES)
+
+
+def test_meeting_sensitive_discovery_requires_oauth_scope_and_permission(monkeypatch):
+    """Espelha `test_meeting_mutation_discovery_requires_oauth_scope_and_permission`
+    para o cohort sensível (schedule/start/finish_meeting,
+    sync_meeting_activities_to_project, send_meeting_minutes): gate duplo
+    scope OAuth (`mcp:user`) + permissão RBAC por tool. O gate humano
+    (`human_gate=True`) continua sendo responsabilidade da capability/policy
+    de execução, não da descoberta."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:analytics", "mcp:finance")),
+    )
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES))
+    assert visible == set(), "sem mcp:user o scope OAuth não cobre a mutação sensível de reuniões"
+
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user")),
+    )
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES))
+    assert visible == set(), "sem permissão RBAC por tool a mutação sensível de reuniões não é descoberta"
+
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES))
+    assert visible == set(registry.PILOT_MEETING_SENSITIVE_TOOL_NAMES)
 
 
 @dataclass
