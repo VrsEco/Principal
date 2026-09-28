@@ -752,3 +752,36 @@ features:
       - "analytics"
     detalhe_disponivel: true
     guia_ref: "features/gestao_processos_execucao.md"
+
+  - id: "gestao_reunioes"
+    nome: "Gestão Estratégica — Gestão de Reuniões"
+    dominio: "meetings"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Execução > Gestão de Reuniões"
+    rotas_app:
+      - "/meetings"
+    objetivo: "Gerenciar o ciclo de vida de uma reuniao -- agendar, iniciar, discutir, encerrar, enviar ata -- com pautas, decisoes e acoes."
+    quando_usar:
+      - "agendar reunião"
+      - "registrar pautas e decisões de uma reunião"
+      - "criar ações e sincronizar para tarefas de projeto"
+      - "enviar ata da reunião"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "title"
+      opcionais:
+        - "project_id"
+        - "participants"
+        - "actual_date"
+        - "actual_time"
+    saidas:
+      - "lista_de_reunioes"
+      - "detalhe_da_reuniao"
+      - "resultado_da_sincronizacao"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_reunioes.md"
