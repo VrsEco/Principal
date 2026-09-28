@@ -125,3 +125,86 @@ def test_curated_content_for_returns_full_guide_when_cutoff_heading_missing(tmp_
     content = compiler._curated_content_for(_reconciliation_entry())
 
     assert content == guide_content
+
+
+SHARED_GUIDE = """# Guia da Feature: Relatórios
+
+## Metadados
+- `feature_id`: `financeiro_relatorios`
+- `company_id_obrigatorio`: `sim`
+
+## Objetivo
+Consultar relatórios financeiros: razão e demonstrativo de resultados.
+
+## Quando usar
+- explicar como ler o razão por conta contábil
+- orientar qual relatório usar
+
+## Entradas esperadas
+- `company_id`: escopo do tenant
+
+## Como orientar o usuário
+1. Acessar **Gestão Financeira > Relatórios** no menu.
+2. Escolher o relatório:
+   - **Razão**: histórico de lançamentos por conta contábil.
+   - **Demonstrativo de Resultados**: DRE do período.
+3. Aplicar os filtros — a surface MCP decide o que a IA pode ver.
+
+## Uso por IA / MCP
+Chamar a tool interna.
+"""
+
+
+def _shared_guide_compiler(tmp_path):
+    service = _feature_catalog_service_with_guide(
+        tmp_path,
+        rotas_app=["/financial/reports/razao", "/financial/reports/dre"],
+        guide_content=SHARED_GUIDE,
+    )
+    return ManualCatalogCompiler(tmp_path, feature_catalog_service=service)
+
+
+def _entry(title, target):
+    return ManualNavigationEntry(
+        title=title, navigation_target=target, route_key=target, module_key="finance", module_label="Gestão Financeira"
+    )
+
+
+def test_shared_guide_gives_each_screen_its_own_item_and_only_user_sections(tmp_path):
+    compiler = _shared_guide_compiler(tmp_path)
+    razao = compiler._curated_content_for(
+        _entry("Razão", "/financial/reports/razao"), sibling_titles=("Demonstrativo de Resultados",)
+    )
+    dre = compiler._curated_content_for(
+        _entry("Demonstrativo de Resultados", "/financial/reports/dre"), sibling_titles=("Razão",)
+    )
+
+    assert razao != dre
+    assert razao.startswith("Como acessar Razão\n\nOnde fica: Gestão Financeira > Razão.")
+    assert "histórico de lançamentos por conta contábil" in razao and "DRE do período" not in razao
+    assert "DRE do período" in dre and "histórico de lançamentos" not in dre
+    for content in (razao, dre):
+        assert "Consultar relatórios financeiros" in content  # objetivo vale para todas as telas
+        assert "- Qual relatório usar" in content  # "orientar qual..." (instrução p/ IA) vira texto p/ pessoa
+        assert "Aplicar os filtros." in content  # trecho técnico depois do travessão sai
+        for leaked in ("feature_id", "company_id", "surface", "tool", "Uso por IA"):
+            assert leaked not in content
+    assert "- Como ler o razão por conta contábil" in razao
+    assert "ler o razão" not in dre  # item de "Quando usar" que fala só da tela irmã
+
+
+def test_compile_documents_never_gives_two_screens_the_same_text():
+    documents = ManualCatalogCompiler().compile_documents()
+    by_content = {}
+    for document in documents:
+        by_content.setdefault(document.chunks[0].content, set()).add(document.title)
+
+    assert all(len(titles) == 1 for titles in by_content.values())
+    dre = next(d for d in documents if d.navigation_target == "/financial/reports/demonstrativo-resultados")
+    razao = next(d for d in documents if d.navigation_target == "/financial/reports/razao")
+    assert "DRE" in dre.chunks[0].content and "DRE" not in razao.chunks[0].content
+
+
+def test_compiler_reads_every_sidebar_partial():
+    targets = {entry.navigation_target for entry in ManualCatalogCompiler().discover_entries()}
+    assert {"/indicators", "/internal-audit", "/plans", "/financial/reconciliation"} <= targets

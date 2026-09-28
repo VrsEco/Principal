@@ -3,7 +3,7 @@
 # Base: os 71 artigos de product_help em 25/09/2026. Paráfrases (sem as palavras do título) foram incluídas
 # de propósito: é onde a busca vetorial deveria superar o full-text. Revisar com perguntas reais de usuários.
 como registro uma despesa que a empresa vai pagar?	financeiro.conta_a_pagar_lancamento|manual.navigation.financial-entries
-onde confiro se o extrato do banco bate com o sistema?	financeiro.conciliacao_bancaria
+onde confiro se o extrato do banco bate com o sistema?	manual.navigation.financial-reconciliation
 quais boletos ainda não foram pagos?	financeiro.titulos_em_aberto|manual.navigation.financial-reports-agendamento
 como vejo minha lista de tarefas do dia?	rotina.meu_trabalho_atividades|manual.navigation.work-journey|manual.navigation.calendar
 como coloco um fluxo de trabalho no ar para todos verem?	processos.publicar_portal

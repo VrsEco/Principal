@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -67,9 +68,11 @@ class ManualCatalogCompiler:
         feature_catalog_service: MCPFeatureCatalogService | None = None,
     ):
         self.app_root = Path(app_root or Path(__file__).resolve().parents[2])
+        # O menu é o sidebar padrão mais os parciais incluídos por ele (Planejamento, Gestão Estratégica,
+        # Rotina...): ler só parte deles deixa telas inteiras sem artigo de navegação.
         self.sidebar_files = (
             self.app_root / "templates" / "partials" / "sidebar_standard.html",
-            self.app_root / "templates" / "partials" / "sidebar" / "_routine_management.html",
+            *sorted((self.app_root / "templates" / "partials" / "sidebar").glob("*.html")),
         )
         self.feature_catalog_service = feature_catalog_service or MCPFeatureCatalogService()
 
@@ -111,10 +114,14 @@ class ManualCatalogCompiler:
             urlsplit(target).path for target in (excluded_targets or set()) if target
         }
         documents = []
-        for entry in self.discover_entries():
+        entries = self.discover_entries()
+        sibling_titles = self._sibling_titles_by_target(entries)
+        for entry in entries:
             if urlsplit(entry.navigation_target).path in excluded_paths:
                 continue
-            content = self._curated_content_for(entry)
+            content = self._curated_content_for(
+                entry, sibling_titles=sibling_titles.get(entry.navigation_target, ())
+            )
             checksum = self._checksum(content)
             source_ref = f"manual.navigation.{self._slugify(entry.navigation_target)}"
             documents.append(
@@ -192,25 +199,47 @@ class ManualCatalogCompiler:
             "duplicate_targets": duplicates,
         }
 
-    def _curated_content_for(self, entry: ManualNavigationEntry) -> str:
-        """Retorna o conteúdo para a entrada de menu, preferindo o guia curado do MCP.
+    USER_SECTIONS = ("Objetivo", "Quando usar", "Como orientar o usuário")
+    _TECHNICAL_MARKERS = re.compile(r"\b(surface|surfaces|mcp|api|tool|tools|ia)\b")
 
-        Busca no catálogo MCP (`docs/mcp/catalogo_features.yaml`, via
-        `MCPFeatureCatalogService.find_feature_by_route`) uma feature cujo campo
-        `rotas_app` contenha a rota de navegação desta entrada. Se encontrar, lê o
-        `guide_markdown` da feature (`guia_ref`) e corta o texto antes do heading
-        exato "## Uso por IA / MCP" (nível 2, em linha própria) -- essa seção é
-        técnica, voltada à IA/MCP, e não deve ser exposta ao Sapiens/usuário final.
-        Se mais de uma feature declarar a mesma rota em `rotas_app`, a primeira que
-        casar na ordem do YAML vence (sem teste de unicidade nesta rodada). Se não
-        houver feature correspondente, o guide não tiver `guia_ref` ou o arquivo não
-        existir, mantém o fallback genérico (`_content`).
-        """
-        route = urlsplit(entry.navigation_target).path
+    def _feature_for(self, entry: ManualNavigationEntry) -> dict | None:
         try:
-            feature = self.feature_catalog_service.find_feature_by_route(route)
+            return self.feature_catalog_service.find_feature_by_route(urlsplit(entry.navigation_target).path)
         except Exception:
-            feature = None
+            return None
+
+    def _sibling_titles_by_target(
+        self, entries: tuple[ManualNavigationEntry, ...]
+    ) -> dict[str, tuple[str, ...]]:
+        """Para cada tela, os títulos das OUTRAS telas que compartilham o mesmo guia de feature."""
+
+        members: dict[str, list[ManualNavigationEntry]] = {}
+        for entry in entries:
+            feature = self._feature_for(entry)
+            if feature and feature.get("id"):
+                members.setdefault(str(feature["id"]), []).append(entry)
+        siblings: dict[str, tuple[str, ...]] = {}
+        for group in members.values():
+            for entry in group:
+                siblings[entry.navigation_target] = tuple(
+                    other.title for other in group if self._words(other.title) != self._words(entry.title)
+                )
+        return siblings
+
+    def _curated_content_for(
+        self, entry: ManualNavigationEntry, *, sibling_titles: tuple[str, ...] = ()
+    ) -> str:
+        """Conteúdo da tela, preferindo o guia curado da feature MCP (`rotas_app`).
+
+        Usa só as seções escritas para pessoas (Objetivo, Quando usar, Como orientar o usuário):
+        metadados, entradas/saídas e "Uso por IA / MCP" são técnicos e ficam de fora, assim como
+        trechos que citam surface/MCP/API/IA. Quando várias telas compartilham o mesmo guia
+        (`sibling_titles`), cada uma recebe só os itens que falam dela, e não os das irmãs; senão as
+        telas teriam texto (e embedding) idêntico e a busca não as distinguiria. O nome da tela e o
+        caminho no menu abrem o texto. Sem feature, sem guia ou sem essas seções: comportamento
+        anterior (genérico, ou guia cortado antes de "Uso por IA / MCP").
+        """
+        feature = self._feature_for(entry)
         if not feature:
             return self._content(entry)
 
@@ -223,7 +252,138 @@ class ManualCatalogCompiler:
             return self._content(entry)
 
         markdown = guide_path.read_text(encoding="utf-8")
-        return self._cut_before_heading(markdown, self.CURATED_CUTOFF_HEADING)
+        sections = self._user_sections(markdown)
+        if not sections:
+            return self._cut_before_heading(markdown, self.CURATED_CUTOFF_HEADING)
+
+        def keep(name: str, line: str) -> bool:
+            if not sibling_titles or name == "Objetivo":  # o objetivo resume a feature: vale para todas
+                return True
+            return self._line_owner(line, entry.title, sibling_titles) != "sibling"
+
+        cleaned = {
+            name: [line for line in (self._strip_technical(raw) for raw in lines) if line and keep(name, line)]
+            for name, lines in sections.items()
+        }
+        parts = [f"Como acessar {entry.title}", f"Onde fica: {self._menu_path(entry, feature)}."]
+        if sibling_titles:
+            own = [
+                self._plain(line)
+                for line in cleaned.get("Como orientar o usuário", [])
+                if self._line_owner(line, entry.title, sibling_titles) == "own"
+                and not self._plain(line).lower().startswith("acessar")
+            ]
+            if own:
+                parts.append("\n".join(own[:2]))
+        if cleaned.get("Objetivo"):
+            parts.append("\n".join(cleaned["Objetivo"]))
+        if cleaned.get("Quando usar"):
+            parts.append("Serve para:\n" + "\n".join(self._as_use_case(line) for line in cleaned["Quando usar"]))
+        if cleaned.get("Como orientar o usuário"):
+            parts.append("Como usar:\n" + "\n".join(self._renumber(cleaned["Como orientar o usuário"])))
+        return "\n\n".join(parts) + "\n"
+
+    @classmethod
+    def _user_sections(cls, markdown: str) -> dict[str, list[str]]:
+        sections: dict[str, list[str]] = {}
+        current: str | None = None
+        for line in markdown.splitlines():
+            if line.startswith("## "):
+                heading = line[3:].strip()
+                current = heading if heading in cls.USER_SECTIONS else None
+                if current:
+                    sections.setdefault(current, [])
+                continue
+            if current and line.strip():
+                sections[current].append(line.rstrip())
+        return {name: lines for name, lines in sections.items() if lines}
+
+    @classmethod
+    def _strip_technical(cls, line: str) -> str:
+        """Tira o trecho técnico (surface/MCP/API/IA); se a linha começa técnica, ela some."""
+        segments = line.split(" — ")
+        kept: list[str] = []
+        for segment in segments:
+            if cls._TECHNICAL_MARKERS.search(cls._fold(segment)):
+                break
+            kept.append(segment)
+        if not kept:
+            return ""
+        text = " — ".join(kept).rstrip(" ;,:")
+        if len(kept) < len(segments) and not text.endswith("."):
+            text += "."
+        return text
+
+    @classmethod
+    def _line_owner(cls, line: str, title: str, sibling_titles: tuple[str, ...]) -> str:
+        """`own`, `sibling` ou `shared`: de qual tela a linha fala (o título mais específico vence)."""
+        lead = re.match(r"^\s*(?:[-*]|\d+\.)\s+\*\*([^*]+)\*\*", line)
+        words = cls._words(lead.group(1) if lead else line)
+        found = [t for t in (title, *sibling_titles) if cls._contains(words, cls._words(t))]
+        if lead and found:
+            # item de lista "**Tela**: descrição": o dono é o nome em negrito que mais casa
+            longest = max(len(cls._words(t)) for t in found)
+            owners = {cls._words(t) for t in found if len(cls._words(t)) == longest}
+            if len(owners) == 1:
+                return "own" if cls._words(title) in owners else "sibling"
+        maximal = [
+            t
+            for t in found
+            if not any(
+                len(cls._words(other)) > len(cls._words(t)) and cls._contains(cls._words(other), cls._words(t))
+                for other in found
+            )
+        ]
+        distinct = {cls._words(t) for t in maximal}
+        if len(distinct) != 1:
+            return "shared"  # nenhuma tela, ou uma enumeração de várias: vale para todas
+        return "own" if cls._words(title) in distinct else "sibling"
+
+    def _menu_path(self, entry: ManualNavigationEntry, feature: dict) -> str:
+        base = str(feature.get("caminho_menu") or entry.module_label).strip()
+        title_words = self._words(entry.title)
+        if title_words and self._words(base)[-len(title_words):] == title_words:
+            return base
+        return f"{base} > {entry.title}"
+
+    @staticmethod
+    def _plain(line: str) -> str:
+        text = re.sub(r"^\s*(?:[-*]|\d+\.)\s+", "", line)
+        return text.replace("**", "").strip()
+
+    @classmethod
+    def _as_use_case(cls, line: str) -> str:
+        # "explicar como cadastrar X" (instrução para a IA) -> "Como cadastrar X" (texto para a pessoa)
+        text = re.sub(r"^(explicar|orientar)\s+", "", cls._plain(line), flags=re.I)
+        return f"- {text[:1].upper()}{text[1:]}"
+
+    @staticmethod
+    def _renumber(lines: list[str]) -> list[str]:
+        counter = 0
+        out = []
+        for line in lines:
+            match = re.match(r"^\d+\.\s", line)
+            if match:
+                counter += 1
+                line = f"{counter}. " + line[match.end():]
+            out.append(line)
+        return out
+
+    @staticmethod
+    def _fold(text: str) -> str:
+        return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
+
+    @classmethod
+    def _words(cls, text: str) -> tuple[str, ...]:
+        """Palavras sem acento/caixa e sem plural simples (`contas` -> `conta`), para casar títulos."""
+        return tuple(
+            w[:-1] if len(w) > 3 and w.endswith("s") else w for w in re.findall(r"[a-z0-9]+", cls._fold(text))
+        )
+
+    @staticmethod
+    def _contains(haystack: tuple[str, ...], needle: tuple[str, ...]) -> bool:
+        n = len(needle)
+        return bool(n) and any(haystack[i : i + n] == needle for i in range(len(haystack) - n + 1))
 
     @staticmethod
     def _cut_before_heading(markdown: str, heading: str) -> str:
