@@ -54,7 +54,14 @@ Conduzir o ciclo completo de auditoria interna: cadastrar áreas e auditores, mo
 7. Registrar follow-ups para acompanhar a resolução de um achado ao longo do tempo.
 
 ## Uso por IA / MCP
-Hoje **não existe nenhuma tool MCP** para o domínio de auditoria interna no `mcp-versus` — toda a operação é feita exclusivamente pela interface web.
+**Correção em relação a uma versão anterior deste guia:** existem, sim, 3 tools MCP reais de leitura para este domínio — só não estão publicadas no allowlist do `mcp-versus` (piloto OAuth). Elas já rodam nas surfaces internas `user`/`admin`/`analytics` completas (`src/core/mcp_internal_audit_tools.py`, registrada em `src/intelligence/tool_catalog.py`), mas o `mcp_surface_registry.py` do piloto não as inclui em nenhum cohort — é o mesmo padrão de gap já identificado e corrigido em `processes`/`meetings`.
+
+Tools já implementadas no domínio `audit` (deliberadamente somente leitura no código — comentário no próprio arquivo diz que pontos/achados dependem de triagem humana na interface antes de qualquer mutação):
+- `get_internal_audit_summary(company_id)`: contadores agregados da auditoria interna da empresa
+- `list_internal_audit_points(company_id, status=None, limit=50)`: lista pontos de auditoria (limite máx. 100)
+- `list_internal_audit_findings(company_id, status=None, limit=50)`: lista achados de auditoria (limite máx. 100)
+
+Se e quando a exposição via `mcp-versus` for aprovada, essas 3 tools de leitura são candidatas de baixo risco (mesmo padrão de `list_open_process_instances`/`get_meeting`: sempre expostas, sem `human_gate`, pois já exigem `company_id` e não mutam nada). Mutação (criar/atualizar checklist, execução, ponto, achado, relatório, follow-up) segue indisponível via MCP mesmo no código interno — ainda exigiria trabalho de implementação, não é só allowlist.
 
 **Achado importante, contra-intuitivo em relação ao menu:** o menu exibe as tags "MVP" (Checklists) e "Onda 2/3/4" (Execuções, Pontos, Papéis de Trabalho, Achados, Relatórios, Follow-ups), sugerindo que partes da feature ainda não existiriam. Na prática, **todo o ciclo já está implementado no backend**, com service dedicado (~35 métodos cobrindo todas as etapas) e schema de banco próprio (13 tabelas: áreas, auditores, checklists e itens, execuções e itens, pontos, papéis de trabalho, achados, vínculos de evidência, relatórios, follow-ups, agenda). As tags parecem ser rótulos de um roadmap que já foi superado pelo código — vale explicar isso ao usuário sem prometer mais do que existe: a lógica de negócio está completa, mas a interface das telas mais recentes (execuções, pontos, papéis de trabalho, achados, relatórios, follow-ups) é minimalista/utilitária, sem os componentes visuais mais elaborados de áreas como Indicadores ou Incentivos.
 
