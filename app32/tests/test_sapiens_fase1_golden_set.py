@@ -51,7 +51,7 @@ def test_sapiens_fase1_golden_set_is_versioned_and_user_safe():
 
 
 def test_product_help_catalog_covers_every_fase1_golden_source_ref():
-    documents = ProductHelpKnowledgeAdapter(ROOT / "knowledge" / "product_help").discover_documents()
+    documents = ProductHelpKnowledgeAdapter().discover_documents()  # inclui os artigos de navegação
     source_refs = {document.source_ref for document in documents}
 
     expected = {

@@ -21,6 +21,8 @@ Calibração offline (peso/limiares sem repetir consultas nem embeddings):
      ... python scripts/knowledge_strategy_ab.py --company-id 9 --questions X.tsv --mode candidates --out /tmp/cand.json
   2. em qualquer lugar (sem app, sem banco), refaz a resposta para uma grade de configurações:
      python scripts/knowledge_strategy_ab.py --replay /tmp/cand.json --weights 1,2 --min-sims 0.45 --solo-mins off,0.55
+  3. antes x depois de mudar conteúdo (pergunta a pergunta, configuração de produção por padrão):
+     python scripts/knowledge_strategy_ab.py --replay /tmp/cand_depois.json --compare /tmp/cand_antes.json
 Nunca agendar; rodar só com autorização do operador.
 """
 from __future__ import annotations
@@ -28,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
@@ -320,6 +323,81 @@ def _replay_score(outcomes: Mapping[str, tuple], cases: Sequence[Mapping[str, An
     return result
 
 
+def _replay_service() -> Any:
+    from services.knowledge.query_service import KnowledgeQueryService
+
+    return KnowledgeQueryService(embedding_provider=None)
+
+
+def _replay_outcome(service: Any, case: Mapping[str, Any], **config: Any) -> tuple[int | None, str | None, bool]:
+    hits = service.replay_answer(case["candidatos"], **config)
+    return expected_rank(hits, case["expected"]), (hits[:1] or [{}])[0].get("title"), not hits
+
+
+def compare(
+    old: Mapping[str, Any],
+    new: Mapping[str, Any],
+    *,
+    weight: float,
+    min_sim: float,
+    solo: float | None,
+    service: Any = None,
+) -> dict[str, Any]:
+    """Antes x depois (ex.: conteúdo novo), pergunta a pergunta, numa configuração só.
+
+    Casa os casos pela pergunta; mostra quem passou a acertar e quem passou a errar em cada
+    estratégia. É a checagem de "não piorar nenhuma resposta" depois de mudar conteúdo.
+    """
+
+    service = service or _replay_service()
+    old_cases = {c["question"]: c for c in old["casos"] if c.get("candidatos")}
+    pairs = [(old_cases[c["question"]], c) for c in new["casos"] if c.get("candidatos") and c["question"] in old_cases]
+    configs = {
+        "full_text": {"strategy": "full_text", "min_similarity": 0.0, "vector_weight": 1.0},
+        "hybrid": {"strategy": "hybrid", "min_similarity": min_sim, "vector_weight": weight, "solo_min_similarity": solo},
+    }
+    result: dict[str, Any] = {"casos": len(pairs), "peso": weight, "limiar": min_sim, "solo": solo, "estrategias": {}}
+    for name, config in configs.items():
+        before_ok = after_ok = 0
+        changes = []
+        for old_case, new_case in pairs:
+            before = _replay_outcome(service, old_case, **config)
+            after = _replay_outcome(service, new_case, **config)
+            before_ok += before[0] == 1
+            after_ok += after[0] == 1
+            if (before[0] == 1) != (after[0] == 1):
+                changes.append(
+                    {
+                        "id": new_case["id"],
+                        "question": new_case["question"],
+                        "tipo": "melhorou" if after[0] == 1 else "piorou",
+                        "antes": before[1] or "(sem resultado)",
+                        "depois": after[1] or "(sem resultado)",
+                    }
+                )
+        result["estrategias"][name] = {"antes": before_ok, "depois": after_ok, "mudancas": changes}
+    return result
+
+
+def render_compare(report: Mapping[str, Any]) -> str:
+    solo = OFF if report["solo"] is None else f"{report['solo']:.2f}"
+    lines = [
+        f"Antes x depois | peso {report['peso']:g} lim {report['limiar']:.2f} solo {solo} | "
+        f"{report['casos']} perguntas em comum",
+        "",
+        f"{'estratégia':<12} {'antes':>6} {'depois':>7} {'melhorou':>9} {'piorou':>7}",
+    ]
+    for name, s in report["estrategias"].items():
+        better = sum(1 for c in s["mudancas"] if c["tipo"] == "melhorou")
+        worse = sum(1 for c in s["mudancas"] if c["tipo"] == "piorou")
+        lines.append(f"{name:<12} {s['antes']:>6} {s['depois']:>7} {better:>9} {worse:>7}")
+    for name, s in report["estrategias"].items():
+        for c in s["mudancas"]:
+            lines.append(f"- [{name}] {c['tipo'].upper()} {c['id']} {c['question']}")
+            lines.append(f"    antes: {c['antes']}  ->  depois: {c['depois']}")
+    return "\n".join(lines)
+
+
 def replay(
     data: Mapping[str, Any],
     *,
@@ -330,16 +408,9 @@ def replay(
 ) -> dict[str, Any]:
     """Refaz a resposta de cada caso para cada configuração, a partir do arquivo de `--mode candidates`."""
 
-    if service is None:
-        from services.knowledge.query_service import KnowledgeQueryService
-
-        service = KnowledgeQueryService(embedding_provider=None)
+    service = service or _replay_service()
     cases = [c for c in data["casos"] if c.get("candidatos")]
-
-    def outcome(case, **config):
-        hits = service.replay_answer(case["candidatos"], **config)
-        return expected_rank(hits, case["expected"]), (hits[:1] or [{}])[0].get("title"), not hits
-
+    outcome = partial(_replay_outcome, service)
     base = {c["id"]: outcome(c, strategy="full_text", min_similarity=0.0, vector_weight=1.0) for c in cases}
     configs = []
     for weight in weights:
@@ -395,11 +466,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--json", dest="as_json", action="store_true", help="Saída em JSON.")
     parser.add_argument("--out", type=Path, default=None, help="Arquivo JSON do modo candidates.")
     parser.add_argument("--replay", type=Path, default=None, help="Arquivo do modo candidates; roda offline, sem app.")
-    parser.add_argument("--weights", default="1,1.5,2", help="Replay: pesos RRF do vetor.")
-    parser.add_argument("--min-sims", default="0.35,0.40,0.45,0.50", help="Replay: limiares de similaridade.")
-    parser.add_argument("--solo-mins", default="off,0.50,0.55,0.60", help="Replay: limiares só-vetor ('off' = desligado).")
+    parser.add_argument("--weights", default=None, help="Replay: pesos RRF do vetor (padrão 1,1.5,2).")
+    parser.add_argument("--min-sims", default=None, help="Replay: limiares de similaridade (padrão 0.35,0.40,0.45,0.50).")
+    parser.add_argument(
+        "--solo-mins", default=None, help="Replay: limiares só-vetor, 'off' = desligado (padrão off,0.50,0.55,0.60)."
+    )
+    parser.add_argument(
+        "--compare", type=Path, default=None,
+        help="Com --replay DEPOIS.json: arquivo ANTES.json; compara pergunta a pergunta (padrão: produção 1/0.45/off).",
+    )
     args = parser.parse_args(argv)
 
+    if args.replay and args.compare:
+        report = compare(
+            json.loads(args.compare.read_text(encoding="utf-8")),
+            json.loads(args.replay.read_text(encoding="utf-8")),
+            weight=parse_grid(args.weights or "1")[0],
+            min_sim=parse_grid(args.min_sims or "0.45")[0],
+            solo=parse_grid(args.solo_mins or OFF, allow_none=True)[0],
+        )
+        print(json.dumps(report, ensure_ascii=False, indent=2) if args.as_json else render_compare(report))
+        return EXIT_OK
+    args.weights = args.weights or "1,1.5,2"
+    args.min_sims = args.min_sims or "0.35,0.40,0.45,0.50"
+    args.solo_mins = args.solo_mins or "off,0.50,0.55,0.60"
     if args.replay:
         report = replay(
             json.loads(args.replay.read_text(encoding="utf-8")),

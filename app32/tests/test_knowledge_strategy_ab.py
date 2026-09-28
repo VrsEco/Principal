@@ -230,3 +230,28 @@ def test_candidates_mode_requires_out():
 
     with pytest.raises(SystemExit):
         ab.main(["--company-id", "9", "--mode", "candidates"])
+
+
+def test_compare_reports_per_question_changes_between_before_and_after(tmp_path, capsys):
+    import copy
+    import json
+
+    before = copy.deepcopy(REPLAY_DATA)
+    after = copy.deepcopy(REPLAY_DATA)
+    # depois do conteúdo novo, o FTS passa a achar "proj" (R-2 melhora nas duas) e R-1 perde o certo no FTS
+    after["casos"][1]["candidatos"]["fts"] = [_cand("proj", 3, 1.0)]
+    after["casos"][0]["candidatos"]["fts"] = [_cand("outro", 9, 2.0)]
+
+    report = ab.compare(before, after, weight=1.0, min_sim=0.45, solo=None)
+    ft, hy = report["estrategias"]["full_text"], report["estrategias"]["hybrid"]
+    assert report["casos"] == 2
+    assert (ft["antes"], ft["depois"]) == (1, 1)
+    assert {c["id"]: c["tipo"] for c in ft["mudancas"]} == {"R-1": "piorou", "R-2": "melhorou"}
+    assert [c["tipo"] for c in hy["mudancas"]] == ["piorou"]
+
+    old, new = tmp_path / "antes.json", tmp_path / "depois.json"
+    old.write_text(json.dumps(before), encoding="utf-8")
+    new.write_text(json.dumps(after), encoding="utf-8")
+    assert ab.main(["--replay", str(new), "--compare", str(old)]) == ab.EXIT_OK
+    out = capsys.readouterr().out
+    assert "peso 1 lim 0.45 solo off" in out and "PIOROU R-1" in out

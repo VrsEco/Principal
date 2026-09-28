@@ -46,7 +46,7 @@
       "scope": "all",
       "expected_intent": "product_help",
       "expected_domain": "finance",
-      "expected_source_refs": ["financeiro.conciliacao_bancaria"],
+      "expected_source_refs": ["manual.navigation.financial-reconciliation"],
       "expected_actions": ["/financial/reconciliation"],
       "must_include": ["Conciliação Bancária", "extrato"]
     },

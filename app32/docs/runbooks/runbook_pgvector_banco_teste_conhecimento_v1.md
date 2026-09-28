@@ -299,3 +299,26 @@ Erros restantes no peso 1: resgates só do vetor quando o FTS não acha nada (ex
 O replay usa as mesmas funções do `answer()` (descarte técnico, fusão RRF e seleção), e um teste garante que a resposta refeita é igual à real. Validação na primeira vez: a linha `peso 1 lim 0.45 solo off` deve bater com o A/B de peso 1 do mesmo arquivo de perguntas.
 
 Um arquivo passado em `--questions` ou `--cases` que não existe agora é erro. Antes era ignorado em silêncio, e a rodada media só o golden set.
+
+## Conteúdo dos manuais de feature nos artigos de navegação (28/09/2026)
+
+Desde o PR #57, o artigo "Acessar X" de uma tela usa o guia da feature (`docs/mcp/features/*.md`) quando a rota está em `rotas_app` do `docs/mcp/catalogo_features.yaml`. Três problemas impediam o ganho no RAG, e o compilador (`services/knowledge/manual_catalog_compiler.py`) agora os corrige:
+
+1. **Várias telas com o mesmo texto.** Um guia cobre até 10 telas (Relatórios, Auditoria, Cadastros, Indicadores). O embedding é calculado só sobre o conteúdo, sem o título, então as telas ficavam com vetores idênticos. Agora cada tela recebe o nome, o caminho no menu, o próprio item do guia e o objetivo comum; os itens que falam só de outra tela ficam de fora. Um teste garante que duas telas diferentes nunca têm o mesmo texto.
+2. **Seções técnicas no texto do usuário.** Entram só Objetivo, Quando usar e Como orientar o usuário. Metadados, entradas e saídas, "Uso por IA / MCP" e trechos que citam surface, MCP, API ou IA ficam de fora. "explicar como X" (instrução para a IA) vira "Como X".
+3. **Menu lido pela metade.** O compilador lia 2 dos 4 arquivos do menu, e as telas de Gestão Estratégica (indicadores, incentivos, auditoria, ocorrências, planejamento) ficavam sem artigo. Agora lê todos: 92 artigos, 62 com texto do guia. Sem guia ainda: Gestão Comercial (Faturar, Faturamentos Feitos, Notas Fiscais, Clientes, Contratos), Sapiens, empresas e telas de sistema.
+
+Gabaritos: a conciliação bancária passou a ser `manual.navigation.financial-reconciliation` (o JSON `financeiro.conciliacao_bancaria` foi aposentado no PR #57).
+
+### Depois do deploy (operador)
+
+Conteúdo de escopo `product` muda a resposta de todas as empresas, e também a do full_text. A medição compara antes e depois, pergunta a pergunta.
+
+1. **Antes do deploy,** guardar as fotos atuais (feitas em 26/09, ainda com o texto genérico): `cp /tmp/cand.json ~/rag_cand_antes.json && cp /tmp/cand_reais.json ~/rag_cand_reais_antes.json`.
+2. **Deploy.** A sincronização do manual roda quando a aplicação sobe e a cada 15 minutos (`KNOWLEDGE_PRODUCT_HELP_SYNC_MINUTES`).
+3. **Embeddings,** obrigatório após mudar texto: a busca vetorial ignora trechos cujo embedding tem checksum antigo. Primeiro a simulação (mostra quantos trechos estão pendentes), depois a execução:
+   `python scripts/knowledge_embedding_backfill.py` e `python scripts/knowledge_embedding_backfill.py --execute --max-chunks 200`, com as variáveis de embedding do cabeçalho do script.
+4. **Nova foto,** com os dois conjuntos: `--mode candidates --out ~/rag_cand_depois.json` (ampliado) e `--out ~/rag_cand_reais_depois.json` (reais).
+5. **Comparação:** `python scripts/knowledge_strategy_ab.py --replay ~/rag_cand_depois.json --compare ~/rag_cand_antes.json`, e o mesmo para os reais. Usa a configuração de produção (peso 1, limiar 0,45, sem limiar só-vetor) e lista cada pergunta que melhorou ou piorou.
+
+Regra: nenhuma pergunta pode piorar no hybrid. Se piorar, analisar o texto da tela envolvida antes de seguir. Reversão: reverter o PR e fazer novo deploy; a sincronização volta o texto anterior, e é preciso rodar o backfill de novo.
