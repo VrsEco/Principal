@@ -785,3 +785,227 @@ features:
       - "analytics"
     detalhe_disponivel: true
     guia_ref: "features/gestao_reunioes.md"
+
+  - id: "gestao_ocorrencias"
+    nome: "Gestão Estratégica — Gestão de Ocorrências"
+    dominio: "processes"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Execução > Gestão de Ocorrências"
+    rotas_app:
+      - "/process-occurrences"
+    objetivo: "Registrar ocorrencias positivas ou negativas vinculadas a colaboradores, processos ou projetos, com visibilidade restrita para quem nao tem acesso total a empresa."
+    quando_usar:
+      - "registrar uma ocorrência (positiva ou negativa) sobre um colaborador"
+      - "consultar ocorrências vinculadas a um processo, projeto ou colaborador"
+      - "editar ou excluir uma ocorrência já registrada"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "title"
+        - "type"
+      opcionais:
+        - "employee_id"
+        - "process_id"
+        - "project_id"
+        - "description"
+        - "score"
+        - "collaborators_ids"
+    saidas:
+      - "lista_de_ocorrencias"
+      - "detalhe_da_ocorrencia"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_ocorrencias.md"
+
+  - id: "calendario_e_jornadas"
+    nome: "Gestão Estratégica — Calendário e Jornadas"
+    dominio: "workload"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Execução > Calendário e Jornadas"
+    rotas_app:
+      - "/work-journey"
+      - "/calendar"
+      - "/process-routines/analysis"
+      - "/efficiency-analysis"
+    objetivo: "Organizar a jornada de trabalho (blocos fixos, regras, calendario de eventos, transferencias e ausencias) e analisar capacidade e eficiencia da equipe frente aos compromissos de rotina, processos, projetos e reunioes."
+    quando_usar:
+      - "montar ou consultar o calendário/jornada de um colaborador"
+      - "gerar a agenda diária automaticamente a partir dos blocos e regras"
+      - "solicitar ou aprovar transferência de bloco ou ausência"
+      - "consultar análise de capacidade (% de utilização) por colaborador ou departamento"
+      - "consultar análise de eficiência da equipe"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "employee_id"
+        - "department"
+        - "period"
+    saidas:
+      - "calendario_e_blocos"
+      - "agenda_diaria"
+      - "analise_de_capacidade"
+      - "analise_de_eficiencia"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/calendario_e_jornadas.md"
+
+  - id: "gestao_indicadores"
+    nome: "Gestão Estratégica — Gestão de Indicadores"
+    dominio: "strategy"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Desempenho > Gestão de Indicadores"
+    rotas_app:
+      - "/indicators/tree"
+      - "/indicators"
+      - "/indicators/goals"
+      - "/indicators/data"
+      - "/indicators/dashboard"
+      - "/indicators/analysis"
+    objetivo: "Estruturar a arvore de indicadores, definir metas (base ou campanha), registrar dados de medicao -- inclusive em lote a partir de uma rotina -- e analisar desempenho via dashboard e analises comparativas."
+    quando_usar:
+      - "criar ou organizar a árvore de indicadores"
+      - "definir meta (base ou campanha) de um indicador"
+      - "registrar dado de medição, inclusive em lote a partir de uma rotina vinculada"
+      - "consultar dashboard de desempenho ou análise comparativa histórica"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "indicator_id"
+        - "tree_node_id"
+        - "goal_kind"
+        - "goal_scope"
+        - "period_start"
+        - "period_end"
+        - "measurement_value"
+    saidas:
+      - "arvore_de_indicadores"
+      - "lista_de_indicadores"
+      - "metas"
+      - "dados_de_medicao"
+      - "dashboard_de_desempenho"
+      - "analise_comparativa"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_indicadores.md"
+
+  - id: "gestao_incentivos"
+    nome: "Gestão Estratégica — Gestão de Incentivos"
+    dominio: "strategy"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Desempenho > Gestão de Incentivos"
+    rotas_app:
+      - "/incentives"
+      - "/incentives/closings"
+      - "/incentives/reports"
+      - "/incentives/statement"
+    objetivo: "Configurar planos de incentivo (regras, participantes, faixas de premiacao), coletar fatos de processos/projetos/ocorrencias, calcular e fechar incentivos por periodo, e consultar extratos por colaborador."
+    quando_usar:
+      - "configurar um plano de incentivo (regras, participantes, faixas de premiação)"
+      - "rodar o cálculo de incentivo de um período"
+      - "aprovar ou marcar como pago um fechamento de incentivo"
+      - "consultar o extrato de incentivo de um colaborador"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "rule_set_id"
+        - "period_start"
+        - "period_end"
+        - "employee_id"
+        - "calc_id"
+    saidas:
+      - "dashboard_de_incentivos"
+      - "lista_de_fechamentos"
+      - "extrato_do_colaborador"
+      - "relatorio_do_fechamento"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_incentivos.md"
+
+  - id: "teia_de_conexoes"
+    nome: "Gestão Estratégica — Teia de Conexões"
+    dominio: "governance"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Governança > Teia de Conexões"
+    rotas_app:
+      - "/incentives/spider-web"
+    objetivo: "Visualizar o grafo de conectividade entre processos, projetos, OKRs e indicadores, identificando itens orfaos, frageis ou bem conectados para apoiar a governanca de metas e indicadores."
+    quando_usar:
+      - "identificar indicadores, processos ou OKRs sem nenhuma conexão (órfãos)"
+      - "avaliar a saúde de governança de metas e indicadores de uma empresa"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais: []
+    saidas:
+      - "grafo_de_conexoes"
+      - "resumo_de_saude_por_tipo"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/teia_de_conexoes.md"
+
+  - id: "auditoria_interna"
+    nome: "Gestão Estratégica — Auditoria Interna"
+    dominio: "governance"
+    ramo_menu: "Gestão Estratégica"
+    caminho_menu: "Gestão Estratégica > Governança > Auditoria Interna"
+    rotas_app:
+      - "/internal-audit"
+      - "/internal-audit/checklists"
+      - "/internal-audit/areas"
+      - "/internal-audit/auditors"
+      - "/internal-audit/executions"
+      - "/internal-audit/points"
+      - "/internal-audit/workpapers"
+      - "/internal-audit/findings"
+      - "/internal-audit/reports"
+      - "/internal-audit/follow-ups"
+    objetivo: "Conduzir o ciclo completo de auditoria interna -- areas, auditores, checklists, execucoes, pontos de auditoria, papeis de trabalho, achados, relatorios formais e follow-ups -- com RBAC especifico de papel de auditor."
+    quando_usar:
+      - "montar um checklist de auditoria e executá-lo sobre uma área"
+      - "registrar um ponto de auditoria e convertê-lo em achado"
+      - "documentar papel de trabalho e evidências vinculadas (projeto, tarefa ou reunião)"
+      - "emitir relatório formal de auditoria"
+      - "registrar follow-up de um achado"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "area_id"
+        - "checklist_id"
+        - "execution_id"
+        - "point_id"
+        - "finding_id"
+        - "report_id"
+    saidas:
+      - "dashboard_de_auditoria"
+      - "checklists"
+      - "execucoes"
+      - "pontos_de_auditoria"
+      - "papeis_de_trabalho"
+      - "achados"
+      - "relatorios"
+      - "follow_ups"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/auditoria_interna.md"
