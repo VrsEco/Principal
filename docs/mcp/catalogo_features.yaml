@@ -494,63 +494,87 @@ features:
     detalhe_disponivel: true
     guia_ref: "features/financeiro_relatorios.md"
 
-  - id: "gestao_comercial_contratos"
-    nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
+  - id: "gestao_comercial_cadastros"
+    nome: "Gestão Comercial — Cadastros"
     dominio: "governance"
-    objetivo: "Operar leitura e manutenção governada de carteiras de clientes, PJs emissoras, catálogo comercial, contratos e itens."
+    ramo_menu: "Gestão Comercial"
+    caminho_menu: "Gestão Comercial > Cadastros"
+    rotas_app:
+      - "/contracts/customers/portfolio"
+      - "/contracts/customers"
+      - "/contracts/parties"
+      - "/contracts/legal-entities"
+      - "/contracts/catalogs/items"
+    objetivo: "Manter os cadastros-base usados pela Gestao de Contratos: carteira de clientes, clientes, PJs emissoras e catalogo de produtos/servicos (grupo, sub-grupo, item) com dados fiscais."
     quando_usar:
-      - "consultar dashboard ou lista de contratos comerciais"
-      - "manter carteira de clientes, clientes, emissores ou produtos/serviços"
-      - "criar, atualizar, suspender, encerrar ou excluir contrato comercial com trilha auditável"
+      - "organizar carteiras de clientes"
+      - "consultar clientes (favorecidos marcados como cliente)"
+      - "cadastrar PJ emissora e suas alíquotas de ISS"
+      - "organizar o catálogo comercial (grupo, sub-grupo, item) com dados fiscais"
     entradas:
       obrigatorias:
         - "company_id"
       opcionais:
-        - "user_id"
-        - "contract_id"
-        - "filters"
-        - "payload"
+        - "portfolio_id"
+        - "counterparty_id"
+        - "legal_entity_id"
+        - "catalog_item_id"
+        - "catalog_view"
     saidas:
-      - "dashboard_comercial"
-      - "contratos"
-      - "clientes"
+      - "carteiras_de_clientes"
+      - "lista_de_clientes"
+      - "pjs_emissoras"
       - "catalogo_comercial"
-      - "workspace_do_contrato"
     surfaces:
       - "user"
       - "admin"
-    detalhe_disponivel: false
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_comercial_cadastros.md"
 
-  - id: "gestao_comercial_faturamento_fiscal"
-    nome: "Gestão Comercial — Faturamento, Títulos e NFS-e"
-    dominio: "finance"
-    objetivo: "Apoiar revisão, geração, cancelamento, integração financeira e esteira fiscal de faturamentos comerciais."
+  - id: "gestao_comercial_contratos"
+    nome: "Gestão Comercial — Gestão de Contratos"
+    dominio: "governance"
+    ramo_menu: "Gestão Comercial"
+    caminho_menu: "Gestão Comercial > Gestão de Contratos"
+    rotas_app:
+      - "/contracts"
+      - "/contracts/dashboard"
+      - "/contracts/list"
+      - "/contracts/new"
+      - "/contracts/billing"
+      - "/contracts/billing/review"
+      - "/contracts/billing/done"
+      - "/contracts/invoices"
+    objetivo: "Conduzir o ciclo completo do contrato comercial -- cadastro, itens, termos financeiros/fiscais, ciclo de vida, faturamento, ponte com titulos financeiros e acompanhamento do status fiscal (NFS-e) ate a exportacao para emissao externa."
     quando_usar:
-      - "listar contratos aptos para faturamento"
-      - "montar revisão de faturamento antes da confirmação"
-      - "gerar faturamentos, títulos financeiros ou planilha de integração fiscal"
-      - "controlar status, lote e dados fiscais de NFS-e"
+      - "cadastrar contrato, itens e termos financeiros/fiscais"
+      - "ativar, suspender, encerrar ou excluir um contrato"
+      - "gerar faturamento (fila → revisão → confirmação)"
+      - "gerar títulos financeiros e retenções a partir de um faturamento"
+      - "acompanhar e exportar o status fiscal (NFS-e) dos faturamentos"
     entradas:
       obrigatorias:
         - "company_id"
       opcionais:
-        - "user_id"
+        - "contract_id"
         - "billing_id"
         - "billing_ids"
-        - "contract_ids"
-        - "review_payloads"
-        - "filters"
+        - "party_id"
+        - "section"
+        - "reason"
     saidas:
+      - "dashboard_comercial"
+      - "workspace_do_contrato"
       - "fila_de_faturamento"
       - "revisao_de_faturamento"
       - "faturamentos_gerados"
       - "workspace_fiscal"
-      - "planilha_base64"
     surfaces:
       - "user"
       - "admin"
       - "analytics"
-    detalhe_disponivel: false
+    detalhe_disponivel: true
+    guia_ref: "features/gestao_comercial_contratos.md"
 
   - id: "leiloes_imobiliarios_pipeline"
     nome: "Leilões Imobiliários"
