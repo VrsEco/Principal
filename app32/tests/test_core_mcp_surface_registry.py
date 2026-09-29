@@ -410,6 +410,58 @@ def test_process_instance_mutation_discovery_requires_oauth_scope_and_permission
     assert visible == set(registry.PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES)
 
 
+def test_audit_read_discovery_requires_oauth_scope_and_permission(monkeypatch):
+    """Gate duplo (scope OAuth `mcp:analytics` + permissão RBAC `audit.read`),
+    no mesmo padrão do teste equivalente para finance/processos -- as 3 tools
+    de Auditoria Interna caem no fallback `scope = "mcp:analytics"` de
+    `_visible_privileged_tool_names` por terem scope de catálogo
+    MCP_ANALYTICS/MCP_ADMIN (não MCP_USER)."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:finance")),
+    )
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_AUDIT_READ_TOOL_NAMES))
+    assert visible == set(), "sem mcp:analytics o scope OAuth não cobre a leitura de auditoria"
+
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:analytics")),
+    )
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_AUDIT_READ_TOOL_NAMES))
+    assert visible == set(), "sem permissão RBAC audit.read a leitura de auditoria não é descoberta"
+
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    visible = registry._visible_privileged_tool_names(frozenset(registry.PILOT_AUDIT_READ_TOOL_NAMES))
+    assert visible == set(registry.PILOT_AUDIT_READ_TOOL_NAMES)
+
+
+def test_oauth_unified_server_exposes_audit_read_cohort_only_with_permission(monkeypatch):
+    """Descoberta do conector mcp-versus inclui as 3 tools de leitura de
+    Auditoria Interna quando scope+permissão permitem, e nenhuma outra tool
+    do domínio audit (mutação de checklist/execução/ponto/achado/relatório
+    não tem tool MCP nenhuma -- não há o que vazar)."""
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity",
+        lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance")),
+    )
+
+    server = registry.build_oauth_unified_mcp_server()
+    tools = {tool.name for tool in asyncio.run(server.list_tools())}
+
+    assert set(registry.PILOT_AUDIT_READ_TOOL_NAMES).issubset(tools)
+
+    denied_monkeypatch = pytest.MonkeyPatch()
+    denied_monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda permission: False)
+    denied_server = registry.build_oauth_unified_mcp_server()
+    denied_tools = {tool.name for tool in asyncio.run(denied_server.list_tools())}
+    denied_monkeypatch.undo()
+
+    assert not set(registry.PILOT_AUDIT_READ_TOOL_NAMES).intersection(denied_tools)
+
+
 def test_oauth_unified_server_exposes_meeting_read_and_mutation_cohorts_only(monkeypatch):
     """Descoberta expõe exatamente leitura (get_meeting, além de list_meetings
     já presente em PILOT_USER_TOOL_NAMES) + mutação simples (11 tools) +
