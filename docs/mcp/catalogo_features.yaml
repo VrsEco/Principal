@@ -54,6 +54,9 @@ domains:
   - id: "operations"
     nome: "Operações Técnicas"
     descricao: "Escalonamentos, integrações e suporte operacional técnico."
+  - id: "consultive"
+    nome: "Consultivo"
+    descricao: "Diagnostico estrutural do cliente, protocolos metodologicos e analise assistida por IA sob gate humano do consultor."
 features:
   - id: "rotina_tarefas"
     nome: "Tarefas da Rotina"
@@ -1068,3 +1071,89 @@ features:
       - "analytics"
     detalhe_disponivel: true
     guia_ref: "features/planejamento_estrategico.md"
+
+  - id: "consultivo_cockpit"
+    nome: "Consultivo — Cockpit do Consultor"
+    dominio: "consultive"
+    ramo_menu: "Consultivo"
+    caminho_menu: "Consultivo > Cockpit do Consultor"
+    rotas_app:
+      - "/consultive/cockpit"
+    objetivo: "Visao consolidada da maturidade estrutural do cliente em 4 frentes (Identidade, Processos, Planejamento Estrategico, Gerenciamento Estrategico), com necessidades urgentes, business reviews e aprendizado estrutural pendentes de decisao."
+    quando_usar:
+      - "explicar a visão geral de maturidade das 4 frentes estruturais"
+      - "explicar como abrir a análise detalhada de uma frente específica"
+      - "explicar necessidades urgentes, business reviews e aprendizado estrutural pendentes"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "front_key"
+        - "analysis_id"
+    saidas:
+      - "resumo_das_4_frentes"
+      - "analise_detalhada_da_frente"
+      - "necessidades_urgentes"
+      - "business_reviews"
+      - "aprendizado_estrutural"
+    surfaces:
+      - "user"
+      - "admin"
+    detalhe_disponivel: true
+    guia_ref: "features/consultivo_cockpit.md"
+
+  - id: "consultivo_jornada_cliente"
+    nome: "Consultivo — Jornada do Cliente"
+    dominio: "consultive"
+    ramo_menu: "Consultivo"
+    caminho_menu: "Consultivo > Jornada do Cliente"
+    rotas_app:
+      - "/structuring-journey/client"
+      - "/structuring-journey/consultant"
+      - "/structuring-journey"
+    objetivo: "Mostrar a maturidade estrutural da empresa em 4 blocos (Identidade, Processos, Planejamento Estrategico, Gerenciamento Estrategico), cada um com etapas e evidencias reais do sistema."
+    quando_usar:
+      - "explicar os 4 blocos da jornada e as etapas de cada um"
+      - "explicar como o progresso de cada etapa é calculado"
+      - "explicar a diferença entre a visão Cliente e Consultor"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "audience"
+    saidas:
+      - "jornada_de_estruturacao"
+    surfaces:
+      - "user"
+      - "admin"
+    detalhe_disponivel: true
+    guia_ref: "features/consultivo_jornada_cliente.md"
+
+  - id: "consultivo_protocolos"
+    nome: "Consultivo — Protocolos Consultivos"
+    dominio: "consultive"
+    ramo_menu: "Consultivo"
+    caminho_menu: "Consultivo > Protocolos Consultivos"
+    rotas_app:
+      - "/consultive/protocols"
+    objetivo: "Manter a biblioteca de protocolos -- roteiros de instrucao versionados por frente e subfase -- usados para orientar a conducao metodologica de uma analise consultiva por IA, squad ou consultor."
+    quando_usar:
+      - "explicar o que é um protocolo (roteiro de prompt, não SOP nem histórico de atendimento)"
+      - "explicar como consultar o protocolo ativo de uma frente/subfase/audiência"
+      - "explicar como criar uma versão própria da empresa (override) de um protocolo"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "front_key"
+        - "subphase_key"
+        - "audience"
+        - "depth_level"
+    saidas:
+      - "catalogo_de_protocolos"
+      - "protocolo_resolvido"
+    surfaces:
+      - "user"
+      - "admin"
+    detalhe_disponivel: true
+    guia_ref: "features/consultivo_protocolos.md"
