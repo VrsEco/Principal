@@ -322,3 +322,40 @@ Conteúdo de escopo `product` muda a resposta de todas as empresas, e também a 
 5. **Comparação:** `python scripts/knowledge_strategy_ab.py --replay ~/rag_cand_depois.json --compare ~/rag_cand_antes.json`, e o mesmo para os reais. Usa a configuração de produção (peso 1, limiar 0,45, sem limiar só-vetor) e lista cada pergunta que melhorou ou piorou.
 
 Regra: nenhuma pergunta pode piorar no hybrid. Se piorar, analisar o texto da tela envolvida antes de seguir. Reversão: reverter o PR e fazer novo deploy; a sincronização volta o texto anterior, e é preciso rodar o backfill de novo.
+
+## Regressão após o conteúdo dos manuais e regras de ordenação do FTS (28/09/2026)
+
+Medição depois do deploy do PR #73 e do backfill (60 trechos, ~20 mil tokens), comparada com a foto de 26/09, em 43 perguntas únicas (as 5 do golden set aparecem nos dois conjuntos e contam uma vez):
+
+| | antes do conteúdo | depois (sem regras) | com as regras |
+|---|---|---|---|
+| full_text (todas as empresas) | 24 | 22 | 32 |
+| hybrid (peso 1, limiar 0,45) | 27 | 27 | 33 |
+
+Causa: o score do FTS é o número de termos da pergunta que aparecem no artigo (a parte decimal é só o desempate por `ts_rank`). Os textos novos, mais longos, casam mais termos e passaram na frente de artigos curtos e certos ("lançamento de uma conta a pagar" → Lançamento Rápido; "títulos em aberto" → Borderô). E uma palavra solta bastava para responder ("previsão do tempo" → Achados). Não era desempate por data de atualização: as pontuações diferiam de verdade.
+
+Duas regras novas, em `KnowledgeQueryService.rerank_fts_rows`, só no caminho das respostas (`search` não muda) e **desligadas por padrão**:
+
+- `KNOWLEDGE_FTS_TITLE_BONUS` (ex.: `1`): cada termo da pergunta que está no título vale esse bônus a mais, e entre títulos com o mesmo número de acertos vence o mais específico (menos palavras sobrando). Casa por radical de 5 letras sem acento ("lançar" = "lançamento"); o "Acessar" do modelo do título não conta.
+- `KNOWLEDGE_FTS_MIN_TERM_MATCHES` (ex.: `2`): em pergunta com 3 ou mais termos, um trecho com menos termos casados só fica se o título casa. Serve também de abstenção para pergunta fora do produto.
+
+Valem para full_text e hybrid, ou seja, para todas as empresas, porque o texto das telas é de escopo `product`.
+
+Replay dos mesmos arquivos (`--title-bonus 1 --fts-min-matches 2`; hybrid com peso 1, limiar 0,45 e limiar só-vetor 0,55, que agora passa a ajudar porque tira o resgate isolado do vetor):
+
+| | full_text | hybrid |
+|---|---|---|
+| ampliado (36) | 25 (antes das regras: 17) | 26 (20) |
+| reais + golden (12) | 11 (7) | 12 (10) |
+
+Ainda piora em relação ao full_text: Q-017 ("acompanho meus projetos": três artigos de projetos com similaridade 0,49 a 0,50, e a fusão por posição amplifica o ruído). PH-004 (conciliar conta bancária) fica no full_text: "Contas bancárias" e "Conciliação Bancária" empatam em título, e só o vetor desempata.
+
+Limites: as regras foram escolhidas olhando estas mesmas perguntas. O resultado é estável em torno dos valores (radical de 4 a 6 letras, bônus de 1 a 2, desempate de 0,02 a 0,6), mas a medição fora da amostra só sai com perguntas novas.
+
+### Ligar em produção (operador)
+
+1. Deploy normal (nada muda com as regras desligadas).
+2. Conferir ao vivo, com as variáveis só na linha de comando, sem mexer no `.env`. Os números esperados são os da tabela:
+   `KNOWLEDGE_FTS_TITLE_BONUS=1 KNOWLEDGE_FTS_MIN_TERM_MATCHES=2 KNOWLEDGE_VECTOR_SOLO_MIN_SIMILARITY=0.55 KNOWLEDGE_VECTOR_RETRIEVAL_ENABLED=true ... python scripts/knowledge_strategy_ab.py --company-id 9 --questions knowledge/golden_sets/ab_perguntas_pt_br_ampliado.tsv` (esperado: full_text 25, hybrid 26) e o mesmo com `/tmp/curado.tsv` (esperado: 11 e 12).
+3. Se bater, no `.env` do servidor: `KNOWLEDGE_FTS_TITLE_BONUS=1`, `KNOWLEDGE_FTS_MIN_TERM_MATCHES=2` e `KNOWLEDGE_VECTOR_SOLO_MIN_SIMILARITY=0.55`, com restart do MCP. Reversão: remover as três linhas.
+4. Sem novo backfill: as regras não mudam texto nem embeddings.

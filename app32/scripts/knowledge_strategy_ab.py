@@ -21,6 +21,8 @@ Calibração offline (peso/limiares sem repetir consultas nem embeddings):
      ... python scripts/knowledge_strategy_ab.py --company-id 9 --questions X.tsv --mode candidates --out /tmp/cand.json
   2. em qualquer lugar (sem app, sem banco), refaz a resposta para uma grade de configurações:
      python scripts/knowledge_strategy_ab.py --replay /tmp/cand.json --weights 1,2 --min-sims 0.45 --solo-mins off,0.55
+  2b. regras de ordenação do FTS nas respostas (desligadas por padrão), com e sem:
+     python scripts/knowledge_strategy_ab.py --replay /tmp/cand.json --weights 1 --min-sims 0.45 --solo-mins off --title-bonus 0,1 --fts-min-matches 0,2
   3. antes x depois de mudar conteúdo (pergunta a pergunta, configuração de produção por padrão):
      python scripts/knowledge_strategy_ab.py --replay /tmp/cand_depois.json --compare /tmp/cand_antes.json
 Nunca agendar; rodar só com autorização do operador.
@@ -341,6 +343,8 @@ def compare(
     weight: float,
     min_sim: float,
     solo: float | None,
+    title_bonus: float = 0.0,
+    fts_min: int = 0,
     service: Any = None,
 ) -> dict[str, Any]:
     """Antes x depois (ex.: conteúdo novo), pergunta a pergunta, numa configuração só.
@@ -352,11 +356,17 @@ def compare(
     service = service or _replay_service()
     old_cases = {c["question"]: c for c in old["casos"] if c.get("candidatos")}
     pairs = [(old_cases[c["question"]], c) for c in new["casos"] if c.get("candidatos") and c["question"] in old_cases]
+    fts = {"fts_title_bonus": title_bonus, "fts_min_term_matches": fts_min}
     configs = {
-        "full_text": {"strategy": "full_text", "min_similarity": 0.0, "vector_weight": 1.0},
-        "hybrid": {"strategy": "hybrid", "min_similarity": min_sim, "vector_weight": weight, "solo_min_similarity": solo},
+        "full_text": {"strategy": "full_text", "min_similarity": 0.0, "vector_weight": 1.0, **fts},
+        "hybrid": {
+            "strategy": "hybrid", "min_similarity": min_sim, "vector_weight": weight, "solo_min_similarity": solo, **fts
+        },
     }
-    result: dict[str, Any] = {"casos": len(pairs), "peso": weight, "limiar": min_sim, "solo": solo, "estrategias": {}}
+    result: dict[str, Any] = {
+        "casos": len(pairs), "peso": weight, "limiar": min_sim, "solo": solo,
+        "titulo": title_bonus, "min_fts": fts_min, "estrategias": {},
+    }
     for name, config in configs.items():
         before_ok = after_ok = 0
         changes = []
@@ -382,8 +392,8 @@ def compare(
 def render_compare(report: Mapping[str, Any]) -> str:
     solo = OFF if report["solo"] is None else f"{report['solo']:.2f}"
     lines = [
-        f"Antes x depois | peso {report['peso']:g} lim {report['limiar']:.2f} solo {solo} | "
-        f"{report['casos']} perguntas em comum",
+        f"Antes x depois | peso {report['peso']:g} lim {report['limiar']:.2f} solo {solo}"
+        f"{_fts_label(report.get('titulo', 0), report.get('min_fts', 0))} | {report['casos']} perguntas em comum",
         "",
         f"{'estratégia':<12} {'antes':>6} {'depois':>7} {'melhorou':>9} {'piorou':>7}",
     ]
@@ -404,49 +414,83 @@ def replay(
     weights: Sequence[float],
     min_sims: Sequence[float],
     solo_mins: Sequence[float | None],
+    title_bonuses: Sequence[float] = (0.0,),
+    fts_mins: Sequence[int] = (0,),
     service: Any = None,
 ) -> dict[str, Any]:
-    """Refaz a resposta de cada caso para cada configuração, a partir do arquivo de `--mode candidates`."""
+    """Refaz a resposta de cada caso para cada configuração, a partir do arquivo de `--mode candidates`.
+
+    `title_bonuses` e `fts_mins` são as regras de ordenação do FTS (0 = desligada). Cada combinação
+    tem o seu próprio `full_text` de referência (com a mesma regra), e ganhos/perdas do hybrid são
+    medidos contra ele.
+    """
 
     service = service or _replay_service()
     cases = [c for c in data["casos"] if c.get("candidatos")]
     outcome = partial(_replay_outcome, service)
-    base = {c["id"]: outcome(c, strategy="full_text", min_similarity=0.0, vector_weight=1.0) for c in cases}
+    bases: list[dict[str, Any]] = []
     configs = []
-    for weight in weights:
-        for min_sim in min_sims:
-            for solo in solo_mins:
-                outcomes = {
-                    c["id"]: outcome(
-                        c, strategy="hybrid", min_similarity=min_sim, vector_weight=weight, solo_min_similarity=solo
-                    )
-                    for c in cases
-                }
-                configs.append({"peso": weight, "limiar": min_sim, "solo": solo, **_replay_score(outcomes, cases, base)})
+    for title_bonus in title_bonuses:
+        for fts_min in fts_mins:
+            fts = {"fts_title_bonus": title_bonus, "fts_min_term_matches": fts_min}
+            base = {
+                c["id"]: outcome(c, strategy="full_text", min_similarity=0.0, vector_weight=1.0, **fts) for c in cases
+            }
+            bases.append({"titulo": title_bonus, "min_fts": fts_min, **_replay_score(base, cases, None)})
+            for weight in weights:
+                for min_sim in min_sims:
+                    for solo in solo_mins:
+                        outcomes = {
+                            c["id"]: outcome(
+                                c, strategy="hybrid", min_similarity=min_sim, vector_weight=weight,
+                                solo_min_similarity=solo, **fts,
+                            )
+                            for c in cases
+                        }
+                        configs.append(
+                            {
+                                "peso": weight, "limiar": min_sim, "solo": solo,
+                                "titulo": title_bonus, "min_fts": fts_min,
+                                **_replay_score(outcomes, cases, base),
+                            }
+                        )
     return {
         "casos": len(cases),
         "com_esperado": sum(1 for c in cases if c["expected"]),
         "ignorados_por_erro": len(data["casos"]) - len(cases),
-        "full_text": _replay_score(base, cases, None),
+        "full_text": {k: v for k, v in bases[0].items() if k not in ("titulo", "min_fts")},
+        "bases": bases,
         "configs": configs,
     }
 
 
+def _fts_label(title_bonus: float, fts_min: int) -> str:
+    """Sufixo do nome da configuração; vazio quando as regras do FTS estão desligadas."""
+
+    parts = ([f"titulo {title_bonus:g}"] if title_bonus else []) + ([f"min {fts_min}"] if fts_min else [])
+    return " " + " ".join(parts) if parts else ""
+
+
 def render_replay(report: Mapping[str, Any]) -> str:
-    base = report["full_text"]
+    width = 40
     lines = [
         f"Replay offline | {report['casos']} casos ({report['com_esperado']} com esperado, "
         f"{report['ignorados_por_erro']} ignorados por erro)",
         "",
-        f"{'configuração':<28} {'acerto@1':>9} {'abst':>5} {'ganhos':>7} {'perdas':>7}",
-        f"{'full_text':<28} {base['acerto_1']:>9} {base['abstencoes']:>5}",
+        f"{'configuração':<{width}} {'acerto@1':>9} {'abst':>5} {'ganhos':>7} {'perdas':>7}",
     ]
-    for c in report["configs"]:
-        solo = OFF if c["solo"] is None else f"{c['solo']:.2f}"
-        name = f"peso {c['peso']:g} lim {c['limiar']:.2f} solo {solo}"
-        lines.append(f"{name:<28} {c['acerto_1']:>9} {c['abstencoes']:>5} {len(c['ganhos']):>7} {len(c['perdas']):>7}")
-        if c["perdas"]:
-            lines.append(f"{'':<28}   perde: {', '.join(c['perdas'])}")
+    bases = report.get("bases") or [{**report["full_text"], "titulo": 0.0, "min_fts": 0}]
+    for base in bases:
+        label = _fts_label(base["titulo"], base["min_fts"])
+        lines.append(f"{'full_text' + label:<{width}} {base['acerto_1']:>9} {base['abstencoes']:>5}")
+        for c in report["configs"]:
+            if (c.get("titulo", 0.0), c.get("min_fts", 0)) != (base["titulo"], base["min_fts"]):
+                continue
+            solo = OFF if c["solo"] is None else f"{c['solo']:.2f}"
+            name = f"  peso {c['peso']:g} lim {c['limiar']:.2f} solo {solo}{label}"
+            lines.append(f"{name:<{width}} {c['acerto_1']:>9} {c['abstencoes']:>5} {len(c['ganhos']):>7} {len(c['perdas']):>7}")
+            if c["perdas"]:
+                lines.append(f"{'':<{width}}   perde: {', '.join(c['perdas'])}")
     return "\n".join(lines)
 
 
@@ -472,6 +516,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--solo-mins", default=None, help="Replay: limiares só-vetor, 'off' = desligado (padrão off,0.50,0.55,0.60)."
     )
     parser.add_argument(
+        "--title-bonus", default=None,
+        help="Replay/compare: bônus por termo no título, 0 = desligado (padrão 0). Ex.: 0,1 compara com e sem.",
+    )
+    parser.add_argument(
+        "--fts-min-matches", default=None,
+        help="Replay/compare: mínimo de termos casados no FTS em perguntas com 3+ termos, 0 = desligado (padrão 0).",
+    )
+    parser.add_argument(
         "--compare", type=Path, default=None,
         help="Com --replay DEPOIS.json: arquivo ANTES.json; compara pergunta a pergunta (padrão: produção 1/0.45/off).",
     )
@@ -484,6 +536,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             weight=parse_grid(args.weights or "1")[0],
             min_sim=parse_grid(args.min_sims or "0.45")[0],
             solo=parse_grid(args.solo_mins or OFF, allow_none=True)[0],
+            title_bonus=parse_grid(args.title_bonus or "0")[0],
+            fts_min=int(parse_grid(args.fts_min_matches or "0")[0]),
         )
         print(json.dumps(report, ensure_ascii=False, indent=2) if args.as_json else render_compare(report))
         return EXIT_OK
@@ -496,6 +550,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             weights=parse_grid(args.weights),
             min_sims=parse_grid(args.min_sims),
             solo_mins=parse_grid(args.solo_mins, allow_none=True),
+            title_bonuses=parse_grid(args.title_bonus or "0"),
+            fts_mins=[int(v) for v in parse_grid(args.fts_min_matches or "0")],
         )
         print(json.dumps(report, ensure_ascii=False, indent=2) if args.as_json else render_replay(report))
         return EXIT_OK

@@ -154,7 +154,7 @@ def test_migration_head_chain_is_single_and_linear():
             if down:
                 downs.update(re.findall(r'["\']([^"\']+)["\']', down.group(1)))
     heads = [r for r in revisions if r not in downs]
-    assert heads == ["20260924_1500"], heads
+    assert len(heads) == 1, heads  # uma só cabeça; o id muda a cada migração nova
 
 
 @pytest.mark.skipif(
