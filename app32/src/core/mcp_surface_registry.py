@@ -190,6 +190,24 @@ PILOT_IDENTITY_READ_TOOL_NAMES: tuple[str, ...] = (
     "list_my_companies",
 )
 
+# Leitura de Auditoria Interna é uma coorte OAuth privilegiada própria, no
+# mesmo padrão de PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES: as 3 tools têm
+# scope de catálogo MCP_ANALYTICS/MCP_ADMIN (não MCP_USER), então caem no
+# fallback `scope = "mcp:analytics"` de `_visible_privileged_tool_names` e
+# exigem permissão RBAC `audit.read` por chamada. São deliberadamente
+# somente leitura no próprio código-fonte
+# (`src/core/mcp_internal_audit_tools.py`): pontos e achados continuam
+# dependendo de triagem humana na interface oficial antes de qualquer
+# mutação. Registradas via shared registrar (não são LangChain tools),
+# não via `_tool_map()`.
+# Aprovação: Fabiano Diretor, 2026-09-29 (ver
+# docs/handoffs/handoff_squad_cliente_2026-09-27_expansao_mcp_versus_manual_ia.md).
+PILOT_AUDIT_READ_TOOL_NAMES: tuple[str, ...] = (
+    "get_internal_audit_summary",
+    "list_internal_audit_points",
+    "list_internal_audit_findings",
+)
+
 
 def _has_authenticated_mcp_permission(permission: str) -> bool:
     """Verifica discovery por principal, sem aceitar permissão do cliente."""
@@ -314,6 +332,7 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
                 *PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES,
                 *PILOT_MEETING_MUTATION_TOOL_NAMES,
                 *PILOT_MEETING_SENSITIVE_TOOL_NAMES,
+                *PILOT_AUDIT_READ_TOOL_NAMES,
             ))
         )
     )
@@ -323,7 +342,8 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
         if capability is None:
             continue
         surface = ("finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else
-                   "analytics" if name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES else "user")
+                   "analytics" if name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES
+                   or name in PILOT_AUDIT_READ_TOOL_NAMES else "user")
         capabilities.append(replace(capability, scopes=get_surface_scope_filter(surface)))
     manifest = build_capability_manifest(capabilities, domain=domain, include_tools=include_tools)
     manifest["discovery"] = {
@@ -951,6 +971,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         *PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES,
         *PILOT_MEETING_MUTATION_TOOL_NAMES,
         *PILOT_MEETING_SENSITIVE_TOOL_NAMES,
+        *PILOT_AUDIT_READ_TOOL_NAMES,
     )
     mcp = _build_policy_fast_mcp(
         name,
@@ -998,6 +1019,11 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         mcp,
         tool_names=set(PILOT_FINANCE_OPERATIONAL_TOOL_NAMES),
         policy_surface="finance",
+    )
+    _register_shared_registrars(
+        mcp,
+        tool_names=set(PILOT_AUDIT_READ_TOOL_NAMES),
+        policy_surface="analytics",
     )
     return mcp
 
