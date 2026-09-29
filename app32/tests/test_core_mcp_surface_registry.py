@@ -59,6 +59,7 @@ def test_pilot_user_server_exposes_only_the_reviewed_tenant_safe_catalog():
         *registry.PILOT_MANUAL_READ_TOOL_NAMES,
         *registry.PILOT_PROCESS_INSTANCE_READ_TOOL_NAMES,
         *registry.PILOT_MEETING_READ_TOOL_NAMES,
+        *registry.PILOT_IDENTITY_READ_TOOL_NAMES,
         "list_user_app32_capabilities",
     }
     # Sem principal autenticado, mutação de processos/instâncias/reuniões não é descoberta.
@@ -85,6 +86,7 @@ def test_oauth_user_server_keeps_the_same_reviewed_remote_catalog():
         *registry.PILOT_MANUAL_READ_TOOL_NAMES,
         *registry.PILOT_PROCESS_INSTANCE_READ_TOOL_NAMES,
         *registry.PILOT_MEETING_READ_TOOL_NAMES,
+        *registry.PILOT_IDENTITY_READ_TOOL_NAMES,
         "list_user_app32_capabilities",
     }
     assert not {

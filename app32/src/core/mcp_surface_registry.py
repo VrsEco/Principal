@@ -178,6 +178,18 @@ PILOT_MEETING_SENSITIVE_TOOL_NAMES: tuple[str, ...] = (
     "send_meeting_minutes",
 )
 
+# Descoberta de empresa por nome/prefixo é uma coorte própria, sempre exposta,
+# no mesmo padrão de PILOT_MEETING_READ_TOOL_NAMES: `list_my_companies` não
+# recebe company_id (é o próprio mecanismo de resolver um company_id a partir
+# do nome/prefixo digitado) — por isso fica fora de PILOT_USER_TOOL_NAMES.
+# Já é tenant-safe por construção (filtra por Employee.user_id do principal
+# autenticado). É LangChain tool (_tool_map()), não shared registrar.
+# Aprovação: Fabiano Diretor, 2026-09-29 (ver
+# docs/handoffs/handoff_squad_cliente_2026-09-27_expansao_mcp_versus_manual_ia.md).
+PILOT_IDENTITY_READ_TOOL_NAMES: tuple[str, ...] = (
+    "list_my_companies",
+)
+
 
 def _has_authenticated_mcp_permission(permission: str) -> bool:
     """Verifica discovery por principal, sem aceitar permissão do cliente."""
@@ -292,6 +304,7 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
         | set(PILOT_MANUAL_READ_TOOL_NAMES)
         | set(PILOT_PROCESS_INSTANCE_READ_TOOL_NAMES)
         | set(PILOT_MEETING_READ_TOOL_NAMES)
+        | set(PILOT_IDENTITY_READ_TOOL_NAMES)
     )
     names.update(
         _visible_privileged_tool_names(
@@ -831,6 +844,7 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
         *PILOT_MANUAL_READ_TOOL_NAMES,
         *PILOT_PROCESS_INSTANCE_READ_TOOL_NAMES,
         *PILOT_MEETING_READ_TOOL_NAMES,
+        *PILOT_IDENTITY_READ_TOOL_NAMES,
     )
     conditional_names = (
         *PILOT_PROCESS_MUTATION_TOOL_NAMES,
@@ -929,6 +943,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         *PILOT_MANUAL_READ_TOOL_NAMES,
         *PILOT_PROCESS_INSTANCE_READ_TOOL_NAMES,
         *PILOT_MEETING_READ_TOOL_NAMES,
+        *PILOT_IDENTITY_READ_TOOL_NAMES,
     )
     conditional_names = (
         *PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES,
