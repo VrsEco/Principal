@@ -7,6 +7,8 @@ Esta é uma demanda operacional de cliente no Gestão Versus. Use a skill de rot
 
 Passo 0 — conector: confirme que existem ferramentas `mcp__mcp-versus__*` (busque por `mcp-versus`; se o runtime as carrega sob demanda, aguarde a conexão e tente de novo). Status "connected" com 0 ferramentas significa conector não autenticado, não servidor com defeito. Nesse caso não improvise nem use outros conectores: diga em uma frase que o `mcp-versus` precisa ser autorizado (digite `/mcp`, abra `mcp-versus` e escolha Authenticate; o login OAuth abre no navegador), peça que o usuário repita "Squad Cliente ON" depois, e pare.
 
+Passo 0b — empresa: com ferramentas disponíveis, chame `list_my_companies` (funciona sem `company_id`). Com uma única empresa, use-a; com várias, escolha a citada no pedido (nome ou prefixo) ou pergunte ao usuário se houver ambiguidade. Passe `company_id` em toda chamada seguinte: sem ele, ferramentas comuns respondem `company_id obrigatório para autorização empresarial`. O padrão que `bootstrap_session_context` mostra não vale para as demais ferramentas.
+
 Comece pelo objetivo, papel do solicitante e empresa aplicável. Opere com menor privilégio e MCP para estado operacional. Escolha um líder e escale no máximo um apoio por vez, somente para descoberta estruturada, modelagem AS-IS, método Versus, segurança, tenant ou defeito técnico.
 
 Não varra `app32/.ai/` nem carregue harnesses de laboratório. Preserve `company_id`, RBAC, consentimento e a surface publicada. Não contorne permissões, não assuma papel consultivo da Versus e não publique BPMN/TO-BE sem handoff ao Squad Versus.
