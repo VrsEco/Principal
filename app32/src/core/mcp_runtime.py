@@ -220,7 +220,80 @@ class MCPExecutionContext:
     correlation_id: str | None = None
 
 
-def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> MCPExecutionContext:
+# Tools somente de leitura que existem para descobrir a empresa; sem elas o
+# usuário OAuth com vários grants não consegue obter o company_id exigido.
+COMPANY_DISCOVERY_TOOLS = frozenset({"list_my_companies", "bootstrap_session_context"})
+
+
+def _resolve_company_discovery_context(
+    *,
+    principal_id: int,
+    active_company_ids: tuple[int, ...],
+    http_request_context: Mapping[str, Any],
+    channel: str,
+    thread_id: str | None,
+) -> MCPExecutionContext:
+    """Contexto sem empresa, limitado aos grants vigentes do principal."""
+
+    from services.principal_authorization_service import principal_authorization_service
+
+    principal = principal_authorization_service.get_active_principal(principal_id)
+    if principal is None:
+        raise PermissionError("principal grant negado: principal não encontrado, inativo ou revogado")
+    user_id = _coerce_optional_int(getattr(principal, "user_id", None))
+    role = "colaborador"
+    permissions: tuple[str, ...] = ()
+    accessible = tuple(active_company_ids)
+    if user_id is not None:
+        identity = resolve_runtime_identity(user_id=user_id, company_id=None)
+        app32_accessible = set(_coerce_optional_int_list(identity.get("accessible_company_ids")))
+        accessible = tuple(cid for cid in active_company_ids if cid in app32_accessible)
+        role = str(identity.get("role") or "colaborador").strip().lower() or "colaborador"
+        permissions = _normalize_permissions(identity.get("permissions"))
+        if bool(identity.get("has_full_app32_permissions")):
+            permissions = ("*", *permissions)
+    metadata = {
+        "surface": str(http_request_context.get("surface") or "user").strip().lower(),
+        "transport": str(http_request_context.get("transport") or "stdio").strip().lower(),
+        "client": str(http_request_context.get("client") or "mcp_http").strip().lower(),
+        "company_resolution_source": "principal_company_discovery",
+        "principal_id": principal_id,
+        "principal_grant_enforced": True,
+        "accessible_company_ids": list(accessible),
+        "multi_company": len(accessible) > 1,
+        "selection_required_for_mutations": True,
+        "disable_company_fallback": True,
+    }
+    return MCPExecutionContext(
+        user_id=user_id,
+        principal_id=principal_id,
+        company_id=None,
+        employee_id=None,
+        role=role,
+        channel=channel or "claude_code",
+        thread_id=thread_id,
+        accessible_company_ids=accessible,
+        permissions=permissions,
+        metadata=metadata,
+        subject_type=str(http_request_context.get("subject_type") or "USER").strip().upper() or "USER",
+        issuer=_coerce_exact_identity_identifier(http_request_context.get("issuer")),
+        subject=_coerce_exact_identity_identifier(http_request_context.get("subject")),
+        client_id=str(http_request_context.get("client_id") or "").strip() or None,
+        auth_method=str(http_request_context.get("auth_method") or "").strip().lower() or None,
+        token_scopes=tuple(
+            str(scope).strip()
+            for scope in (http_request_context.get("token_scopes") or ())
+            if str(scope).strip()
+        ),
+        correlation_id=str(http_request_context.get("correlation_id") or "").strip() or None,
+    )
+
+
+def resolve_mcp_execution_context(
+    payload: Mapping[str, Any] | None = None,
+    *,
+    allow_missing_company: bool = False,
+) -> MCPExecutionContext:
     raw_payload = dict(payload or {})
     http_request_context = dict(get_http_request_context() or {})
     authenticated_http_context = _is_authenticated_http_context(http_request_context)
@@ -264,6 +337,25 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
 
     if principal_grant_mode:
         from services.principal_authorization_service import principal_authorization_service
+
+        active_company_ids: tuple[int, ...] = ()
+        if requested_company_id is None:
+            # Sem empresa na requisição: seleciona somente se o principal tiver
+            # exatamente um grant vigente. Com zero ou vários, a empresa continua
+            # obrigatória, exceto nas tools de descoberta (allow_missing_company).
+            active_company_ids = tuple(principal_authorization_service.active_company_ids(principal_id=principal_id))
+            if len(active_company_ids) == 1:
+                requested_company_id = active_company_ids[0]
+                requested_company_source = "principal_company_grant.single_active"
+
+        if requested_company_id is None and allow_missing_company:
+            return _resolve_company_discovery_context(
+                principal_id=principal_id,
+                active_company_ids=active_company_ids,
+                http_request_context=http_request_context,
+                channel=channel,
+                thread_id=thread_id,
+            )
 
         grant_decision = principal_authorization_service.resolve_for_company(
             principal_id=principal_id,
@@ -418,11 +510,14 @@ def wrap_mcp_callable(
         payload = extract_mcp_payload(args, kwargs)
         app = create_app()
         with app.app_context():
-            execution_context = resolve_mcp_execution_context(payload)
             tool_name = str(
                 getattr(callback, "__app32_tool_name__", None)
                 or getattr(callback, "__name__", "unknown_tool")
             ).strip() or "unknown_tool"
+            if tool_name in COMPANY_DISCOVERY_TOOLS:
+                execution_context = resolve_mcp_execution_context(payload, allow_missing_company=True)
+            else:
+                execution_context = resolve_mcp_execution_context(payload)
             capability = catalog.get_tool_capability(tool_name)
             if capability is None:
                 # Nenhuma inferência por nome/descrição é autorização. Toda

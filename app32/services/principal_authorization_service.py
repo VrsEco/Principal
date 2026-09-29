@@ -81,8 +81,10 @@ class PrincipalAuthorizationService:
         principal_lookup: Callable[[int], IdentityPrincipal | None] | None = None,
         grant_lookup: Callable[[int, int], PrincipalCompanyGrant | None] | None = None,
         external_identity_lookup: Callable[[str, str], ExternalIdentity | None] | None = None,
+        grants_lookup: Callable[[int], list[PrincipalCompanyGrant]] | None = None,
     ):
         self._now_provider = now_provider
+        self._grants_lookup = grants_lookup or self._lookup_grants_for_principal
         self._principal_lookup = principal_lookup or self._lookup_principal
         self._grant_lookup = grant_lookup or self._lookup_grant
         self._external_identity_lookup = external_identity_lookup or self._lookup_external_identity
@@ -268,6 +270,32 @@ class PrincipalAuthorizationService:
             return self.evaluate_grant(principal=None, grant=None, company_id=resolved_company_id)
         grant = self._grant_lookup(principal.id, resolved_company_id)
         return self.evaluate_grant(principal=principal, grant=grant, company_id=resolved_company_id)
+
+    @classmethod
+    def _lookup_grants_for_principal(cls, principal_id: int) -> list[PrincipalCompanyGrant]:
+        with cls._ensure_app_context():
+            return list(PrincipalCompanyGrant.query.filter_by(principal_id=principal_id).all())
+
+    def get_active_principal(self, principal_id: int) -> IdentityPrincipal | None:
+        principal = self._principal_lookup(principal_id)
+        return principal if principal is not None and principal.is_active else None
+
+    def active_company_ids(self, *, principal_id: int) -> tuple[int, ...]:
+        """Empresas com grant vigente do principal, para descoberta e auto-seleção.
+
+        Cada grant passa pela mesma avaliação de ``evaluate_grant``; o resultado
+        nunca inclui empresas revogadas, expiradas ou de outro principal.
+        """
+
+        principal = self._principal_lookup(principal_id)
+        if principal is None or not principal.is_active:
+            return ()
+        company_ids: list[int] = []
+        for grant in self._grants_lookup(principal_id):
+            decision = self.evaluate_grant(principal=principal, grant=grant, company_id=grant.company_id)
+            if decision.allowed and decision.company_id not in company_ids:
+                company_ids.append(int(decision.company_id))
+        return tuple(sorted(company_ids))
 
     def resolve_external_principal(
         self,
