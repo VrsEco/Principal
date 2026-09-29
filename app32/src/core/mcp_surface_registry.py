@@ -562,6 +562,7 @@ def _build_policy_fast_mcp(
     *,
     exposed_tool_names: Sequence[str] | None = None,
     conditional_tool_names: Sequence[str] | None = None,
+    instructions: str | None = None,
 ) -> Any:
     """Cria servidor cujo tools/list reflete a policy efetiva da requisição."""
     if FastMCP is None:  # pragma: no cover
@@ -570,7 +571,7 @@ def _build_policy_fast_mcp(
     static_tool_names = frozenset(exposed_tool_names or ())
     conditional_names = frozenset(conditional_tool_names or ())
     if not hasattr(FastMCP, "list_tools"):
-        return FastMCP(name)
+        return FastMCP(name, instructions=instructions)
 
     class _PolicyFastMCP(FastMCP):
         async def list_tools(self):
@@ -591,7 +592,7 @@ def _build_policy_fast_mcp(
             allowed_names.add(f"list_{normalized_surface}_app32_capabilities")
             return [tool for tool in tools if tool.name in allowed_names]
 
-    return _PolicyFastMCP(name)
+    return _PolicyFastMCP(name, instructions=instructions)
 
 
 def _tool_map() -> dict[str, Any]:
@@ -949,6 +950,24 @@ def build_oauth_finance_mcp_server(name: str = "GestaoVersus OAuth Finance MCP")
     return mcp
 
 
+# Entregue no ``initialize``: o cliente MCP a inclui no contexto do agente ao
+# conectar, então "Squad Cliente on" funciona em qualquer pasta, sem CLAUDE.md
+# nem memória local. Mantida curta (orçamento de contexto); fonte de detalhe:
+# app32/.ai/claude-squad-cliente.md.
+UNIFIED_SERVER_INSTRUCTIONS = (
+    "Conector mcp-versus (Gestão Versus). Quando o usuário disser \"Squad Cliente on\", "
+    "ative o atendimento de cliente: menor privilégio, MCP para estado operacional, "
+    "sem commit, deploy ou escrita em produção sem autorização explícita; abra a primeira "
+    "resposta com \"🦅 Squad Cliente ON — SC - [título da tarefa]\".\n"
+    "Antes de agir: 1) chame list_my_companies (funciona sem company_id); com uma só empresa use-a, "
+    "com várias use a citada no pedido (nome ou prefixo) ou pergunte ao usuário; "
+    "2) passe company_id em toda chamada seguinte, pois as demais ferramentas negam sem ele; "
+    "3) use list_user_app32_capabilities para ver o que existe e não prometa capacidades ausentes.\n"
+    "As permissões seguem o usuário APP32 e a empresa autorizada; nunca contorne RBAC ou consentimento. "
+    "Método, governança e desenho TO-BE vão ao Squad Versus; bug ou capability ausente vai à Engenharia."
+)
+
+
 def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
     """Servidor público único: ``mcp-versus`` sem promover finance a user.
 
@@ -978,6 +997,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         "user",
         exposed_tool_names=exposed_names,
         conditional_tool_names=conditional_names,
+        instructions=UNIFIED_SERVER_INSTRUCTIONS,
     )
     register_mcp_surface_tools(
         mcp,
