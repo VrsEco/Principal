@@ -534,3 +534,109 @@ def test_replay_answer_reproduces_answer_for_each_config(rag_app):
             assert replayed == live, (weight, min_sim, solo, strategy)
             seen.add(tuple(live))
     assert ("lex",) in seen and any(refs[:1] == ("sem",) for refs in seen)  # a grade exercita os dois desfechos
+
+
+# --- regras de ordenação do FTS nas respostas (título e mínimo de termos) ---------------------------------
+
+
+def _fts_service(fetcher=None, **fts):
+    from services.knowledge import retrieval_strategy as rs
+
+    config = rs.VectorRetrievalConfig(enabled=True, embedding=rs.EmbeddingSpec("m", "v1", 1, dimensions=2))
+    return KnowledgeQueryService(
+        embedding_provider=lambda q: [0.1, 0.2],
+        vector_config=config,
+        vector_fetcher=fetcher or (lambda *a, **k: []),
+        fts_ranking=rs.FtsRankingConfig(**fts),
+    )
+
+
+def _seed_long_beats_short():
+    """Os dois casam os 3 termos; o texto longo é mais novo e ganha o desempate do banco."""
+    short = _source(1, "curto", "Registrar um título.", title="Lançar conta a pagar")
+    long = _source(
+        1, "longo", "Lançar o movimento: a conta e o pagar já efetivado, com baixa.", title="Acessar Lançamento Rápido",
+        source_updated_at=datetime.utcnow() + timedelta(days=1),
+    )
+    weak = _source(1, "solto", "O tempo de espera é curto.", title="Acessar Relatórios")
+    db.session.add_all([short, long, weak])
+    db.session.commit()
+
+
+def _answer_refs(service, question, strategy):
+    return [c["source_ref"] for c in service.answer(question, company_id=1, strategy=strategy)["citations"]]
+
+
+def test_title_bonus_puts_the_specific_short_article_first(rag_app):
+    _seed_long_beats_short()
+    question = "como lançar conta pagar"
+
+    assert _answer_refs(_fts_service(), question, "full_text")[0] == "longo"  # comportamento atual
+    assert _answer_refs(_fts_service(title_bonus=1.0), question, "full_text")[0] == "curto"
+    assert _answer_refs(_fts_service(title_bonus=1.0), question, "hybrid")[0] == "curto"
+
+
+def test_min_term_matches_abstains_on_single_loose_word_unless_title_matches(rag_app):
+    _seed_long_beats_short()
+    weather = "qual previsão do tempo amanhã"  # 4 termos; só "tempo" casa, no meio do texto
+
+    assert _answer_refs(_fts_service(), weather, "full_text") == ["solto"]
+    assert _answer_refs(_fts_service(min_term_matches=2), weather, "full_text") == []
+    assert _answer_refs(_fts_service(min_term_matches=2), weather, "hybrid") == []
+    # uma palavra que está no título vale, mesmo com um só termo casado
+    assert _answer_refs(_fts_service(min_term_matches=2), "onde ficam os relatórios de auditoria mensal", "full_text") == ["solto"]
+
+
+def test_replay_matches_answer_with_fts_ranking_rules(rag_app):
+    _seed_long_beats_short()
+    question = "como lançar conta pagar"
+    for fts in ({}, {"title_bonus": 1.0}, {"title_bonus": 1.0, "min_term_matches": 2}, {"min_term_matches": 2}):
+        service = _fts_service(**fts)
+        recorded = service.candidates(question, company_id=1)
+        for strategy in ("full_text", "hybrid"):
+            live = _answer_refs(service, question, strategy)
+            replayed = [
+                h["source_ref"]
+                for h in service.replay_answer(
+                    recorded, strategy=strategy, min_similarity=0.4, vector_weight=1.0,
+                    fts_title_bonus=fts.get("title_bonus", 0.0), fts_min_term_matches=fts.get("min_term_matches", 0),
+                )
+            ]
+            assert replayed == live, (fts, strategy)
+
+
+def _row(title, score, source_type="product_help"):
+    from types import SimpleNamespace as NS
+
+    return (NS(source_type=source_type, title=title), NS(id=title), score)
+
+
+def test_rerank_fts_rows_rules():
+    from services.knowledge.retrieval_strategy import FtsRankingConfig
+
+    rerank = KnowledgeQueryService.rerank_fts_rows
+    rows = [_row("Acessar Grupo de Produtos / Serviços", 3.015), _row("Acessar Produtos / Serviços", 3.015)]
+
+    assert rerank("onde cadastro produtos serviços", rows, FtsRankingConfig()) is rows  # desligado = mesmas linhas
+    # empate de título: vence o mais específico (menos palavras sobrando); o score original é preservado
+    out = rerank("onde cadastro produtos serviços", rows, FtsRankingConfig(title_bonus=1.0))
+    assert [r[0].title for r in out][0] == "Acessar Produtos / Serviços" and [r[2] for r in out] == [3.015, 3.015]
+    # radical de 5 letras: "lançar" casa "lançamento"; "acessar" (modelo do título) não conta
+    out = rerank("como lançar conta", [_row("Acessar Relatórios", 2.02), _row("Acessar Lançamento Rápido", 2.01)], FtsRankingConfig(title_bonus=1.0))
+    assert [r[0].title for r in out] == ["Acessar Lançamento Rápido", "Acessar Relatórios"]
+    # mínimo de termos só vale com 3+ termos na pergunta; 1 termo ou título casando não é cortado
+    few = [_row("Acessar Borderô", 1.004)]
+    assert rerank("como faço um borderô", few, FtsRankingConfig(min_term_matches=2)) == few
+    loose = [_row("Acessar Achados", 1.003), _row("Acessar Tempo", 1.002)]
+    assert [r[0].title for r in rerank("previsão do tempo amanhã", loose, FtsRankingConfig(min_term_matches=2))] == ["Acessar Tempo"]
+
+
+def test_fts_ranking_config_env_defaults_off_and_validates():
+    from services.knowledge import retrieval_strategy as rs
+
+    assert not rs.FtsRankingConfig.from_env({}).enabled
+    cfg = rs.FtsRankingConfig.from_env({"KNOWLEDGE_FTS_TITLE_BONUS": "1,5", "KNOWLEDGE_FTS_MIN_TERM_MATCHES": "2"})
+    assert (cfg.title_bonus, cfg.min_term_matches, cfg.enabled) == (1.5, 2, True)
+    for bad in ("x", "-1", "0", "99"):
+        cfg = rs.FtsRankingConfig.from_env({"KNOWLEDGE_FTS_TITLE_BONUS": bad, "KNOWLEDGE_FTS_MIN_TERM_MATCHES": bad})
+        assert (cfg.title_bonus, cfg.min_term_matches) == (0.0, 0)

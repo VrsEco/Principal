@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 import re
+import unicodedata
 import uuid
 import logging
 from dataclasses import dataclass, replace
@@ -15,6 +17,7 @@ from models.knowledge import KnowledgeChunk, KnowledgeSource, KnowledgeSourceGra
 from services.knowledge.retrieval_strategy import (
     DEFAULT_STRATEGIES,
     EvidenceOrigin,
+    FtsRankingConfig,
     HybridRankingPolicy,
     STRATEGY_FULL_TEXT,
     STRATEGY_HYBRID,
@@ -152,6 +155,7 @@ class KnowledgeQueryService:
         vector_config: VectorRetrievalConfig | None = None,
         vector_fetcher: VectorFetcher | None = None,
         ranking_policy: HybridRankingPolicy | None = None,
+        fts_ranking: FtsRankingConfig | None = None,
     ) -> None:
         if embedding_provider is _FROM_ENV:
             # Import tardio: a fábrica só devolve provedor com flag, modelo e chave presentes;
@@ -162,6 +166,7 @@ class KnowledgeQueryService:
         self._embedding_provider = embedding_provider
         self._vector_config = vector_config
         self._vector_fetcher = vector_fetcher
+        self._fts_ranking = fts_ranking
         self._ranking_policy = ranking_policy or HybridRankingPolicy()
 
     MIN_QUERY_LENGTH = 3
@@ -465,8 +470,12 @@ class KnowledgeQueryService:
         min_similarity: float,
         vector_weight: float,
         solo_min_similarity: float | None = None,
+        fts_title_bonus: float = 0.0,
+        fts_min_term_matches: int = 0,
     ) -> list[dict[str, Any]]:
         """Refaz a seleção de `answer()` sobre o que `candidates()` gravou (sem banco nem provedor)."""
+
+        fts_config = FtsRankingConfig(title_bonus=fts_title_bonus, min_term_matches=fts_min_term_matches)
 
         question = candidates["normalized_question"]
         by_id: dict[Any, dict[str, Any]] = {}
@@ -476,15 +485,21 @@ class KnowledgeQueryService:
             for hit in items:
                 by_id[hit["chunk_id"]] = hit
                 out.append(
-                    (SimpleNamespace(source_type=hit["source_type"]), SimpleNamespace(id=hit["chunk_id"]), float(hit["score"] or 0))
+                    (
+                        SimpleNamespace(source_type=hit["source_type"], title=hit.get("title")),
+                        SimpleNamespace(id=hit["chunk_id"]),
+                        float(hit["score"] or 0),
+                    )
                 )
             return out
 
         fts_rows, vector_rows = rows(candidates["fts"]), rows(candidates["vector"])
         if strategy == STRATEGY_FULL_TEXT:
             fused, _ = self._drop_technical_rows(question, fts_rows, [])
+            fused = self.rerank_fts_rows(question, fused, fts_config)
         else:
             fts_rows, vector_rows = self._drop_technical_rows(question, fts_rows, vector_rows)
+            fts_rows = self.rerank_fts_rows(question, fts_rows, fts_config)
             fused = self._merge_hybrid(
                 fts_rows,
                 vector_rows,
@@ -518,6 +533,7 @@ class KnowledgeQueryService:
         if not set(plan.strategies) & {STRATEGY_VECTOR, STRATEGY_HYBRID}:
             if drop_technical:
                 fts_rows, _ = self._drop_technical_rows(question, fts_rows, [])
+                fts_rows = self.rerank_fts_rows(question, fts_rows, self._fts_ranking or FtsRankingConfig.from_env())
             return fts_rows, []
         try:
             vector_rows = self._vector_rows(
@@ -527,11 +543,59 @@ class KnowledgeQueryService:
             logger.warning("knowledge vector retrieval failed; using full_text", exc_info=True)
             if drop_technical:
                 fts_rows, _ = self._drop_technical_rows(question, fts_rows, [])
+                fts_rows = self.rerank_fts_rows(question, fts_rows, self._fts_ranking or FtsRankingConfig.from_env())
             return fts_rows, ["vector_retrieval_failed"]
         if drop_technical:
             fts_rows, vector_rows = self._drop_technical_rows(question, fts_rows, vector_rows)
+            fts_rows = self.rerank_fts_rows(question, fts_rows, self._fts_ranking or FtsRankingConfig.from_env())
         config = self._vector_config or VectorRetrievalConfig.from_env()
         return self._merge_hybrid(fts_rows, vector_rows, plan, min_similarity=config.min_similarity, vector_weight=config.rrf_vector_weight, solo_min_similarity=config.solo_min_similarity), []
+
+    _TITLE_STEM_LENGTH = 5
+    _TITLE_TIEBREAK = 0.1
+    _MIN_TERMS_TRIGGER = 3
+    _TITLE_TEMPLATE_WORDS = frozenset({"acess"})  # os artigos de navegação se chamam "Acessar X"
+
+    @classmethod
+    def _stems(cls, text: str) -> list[str]:
+        """Radical de 5 letras sem acento/caixa: 'lançar' e 'lançamento' casam; 'contas' e 'conta' também."""
+
+        folded = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode().lower()
+        return [word[: cls._TITLE_STEM_LENGTH] for word in re.findall(r"[a-z0-9]+", folded) if len(word) > 1]
+
+    @classmethod
+    def rerank_fts_rows(
+        cls,
+        question: str,
+        rows: list[tuple[KnowledgeSource, KnowledgeChunk, float]],
+        config: FtsRankingConfig,
+    ) -> list[tuple[KnowledgeSource, KnowledgeChunk, float]]:
+        """Reordena/filtra o FTS das respostas (só quando ligado; sem config devolve as mesmas linhas).
+
+        O score do FTS é o nº de termos casados (+ desempate por ts_rank). Texto longo casa mais termos e
+        ganhava do artigo curto e certo. Aqui: (1) cada termo da pergunta que aparece no título vale
+        `title_bonus` a mais; (2) entre títulos com o mesmo nº de acertos vence o mais específico (menos
+        palavras sobrando); (3) em pergunta com 3+ termos, um trecho com menos de `min_term_matches` termos
+        só fica se o título casa. O score devolvido é o original; muda só a ordem e quem permanece.
+        """
+
+        if not config.enabled or not rows:
+            return rows
+        terms = list(dict.fromkeys(cls._stems(" ".join(cls._query_terms(question)))))
+        strict = config.min_term_matches > 0 and len(terms) >= cls._MIN_TERMS_TRIGGER
+        keyed = []
+        for source, chunk, score in rows:
+            title = [s for s in cls._stems(source.title) if s not in cls._TITLE_TEMPLATE_WORDS]
+            title_hits = sum(1 for term in terms if term in set(title))
+            if strict and math.floor(float(score or 0) + 1e-9) < config.min_term_matches and title_hits == 0:
+                continue
+            adjusted = float(score or 0)
+            if config.title_bonus > 0:
+                adjusted += config.title_bonus * title_hits + cls._TITLE_TIEBREAK * title_hits / max(len(title), 1)
+            keyed.append((adjusted, (source, chunk, score)))
+        if config.title_bonus > 0:
+            keyed.sort(key=lambda item: -item[0])  # estável: empate mantém a ordem do banco
+        return [row for _adjusted, row in keyed]
 
     def _vector_rows(
         self,

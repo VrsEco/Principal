@@ -255,3 +255,67 @@ def test_compare_reports_per_question_changes_between_before_and_after(tmp_path,
     assert ab.main(["--replay", str(new), "--compare", str(old)]) == ab.EXIT_OK
     out = capsys.readouterr().out
     assert "peso 1 lim 0.45 solo off" in out and "PIOROU R-1" in out
+
+
+def _titled(chunk_id, title, score, source_type="product_help"):
+    return {"chunk_id": chunk_id, "source_ref": f"ref.{chunk_id}", "title": title, "source_type": source_type,
+            "content": "texto", "source_span": "trecho", "score": score}
+
+
+FTS_RULE_DATA = {
+    "company_id": 9,
+    "limit": 5,
+    "casos": [
+        {   # o texto longo casa 3 termos e ganha do curto e certo (2 termos) sem a regra
+            "id": "T-1", "question": "lançar conta pagar", "expected": ["ref.2"],
+            "candidatos": {"normalized_question": "lançar conta pagar", "candidate_limit": 30,
+                           "answer_source_limit": 5, "fallback_reason": None,
+                           "fts": [_titled(1, "Acessar Lançamento Rápido", 3.01), _titled(2, "Lançar conta a pagar", 2.01)],
+                           "vector": []},
+        },
+        {   # pergunta fora do produto: uma palavra solta casa; com mínimo 2 a resposta certa é abster
+            "id": "T-2", "question": "previsão tempo amanhã", "expected": ["-"],
+            "candidatos": {"normalized_question": "previsão tempo amanhã", "candidate_limit": 30,
+                           "answer_source_limit": 5, "fallback_reason": None,
+                           "fts": [_titled(3, "Acessar Achados", 1.002)], "vector": []},
+        },
+    ],
+}
+
+
+def test_replay_grid_includes_fts_rules_with_their_own_full_text_baseline():
+    report = ab.replay(
+        FTS_RULE_DATA, weights=[1.0], min_sims=[0.45], solo_mins=[None], title_bonuses=[0.0, 1.0], fts_mins=[0, 2]
+    )
+    bases = {(b["titulo"], b["min_fts"]): b["acerto_1"] for b in report["bases"]}
+    assert bases == {(0.0, 0): 0, (0.0, 2): 1, (1.0, 0): 1, (1.0, 2): 2}
+    assert report["full_text"] == {"acerto_1": 0, "abstencoes": 0}  # a base sem regras continua no topo do relatório
+    by_cfg = {(c["titulo"], c["min_fts"]): c for c in report["configs"]}
+    assert by_cfg[(1.0, 2)]["acerto_1"] == 2 and by_cfg[(1.0, 2)]["perdas"] == []
+    text = ab.render_replay(report)
+    assert "full_text titulo 1 min 2" in text and "solo off titulo 1 min 2" in text
+
+
+def test_compare_and_cli_accept_fts_rules(tmp_path, capsys):
+    import copy
+    import json
+
+    before = copy.deepcopy(FTS_RULE_DATA)
+    after = copy.deepcopy(FTS_RULE_DATA)
+    after["casos"][0]["candidatos"]["fts"] = [_titled(1, "Acessar Lançamento Rápido", 3.01)]  # o certo saiu do FTS
+    report = ab.compare(before, after, weight=1.0, min_sim=0.45, solo=None, title_bonus=1.0, fts_min=2)
+    assert report["titulo"] == 1.0 and report["min_fts"] == 2
+    assert [c["id"] for c in report["estrategias"]["full_text"]["mudancas"]] == ["T-1"]
+
+    path = tmp_path / "cand.json"
+    path.write_text(json.dumps(FTS_RULE_DATA), encoding="utf-8")
+    argv = ["--replay", str(path), "--weights", "1", "--min-sims", "0.45", "--solo-mins", "off",
+            "--title-bonus", "0,1", "--fts-min-matches", "0,2"]
+    assert ab.main(argv) == ab.EXIT_OK
+    out = capsys.readouterr().out
+    assert "full_text titulo 1 min 2" in out
+    new, old = tmp_path / "depois.json", tmp_path / "antes.json"
+    new.write_text(json.dumps(after), encoding="utf-8")
+    old.write_text(json.dumps(before), encoding="utf-8")
+    assert ab.main(["--replay", str(new), "--compare", str(old), "--title-bonus", "1", "--fts-min-matches", "2"]) == ab.EXIT_OK
+    assert "titulo 1 min 2" in capsys.readouterr().out

@@ -43,6 +43,14 @@ VECTOR_SOLO_MIN_SIMILARITY_ENV = "KNOWLEDGE_VECTOR_SOLO_MIN_SIMILARITY"
 VECTOR_RRF_WEIGHT_ENV = "KNOWLEDGE_VECTOR_RRF_WEIGHT"
 DEFAULT_VECTOR_RRF_WEIGHT = 1.0
 
+# Ordenação do FTS nas RESPOSTAS (vale para full_text e hybrid; desligada por padrão).
+# Bônus por termo da pergunta que aparece no TÍTULO (0 = desligado): texto longo casa mais palavras e
+# vencia o artigo curto e certo; palavra no título pesa mais que palavra solta no meio do texto.
+FTS_TITLE_BONUS_ENV = "KNOWLEDGE_FTS_TITLE_BONUS"
+# Mínimo de termos casados no FTS para perguntas com 3+ termos (0 = desligado). Um trecho com menos
+# termos só vale se o título casa; senão "previsão do tempo" responderia com qualquer artigo que cite "tempo".
+FTS_MIN_TERM_MATCHES_ENV = "KNOWLEDGE_FTS_MIN_TERM_MATCHES"
+
 # Dimensão fixada pela migration da projeção vetorial; trocar exige nova geração.
 KNOWLEDGE_EMBEDDING_DIMENSIONS = 1536
 EMBEDDINGS_TABLE = "knowledge_chunk_embeddings"
@@ -88,6 +96,39 @@ def _parse_solo_min_similarity(raw: object) -> float | None:
     except ValueError:
         return None
     return value if 0.0 <= value <= 1.0 else None
+
+
+def _parse_title_bonus(raw: object) -> float:
+    try:
+        value = float(str(raw).strip().replace(',', '.'))
+    except (TypeError, ValueError):
+        return 0.0
+    return value if 0.0 < value <= 10.0 else 0.0
+
+
+def _parse_min_term_matches(raw: object) -> int:
+    text = str(raw).strip()
+    return int(text) if text.isdigit() and 0 < int(text) <= 5 else 0
+
+
+@dataclass(frozen=True)
+class FtsRankingConfig:
+    """Ajustes de ordenação do FTS nas respostas. Tudo desligado por padrão (comportamento anterior)."""
+
+    title_bonus: float = 0.0
+    min_term_matches: int = 0
+
+    @property
+    def enabled(self) -> bool:
+        return self.title_bonus > 0 or self.min_term_matches > 0
+
+    @classmethod
+    def from_env(cls, environ: Mapping[str, str] | None = None) -> "FtsRankingConfig":
+        env = os.environ if environ is None else environ
+        return cls(
+            title_bonus=_parse_title_bonus(env.get(FTS_TITLE_BONUS_ENV)),
+            min_term_matches=_parse_min_term_matches(env.get(FTS_MIN_TERM_MATCHES_ENV)),
+        )
 
 
 @dataclass(frozen=True)
@@ -208,6 +249,9 @@ __all__ = [
     "EMBEDDINGS_TABLE",
     "EmbeddingSpec",
     "EvidenceOrigin",
+    "FTS_MIN_TERM_MATCHES_ENV",
+    "FTS_TITLE_BONUS_ENV",
+    "FtsRankingConfig",
     "HybridRankingPolicy",
     "KNOWLEDGE_EMBEDDING_DIMENSIONS",
     "STRATEGY_FULL_TEXT",
