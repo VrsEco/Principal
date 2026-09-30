@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, jsonify, request, send_file, url_f
 from flask_login import login_required, current_user
 from datetime import datetime
 from models import db, User, Company, Employee, Project, ProjectTask, Process, ProcessInstance
-from utils.permissions import can_access_company, get_active_company_id, get_default_company_id
+from utils.permissions import can_access_company, get_active_company_id, get_default_company_id, is_platform_admin
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,34 @@ def _resolve_active_company_context(*requested_company_ids):
                 return None, (jsonify({"success": False, "error": "Empresa da requisição não corresponde à empresa ativa."}), 403)
 
     return int(active_company_id), None
+
+
+def _resolve_company_scope(*requested_company_ids):
+    """Define as empresas visíveis: admin da plataforma vê todas as ativas;
+    demais perfis ficam restritos à empresa ativa da sessão."""
+    active_company_id, error_response = _resolve_active_company_context(
+        *([] if is_platform_admin() else requested_company_ids)
+    )
+    if error_response:
+        return None, None, error_response
+    if not is_platform_admin():
+        return active_company_id, [active_company_id], None
+
+    all_ids = [row[0] for row in db.session.query(Company.id).filter(Company.is_active.is_(True)).all()]
+    requested = []
+    for value in requested_company_ids:
+        if value in (None, "", [], (), set()):
+            continue
+        for item in (value if isinstance(value, (list, tuple, set)) else [value]):
+            try:
+                requested.append(int(item))
+            except (TypeError, ValueError):
+                return None, None, (jsonify({"success": False, "error": "Empresa da requisição é inválida."}), 400)
+    if requested:
+        if any(cid not in all_ids for cid in requested):
+            return None, None, (jsonify({"success": False, "error": "Empresa da requisição não está disponível."}), 403)
+        return active_company_id, list(dict.fromkeys(requested)), None
+    return active_company_id, all_ids, None
 
 
 @my_work_bp.route('/my-work')
@@ -433,13 +461,12 @@ def export_my_work_pdf():
         query_filters["employee_ids"] = list(set(responsible_ids + executor_ids))
 
     requested_company_ids = exported_filters.get("company_ids")
-    active_company_id, error_response = _resolve_active_company_context(
+    active_company_id, company_ids, error_response = _resolve_company_scope(
         requested_company_ids,
         request.args.get("active_company_id", type=int),
     )
     if error_response:
         return error_response
-    company_ids = [active_company_id]
 
     activities_raw, _scope_counts = get_user_activities_v2(
         user_id=current_user.id,
@@ -637,11 +664,14 @@ def send_project_task_summary(task_id):
 @login_required
 def my_work_filter_options():
     from services.my_work.discovery_service import get_filter_options_v2
-    active_company_id, error_response = _resolve_active_company_context()
+    active_company_id, _company_ids, error_response = _resolve_company_scope()
     if error_response:
         return error_response
     try:
-        data = get_filter_options_v2(current_user.id, active_company_id=active_company_id)
+        data = get_filter_options_v2(
+            current_user.id,
+            active_company_id=None if is_platform_admin() else active_company_id,
+        )
         logger.info(f"📊 Filter Options Response: {len(data.get('companies', []))} companies, {len(data.get('collaborators', []))} collabs, role={data.get('user_role')}")
         return jsonify({
             "success": True,
@@ -674,13 +704,12 @@ def my_work_api_activities():
 
     # Os filtros de empresa podem somente repetir o tenant ativo da sessão.
     requested_company_ids = _parse_ints(request.args.get('company_ids'))
-    active_company_id, error_response = _resolve_active_company_context(
+    active_company_id, company_ids, error_response = _resolve_company_scope(
         requested_company_ids,
         request.args.get('active_company_id', type=int),
     )
     if error_response:
         return error_response
-    company_ids = [active_company_id]
 
     # Merge responsible_ids and executor_ids into a single list of employee_ids to filter
     r_ids = _parse_ints(request.args.get('responsible_ids')) or []
