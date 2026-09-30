@@ -17,6 +17,7 @@ def _app():
 def _allow_active_company(monkeypatch, company_id=9):
     monkeypatch.setattr(my_work_module, "get_active_company_id", lambda: company_id)
     monkeypatch.setattr(my_work_module, "can_access_company", lambda candidate: candidate == company_id)
+    monkeypatch.setattr(my_work_module, "is_platform_admin", lambda: False)
 
 
 def test_my_work_rejects_query_tenant_different_from_active_session(monkeypatch):
@@ -49,6 +50,36 @@ def test_my_work_activities_scope_service_to_active_company(monkeypatch):
     assert response.status_code == 200
     assert captured["company_ids"] == [9]
     assert captured["active_company_id"] == 9
+
+
+def test_my_work_platform_admin_sees_all_active_companies(monkeypatch):
+    app = _app()
+    _allow_active_company(monkeypatch)
+    monkeypatch.setattr(my_work_module, "is_platform_admin", lambda: True)
+    monkeypatch.setattr(my_work_module, "current_user", SimpleNamespace(id=1))
+    monkeypatch.setattr(
+        my_work_module.db.session,
+        "query",
+        lambda *_a: SimpleNamespace(filter=lambda *_b: SimpleNamespace(all=lambda: [(9,), (22,)])),
+    )
+    captured = {}
+
+    def get_user_activities_v2(**kwargs):
+        captured.update(kwargs)
+        return [], {"me": 0, "company": 0, "general": 0}
+
+    monkeypatch.setattr(discovery_service, "get_user_activities_v2", get_user_activities_v2)
+    monkeypatch.setattr(my_work_service, "_calculate_stats_from_activities", lambda rows: {"total": len(rows)})
+
+    with app.test_request_context("/my-work/api/activities?scope=general"):
+        response = my_work_module.my_work_api_activities.__wrapped__()
+
+    assert response.status_code == 200
+    assert captured["company_ids"] == [9, 22]
+
+    with app.test_request_context("/my-work/api/activities?company_ids=99"):
+        response, status = my_work_module.my_work_api_activities.__wrapped__()
+    assert status == 403
 
 
 def test_my_work_legacy_complete_rejects_payload_tenant_mismatch(monkeypatch):
