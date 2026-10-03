@@ -12,6 +12,7 @@ from services import google_calendar_service as gcal
 from services.agenda_block_view_service import BlockViewError, build_block_view
 from services import block_assignment_service as assignment
 from services import block_migration_service as migration
+from services.team_block_signal_service import build_team_view
 from services import person_work_block_service as person_blocks
 from services.agenda_telemetry_service import record_events
 from services.work_journey_base import WorkJourneyError
@@ -400,6 +401,25 @@ def api_person_blocks_migration_apply():
 def api_person_blocks_migration_revert():
     """Volta aos blocos por empresa. Os blocos legados nunca foram alterados."""
     return _own_call(migration.revert)
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/team', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_team(company_id: int):
+    """Sinais por bloco da equipe (só gestor). Itens de outras empresas saem apenas como minutos."""
+    if not has_company_full_access(company_id):
+        return jsonify({'success': False, 'message': 'Acesso negado à visão da equipe.'}), 403
+    start = _parse_date(request.args.get('start'))
+    end = _parse_date(request.args.get('end'))
+    if not start or not end:
+        return jsonify({'success': False, 'message': 'Informe start e end (AAAA-MM-DD).'}), 400
+    try:
+        return jsonify({'success': True, **build_team_view(company_id, start, end)})
+    except BlockViewError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        current_app.logger.exception('agenda team view failed')
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/telemetry', methods=['POST'])
