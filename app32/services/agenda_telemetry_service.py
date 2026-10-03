@@ -34,6 +34,8 @@ ALLOWED_EVENTS: dict[str, set[str] | None] = {
     "migration_apply": None,
     "migration_revert": None,
     "team_filter": {"all", "over", "free"},
+    "config_open": {"rules", "absences", "transfers"},
+    "request_approve": {"absence", "transfer"},
 }
 
 

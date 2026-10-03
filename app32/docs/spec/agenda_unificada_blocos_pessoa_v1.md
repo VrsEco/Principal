@@ -23,6 +23,7 @@ Protótipo de referência (privado): https://claude.ai/artifact/REcHTjGEo1dS8ZH7
 - [ ] Parecer do DBA sobre migração e índices.
 - [x] Aprovação para iniciar a Fase 1 (2026-10-03).
 - [x] Fase 1 entregue em produção (2026-10-03); validação com colaboradores segue pendente (seção 9.1).
+- [x] Fase 5 implementada em branch (2026-10-04): menu de configuração, Regras de recorrência com tela, Ausências e Transferências com aprovação e escopo. **Em aberto:** desligar a tela antiga e Google com agenda travada.
 - [x] Fase 4 (parcial) implementada em branch: tela Equipe com privacidade e soma entre empresas só para migrados. **4c implementada em branch (2026-10-04):** Calendário Operacional antigo (e o PDF, que sai do mesmo apresentador), motor, relatório gerencial, grafo de incentivos e respostas de blocos de rotas/MCP passam a respeitar os blocos da pessoa de quem migrou.
 - [x] Fase 3 implementada em branch (blocos da pessoa, adaptador, editor, assistente de migração e reversão); **deploy depende dos pareceres do Arquiteto e do DBA**.
 - [x] Fase 2 implementada (sinais por bloco, estimativa e Estimar em lote, Mover para um bloco, sugestão de distribuição); padrão de estimativa em 30 min por decisão de 2026-10-03.
