@@ -4176,6 +4176,22 @@
 
         setupMeetingEditorEnhancements();
         updateSaveStatusUi();
+
+        // Deep link vindo da Agenda Unificada: ?meeting_id=ID abre a reunião; ?new=1&date=AAAA-MM-DD cria nova.
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const deepMeetingId = parseInt(params.get('meeting_id') || '', 10);
+            if (deepMeetingId > 0) {
+                window.editarReuniao(deepMeetingId);
+            } else if (params.get('new') === '1') {
+                window.novaReuniao();
+                const deepDate = params.get('date') || '';
+                const dateInput = document.getElementById('meeting-scheduled-date');
+                if (dateInput && /^\d{4}-\d{2}-\d{2}$/.test(deepDate)) dateInput.value = deepDate;
+            }
+        } catch (e) {
+            console.error('Deep link da agenda falhou:', e);
+        }
     });
 </script>
 {% endblock %}

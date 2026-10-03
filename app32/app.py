@@ -1214,6 +1214,7 @@ def register_blueprints(app):
     from api.routes.okr import okr_bp
     from api.routes.my_work import my_work_bp
     from api.routes.work_journey import work_journey_bp
+    from api.routes.unified_calendar import unified_calendar_bp
     from api.routes.work_journey_agendas import work_journey_agendas_bp
     from api.routes.work_journey_report import work_journey_report_bp
     from api.routes.diag import diag_bp
@@ -1246,6 +1247,7 @@ def register_blueprints(app):
     app.register_blueprint(okr_bp)
     app.register_blueprint(my_work_bp)
     app.register_blueprint(work_journey_bp)
+    app.register_blueprint(unified_calendar_bp)
     app.register_blueprint(work_journey_agendas_bp)
     app.register_blueprint(work_journey_report_bp)
     app.register_blueprint(diag_bp)
