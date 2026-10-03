@@ -235,3 +235,47 @@ def test_meeting_crud_contract_is_implemented_and_mentions_project_sync():
         "meeting", "meeting_topic", "meeting_decision", "meeting_activity"
     }
     assert all(item.implementation_status == "implemented" for item in contract.operations)
+
+
+def test_create_meeting_persists_scheduled_date_and_time(monkeypatch):
+    added = []
+    session = _Session()
+    session.add = added.append
+    monkeypatch.setattr(MeetingMCPService, "_validate_project", staticmethod(lambda **kwargs: (None, None)))
+    monkeypatch.setattr("services.meeting_mcp_service.db", SimpleNamespace(session=session))
+    monkeypatch.setattr("services.meeting_mcp_service.Meeting", lambda **kwargs: SimpleNamespace(to_dict=lambda: kwargs, **kwargs))
+
+    payload, error = MeetingMCPService.create_meeting(
+        company_id=13, title="Tia Sonia x Versus", scheduled_date="05/10/2026",
+        scheduled_time="9:00", planned_duration_minutes=120,
+    )
+
+    assert error is None
+    meeting = payload["meeting"]
+    assert meeting["scheduled_date"].isoformat() == "2026-10-05"
+    assert meeting["scheduled_time"] == "09:00"
+    assert meeting["planned_duration_minutes"] == 120
+
+    _, error = MeetingMCPService.create_meeting(company_id=13, title="x", scheduled_time="25:99")
+    assert error == "Horário inválido. Use HH:MM."
+
+
+def test_update_meeting_accepts_scheduled_fields_and_rejects_invalid_values(monkeypatch):
+    meeting = SimpleNamespace(
+        id=109, company_id=13, project_id=None, scheduled_date=None, scheduled_time=None,
+        planned_duration_minutes=None, to_dict=lambda: {},
+    )
+    monkeypatch.setattr(MeetingMCPService, "get_meeting", staticmethod(lambda **kwargs: (meeting, None)))
+    monkeypatch.setattr("services.meeting_mcp_service.db", SimpleNamespace(session=_Session()))
+
+    _, error = MeetingMCPService.update_meeting(
+        company_id=13, meeting_id=109,
+        changes={"scheduled_date": "2026-10-05", "scheduled_time": "09:00", "planned_duration_minutes": "120"},
+    )
+    assert error is None
+    assert meeting.scheduled_date.isoformat() == "2026-10-05"
+    assert meeting.scheduled_time == "09:00"
+    assert meeting.planned_duration_minutes == 120
+
+    _, error = MeetingMCPService.update_meeting(company_id=13, meeting_id=109, changes={"scheduled_date": "amanhã"})
+    assert error and "inválida" in error

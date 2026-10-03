@@ -721,8 +721,11 @@ def create_meeting(
     project_id: int | None = None,
     participants: list | dict | None = None,
     meeting_notes: str | None = None,
+    scheduled_date: str | None = None,
+    scheduled_time: str | None = None,
+    planned_duration_minutes: int | None = None,
 ):
-    """Cria uma reunião de trabalho sem exigir agendamento."""
+    """Cria uma reunião de trabalho; data (AAAA-MM-DD ou DD/MM/AAAA) e horário (HH:MM) são opcionais."""
     from services.meeting_mcp_service import MeetingMCPService
 
     return _meeting_service_mutation(
@@ -734,6 +737,9 @@ def create_meeting(
         project_id=project_id,
         participants=participants,
         meeting_notes=meeting_notes,
+        scheduled_date=scheduled_date,
+        scheduled_time=scheduled_time,
+        planned_duration_minutes=planned_duration_minutes,
     )
 
 

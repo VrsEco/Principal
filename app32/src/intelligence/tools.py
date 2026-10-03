@@ -585,11 +585,17 @@ def list_meetings(company_id: int = None, status: str = None, limit: int = 20):
 
 
 @tool
-def create_meeting(title: str, company_id: int = None, project_id: int = None, participants: list | dict = None, meeting_notes: str = None):
-    """Cria uma reunião de trabalho sem exigir data, horário ou convite."""
+def create_meeting(
+    title: str, company_id: int = None, project_id: int = None, participants: list | dict = None,
+    meeting_notes: str = None, scheduled_date: str = None, scheduled_time: str = None,
+    planned_duration_minutes: int = None,
+):
+    """Cria uma reunião de trabalho. Informe scheduled_date (AAAA-MM-DD) e scheduled_time (HH:MM) para agendá-la; sem eles fica sem data."""
     return meeting_ops_domain.create_meeting(
         title=title, company_id=company_id, project_id=project_id,
         participants=participants, meeting_notes=meeting_notes,
+        scheduled_date=scheduled_date, scheduled_time=scheduled_time,
+        planned_duration_minutes=planned_duration_minutes,
     )
 
 
