@@ -44,6 +44,9 @@ PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES: tuple[str, ...] = (
     "list_financial_catalog_items",
     "list_financial_classification_rules",
     "list_financial_entries",
+    "list_financial_reconciliation_batches",
+    "get_financial_reconciliation_batch",
+    "get_financial_reconciliation_settlement",
 )
 PILOT_FINANCE_OPERATIONAL_TOOL_NAMES: tuple[str, ...] = (
     "create_financial_entry",
@@ -678,7 +681,10 @@ def _register_shared_registrars(
 
     proxy = _WrappedMCPProxy(mcp, tool_names)
     for registrar in getattr(catalog, "mcp_registrars", ()):
-        registrar(proxy)
+        if getattr(registrar, "__name__", "") == "register_financial_mcp_tools":
+            registrar(proxy, include_diagnostic_reads=(policy_surface == "analytics"))
+        else:
+            registrar(proxy)
 
 
 def _register_admin_diagnostics(mcp: Any) -> None:
