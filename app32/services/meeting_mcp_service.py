@@ -24,6 +24,9 @@ class MeetingMCPService:
             "project_id",
             "meeting_notes",
             "participants",
+            "scheduled_date",
+            "scheduled_time",
+            "planned_duration_minutes",
             "actual_date",
             "actual_time",
             "actual_duration_minutes",
@@ -81,6 +84,28 @@ class MeetingMCPService:
         return parsed, error
 
     @staticmethod
+    def _parse_time(value: Any) -> tuple[str | None, str | None]:
+        raw = str(value or "").strip()
+        if not raw:
+            return None, None
+        try:
+            return datetime.strptime(raw, "%H:%M").strftime("%H:%M"), None
+        except ValueError:
+            return None, "Horário inválido. Use HH:MM."
+
+    @staticmethod
+    def _parse_minutes(value: Any, field: str) -> tuple[int | None, str | None]:
+        if value in (None, ""):
+            return None, None
+        try:
+            minutes = int(value)
+        except (TypeError, ValueError):
+            return None, f"{field} deve ser inteiro."
+        if minutes < 0:
+            return None, f"{field} não pode ser negativo."
+        return minutes, None
+
+    @staticmethod
     def _parse_decimal(value: Any, field: str) -> tuple[Decimal | None, str | None]:
         if value in (None, ""):
             return None, None
@@ -133,10 +158,22 @@ class MeetingMCPService:
         project_id: int | None = None,
         participants: list[Any] | dict[str, Any] | None = None,
         meeting_notes: str | None = None,
+        scheduled_date: str | None = None,
+        scheduled_time: str | None = None,
+        planned_duration_minutes: int | None = None,
     ) -> tuple[dict[str, Any] | None, str | None]:
         normalized_title = str(title or "").strip()
         if not normalized_title:
             return None, "Informe o título da reunião."
+        parsed_date, error = MeetingMCPService._parse_date(scheduled_date)
+        if error:
+            return None, error
+        parsed_time, error = MeetingMCPService._parse_time(scheduled_time)
+        if error:
+            return None, error
+        planned_minutes, error = MeetingMCPService._parse_minutes(planned_duration_minutes, "planned_duration_minutes")
+        if error:
+            return None, error
         project, error = MeetingMCPService._validate_project(company_id=company_id, project_id=project_id)
         if error:
             return None, error
@@ -144,6 +181,9 @@ class MeetingMCPService:
             company_id=int(company_id),
             project_id=project.id if project else None,
             title=normalized_title,
+            scheduled_date=parsed_date,
+            scheduled_time=parsed_time,
+            planned_duration_minutes=planned_minutes,
             status="draft",
             meeting_notes=str(meeting_notes or "").strip() or None,
             participants_json=json.dumps(participants or [], ensure_ascii=False),
@@ -183,6 +223,20 @@ class MeetingMCPService:
             if not isinstance(participants, (list, dict)):
                 return None, "participants deve ser lista ou objeto."
             meeting.participants_json = json.dumps(participants, ensure_ascii=False)
+        if "scheduled_date" in normalized:
+            meeting.scheduled_date, date_error = MeetingMCPService._parse_date(normalized.get("scheduled_date"))
+            if date_error:
+                return None, date_error
+        if "scheduled_time" in normalized:
+            meeting.scheduled_time, time_error = MeetingMCPService._parse_time(normalized.get("scheduled_time"))
+            if time_error:
+                return None, time_error
+        if "planned_duration_minutes" in normalized:
+            meeting.planned_duration_minutes, minutes_error = MeetingMCPService._parse_minutes(
+                normalized.get("planned_duration_minutes"), "planned_duration_minutes"
+            )
+            if minutes_error:
+                return None, minutes_error
         if "actual_date" in normalized:
             meeting.actual_date, date_error = MeetingMCPService._parse_date(normalized.get("actual_date"))
             if date_error:
