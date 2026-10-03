@@ -67,12 +67,14 @@
     late: { open: false, sort: 'old', types: { project_task: true, process_instance: true }, items: [], total: 0, loading: false, error: null },
     google: { configured: false, connected: false, needsReconnect: false, email: null, status: null },
     googleNote: null,
+    blocks: { on: false, days: {}, loading: false, error: null },
     layer: null,
     filtersOpen: false,
     lastFocus: null,
     toastTimer: null
   };
 
+  S.blocks.on = store('agenda.blocks') === '1';
   var saved = store('agenda.view');
   S.view = (saved === 'day' || saved === 'week' || saved === 'month') ? saved : (isMobile() ? 'day' : 'week');
 
@@ -172,6 +174,21 @@
       renderMain();
       renderChrome();
     });
+    loadBlocks();
+  }
+  function loadBlocks() {
+    var B = S.blocks;
+    if (!B.on || S.view === 'month') { B.days = {}; B.loading = false; B.error = null; return; }
+    var r = range(), key = r.start + '|' + r.end + '|' + scopeParams();
+    B.loading = true; B.error = null; B.key = key;
+    api(base() + '/agenda/blocks?start=' + r.start + '&end=' + r.end + '&' + scopeParams()).then(function (res) {
+      if (B.key !== key) return;
+      B.loading = false;
+      B.days = {};
+      if (!res.ok || !res.body.success) B.error = errText(res, 'Não foi possível carregar os blocos.');
+      else (res.body.days || []).forEach(function (d) { B.days[d.date] = d; });
+      renderMain();
+    });
   }
   function ensureLoaded() {
     var r = range(), key = r.start + '|' + r.end + '|' + typesParam() + '|' + scopeParams();
@@ -238,6 +255,45 @@
   }
   function ariaEv(e) { return TYPES[e.type] + ', ' + e.title + ', ' + whenTxt(e); }
 
+  /* ---------- blocos e sinais (somente leitura; nunca bloqueiam) ---------- */
+  function bday(d) { return S.blocks.on ? (S.blocks.days[d] || null) : null; }
+  function dur(m) { m = Math.max(0, Math.round(m)); var hh = Math.floor(m / 60), mm = m % 60; return hh && mm ? hh + 'h' + pad(mm) : (hh ? hh + 'h' : mm + 'min'); }
+  function sigChip(sig, small) {
+    if (!sig || sig.state === 'none' || !sig.label) return '';
+    return '<span class="ag-sig ag-sig--' + sig.state + (small ? ' ag-sig--sm' : '') + '">' + h(sig.label) + '</span>';
+  }
+  function dayBar(bd) {
+    var d = bd.day;
+    if (!d || d.state === 'none') return '<p class="ag-bk-day"><b>Sem expediente</b></p>';
+    var pct = d.capacity_minutes ? Math.min(100, Math.round(d.consumed_minutes / d.capacity_minutes * 100)) : 0;
+    return '<div class="ag-bk-day"><div class="ag-bk-day__txt"><b>Dia</b> ' + dur(d.consumed_minutes) + ' de ' + dur(d.capacity_minutes) + ' ' + sigChip(d, true) +
+      '</div><div class="ag-bar" role="img" aria-label="Ocupação do dia: ' + dur(d.consumed_minutes) + ' de ' + dur(d.capacity_minutes) + '"><i class="ag-bar--' + d.state + '" style="width:' + pct + '%"></i></div></div>';
+  }
+  function blocksMobile(d) {
+    var B = S.blocks;
+    if (!B.on) return '';
+    if (B.loading && !B.days[d]) return '<p class="ag-note">Carregando blocos…</p>';
+    if (B.error) return '<p class="ag-note">' + h(B.error) + '</p>';
+    var bd = B.days[d];
+    if (!bd) return '<p class="ag-note">Escolha um colaborador para ver os blocos.</p>';
+    var out = '<section class="ag-bk" aria-label="Blocos do dia">' + dayBar(bd);
+    bd.blocks.forEach(function (b) {
+      out += '<div class="ag-bk-row"><span class="ag-bk-row__time">' + h(b.start) + '–' + h(b.end) + '</span><span class="ag-bk-row__name">' + h(b.name) + '</span>' +
+        sigChip(b.signal) + (b.without_estimate ? '<span class="ag-bk-row__warn">' + b.without_estimate + ' sem estimativa</span>' : '') + '</div>';
+    });
+    return out + '</section>';
+  }
+  function blockBands(x, H0, H1) {
+    var bd = bday(x), out = '';
+    if (!bd) return '';
+    bd.blocks.forEach(function (b) {
+      var s0 = Math.max(b.start_minutes, H0), e0 = Math.min(b.end_minutes, H1);
+      if (e0 <= s0) return;
+      out += '<div class="ag-bk-band ag-bk-band--' + (b.signal.state || 'none') + '" style="top:' + ((s0 - H0) / 60 * HP) + 'px;height:' + ((e0 - s0) / 60 * HP) + 'px" aria-hidden="true"><span>' + h(b.name) + ' ' + sigChip(b.signal, true) + '</span></div>';
+    });
+    return out;
+  }
+
   /* ---------- visões ---------- */
   function dayMobile() {
     var d = S.sel, strip = '<div class="ag-strip" role="group" aria-label="Dias da semana">';
@@ -252,14 +308,14 @@
     if (!list.length) body = '<p class="ag-state">Nada marcado para este dia. Toque em Criar.</p>';
     if (all.length) body += '<p class="ag-sec">Dia todo</p><div class="ag-cards">' + all.map(card).join('') + '</div>';
     if (tm.length) body += '<p class="ag-sec">Horários</p><div class="ag-cards">' + tm.map(card).join('') + '</div>';
-    return strip + '<div class="ag-cards--day">' + body + '</div>';
+    return strip + blocksMobile(d) + '<div class="ag-cards--day">' + body + '</div>';
   }
   function weekMobile() {
     var out = '<div class="ag-weeklist">', ws = weekStart(S.sel);
     for (var i = 0; i < 7; i++) {
       var x = add(ws, i), l = onDay(x);
       out += '<button type="button" class="ag-wrow' + (x === cfg.today ? ' is-today' : '') + '" data-go="' + x + '"><span class="ag-wrow__head">' + DOW[i] + ' ' + dnum(x) + dots(x) +
-        '<small>' + l.length + (l.length === 1 ? ' item' : ' itens') + '</small></span>' +
+        (bday(x) ? sigChip(bday(x).day, true) : '') + '<small>' + l.length + (l.length === 1 ? ' item' : ' itens') + '</small></span>' +
         '<span class="ag-wrow__txt">' + (l.length ? h(l.slice(0, 2).map(function (e) { return e.title; }).join(' · ')) : 'Livre') + '</span></button>';
     }
     return out + '</div>';
@@ -282,7 +338,7 @@
       if (e.start == null) return;
       min = Math.min(min, Math.floor(e.start / 60) * 60);
       max = Math.max(max, Math.ceil((e.start + (e.dur || 60)) / 60) * 60);
-    }); });
+    }); var bd = bday(x); if (bd) bd.blocks.forEach(function (b) { min = Math.min(min, Math.floor(b.start_minutes / 60) * 60); max = Math.max(max, Math.ceil(b.end_minutes / 60) * 60); }); });
     return [Math.max(0, min), Math.min(24 * 60, max)];
   }
   function layout(events) {
@@ -307,7 +363,7 @@
     var hr = hourRange(days), H0 = hr[0], H1 = hr[1], height = (H1 - H0) / 60 * HP;
     var head = '<div class="ag-tg__head" style="' + cols + '"><div class="ag-tg__hd is-gut"></div>';
     days.forEach(function (x) {
-      head += '<div class="ag-tg__hd' + (x === cfg.today ? ' is-today' : '') + '"><small>' + DOW[dow(x)] + '</small><b>' + dnum(x) + '</b></div>';
+      head += '<div class="ag-tg__hd' + (x === cfg.today ? ' is-today' : '') + '"><small>' + DOW[dow(x)] + '</small><b>' + dnum(x) + '</b>' + (bday(x) ? sigChip(bday(x).day, true) : '') + '</div>';
     });
     head += '</div>';
     var allday = '<div class="ag-tg__allday" style="' + cols + '"><div class="ag-tg__al is-gut">dia todo</div>';
@@ -322,7 +378,7 @@
     var body = '<div class="ag-tg__body" style="' + cols + '"><div class="ag-tg__gut" style="height:' + height + 'px">' + lab + '</div>';
     var now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
     days.forEach(function (x) {
-      var timed = onDay(x).filter(function (e) { return e.start != null; }), inner = '';
+      var timed = onDay(x).filter(function (e) { return e.start != null; }), inner = blockBands(x, H0, H1);
       layout(timed).forEach(function (it) {
         var e = it.e, top = (it.s - H0) / 60 * HP, hh = Math.max((it.f - it.s) / 60 * HP - 2, 22), w = 100 / it.lanes, left = it.lane * w;
         inner += '<button type="button" class="ag-ev t-' + e.type + (e.closed ? ' is-closed' : '') + '" data-key="' + h(e.key) + '" aria-label="' + h(ariaEv(e)) + '" style="top:' + top + 'px;height:' + hh + 'px;left:calc(' + left + '% + 2px);width:calc(' + w + '% - 4px)"><b>' + h(e.title) + '</b>' + hm(it.s) + (e.dur ? '–' + hm(it.f) : '') + '</button>';
@@ -374,6 +430,8 @@
   }
   function renderChrome() {
     $('agRange').textContent = rangeLabel();
+    var bt = $('agBlocksToggle');
+    if (bt) { bt.setAttribute('aria-pressed', String(S.blocks.on)); bt.disabled = S.view === 'month'; bt.title = S.view === 'month' ? 'Os blocos aparecem nas visões Dia e Semana.' : ''; }
     Array.prototype.forEach.call($('agViews').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.view === S.view)); });
     var g = S.google, chip = $('agGoogleChip');
     if (!g.configured) chip.hidden = true;
@@ -690,6 +748,10 @@
   $('agToday').addEventListener('click', function () { S.sel = cfg.today; renderChrome(); ensureLoaded(); });
   $('agPrev').addEventListener('click', function () { shift(-1); });
   $('agNext').addEventListener('click', function () { shift(1); });
+  $('agBlocksToggle').addEventListener('click', function () {
+    S.blocks.on = !S.blocks.on; store('agenda.blocks', S.blocks.on ? '1' : '0'); track('blocks_toggle', S.blocks.on ? 'on' : 'off');
+    renderChrome(); if (S.blocks.on) loadBlocks(); else S.blocks.days = {}; renderMain();
+  });
   $('agCreateBtn').addEventListener('click', function () { openCreate(S.sel, null, $('agCreateBtn')); });
   $('agFilterToggle').addEventListener('click', function () { S.filtersOpen = !S.filtersOpen; renderFilters(); });
   $('agFab').addEventListener('click', function () { openCreate(S.sel, null, $('agFab')); });

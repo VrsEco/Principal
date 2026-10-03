@@ -9,6 +9,7 @@ from flask_login import current_user, login_required
 
 from models import Company, Employee, Project, Process
 from services import google_calendar_service as gcal
+from services.agenda_block_view_service import BlockViewError, build_block_view
 from services.agenda_telemetry_service import record_events
 from services.unified_calendar_service import (
     EVENT_TYPES,
@@ -152,6 +153,34 @@ def api_agenda_late(company_id: int):
     except Exception:
         return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
     return jsonify({'success': True, **result})
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/blocks', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_blocks(company_id: int):
+    """Sinais por bloco (Livre/Completo/Acima), somente leitura. Nunca bloqueia nada."""
+    start = _parse_date(request.args.get('start'))
+    end = _parse_date(request.args.get('end'))
+    if not start or not end:
+        return jsonify({'success': False, 'message': 'Informe start e end (AAAA-MM-DD).'}), 400
+    employee_id, scope, error = _resolve_scope(company_id)
+    if error:
+        return error
+    if not employee_id:
+        return jsonify({'success': True, 'days': [], 'note': 'Informe um colaborador.'})
+    extra = []
+    if scope != 'all':
+        try:
+            extra = gcal.list_google_events(current_user.id, start, end)
+        except gcal.GoogleCalendarError:
+            extra = []
+    try:
+        view = build_block_view(company_id, employee_id, start, end, extra_events=extra)
+    except BlockViewError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+    return jsonify({'success': True, **view})
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/telemetry', methods=['POST'])
