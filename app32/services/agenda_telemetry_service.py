@@ -10,7 +10,7 @@ DEVICES = {"mobile", "desktop"}
 # evento -> valores aceitos em `detail` (None = detail livre curto, apenas [a-z0-9_-])
 ALLOWED_EVENTS: dict[str, set[str] | None] = {
     "agenda_open": {"day", "week", "month"},
-    "view_change": {"day", "week", "month"},
+    "view_change": {"day", "week", "month", "team"},
     "create_open": None,
     "create_choose": {"meeting", "project_task", "process_instance", "manual"},
     "late_open": None,
@@ -33,6 +33,7 @@ ALLOWED_EVENTS: dict[str, set[str] | None] = {
     "migration_open": None,
     "migration_apply": None,
     "migration_revert": None,
+    "team_filter": {"all", "over", "free"},
 }
 
 

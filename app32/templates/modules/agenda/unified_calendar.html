@@ -3,7 +3,7 @@
 {% block title %}Agenda | Versus{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='7') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='8') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -43,6 +43,7 @@
                 <button type="button" data-view="day" aria-pressed="false">Dia</button>
                 <button type="button" data-view="week" aria-pressed="false">Semana</button>
                 <button type="button" data-view="month" aria-pressed="false">Mês</button>
+                <button type="button" data-view="team" id="agTeamBtn" aria-pressed="false" hidden>Equipe</button>
             </div>
             <button type="button" class="ag-btn ag-btn--primary ag-create-desktop" id="agCreateBtn" aria-haspopup="dialog">+ Criar</button>
         </div>
@@ -74,5 +75,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/unified-calendar.js', v='7') }}"></script>
+<script src="{{ url_for('static', filename='js/unified-calendar.js', v='8') }}"></script>
 {% endblock %}

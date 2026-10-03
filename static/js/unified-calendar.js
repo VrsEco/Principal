@@ -69,6 +69,7 @@
     google: { configured: false, connected: false, needsReconnect: false, email: null, status: null },
     googleNote: null,
     blocks: { on: false, days: {}, loading: false, error: null },
+    team: { loading: false, error: null, data: null, key: '', filter: 'all' },
     pb: { loading: false, error: null, blocks: [], warnings: [], has: false, mode: 'list', editing: null, proposal: null, decisions: {}, saving: false, confirmRevert: false, form: null },
     move: { key: null, loading: false, error: null, options: [], item: null, applyNow: false, sel: null, reason: '', saving: false },
     sug: { date: null, loading: false, error: null, proposals: [], unplaced: [], saving: false },
@@ -164,7 +165,19 @@
     return null;
   }
 
+  function loadTeam() {
+    var T = S.team, key = S.sel;
+    T.key = key; T.loading = true; T.error = null; renderMain();
+    api(base() + '/agenda/team?start=' + S.sel + '&end=' + S.sel).then(function (res) {
+      if (T.key !== key) return;
+      T.loading = false;
+      if (!res.ok || !res.body.success) { T.error = errText(res, 'Não foi possível carregar a equipe.'); T.data = null; }
+      else T.data = res.body;
+      renderMain();
+    });
+  }
   function load() {
+    if (S.view === 'team') { loadTeam(); return; }
     var r = range(), seq = ++S.reqSeq, types = typesParam();
     S.rangeKey = r.start + '|' + r.end + '|' + types + '|' + scopeParams();
     S.error = null;
@@ -196,6 +209,7 @@
     });
   }
   function ensureLoaded() {
+    if (S.view === 'team') { if (S.team.key !== S.sel || !S.team.data) loadTeam(); else renderMain(); return; }
     var r = range(), key = r.start + '|' + r.end + '|' + typesParam() + '|' + scopeParams();
     if (key !== S.rangeKey) load(); else { renderMain(); }
   }
@@ -575,6 +589,37 @@
     return out;
   }
 
+  /* ---------- equipe (gestor) ---------- */
+  function teamCard(e) {
+    var d = e.days[0], day = d.day, cap = day.capacity_minutes || 0;
+    var mine = cap ? Math.min(100, Math.round(day.this_company_minutes / cap * 100)) : 0;
+    var others = cap ? Math.min(100 - mine, Math.round(day.other_companies_minutes / cap * 100)) : 0;
+    var head = '<div class="ag-tm__head"><b>' + h(e.name) + '</b><span class="ag-tag">' + (e.source === 'person' ? 'Blocos da pessoa' : 'Por empresa') + '</span>' + sigChip(day, true) + '</div>';
+    var bar = cap ? '<div class="ag-tbar" role="img" aria-label="Ocupação: ' + dur(day.consumed_minutes) + ' de ' + dur(cap) + ', ' + dur(day.this_company_minutes) + ' desta empresa e ' + dur(day.other_companies_minutes) + ' de outras"><i class="is-mine" style="width:' + mine + '%"></i><i class="is-other" style="width:' + others + '%"></i></div>' +
+      '<p class="ag-tm__sum">' + dur(day.consumed_minutes) + ' de ' + dur(cap) + ' · <span class="k-mine">desta empresa ' + dur(day.this_company_minutes) + '</span>' + (e.source === 'person' ? ' · <span class="k-other">outras empresas ' + dur(day.other_companies_minutes) + '</span>' : '') + '</p>' : '<p class="ag-tm__sum">Sem expediente neste dia.</p>';
+    var rows = d.blocks.map(function (b) {
+      var items = b.items.length ? '<ul class="ag-bk-items">' + b.items.map(function (it) { return '<li>' + h(it.title) + ' <small>' + (it.minutes ? dur(it.minutes) : 'sem estimativa') + '</small></li>'; }).join('') + '</ul>' : '';
+      var split = b.mode === 'operational' ? '<small>desta empresa ' + dur(b.this_company_minutes) + (e.source === 'person' ? ' · outras empresas ' + dur(b.other_companies_minutes) : '') + (b.without_estimate ? ' · ' + b.without_estimate + ' sem estimativa' : '') + '</small>' : '';
+      return '<div class="ag-bk-row"><span class="ag-bk-row__time">' + h(b.start) + '–' + h(b.end) + '</span><span class="ag-bk-row__name">' + h(b.name) + '</span>' + sigChip(b.signal) + split + items + '</div>';
+    }).join('');
+    var more = d.blocks.length ? '<details class="ag-tm__more"><summary>Ver blocos (' + d.blocks.length + ')</summary>' + rows + '</details>' : '';
+    return '<article class="ag-tm">' + head + bar + more + '</article>';
+  }
+  function teamHtml() {
+    var T = S.team;
+    if (T.loading && !T.data) return '<p class="ag-state">Carregando a equipe…</p>';
+    if (T.error) return '<div class="ag-state ag-state--error" role="alert"><p>' + h(T.error) + '</p><button type="button" class="ag-btn" data-act="retry">Tentar de novo</button></div>';
+    var list = (T.data && T.data.employees) || [], over = 0, free = 0;
+    list.forEach(function (e) { var st = e.days[0].day.state; if (st === 'over') over++; else if (st === 'free') free++; });
+    var shown = list.filter(function (e) { var st = e.days[0].day.state; return T.filter === 'all' || st === T.filter; });
+    var chips = [['all', 'Todos (' + list.length + ')'], ['over', 'Acima (' + over + ')'], ['free', 'Com folga (' + free + ')']].map(function (c) {
+      return '<button type="button" class="ag-fchip" data-act="team-filter" data-f="' + c[0] + '" aria-pressed="' + (T.filter === c[0]) + '"><span>' + c[1] + '</span></button>';
+    }).join('');
+    var note = '<p class="ag-note">Você vê o total de cada pessoa em todas as empresas. Itens de outras empresas aparecem só como tempo, sem título.</p>';
+    return '<div class="ag-view ag-team"><div class="ag-est-types" role="group" aria-label="Filtrar equipe">' + chips + '</div>' + note +
+      (shown.length ? '<div class="ag-tm-grid">' + shown.map(teamCard).join('') + '</div>' : '<p class="ag-state">Nenhum colaborador neste filtro.</p>') + '</div>';
+  }
+
   /* ---------- visões ---------- */
   function dayMobile() {
     var d = S.sel, strip = '<div class="ag-strip" role="group" aria-label="Dias da semana">';
@@ -683,6 +728,7 @@
 
   function renderMain() {
     var main = $('agMain');
+    if (S.view === 'team') { main.setAttribute('aria-busy', S.team.loading ? 'true' : 'false'); main.innerHTML = teamHtml(); return; }
     main.setAttribute('aria-busy', S.loading ? 'true' : 'false');
     if (S.error) {
       main.innerHTML = '<div class="ag-state ag-state--error" role="alert"><p>' + h(S.error) + '</p><button type="button" class="ag-btn" data-act="retry">Tentar de novo</button></div>';
@@ -703,7 +749,7 @@
   /* ---------- cabeçalho, filtros, atrasadas ---------- */
   function rangeLabel() {
     var d = pd(S.sel);
-    if (S.view === 'day') return isMobile() ? DOW[d.getDay()] + ', ' + d.getDate() + ' de ' + MON3[d.getMonth()] : cap1(longDay(S.sel));
+    if (S.view === 'day' || S.view === 'team') return isMobile() ? DOW[d.getDay()] + ', ' + d.getDate() + ' de ' + MON3[d.getMonth()] : cap1(longDay(S.sel));
     if (S.view === 'month') return cap1(MONTHS[d.getMonth()]) + ' de ' + d.getFullYear();
     var r = range(), a = pd(r.start), b = pd(r.end);
     if (a.getMonth() === b.getMonth()) return a.getDate() + ' – ' + b.getDate() + ' de ' + MONTHS[b.getMonth()] + ' de ' + b.getFullYear();
@@ -711,6 +757,8 @@
   }
   function renderChrome() {
     $('agRange').textContent = rangeLabel();
+    var tb = $('agTeamBtn'); if (tb) tb.hidden = !cfg.canViewAll;
+    root.classList.toggle('is-team', S.view === 'team');
     var bt = $('agBlocksToggle');
     if (bt) { bt.setAttribute('aria-pressed', String(S.blocks.on)); bt.disabled = S.view === 'month'; bt.title = S.view === 'month' ? 'Os blocos aparecem nas visões Dia e Semana.' : ''; }
     Array.prototype.forEach.call($('agViews').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.view === S.view)); });
@@ -930,14 +978,14 @@
 
   /* ---------- ações ---------- */
   function setView(v) {
-    S.view = v; store('agenda.view', v); track('view_change', v);
+    S.view = v; if (v !== 'team') store('agenda.view', v); track('view_change', v);
     renderChrome(); ensureLoaded();
   }
   function go(date, view) { S.sel = date; if (view && view !== S.view) setView(view); else { renderChrome(); ensureLoaded(); } }
   function shift(dir) {
     var d = pd(S.sel);
     if (S.view === 'month') { d.setDate(1); d.setMonth(d.getMonth() + dir); S.sel = iso(d); }
-    else S.sel = add(S.sel, (S.view === 'day' ? 1 : 7) * dir);
+    else S.sel = add(S.sel, (S.view === 'day' || S.view === 'team' ? 1 : 7) * dir);
     renderChrome(); ensureLoaded();
   }
   function openCreate(date, time, trigger) { track('create_open'); openLayer({ kind: 'create', date: date, time: time }, trigger); }
@@ -992,6 +1040,7 @@
   function act(name, node) {
     if (name === 'close') return closeLayer();
     if (name === 'retry') return load();
+    if (name === 'team-filter') { S.team.filter = node.dataset.f; track('team_filter', S.team.filter); renderMain(); return; }
     if (name === 'pb-open') { track('blocks_edit_open'); S.pb.mode = 'list'; S.pb.form = null; S.pb.confirmRevert = false; S.pb.confirmDelete = null; renderLayer0(); return; }
     if (name === 'pb-new') { S.pb.form = pbNewForm(); S.pb.mode = 'form'; renderLayer(); return; }
     if (name === 'pb-edit') { var eb0 = S.pb.blocks.filter(function (b) { return String(b.id) === node.dataset.id; })[0]; if (eb0) { S.pb.form = { id: eb0.id, name: eb0.name, start: eb0.start, end: eb0.end, mode: eb0.mode, weekdays: eb0.weekdays.slice(), types: eb0.preferred_item_types.slice() }; S.pb.mode = 'form'; renderLayer(); } return; }

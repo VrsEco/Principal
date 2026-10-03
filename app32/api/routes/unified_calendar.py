@@ -12,6 +12,7 @@ from services import google_calendar_service as gcal
 from services.agenda_block_view_service import BlockViewError, build_block_view
 from services import block_assignment_service as assignment
 from services import block_migration_service as migration
+from services.team_block_signal_service import build_team_view
 from services import person_work_block_service as person_blocks
 from services.agenda_telemetry_service import record_events
 from services.work_journey_base import WorkJourneyError
@@ -182,7 +183,7 @@ def api_agenda_blocks(company_id: int):
         except gcal.GoogleCalendarError:
             extra = []
     try:
-        view = build_block_view(company_id, employee_id, start, end, extra_events=extra, viewer_user_id=(current_user.id if scope != 'all' else None))
+        view = build_block_view(company_id, employee_id, start, end, extra_events=extra, viewer_user_id=(current_user.id if scope != 'all' else None), allowed_company_ids=_allowed_company_ids())
     except BlockViewError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -255,6 +256,14 @@ def _viewer_user_id():
     return current_user.id if scope != 'all' and current_user.is_authenticated else None
 
 
+def _allowed_company_ids() -> set[int]:
+    """Empresas em que o usuário logado ainda pode ver a Agenda (vínculo ativo + permissão processes:view)."""
+    if not current_user.is_authenticated:
+        return set()
+    ids = {e.company_id for e in Employee.query.filter_by(user_id=current_user.id, status='active')}
+    return {cid for cid in ids if has_permission(cid, 'processes', 'view')}
+
+
 def _planning_call(fn):
     try:
         return jsonify({'success': True, **fn()})
@@ -279,7 +288,7 @@ def api_agenda_move_options(company_id: int):
     if not source_id:
         return jsonify({'success': False, 'message': 'Informe o item.'}), 400
     def build():
-        data = assignment.move_options(company_id, employee_id, source_type, source_id, viewer_user_id=_viewer_user_id())
+        data = assignment.move_options(company_id, employee_id, source_type, source_id, viewer_user_id=_viewer_user_id(), allowed_company_ids=_allowed_company_ids())
         if source_type == 'project_task':
             task = ProjectTask.query.get(source_id)
             project = Project.query.filter_by(id=task.project_id, company_id=company_id).first() if task else None
@@ -316,7 +325,7 @@ def api_agenda_suggestions(company_id: int):
     target = _parse_date(request.args.get('date'))
     if not target:
         return jsonify({'success': False, 'message': 'Informe a data (AAAA-MM-DD).'}), 400
-    return _planning_call(lambda: assignment.suggest_distribution(company_id, employee_id, target, viewer_user_id=_viewer_user_id()))
+    return _planning_call(lambda: assignment.suggest_distribution(company_id, employee_id, target, viewer_user_id=_viewer_user_id(), allowed_company_ids=_allowed_company_ids()))
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/suggestions', methods=['POST'])
@@ -332,7 +341,7 @@ def api_agenda_suggestions_action(company_id: int):
     handlers = {'apply': assignment.apply_suggestions, 'accept': assignment.accept_suggestions, 'undo': assignment.undo_suggestions}
     if not target or action not in handlers:
         return jsonify({'success': False, 'message': 'Informe a data e a ação (apply, accept ou undo).'}), 400
-    return _planning_call(lambda: handlers[action](company_id, employee_id, target, viewer_user_id=_viewer_user_id()))
+    return _planning_call(lambda: handlers[action](company_id, employee_id, target, viewer_user_id=_viewer_user_id(), allowed_company_ids=_allowed_company_ids()))
 
 
 def _own_call(fn):
@@ -400,6 +409,25 @@ def api_person_blocks_migration_apply():
 def api_person_blocks_migration_revert():
     """Volta aos blocos por empresa. Os blocos legados nunca foram alterados."""
     return _own_call(migration.revert)
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/team', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_team(company_id: int):
+    """Sinais por bloco da equipe (só gestor). Itens de outras empresas saem apenas como minutos."""
+    if not has_company_full_access(company_id):
+        return jsonify({'success': False, 'message': 'Acesso negado à visão da equipe.'}), 403
+    start = _parse_date(request.args.get('start'))
+    end = _parse_date(request.args.get('end'))
+    if not start or not end:
+        return jsonify({'success': False, 'message': 'Informe start e end (AAAA-MM-DD).'}), 400
+    try:
+        return jsonify({'success': True, **build_team_view(company_id, start, end)})
+    except BlockViewError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        current_app.logger.exception('agenda team view failed')
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/telemetry', methods=['POST'])

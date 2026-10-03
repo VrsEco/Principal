@@ -410,3 +410,20 @@
 .ag-revert { border-top: 1px solid var(--ag-line); padding-top: 8px; }
 .ag-revert summary { cursor: pointer; font-weight: 600; font-size: .86rem; min-height: 36px; display: flex; align-items: center; }
 @media (max-width: 380px) { .ag-row3 { grid-template-columns: 1fr 1fr; } .ag-row3 input:first-child { grid-column: 1 / -1; } }
+
+
+/* ---------- equipe (Fase 4) ---------- */
+.ag.is-team .ag-est, .ag.is-team .ag-late, .ag.is-team .ag-blocks-toggle, .ag.is-team .ag-create-desktop, .ag.is-team .ag-fab, .ag.is-team .ag-filter-toggle, .ag.is-team .ag-filters { display: none !important; }
+.ag-seg button[hidden] { display: none; }
+.ag-tm-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.ag-tm { border: 1px solid var(--ag-line); border-radius: 14px; background: var(--ag-surface); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.ag-tm__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ag-tm__head b { overflow-wrap: anywhere; }
+.ag-tbar { display: flex; height: 10px; border-radius: 999px; background: var(--ag-surface-2); overflow: hidden; }
+.ag-tbar .is-mine { background: #3d68c9; }
+.ag-tbar .is-other { background: #b9a2e6; }
+.ag-tm__sum { margin: 0; font-size: .8rem; color: var(--ag-muted); }
+.k-mine { color: #1f4aa8; font-weight: 700; }
+.k-other { color: #5b3fa8; font-weight: 700; }
+.ag-tm__more summary { cursor: pointer; font-weight: 600; font-size: .84rem; min-height: 40px; display: flex; align-items: center; }
+@media (min-width: 761px) { .ag-tm-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); } }

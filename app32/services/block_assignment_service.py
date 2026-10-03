@@ -59,10 +59,11 @@ def _person_mode(company_id: int, employee_id: int, viewer_user_id: int | None) 
     return None
 
 
-def _scope_employee_ids(company_id: int, employee_id: int, person_user: int | None) -> set[int]:
+def _scope_employee_ids(company_id: int, employee_id: int, person_user: int | None, allowed: set[int] | None = None) -> set[int]:
     if person_user is None:
         return {employee_id}
-    return {e.id for e in Employee.query.filter(Employee.user_id == person_user, Employee.status == "active").all()} | {employee_id}
+    rows = Employee.query.filter(Employee.user_id == person_user, Employee.status == "active").all()
+    return {e.id for e in rows if allowed is None or e.company_id in allowed or e.company_id == company_id} | {employee_id}
 
 
 def _journey_item(company_id: int, employee_id: int, source_type: str, source_id: int) -> WorkJourneyItem:
@@ -94,6 +95,7 @@ def move_options(
     today: date | None = None,
     limit: int = MAX_OPTIONS,
     viewer_user_id: int | None = None,
+    allowed_company_ids: set[int] | None = None,
 ) -> dict[str, Any]:
     """Ate `limit` destinos possiveis, com o estado atual do bloco e o que ficaria."""
     item = _journey_item(company_id, employee_id, source_type, source_id)
@@ -104,7 +106,7 @@ def move_options(
     end = today + timedelta(days=HORIZON_DAYS - 1)
 
     defs = {b["id"]: b for b in (person_blocks(person_user) if person_user else legacy_blocks(company_id, employee_id))}
-    view = build_block_view(company_id, employee_id, today, end, viewer_user_id=viewer_user_id)
+    view = build_block_view(company_id, employee_id, today, end, viewer_user_id=viewer_user_id, allowed_company_ids=allowed_company_ids)
     column = WorkJourneyAgendaItem.person_block_id if person_user else WorkJourneyAgendaItem.block_id
     current = WorkJourneyAgendaItem.query.filter(
         WorkJourneyAgendaItem.company_id == company_id,
@@ -262,9 +264,9 @@ def assign_item(
     return {"status": "assigned", "message": message or "Item movido para o bloco."}
 
 
-def _plan(company_id: int, employee_id: int, target_date: date, viewer_user_id: int | None) -> dict[str, Any]:
+def _plan(company_id: int, employee_id: int, target_date: date, viewer_user_id: int | None, allowed: set[int] | None = None) -> dict[str, Any]:
     person_user = _person_mode(company_id, employee_id, viewer_user_id)
-    scope_ids = _scope_employee_ids(company_id, employee_id, person_user)
+    scope_ids = _scope_employee_ids(company_id, employee_id, person_user, allowed)
     column = WorkJourneyAgendaItem.person_block_id if person_user else WorkJourneyAgendaItem.block_id
     placed = {
         e.journey_item_id
@@ -285,7 +287,7 @@ def _plan(company_id: int, employee_id: int, target_date: date, viewer_user_id: 
     pending = [i for i in query.all() if i.id not in placed and int(i.estimated_minutes or 0) > 0]
     pending.sort(key=lambda i: (-int(i.estimated_minutes or 0), i.id))
 
-    view = build_block_view(company_id, employee_id, target_date, target_date, viewer_user_id=viewer_user_id)
+    view = build_block_view(company_id, employee_id, target_date, target_date, viewer_user_id=viewer_user_id, allowed_company_ids=allowed)
     day = view["days"][0] if view["days"] else {"blocks": []}
     defs = {b["id"]: b for b in (person_blocks(person_user) if person_user else legacy_blocks(company_id, employee_id))}
     operational = [b for b in day["blocks"] if b["mode"] == OPERATIONAL_MODE and b["id"] in defs]
@@ -314,19 +316,19 @@ def _plan(company_id: int, employee_id: int, target_date: date, viewer_user_id: 
     return {"date": target_date.isoformat(), "proposals": proposals, "unplaced": unplaced, "_person_user": person_user}
 
 
-def suggest_distribution(company_id: int, employee_id: int, target_date: date, *, viewer_user_id: int | None = None) -> dict[str, Any]:
+def suggest_distribution(company_id: int, employee_id: int, target_date: date, *, viewer_user_id: int | None = None, allowed_company_ids: set[int] | None = None) -> dict[str, Any]:
     """Propõe blocos para os itens do dia ainda sem bloco, respeitando capacidade.
 
     Não grava nada. Itens que não cabem ficam "sem bloco", nunca forçados (RF-MOV-1).
     """
-    plan = _plan(company_id, employee_id, target_date, viewer_user_id)
+    plan = _plan(company_id, employee_id, target_date, viewer_user_id, allowed_company_ids)
     clean = [{k: v for k, v in p.items() if not k.startswith("_")} for p in plan["proposals"]]
     return {"date": plan["date"], "proposals": clean, "unplaced": plan["unplaced"]}
 
 
-def apply_suggestions(company_id: int, employee_id: int, target_date: date, *, viewer_user_id: int | None = None) -> dict[str, Any]:
+def apply_suggestions(company_id: int, employee_id: int, target_date: date, *, viewer_user_id: int | None = None, allowed_company_ids: set[int] | None = None) -> dict[str, Any]:
     """Aplica a sugestão marcando cada item como `suggested_by=system` (a pessoa aceita ou desfaz)."""
-    plan = _plan(company_id, employee_id, target_date, viewer_user_id)
+    plan = _plan(company_id, employee_id, target_date, viewer_user_id, allowed_company_ids)
     applied = 0
     for proposal in plan["proposals"]:
         item = _journey_item(proposal["_company_id"], proposal["_employee_id"], proposal["type"], proposal["id"])
@@ -337,8 +339,8 @@ def apply_suggestions(company_id: int, employee_id: int, target_date: date, *, v
     return {"applied": applied, "unplaced": plan["unplaced"]}
 
 
-def _suggested_entries(company_id: int, employee_id: int, target_date: date, viewer_user_id: int | None) -> list[WorkJourneyAgendaItem]:
-    scope_ids = _scope_employee_ids(company_id, employee_id, _person_mode(company_id, employee_id, viewer_user_id))
+def _suggested_entries(company_id: int, employee_id: int, target_date: date, viewer_user_id: int | None, allowed: set[int] | None = None) -> list[WorkJourneyAgendaItem]:
+    scope_ids = _scope_employee_ids(company_id, employee_id, _person_mode(company_id, employee_id, viewer_user_id), allowed)
     rows = WorkJourneyAgendaItem.query.filter(
         WorkJourneyAgendaItem.employee_id.in_(scope_ids),
         WorkJourneyAgendaItem.planned_date == target_date,
@@ -346,10 +348,10 @@ def _suggested_entries(company_id: int, employee_id: int, target_date: date, vie
     return [e for e in rows if (e.metadata_json or {}).get("suggested_by") == SUGGESTED_BY]
 
 
-def undo_suggestions(company_id: int, employee_id: int, target_date: date, *, viewer_user_id: int | None = None) -> dict[str, int]:
+def undo_suggestions(company_id: int, employee_id: int, target_date: date, *, viewer_user_id: int | None = None, allowed_company_ids: set[int] | None = None) -> dict[str, int]:
     """Remove só o que o sistema sugeriu; o que a pessoa atribuiu nunca é tocado (RF-MOV-5)."""
     removed = 0
-    for entry in _suggested_entries(company_id, employee_id, target_date, viewer_user_id):
+    for entry in _suggested_entries(company_id, employee_id, target_date, viewer_user_id, allowed_company_ids):
         agenda = entry.agenda
         if agenda is not None and agenda.status == "locked":
             continue
@@ -359,10 +361,10 @@ def undo_suggestions(company_id: int, employee_id: int, target_date: date, *, vi
     return {"removed": removed}
 
 
-def accept_suggestions(company_id: int, employee_id: int, target_date: date, *, viewer_user_id: int | None = None) -> dict[str, int]:
+def accept_suggestions(company_id: int, employee_id: int, target_date: date, *, viewer_user_id: int | None = None, allowed_company_ids: set[int] | None = None) -> dict[str, int]:
     """A pessoa aceita a sugestão: vira atribuição dela (perde a marca de sugerido)."""
     accepted = 0
-    for entry in _suggested_entries(company_id, employee_id, target_date, viewer_user_id):
+    for entry in _suggested_entries(company_id, employee_id, target_date, viewer_user_id, allowed_company_ids):
         metadata = dict(entry.metadata_json or {})
         metadata.pop("suggested_by", None)
         entry.metadata_json = metadata

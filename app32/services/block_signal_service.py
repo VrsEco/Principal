@@ -61,6 +61,12 @@ def _block_window(block: dict[str, Any]) -> tuple[int, int]:
     return int(block["start_minutes"]), int(block["end_minutes"])
 
 
+def _tag(entry: dict[str, Any], tag: Any, minutes: int) -> None:
+    """Soma o consumo por etiqueta (ex.: empresa de origem), usada na visão da equipe."""
+    if tag is not None:
+        entry["by_tag"][tag] = entry["by_tag"].get(tag, 0) + minutes
+
+
 def compute_block_signals(
     blocks: Iterable[dict[str, Any]],
     items: Iterable[dict[str, Any]],
@@ -93,6 +99,7 @@ def compute_block_signals(
             "item_count": 0,
             "event_count": 0,
             "without_estimate": 0,
+            "by_tag": {},
         }
 
     unassigned_without_estimate = 0
@@ -110,6 +117,7 @@ def compute_block_signals(
             entry["without_estimate"] += 1
             continue
         entry["consumed_minutes"] += minutes
+        _tag(entry, item.get("tag"), minutes)
 
     for event in timed_events:
         start = int(event["start_minutes"])
@@ -120,6 +128,7 @@ def compute_block_signals(
         entry = state[owner["id"]]
         entry["event_count"] += 1
         entry["consumed_minutes"] += duration
+        _tag(entry, event.get("tag"), duration)
 
     result_blocks: list[dict[str, Any]] = []
     operational_windows: list[tuple[int, int]] = []

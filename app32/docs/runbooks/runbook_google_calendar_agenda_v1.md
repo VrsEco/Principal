@@ -78,3 +78,15 @@ Tipo: Runbook. Escopo: tela `/agenda` e envio app → Google (Fase 2). Leitura d
   relatório e PDF ainda leem só `block_id`; itens colocados em bloco da pessoa aparecem como "sem bloco" naquela tela até esses consumidores usarem o adaptador.
 - Telemetria nova: `blocks_edit_open`, `blocks_edit_save` (create/update/delete), `migration_open`, `migration_apply`, `migration_revert`.
 
+## Equipe (Fase 4 da SPEC)
+- **Sem migração. Pode ser deploy `quick`.** Mas o valor real depende da Fase 3 estar no ar (sem ela, a tela Equipe só mostra os blocos por empresa).
+- Visão **Equipe** (botão ao lado de Dia, Semana e Mês; só aparece para quem vê a empresa toda, `has_company_full_access`). Rota: `GET /api/companies/<id>/agenda/team?start&end` (403 para os demais).
+- Para cada colaborador ativo da empresa: sinal do dia e de cada bloco (Livre, Completo, Acima), ocupação total e consumo dividido em **"desta empresa"** e **"outras empresas"**.
+- **Privacidade (por construção, coberta por teste que procura títulos sentinela na resposta):** itens desta empresa saem com título; itens e reuniões de **outras** empresas e eventos avulsos
+  saem **somente como minutos**; eventos do Google nunca entram; a soma entre empresas só vale para quem migrou para blocos da pessoa; quem não migrou aparece com os blocos legados desta
+  empresa, sem soma. Campos de bloco permitidos: id, nome, início, fim, modo, capacidade, consumo, minutos desta/outras empresas, sem estimativa, sinal e itens desta empresa (tipo, título, minutos).
+- Carga em lote: o número de consultas não cresce com a equipe (teste com 60 colaboradores). Limite de 300 colaboradores e de 14 dias por consulta.
+- Telemetria: `view_change = team`, `team_filter`.
+- **Fora desta entrega (decisão consciente):** motor de agendas, apresentador do Calendário Operacional antigo, relatório/PDF, mapa de incentivos e ferramentas MCP **ainda leem só os blocos por empresa**.
+  São 13 arquivos e cerca de 50 pontos que dependem de `block_id`; migrá-los antes de haver usuários com blocos da pessoa em produção só aumentaria o risco. Fica como etapa 4c, a medir pelo uso real.
+
