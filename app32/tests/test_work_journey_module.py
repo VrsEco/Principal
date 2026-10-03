@@ -1,4 +1,5 @@
 from collections import defaultdict
+import json
 import os
 import sys
 from datetime import date, datetime, time
@@ -2414,3 +2415,26 @@ def test_meeting_resource_sync_helper_prefers_current_user_employee(monkeypatch)
 
     assert captured == {'company_id': 9, 'meeting_id': 77, 'preferred_employee_id': 44, 'committed': True}
 
+
+def test_meeting_matches_employee_supports_internal_external_payload():
+    employee = SimpleNamespace(id=97, name='Fabiano Ferreira', email='fabiano@example.com')
+
+    def _meeting(participants=None, guests=None):
+        return SimpleNamespace(
+            participants_json=json.dumps(participants) if participants is not None else None,
+            guests_json=json.dumps(guests) if guests is not None else None,
+        )
+
+    assert work_journey_sync.meeting_matches_employee(
+        _meeting({'internal': [{'id': '97', 'name': 'Outro Nome'}], 'external': []}), employee
+    )
+    assert work_journey_sync.meeting_matches_employee(
+        _meeting(None, {'internal': [], 'external': [{'name': 'fabiano ferreira'}]}), employee
+    )
+    assert work_journey_sync.meeting_matches_employee(_meeting([{'email': 'FABIANO@example.com'}]), employee)
+    assert not work_journey_sync.meeting_matches_employee(
+        _meeting({'internal': [], 'external': [{'id': '97', 'name': 'Cliente'}]}), employee
+    )
+    assert not work_journey_sync.meeting_matches_employee(_meeting([{'id': 97, 'name': 'Cliente'}]), employee)
+    assert not work_journey_sync.meeting_matches_employee(_meeting({'internal': [{'id': '5'}]}), employee)
+    assert not work_journey_sync.meeting_matches_employee(_meeting(), employee)
