@@ -11,6 +11,7 @@ from datetime import time
 from typing import Any, Iterable
 
 from models import PersonWorkBlock, UserLog, db
+from services.block_signal_service import union_minutes  # noqa: F401  (reexportado)
 
 MODES = ("operational", "reserved_full", "buffer")
 ITEM_TYPES = ("manual", "process_instance", "project_task", "meeting")
@@ -65,21 +66,6 @@ def validate_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "preferred_item_types": sorted(set(types)),
         "is_active": bool(payload.get("is_active", True)),
     }
-
-
-def union_minutes(intervals: Iterable[tuple[int, int]]) -> int:
-    """Total de minutos da UNIAO dos intervalos: a mesma hora nao conta duas vezes (RF-BLO-5)."""
-    total, cur_start, cur_end = 0, None, None
-    for start, end in sorted((s, e) for s, e in intervals if e > s):
-        if cur_end is None or start > cur_end:
-            if cur_end is not None:
-                total += cur_end - cur_start
-            cur_start, cur_end = start, end
-        else:
-            cur_end = max(cur_end, end)
-    if cur_end is not None:
-        total += cur_end - cur_start
-    return total
 
 
 def overlap_warnings(blocks: Iterable[Any]) -> list[dict[str, Any]]:

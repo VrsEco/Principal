@@ -211,6 +211,7 @@ def _preserve_manual_entries(agenda: WorkJourneyAgenda) -> dict[int, list[WorkJo
                 employee_id=agenda.employee_id,
                 journey_item_id=entry.journey_item_id,
                 block_id=entry.block_id,
+                person_block_id=getattr(entry, 'person_block_id', None),
                 planned_date=entry.planned_date,
                 position_index=entry.position_index,
                 allocated_minutes=entry.allocated_minutes,
