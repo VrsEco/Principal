@@ -243,7 +243,8 @@ def test_create_meeting_persists_scheduled_date_and_time(monkeypatch):
     session.add = added.append
     monkeypatch.setattr(MeetingMCPService, "_validate_project", staticmethod(lambda **kwargs: (None, None)))
     monkeypatch.setattr("services.meeting_mcp_service.db", SimpleNamespace(session=session))
-    monkeypatch.setattr("services.meeting_mcp_service.Meeting", lambda **kwargs: SimpleNamespace(to_dict=lambda: kwargs, **kwargs))
+    monkeypatch.setattr("services.meeting_mcp_service.Meeting", lambda **kwargs: SimpleNamespace(id=5, to_dict=lambda: kwargs, **kwargs))
+    monkeypatch.setattr(MeetingMCPService, "_sync_work_journey", staticmethod(lambda _meeting: None))
 
     payload, error = MeetingMCPService.create_meeting(
         company_id=13, title="Tia Sonia x Versus", scheduled_date="05/10/2026",
@@ -279,3 +280,45 @@ def test_update_meeting_accepts_scheduled_fields_and_rejects_invalid_values(monk
 
     _, error = MeetingMCPService.update_meeting(company_id=13, meeting_id=109, changes={"scheduled_date": "amanhã"})
     assert error and "inválida" in error
+
+
+def test_meeting_mcp_create_and_update_sync_work_journey(monkeypatch):
+    calls = []
+    session = _Session()
+    monkeypatch.setattr(MeetingMCPService, "_validate_project", staticmethod(lambda **kwargs: (None, None)))
+    monkeypatch.setattr("services.meeting_mcp_service.db", SimpleNamespace(session=session))
+    monkeypatch.setattr(
+        "services.meeting_mcp_service.Meeting",
+        lambda **kwargs: SimpleNamespace(id=7, to_dict=lambda: {}, **kwargs),
+    )
+    monkeypatch.setattr(
+        "services.work_journey_sync.sync_meeting_item",
+        lambda company_id, meeting_id, preferred_employee_id=None: calls.append((company_id, meeting_id)),
+    )
+
+    MeetingMCPService.create_meeting(company_id=13, title="Reunião")
+    meeting = SimpleNamespace(id=7, company_id=13, project_id=None, to_dict=lambda: {})
+    monkeypatch.setattr(MeetingMCPService, "get_meeting", staticmethod(lambda **kwargs: (meeting, None)))
+    MeetingMCPService.update_meeting(company_id=13, meeting_id=7, changes={"title": "Novo"})
+
+    assert calls == [(13, 7), (13, 7)]
+
+
+def test_meeting_mcp_sync_failure_does_not_break_the_write(monkeypatch):
+    session = _Session()
+    monkeypatch.setattr(MeetingMCPService, "_validate_project", staticmethod(lambda **kwargs: (None, None)))
+    monkeypatch.setattr("services.meeting_mcp_service.db", SimpleNamespace(session=session))
+    monkeypatch.setattr(
+        "services.meeting_mcp_service.Meeting",
+        lambda **kwargs: SimpleNamespace(id=7, to_dict=lambda: {"id": 7}, **kwargs),
+    )
+
+    def _boom(*_args, **_kwargs):
+        raise RuntimeError("falha")
+
+    monkeypatch.setattr("services.work_journey_sync.sync_meeting_item", _boom)
+
+    payload, error = MeetingMCPService.create_meeting(company_id=13, title="Reunião")
+
+    assert error is None
+    assert payload["meeting"] == {"id": 7}

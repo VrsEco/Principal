@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -11,6 +12,9 @@ from models.meeting import Meeting
 from models.employee import Employee
 from models.project import Project, ProjectTask
 from services.project_task_service import ProjectTaskService
+
+
+logger = logging.getLogger(__name__)
 
 
 class MeetingMCPService:
@@ -82,6 +86,18 @@ class MeetingMCPService:
     def _parse_date(value: Any):
         parsed, error = ProjectTaskService.parse_due_date(value)
         return parsed, error
+
+    @staticmethod
+    def _sync_work_journey(meeting: Meeting) -> None:
+        """Materializa a reunião na Jornada; falha de sincronização não desfaz a gravação da reunião."""
+        try:
+            from services.work_journey_sync import sync_meeting_item
+
+            sync_meeting_item(int(meeting.company_id), int(meeting.id))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception("Falha ao sincronizar a reunião %s com a Jornada de Trabalho", meeting.id)
 
     @staticmethod
     def _parse_time(value: Any) -> tuple[str | None, str | None]:
@@ -192,6 +208,7 @@ class MeetingMCPService:
         )
         db.session.add(meeting)
         db.session.commit()
+        MeetingMCPService._sync_work_journey(meeting)
         return {"meeting": meeting.to_dict()}, None
 
     @staticmethod
@@ -255,6 +272,7 @@ class MeetingMCPService:
             meeting.status = str(normalized.get("status") or "").strip() or meeting.status
 
         db.session.commit()
+        MeetingMCPService._sync_work_journey(meeting)
         return {"meeting": meeting.to_dict()}, None
 
     @staticmethod

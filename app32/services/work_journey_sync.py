@@ -608,8 +608,21 @@ def _normalize_company_employee_id(company_id: int, employee_id: int | None) -> 
     return int(employee.id) if employee else None
 
 
+def _meeting_people(loaded) -> list[tuple[dict, bool]]:
+    """Achata participantes/convidados em (pessoa, id_confiavel); só o grupo "internal" tem id de colaborador."""
+    if isinstance(loaded, list):
+        return [(item, False) for item in loaded if isinstance(item, dict)]
+    if isinstance(loaded, dict):
+        people = []
+        for key, value in loaded.items():
+            if isinstance(value, list):
+                people.extend((item, str(key).lower() != 'external') for item in value if isinstance(item, dict))
+        return people
+    return []
+
+
 def meeting_matches_employee(meeting: Meeting, employee: Employee) -> bool:
-    payloads = []
+    people = []
     for raw in (meeting.participants_json, meeting.guests_json):
         if not raw:
             continue
@@ -617,17 +630,20 @@ def meeting_matches_employee(meeting: Meeting, employee: Employee) -> bool:
             loaded = json.loads(raw) if isinstance(raw, str) else raw
         except Exception:
             loaded = []
-        if isinstance(loaded, list):
-            payloads.extend(loaded)
+        people.extend(_meeting_people(loaded))
     employee_email = str(employee.email or '').strip().lower()
     employee_name = str(employee.name or '').strip().lower()
-    for item in payloads:
-        name = str(item.get('name') or '').strip().lower() if isinstance(item, dict) else ''
-        email = str(item.get('email') or '').strip().lower() if isinstance(item, dict) else ''
+    for item, id_is_employee in people:
+        name = str(item.get('name') or '').strip().lower()
+        email = str(item.get('email') or '').strip().lower()
         if employee_email and email == employee_email:
             return True
         if employee_name and name == employee_name:
             return True
+        # id só vale para o grupo interno: em externos ou listas legadas pode coincidir por acaso
+        for key in ('employee_id', 'id'):
+            if id_is_employee and item.get(key) is not None and str(item.get(key)) == str(employee.id):
+                return True
     return False
 
 
