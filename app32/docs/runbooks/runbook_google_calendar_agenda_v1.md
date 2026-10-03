@@ -90,3 +90,14 @@ Tipo: Runbook. Escopo: tela `/agenda` e envio app → Google (Fase 2). Leitura d
 - **Fora desta entrega (decisão consciente):** motor de agendas, apresentador do Calendário Operacional antigo, relatório/PDF, mapa de incentivos e ferramentas MCP **ainda leem só os blocos por empresa**.
   São 13 arquivos e cerca de 50 pontos que dependem de `block_id`; migrá-los antes de haver usuários com blocos da pessoa em produção só aumentaria o risco. Fica como etapa 4c, a medir pelo uso real.
 
+## Blocos: trilha lateral e regra proporcional (2026-10-04)
+- **Sem migração. Deploy `quick`.** Só interface e cálculo.
+- **Regra do consumo de eventos com horário (reuniões, avulsos e Google):** proporcional ao trecho que passa por cada bloco (cada minuto conta uma vez). Antes contava inteiro onde começava.
+  Efeito visível: dias com eventos longos mudam de sinal (ex.: um evento de 4 h sobre dois blocos de 2 h deixa os dois "Completo"). O resumo de cada bloco lista os eventos com "Xh de Yh neste bloco".
+- **Dia (computador):** os blocos viram uma **trilha** ao lado das horas (uma faixa por bloco; lado a lado e com "!" quando se sobrepõem; verde livre, azul completo, âmbar acima, tracejado para capacidade ocupada).
+  A grade deixa de ser pintada. Resumo do dia acima da grade e painel **Blocos do dia** recolhido abaixo, com itens e eventos de cada bloco. **Celular:** resumo + lista aberta.
+- **Semana:** sem faixas nem rótulos de bloco; só o chip e uma barra de ocupação por dia e uma marca fina na borda da coluna.
+- **Cores por tipo** (iguais às dos filtros): Atividade azul, Instância verde, Google âmbar, Reunião roxo, Evento avulso magenta; etiqueta cheia + legenda. Chips de sinal são claros e com texto.
+- API: `GET .../agenda/blocks` agora devolve, por bloco, `events` (`type`, `title`, `start`, `end`, `minutes`, `total_minutes`). A visão da **Equipe** não recebe títulos de eventos (inalterada).
+- Observação: o nome de classe `ag-strip` já pertence à faixa de dias do celular; a trilha usa `ag-lane`.
+

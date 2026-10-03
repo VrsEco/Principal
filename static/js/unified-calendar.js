@@ -560,33 +560,103 @@
     return '<div class="ag-bk-day"><div class="ag-bk-day__txt"><b>Dia</b> ' + dur(d.consumed_minutes) + ' de ' + dur(d.capacity_minutes) + ' ' + sigChip(d, true) +
       '</div><div class="ag-bar" role="img" aria-label="Ocupação do dia: ' + dur(d.consumed_minutes) + ' de ' + dur(d.capacity_minutes) + '"><i class="ag-bar--' + d.state + '" style="width:' + pct + '%"></i></div></div>';
   }
-  function blocksMobile(d) {
+  var ITEM_TAG = { project_task: ['Atividade', 'act'], process_instance: ['Instância', 'inst'], manual: ['Avulso', 'man'], meeting: ['Reunião', 'meet'] };
+  var EVENT_TAG = { google_event: ['Google', 'goog'], meeting: ['Reunião', 'meet'], manual: ['Evento avulso', 'man'] };
+  function blockState(d) {
     var B = S.blocks;
-    if (!B.on) return '';
-    if (B.loading && !B.days[d]) return '<p class="ag-note">Carregando blocos…</p>';
-    if (B.error) return '<p class="ag-note">' + h(B.error) + '</p>';
+    if (!B.on) return { html: '' };
+    if (B.loading && !B.days[d]) return { html: '<p class="ag-note">Carregando blocos…</p>' };
+    if (B.error) return { html: '<p class="ag-note">' + h(B.error) + '</p>' };
     var bd = B.days[d];
-    if (!bd) return '<p class="ag-note">Escolha um colaborador para ver os blocos.</p>';
-    var out = '<section class="ag-bk" aria-label="Blocos do dia">' + dayBar(bd), sc = bd.day.suggested_count || 0;
+    if (!bd) return { html: '<p class="ag-note">Escolha um colaborador para ver os blocos.</p>' };
+    return { bd: bd };
+  }
+  function blocksSummary(d) {
+    var st = blockState(d);
+    if (!st.bd) return st.html;
+    var bd = st.bd, out = '<section class="ag-bk ag-bk--sum" aria-label="Resumo do dia">' + dayBar(bd), sc = bd.day.suggested_count || 0;
     if (sc) out += '<div class="ag-sugbar" role="status"><span><b>' + sc + (sc === 1 ? ' item sugerido' : ' itens sugeridos') + '</b> pelo sistema.</span><span class="ag-sugbar__btns"><button type="button" class="ag-btn ag-btn--sm" data-act="sug-accept">Aceitar</button><button type="button" class="ag-btn ag-btn--sm" data-act="sug-undo">Desfazer sugestão</button></span></div>';
     else if (bd.day.state !== 'none') out += '<div class="ag-sugbar"><span>Itens do dia sem bloco?</span><button type="button" class="ag-btn ag-btn--sm" data-act="sug-open">Sugerir distribuição</button></div>';
-    bd.blocks.forEach(function (b) {
-      out += '<div class="ag-bk-row"><span class="ag-bk-row__time">' + h(b.start) + '–' + h(b.end) + '</span><span class="ag-bk-row__name">' + h(b.name) + '</span>' +
-        sigChip(b.signal) + (b.without_estimate ? '<span class="ag-bk-row__warn">' + b.without_estimate + ' sem estimativa</span>' : '');
-      if (b.items && b.items.length) out += '<ul class="ag-bk-items">' + b.items.map(function (it) { return '<li>' + h(it.title) + ' <small>' + (it.minutes ? dur(it.minutes) : 'sem estimativa') + (it.suggested ? ' · sugerido' : '') + '</small></li>'; }).join('') + '</ul>';
-      out += '</div>';
-    });
     return out + '</section>';
   }
-  function blockBands(x, H0, H1) {
+  function legendHtml() {
+    return '<p class="ag-legend" aria-label="Legenda"><span><i class="k-act"></i>Atividade</span><span><i class="k-inst"></i>Instância</span><span><i class="k-goog"></i>Google</span><span><i class="k-meet"></i>Reunião</span></p>';
+  }
+  function blockRow(b) {
+    var out = '<div class="ag-bk-row"><span class="ag-bk-row__time">' + h(b.start) + '–' + h(b.end) + '</span><span class="ag-bk-row__name">' + h(b.name) + '</span>' +
+      sigChip(b.signal) + (b.without_estimate ? '<span class="ag-bk-row__warn">' + b.without_estimate + ' sem estimativa</span>' : '');
+    var li = '';
+    (b.events || []).forEach(function (e) {
+      var t = EVENT_TAG[e.type] || ['Evento', 'man'], part = e.total_minutes && e.minutes < e.total_minutes ? dur(e.minutes) + ' de ' + dur(e.total_minutes) + ' neste bloco' : dur(e.minutes);
+      li += '<li class="ev ' + t[1] + '"><span class="ag-ttag">' + t[0] + '</span><span class="t">' + h(e.title || 'Compromisso') + '</span><small>' + h(e.start) + (e.end ? '–' + h(e.end) : '') + ' · ' + part + '</small></li>';
+    });
+    (b.items || []).forEach(function (it) {
+      var t = ITEM_TAG[it.type] || ['Item', 'act'];
+      li += '<li class="it ' + t[1] + '"><span class="ag-ttag">' + t[0] + '</span><span class="t">' + h(it.title) + '</span><small>' + (it.minutes ? dur(it.minutes) : 'sem estimativa') + (it.company ? ' · ' + h(it.company) : '') + (it.suggested ? ' · sugerido' : '') + '</small></li>';
+    });
+    if (li) out += '<ul class="ag-bk-items">' + li + '</ul>';
+    return out + '</div>';
+  }
+  function blocksList(d) {
+    var st = blockState(d);
+    if (!st.bd) return '';
+    return '<div class="ag-bk-list">' + st.bd.blocks.map(blockRow).join('') + '</div>' + legendHtml();
+  }
+  function blocksMobile(d) {   /* celular: resumo + lista aberta */
+    var st = blockState(d);
+    if (!st.bd) return st.html;
+    return blocksSummary(d) + '<section class="ag-bk" aria-label="Blocos do dia">' + blocksList(d) + '</section>';
+  }
+  function blocksPanel(d) {    /* computador: lista recolhida abaixo da grade */
+    var st = blockState(d);
+    if (!st.bd) return '';
+    var n = st.bd.blocks.length;
+    return '<details class="ag-panel"><summary>Blocos do dia <span class="ag-panel__n">' + n + '</span>' + sigChip(st.bd.day, true) + '</summary>' + blocksList(d) + '</details>' +
+      '<p class="ag-note">Passe o mouse numa faixa da trilha para ver o nome e o sinal do bloco. A lista traz os itens e os eventos de cada um.</p>';
+  }
+  /* trilha lateral (Dia): uma faixa por bloco, lado a lado quando se sobrepõem */
+  function railLanes(blocks) {
+    var ends = [], items = [];
+    blocks.forEach(function (b) {
+      var l = 0; while (ends[l] !== undefined && ends[l] > b.start_minutes) l++;
+      ends[l] = b.end_minutes; items.push({ b: b, lane: l });
+    });
+    return { items: items, n: ends.length };
+  }
+  function overlapIds(blocks) {
+    var ids = {};
+    blocks.forEach(function (a, i) { blocks.forEach(function (c, j) {
+      if (i < j && a.mode === 'operational' && c.mode === 'operational' && a.start_minutes < c.end_minutes && c.start_minutes < a.end_minutes) { ids[a.id] = 1; ids[c.id] = 1; }
+    }); });
+    return ids;
+  }
+  function railInfo(x, H0, H1) {
+    var bd = bday(x);
+    if (!bd || !bd.blocks.length) return null;
+    var ln = railLanes(bd.blocks), warn = overlapIds(bd.blocks), out = '';
+    ln.items.forEach(function (it) {
+      var b = it.b, s0 = Math.max(b.start_minutes, H0), e0 = Math.min(b.end_minutes, H1);
+      if (e0 <= s0) return;
+      var state = (b.signal && b.signal.state) || 'none', tip = b.name + ' · ' + b.start + '–' + b.end + (b.signal && b.signal.label ? ' · ' + b.signal.label : ' · Capacidade ocupada');
+      out += '<div class="ag-lane ag-lane--' + state + (warn[b.id] ? ' has-warn' : '') + '" style="top:' + ((s0 - H0) / 60 * HP + 1) + 'px;height:' + ((e0 - s0) / 60 * HP - 2) + 'px;left:' + (3 + it.lane * 17) + 'px" title="' + h(tip) + (warn[b.id] ? ' · sobreposto a outro bloco' : '') + '" role="img" aria-label="' + h(tip) + '"><span>' + h(b.name) + '</span></div>';
+    });
+    return { html: out, w: Math.max(26, 6 + ln.n * 17) };
+  }
+  /* Semana: marcas finas na borda da coluna, sem rótulos */
+  function weekEdges(x, H0, H1) {
     var bd = bday(x), out = '';
     if (!bd) return '';
     bd.blocks.forEach(function (b) {
       var s0 = Math.max(b.start_minutes, H0), e0 = Math.min(b.end_minutes, H1);
       if (e0 <= s0) return;
-      out += '<div class="ag-bk-band ag-bk-band--' + (b.signal.state || 'none') + '" style="top:' + ((s0 - H0) / 60 * HP) + 'px;height:' + ((e0 - s0) / 60 * HP) + 'px" aria-hidden="true"><span>' + h(b.name) + ' ' + sigChip(b.signal, true) + '</span></div>';
+      out += '<div class="ag-wedge ag-wedge--' + ((b.signal && b.signal.state) || 'none') + '" style="top:' + ((s0 - H0) / 60 * HP + 1) + 'px;height:' + ((e0 - s0) / 60 * HP - 2) + 'px" title="' + h(b.name + (b.signal && b.signal.label ? ' · ' + b.signal.label : '')) + '" aria-hidden="true"></div>';
     });
     return out;
+  }
+  function miniBar(day) {
+    if (!day || day.state === 'none' || !day.capacity_minutes) return '';
+    var pct = Math.min(100, Math.round(day.consumed_minutes / day.capacity_minutes * 100));
+    return '<div class="ag-bar ag-bar--mini" role="img" aria-label="Ocupação: ' + dur(day.consumed_minutes) + ' de ' + dur(day.capacity_minutes) + '"><i class="ag-bar--' + day.state + '" style="width:' + pct + '%"></i></div>';
   }
 
   /* ---------- equipe (gestor) ---------- */
@@ -685,14 +755,15 @@
     return out;
   }
   function grid(days) {
-    var n = days.length, cols = 'grid-template-columns:52px repeat(' + n + ',minmax(0,1fr))';
-    var hr = hourRange(days), H0 = hr[0], H1 = hr[1], height = (H1 - H0) / 60 * HP;
-    var head = '<div class="ag-tg__head" style="' + cols + '"><div class="ag-tg__hd is-gut"></div>';
+    var n = days.length, hr = hourRange(days), H0 = hr[0], H1 = hr[1], height = (H1 - H0) / 60 * HP;
+    var rail = n === 1 ? railInfo(days[0], H0, H1) : null;
+    var cols = 'grid-template-columns:' + (rail ? rail.w + 'px ' : '') + '52px repeat(' + n + ',minmax(0,1fr))';
+    var head = '<div class="ag-tg__head" style="' + cols + '">' + (rail ? '<div class="ag-tg__hd is-gut"></div>' : '') + '<div class="ag-tg__hd is-gut"></div>';
     days.forEach(function (x) {
-      head += '<div class="ag-tg__hd' + (x === cfg.today ? ' is-today' : '') + '"><small>' + DOW[dow(x)] + '</small><b>' + dnum(x) + '</b>' + (bday(x) ? sigChip(bday(x).day, true) : '') + '</div>';
+      head += '<div class="ag-tg__hd' + (x === cfg.today ? ' is-today' : '') + '"><small>' + DOW[dow(x)] + '</small><b>' + dnum(x) + '</b>' + (bday(x) ? sigChip(bday(x).day, true) + (n > 1 ? miniBar(bday(x).day) : '') : '') + '</div>';
     });
     head += '</div>';
-    var allday = '<div class="ag-tg__allday" style="' + cols + '"><div class="ag-tg__al is-gut">dia todo</div>';
+    var allday = '<div class="ag-tg__allday" style="' + cols + '">' + (rail ? '<div class="ag-tg__al is-gut"></div>' : '') + '<div class="ag-tg__al is-gut">dia todo</div>';
     days.forEach(function (x) {
       var l = onDay(x).filter(function (e) { return e.start == null; }), shown = l.slice(0, 3);
       allday += '<div class="ag-tg__al">' + shown.map(function (e) {
@@ -701,10 +772,10 @@
     });
     allday += '</div>';
     var lab = ''; for (var m = H0; m <= H1; m += 60) lab += '<span style="top:' + ((m - H0) / 60 * HP) + 'px">' + hm(m) + '</span>';
-    var body = '<div class="ag-tg__body" style="' + cols + '"><div class="ag-tg__gut" style="height:' + height + 'px">' + lab + '</div>';
+    var body = '<div class="ag-tg__body" style="' + cols + '">' + (rail ? '<div class="ag-rail" style="height:' + height + 'px">' + rail.html + '</div>' : '') + '<div class="ag-tg__gut" style="height:' + height + 'px">' + lab + '</div>';
     var now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
     days.forEach(function (x) {
-      var timed = onDay(x).filter(function (e) { return e.start != null; }), inner = blockBands(x, H0, H1);
+      var timed = onDay(x).filter(function (e) { return e.start != null; }), inner = (n > 1 ? weekEdges(x, H0, H1) : '');
       layout(timed).forEach(function (it) {
         var e = it.e, top = (it.s - H0) / 60 * HP, hh = Math.max((it.f - it.s) / 60 * HP - 2, 22), w = 100 / it.lanes, left = it.lane * w;
         inner += '<button type="button" class="ag-ev t-' + e.type + (e.closed ? ' is-closed' : '') + '" data-key="' + h(e.key) + '" aria-label="' + h(ariaEv(e)) + '" style="top:' + top + 'px;height:' + hh + 'px;left:calc(' + left + '% + 2px);width:calc(' + w + '% - 4px)"><b>' + h(e.title) + '</b>' + hm(it.s) + (e.dur ? '–' + hm(it.f) : '') + '</button>';
@@ -739,7 +810,7 @@
       return;
     }
     var v = S.view, html;
-    if (v === 'day') html = dayMobile() + '<div class="ag-bk-d">' + blocksMobile(S.sel) + '</div>' + grid([S.sel]);
+    if (v === 'day') html = dayMobile() + '<div class="ag-bk-d">' + blocksSummary(S.sel) + '</div>' + grid([S.sel]) + '<div class="ag-bk-d">' + blocksPanel(S.sel) + '</div>';
     else if (v === 'week') { var ws = weekStart(S.sel), days = []; for (var i = 0; i < 7; i++) days.push(add(ws, i)); html = weekMobile() + grid(days); }
     else html = monthMobile() + monthDesktop();
     var note = S.googleNote ? '<p class="ag-note">' + h(S.googleNote) + '</p>' : '';

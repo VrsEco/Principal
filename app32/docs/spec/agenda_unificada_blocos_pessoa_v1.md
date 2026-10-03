@@ -187,13 +187,15 @@ Definições, por pessoa e por data:
 
 - **Capacidade do bloco** = (fim − início) em minutos, apenas para modo Operacional.
 - **Consumo do bloco** = soma da **estimativa** dos itens atribuídos ao bloco + soma da **duração**
-  dos eventos com horário que **começam** dentro do bloco (reuniões, eventos avulsos com horário e
-  eventos do Google).
+  dos eventos com horário **que passam pelo bloco, só no trecho que cabe nele** (reuniões, eventos avulsos com
+  horário e eventos do Google). Um evento de 4 h que atravessa dois blocos de 2 h conta 2 h em cada um; cada minuto
+  conta uma vez (onde há blocos sobrepostos vale o primeiro operacional). Evento de dia inteiro não consome. *(Regra
+  alterada em 2026-10-04 por decisão do usuário; antes contava inteiro no bloco onde começava.)*
 - **Sinal** (somente blocos Operacionais):
   - **Acima**: consumo > capacidade. Texto: "Acima 1h30".
   - **Livre**: capacidade − consumo ≥ **limite de ocioso** (padrão 30 min). Texto: "Livre 1h30".
   - **Completo**: os demais casos.
-- **Capacidade do dia** = soma das capacidades dos blocos Operacionais do dia. Dias sem blocos
+- **Capacidade do dia** = união dos intervalos dos blocos Operacionais do dia (cada hora conta uma vez). Dias sem blocos
   operacionais mostram "Sem expediente".
 
 Requisitos:

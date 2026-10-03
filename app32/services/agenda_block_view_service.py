@@ -99,12 +99,23 @@ def _assemble(
                 listing.setdefault(block_ref, []).append(row)
 
         timed = []
-        for event in events:
+        event_info: dict[str, dict[str, Any]] = {}
+        for index, event in enumerate(events):
             if event.get("date") != current.isoformat() or event.get("all_day") or not event.get("time"):
                 continue
             if event.get("type") not in _TIMED_TYPES or event.get("closed"):
                 continue
-            timed.append({"start_minutes": _hhmm_to_minutes(event["time"]), "duration_minutes": event.get("duration_minutes") or 0})
+            ref = f"e{index}"
+            start_min = _hhmm_to_minutes(event["time"])
+            minutes = event.get("duration_minutes") or 0
+            timed.append({"start_minutes": start_min, "duration_minutes": minutes, "ref": ref})
+            event_info[ref] = {
+                "type": event.get("type"),
+                "title": event.get("title"),
+                "start": event["time"],
+                "end": event.get("end_time") or (f"{(start_min + minutes) // 60:02d}:{(start_min + minutes) % 60:02d}" if minutes else None),
+                "total_minutes": int(minutes),
+            }
 
         computed = compute_block_signals(day_blocks, items, timed, idle_threshold)
         label_by_id = {b["id"]: b for b in day_blocks}
@@ -112,6 +123,12 @@ def _assemble(
             block["start"] = label_by_id[block["id"]]["start"]
             block["end"] = label_by_id[block["id"]]["end"]
             block["items"] = listing.get(block["id"], [])
+            # Eventos que passam por este bloco, com o tempo que cabe nele (regra proporcional).
+            block["events"] = [
+                {**event_info[part["ref"]], "minutes": part["minutes"]}
+                for part in block.pop("event_parts", [])
+                if part.get("ref") in event_info
+            ]
         computed["day"]["suggested_count"] = suggested
         days.append({"date": current.isoformat(), **computed})
         current += timedelta(days=1)

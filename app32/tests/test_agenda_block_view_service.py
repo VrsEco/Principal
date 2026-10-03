@@ -121,6 +121,18 @@ def test_atrasado_so_consome_depois_de_planejado_pela_pessoa(ctx):
     assert middle()["consumed_minutes"] == 120 + 90  # a pessoa planejou: passa a contar
 
 
+def test_evento_que_cruza_blocos_e_listado_em_cada_um_com_o_tempo_que_cabe(ctx):
+    db.session.add(WorkCalendarEvent(id=1, company_id=1, employee_id=10, source_type="manual", title="Dentista",
+                                     event_date=MONDAY, start_time=time(9, 30), end_time=time(10, 30), status="planned"))
+    db.session.commit()
+    day = _day(build_block_view(1, 10, MONDAY, MONDAY), "2026-10-05")
+    morning, middle = day["blocks"]
+    assert [(e["title"], e["minutes"], e["total_minutes"]) for e in morning["events"]] == [("Dentista", 30, 60)]
+    assert [(e["title"], e["minutes"]) for e in middle["events"] if e["title"] == "Dentista"] == [("Dentista", 30)]
+    assert morning["consumed_minutes"] == 30 and "event_parts" not in morning
+    assert morning["events"][0]["type"] == "manual" and morning["events"][0]["start"] == "09:30"
+
+
 def test_nao_bloqueia_nem_cria_nada(ctx):
     before = WorkJourneyAgenda.query.count(), WorkJourneyAgendaItem.query.count()
     build_block_view(1, 10, MONDAY, MONDAY)
