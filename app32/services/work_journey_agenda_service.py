@@ -20,12 +20,14 @@ from services.process_execution_projection_service import build_operational_proj
 from services.work_journey_agenda_engine import (
     allocate_item,
     apply_date_change_to_source,
+    build_unassigned_entry,
     load_blocks_by_day,
     load_source_items,
     next_position_for_group,
     recompute_agenda_summary,
     shift_positions_before_insert,
 )
+from services.effective_blocks_service import PersonModeView, person_block_proxies, person_mode_user
 from services.work_journey_agenda_presenter import serialize_agenda_payload
 from services.work_journey_base import WorkJourneyError, ensure_employee
 from services.work_journey_helpers import clamp_period
@@ -93,6 +95,8 @@ def move_work_journey_agenda_item(
         raise WorkJourneyError('Agenda não encontrada para o item informado.')
     if agenda.status == 'locked':
         raise WorkJourneyError('A agenda está travada. Cancele o travamento para continuar.')
+    if person_mode_user(employee) is not None:
+        raise WorkJourneyError('Você usa blocos da pessoa. Para mover itens entre blocos, use a Agenda.')
     if not entry.journey_item:
         raise WorkJourneyError('A origem da tarefa não está mais disponível.')
     if entry.journey_item.item_type == 'meeting':
@@ -178,6 +182,8 @@ def _build_agenda_snapshot(agenda: WorkJourneyAgenda) -> None:
     used_capacity: dict[tuple[date, int], int] = defaultdict(int)
     new_entries: list[WorkJourneyAgendaItem] = []
 
+    employee = Employee.query.filter_by(id=agenda.employee_id, company_id=agenda.company_id).first()
+    person_mode = person_mode_user(employee) is not None
     for item in source_items:
         if item.id in preserved_entries:
             preserved = preserved_entries[item.id]
@@ -185,6 +191,12 @@ def _build_agenda_snapshot(agenda: WorkJourneyAgenda) -> None:
             for entry in preserved:
                 if entry.block_id:
                     used_capacity[(entry.planned_date, entry.block_id)] += int(entry.allocated_minutes or 0)
+            continue
+        if person_mode:
+            # Blocos da pessoa: a distribuicao sugerida vive na Agenda unificada (que ja usa o adaptador). Aqui o item
+            # fica sem bloco, nunca preso a um bloco por empresa que o usuario deixou de usar.
+            target = item.occurrence_date or item.due_date or agenda.anchor_date
+            new_entries.append(build_unassigned_entry(agenda, item, target, int(item.estimated_minutes or 0)))
             continue
         new_entries.extend(allocate_item(item, agenda, blocks_by_day, used_capacity, period_start, period_end))
 
@@ -270,7 +282,16 @@ def _serialize(agenda: WorkJourneyAgenda, employee: Employee) -> dict[str, Any]:
         .all()
     )
     process_instance_cards = _build_process_instance_cards(agenda, entries, calendar_events)
+    person_user = person_mode_user(employee)
+    if person_user is not None:
+        proxies = person_block_proxies(person_user, agenda.company_id, agenda.employee_id)
+        by_id = {p.id: p for p in proxies}
+        blocks = proxies
+        entries = [PersonModeView(e, by_id) for e in entries]
+        calendar_events = [PersonModeView(e, by_id) for e in calendar_events]
     payload = serialize_agenda_payload(agenda, employee, blocks, entries, calendar_events, process_instance_cards)
+    payload['person_mode'] = person_user is not None
+    payload['blocks_source'] = 'person' if person_user is not None else 'legacy'
     payload['agenda'] = agenda.to_dict()
     payload['agenda']['locked_by_name'] = payload['agenda'].get('locked_by_name') or payload.get('locked_by_name')
     payload['agenda']['locked'] = agenda.status == 'locked'
