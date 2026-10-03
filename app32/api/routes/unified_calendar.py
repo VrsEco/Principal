@@ -11,6 +11,8 @@ from models import Company, Employee, Project, Process
 from services import google_calendar_service as gcal
 from services.agenda_block_view_service import BlockViewError, build_block_view
 from services.agenda_telemetry_service import record_events
+from services.estimate_batch_service import ESTIMATE_TYPES, EstimateError, list_without_estimate, save_estimates
+from services.project_task_due_date_change_service import ProjectTaskDueDateChangeService
 from services.unified_calendar_service import (
     EVENT_TYPES,
     OVERDUE_SORTS,
@@ -25,6 +27,7 @@ from utils.permissions import (
     get_active_company_id,
     get_default_company_id,
     has_company_full_access,
+    has_permission,
 )
 
 unified_calendar_bp = Blueprint('unified_calendar', __name__)
@@ -181,6 +184,49 @@ def api_agenda_blocks(company_id: int):
     except Exception:
         return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
     return jsonify({'success': True, **view})
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/estimates', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_estimates(company_id: int):
+    """Itens abertos sem estimativa (prazo mais próximo primeiro). `limit=1` serve de contador."""
+    employee_id, _scope, error = _resolve_scope(company_id)
+    if error:
+        return error
+    raw_types = {t.strip() for t in str(request.args.get('types') or '').split(',') if t.strip()}
+    types = (raw_types & set(ESTIMATE_TYPES)) if raw_types else None
+    try:
+        result = list_without_estimate(company_id, employee_id=employee_id, types=types, limit=request.args.get('limit', type=int) or 200)
+    except EstimateError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+    return jsonify({'success': True, **result})
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/estimates', methods=['POST'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_save_estimates(company_id: int):
+    """Grava estimativas em lote; cada item respeita a permissão de edição própria."""
+    payload = request.get_json(silent=True) or {}
+    employee = _current_employee(company_id)
+    full_edit = has_permission(company_id, 'processes', 'edit')
+
+    def can_edit_task(task, project):
+        return ProjectTaskDueDateChangeService.user_can_apply_due_date_change(task, project, company_id)
+
+    def can_edit_instance(instance):
+        if full_edit:
+            return True
+        return bool(employee and employee.id in {instance.owner_employee_id, instance.responsible_id, instance.executor_id})
+
+    try:
+        result = save_estimates(company_id, payload.get('entries') or [], can_edit_task=can_edit_task, can_edit_instance=can_edit_instance)
+    except EstimateError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+    return jsonify({'success': True, **result})
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/telemetry', methods=['POST'])

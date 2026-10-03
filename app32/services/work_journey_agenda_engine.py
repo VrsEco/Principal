@@ -75,7 +75,8 @@ def allocate_item(
     period_start: date,
     period_end: date,
 ) -> list[WorkJourneyAgendaItem]:
-    remaining = max(int(item.estimated_minutes or 0), 0) or 15
+    # Sem estimativa nao se inventa tempo (RF-EST-3): o item e alocado com 0 min e marcado.
+    remaining = max(int(item.estimated_minutes or 0), 0)
     candidates = candidate_slots_for_item(item, blocks_by_day, period_start, period_end)
     if not candidates:
         target = item.occurrence_date or item.due_date or agenda.anchor_date

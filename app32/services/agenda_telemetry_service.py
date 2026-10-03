@@ -20,6 +20,8 @@ ALLOWED_EVENTS: dict[str, set[str] | None] = {
     "legacy_open": None,
     "google_open": None,
     "blocks_toggle": {"on", "off"},
+    "estimate_open": None,
+    "estimate_save": None,
 }
 
 

@@ -3,7 +3,7 @@
 {% block title %}Agenda | Versus{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='4') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='5') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -52,6 +52,8 @@
 
     <div class="ag-banner" id="agBanner" role="alert" hidden></div>
 
+    <div class="ag-est" id="agEst" hidden></div>
+
     <section class="ag-late" id="agLate" aria-label="Atrasadas" hidden></section>
 
     <main class="ag-main" id="agMain" aria-live="polite" aria-busy="true">
@@ -72,5 +74,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/unified-calendar.js', v='4') }}"></script>
+<script src="{{ url_for('static', filename='js/unified-calendar.js', v='5') }}"></script>
 {% endblock %}

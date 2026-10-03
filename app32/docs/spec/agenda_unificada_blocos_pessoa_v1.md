@@ -84,7 +84,7 @@ Medido no clone (mesmas ressalvas da seção 1.3):
 
 No código da `main`: `ProjectTask.estimated_hours` começa em 0, o sync de jornada converte 0 em 0
 minutos para atividades e instâncias, e o **motor da agenda assume 15 minutos** quando a estimativa é 0.
-Ou seja, o padrão de 1 h no cadastro **não existe hoje**, e as duas telas mostram valores diferentes
+Ou seja, o padrão de 30 min no cadastro **não existe hoje**, e as duas telas mostram valores diferentes
 para o mesmo item. Sem tratar isso, os sinais por bloco nasceriam quase todos vazios. Ver 5.9.
 
 ## 2. Objetivos e não objetivos
@@ -117,12 +117,12 @@ para o mesmo item. Sem tratar isso, os sinais por bloco nasceriam quase todos va
 | D2 | Ausências e transferências continuam existindo, com aprovação. |
 | D3 | O bloco é da pessoa. A pessoa coloca nele itens de várias empresas. |
 | D4 | O sistema sinaliza livre, completo e acima. Não trava. A pessoa decide o que realocar. |
-| D5 | Estimativa padrão de **1 h nos novos cadastros** (a implementar; ver D10). Item que chega sem tempo fica "sem estimativa" e fora da conta. |
+| D5 | Estimativa padrão de **30 min nos novos cadastros** (a implementar; ver D10). Item que chega sem tempo fica "sem estimativa" e fora da conta. |
 | D6 | Não há "recuperação". A área de atrasadas ordena da mais antiga para a mais nova por padrão, com outras ordenações e filtros. |
 | D7 | O gestor vê a ocupação também **por bloco**. |
 | D8 | Celular e computador são requisitos de primeira classe. |
 | D9 | O Google Calendar segue como entregue (conexão por usuário, envio por empresa ou global, leitura somente consulta). |
-| D10 | **Política de estimativa:** padrão de 1 h só em novos cadastros; itens antigos sem estimativa ficam marcados e fora da conta, sem preenchimento em massa; o motor deixa de assumir 15 min; tela de estimar em lote na Fase 2. |
+| D10 | **Política de estimativa:** padrão de 30 min só em novos cadastros; itens antigos sem estimativa ficam marcados e fora da conta, sem preenchimento em massa; o motor deixa de assumir 15 min; tela de estimar em lote na Fase 2. |
 | D11 | **Mover para outro dia:** atividades usam o fluxo existente de mudança de prazo (com motivo); instâncias, na Fase 2, só se movem entre blocos do mesmo dia. |
 
 ## 4. Princípios
@@ -159,7 +159,7 @@ para o mesmo item. Sem tratar isso, os sinais por bloco nasceriam quase todos va
   horário clicado.
 - **RF-CRI-2.** Reunião abre o editor existente (`/meetings/company/<id>?new=1&date=`). Atividade e
   Instância usam o formulário rápido atual. Evento avulso usa o cadastro existente de eventos avulsos.
-- **RF-CRI-3.** Atividade nova sem tempo informado nasce com 1 h (RF-EST-1). Um item que chegue sem
+- **RF-CRI-3.** Atividade nova sem tempo informado nasce com 30 min (RF-EST-1). Um item que chegue sem
   tempo por outro caminho é tratado por RF-SIN-5.
 
 ### 5.3 Blocos da pessoa
@@ -249,7 +249,7 @@ Requisitos:
 ### 5.9 Estimativas
 
 - **RF-EST-1.** Atividade criada **a partir da entrega** desta funcionalidade, sem tempo informado, nasce
-  com 1 h de estimativa. Para instâncias, usar a estimativa do processo quando houver; sem ela, 1 h
+  com 30 min de estimativa. Para instâncias, usar a estimativa do processo quando houver; sem ela, 30 min
   (confirmar na seção 15).
 - **RF-EST-2.** Itens existentes sem estimativa **não são preenchidos em massa**. Ficam marcados "Sem
   estimativa" e fora da conta dos sinais.
@@ -468,7 +468,7 @@ estimativa (RF-EST-1 a RF-EST-5), com a tela Estimar em lote e a remoção do fa
 Aceite: os exemplos numéricos da seção 8.1 reproduzidos em testes; nenhum bloqueio de ação; mover para
 outro dia aciona o fluxo de mudança de prazo; item sem estimativa fora da conta; "Desfazer sugestão"
 remove só o sugerido; atividade movida para outro dia aciona o fluxo de prazo com motivo; instância só se
-move dentro do mesmo dia; novas atividades nascem com 1 h; cartões sem estimativa mostram o marcador, e o motor
+move dentro do mesmo dia; novas atividades nascem com 30 min; cartões sem estimativa mostram o marcador, e o motor
 não assume mais 15 minutos.
 Testes: unitários do cálculo (função pura), incluindo limites (exatamente 30 min livres, consumo igual
 à capacidade, evento que cruza dois blocos), tenancy (nenhum dado de outra empresa), integração do mover.
@@ -533,7 +533,7 @@ Métricas:
 | Migração fundindo blocos indevidamente | Confirmação item a item e reversão |
 | Quadro semanal ruim no celular | Lista por bloco no celular; Semana resumida |
 | Adoção baixa do planejamento | Interruptor Blocos desligável; telemetria antes de investir mais |
-| 90% dos itens sem estimativa: sinais quase vazios no início | Padrão de 1 h só em novos cadastros, tela Estimar em lote, marcador "Sem estimativa" e meta semanal de cobertura |
+| 90% dos itens sem estimativa: sinais quase vazios no início | Padrão de 30 min só em novos cadastros, tela Estimar em lote, marcador "Sem estimativa" e meta semanal de cobertura |
 | Usabilidade ruim derruba a adesão | Critérios de UX por fase, teste com colaboradores reais e liberação gradual com volta à tela antiga |
 
 ## 15. Decisões
@@ -554,7 +554,7 @@ Métricas:
 | 5 | Agenda travada no Google como blocos | Adiar; sem escopo na Fase 5 |
 | 6 | Nome "Evento avulso" | Manter |
 | 7 | Portal e Meu Trabalho | Avaliar depois da Fase 2, com telemetria |
-| 8 | Padrão de 1 h para instâncias | Usar a estimativa do processo quando houver; sem ela, 1 h |
+| 8 | Padrão de 30 min para instâncias | Usar a estimativa do processo quando houver; sem ela, 30 min (decisão do usuário em 03/10/2026, no lugar de 1 h) |
 | 9 | Início da Fase 1 | Aprovado (não toca em blocos nem em dados) |
 
 ### 15.3 Pendências de parecer

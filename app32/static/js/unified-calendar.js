@@ -68,6 +68,7 @@
     google: { configured: false, connected: false, needsReconnect: false, email: null, status: null },
     googleNote: null,
     blocks: { on: false, days: {}, loading: false, error: null },
+    est: { total: 0, items: [], loaded: false, types: { project_task: true, process_instance: true }, picks: {}, loading: false, saving: false, error: null, skipped: {} },
     layer: null,
     filtersOpen: false,
     lastFocus: null,
@@ -254,6 +255,79 @@
       '<span class="ag-card__row">' + pills(e) + '</span></button>';
   }
   function ariaEv(e) { return TYPES[e.type] + ', ' + e.title + ', ' + whenTxt(e); }
+
+  /* ---------- estimativas (Estimar em lote) ---------- */
+  var EST_SHORTCUTS = [30, 60, 120, 240];
+  function estTypes() { return Object.keys(S.est.types).filter(function (k) { return S.est.types[k]; }).join(','); }
+  function loadEstCount() {
+    api(base() + '/agenda/estimates?limit=1&' + scopeParams()).then(function (res) {
+      if (!res.ok || !res.body.success) return;
+      S.est.total = res.body.total || 0;
+      renderEst();
+    });
+  }
+  function renderEst() {
+    var el = $('agEst'), n = S.est.total;
+    if (!n) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.innerHTML = '<span><b>' + n + (n === 1 ? ' item sem estimativa.' : ' itens sem estimativa.') + '</b> Eles ficam fora da conta dos blocos.</span>' +
+      '<button type="button" class="ag-btn ag-btn--sm" data-act="est-open" data-fk="est-open">Estimar agora</button>';
+  }
+  function loadEstList() {
+    var E = S.est, types = estTypes();
+    E.loading = true; E.error = null;
+    if (!types) { E.items = []; E.loading = false; renderLayer(); return; }
+    api(base() + '/agenda/estimates?types=' + types + '&' + scopeParams()).then(function (res) {
+      E.loading = false; E.loaded = true;
+      if (!res.ok || !res.body.success) E.error = errText(res, 'Não foi possível carregar os itens.');
+      else { E.items = res.body.items || []; E.listTotal = res.body.total || 0; }
+      if (S.layer && S.layer.kind === 'est') renderLayer();
+    });
+  }
+  function estPicks() { return Object.keys(S.est.picks).filter(function (k) { return S.est.picks[k]; }); }
+  function estCounter() {
+    var n = estPicks().length, btn = document.querySelector('[data-act="est-save"]'), c = document.getElementById('agEstCount');
+    if (c) c.textContent = n ? n + (n === 1 ? ' selecionado' : ' selecionados') : 'Escolha um tempo para cada item';
+    if (btn) { btn.disabled = !n || S.est.saving; btn.textContent = S.est.saving ? 'Salvando…' : (n ? 'Salvar ' + n : 'Salvar'); }
+  }
+  function dueTxt(d) { return d ? 'prazo ' + ddmm(d) : 'sem prazo'; }
+  function estHtml() {
+    var E = S.est, out = '<h3 id="agDlg">Estimar em lote</h3><p class="ag-meta">Itens abertos sem tempo estimado, do prazo mais próximo ao mais distante. Só os itens que você escolher serão alterados.</p>';
+    out += '<div class="ag-est-types">' + ['project_task', 'process_instance'].map(function (k) {
+      return '<button type="button" class="ag-fchip t-' + k + '" data-act="est-type" data-k="' + k + '" aria-pressed="' + (E.types[k] !== false) + '"><span>' + (k === 'project_task' ? 'Atividades' : 'Instâncias') + '</span></button>';
+    }).join('') + '</div>';
+    if (E.error) out += '<p class="ag-error" role="alert">' + h(E.error) + '</p>';
+    if (E.loading) out += '<p class="ag-meta">Carregando…</p>';
+    else if (!E.items.length) out += '<p class="ag-state">Nenhum item sem estimativa com este filtro.</p>';
+    else {
+      out += '<div class="ag-est-list">' + E.items.map(function (it) {
+        var picked = E.picks[it.key] || 0, why = E.skipped[it.key];
+        return '<div class="ag-est-row t-' + it.type + '"><div class="ag-est-row__txt"><span class="ag-tl">' + TYPES[it.type] + '</span><b>' + h(it.title) + '</b><small>' + h(it.subtitle || '') + (it.subtitle ? ' · ' : '') + dueTxt(it.due_date) + '</small>' +
+          (why ? '<small class="ag-est-row__err" role="alert">' + h(why) + '</small>' : '') + '</div><div class="ag-est-row__btns" role="group" aria-label="Tempo para ' + h(it.title) + '">' +
+          EST_SHORTCUTS.map(function (m) { return '<button type="button" data-act="est-pick" data-key="' + h(it.key) + '" data-min="' + m + '" aria-pressed="' + (picked === m) + '">' + (m >= 60 ? (m / 60) + ' h' : m + ' min') + '</button>'; }).join('') + '</div></div>';
+      }).join('') + '</div>' + (E.listTotal > E.items.length ? '<p class="ag-meta">Mostrando ' + E.items.length + ' de ' + E.listTotal + '.</p>' : '');
+    }
+    return out + '<div class="ag-btns ag-btns--sticky"><span class="ag-est-count" id="agEstCount" aria-live="polite"></span><button type="button" class="ag-btn" data-act="close">Fechar</button><button type="button" class="ag-btn ag-btn--primary" data-act="est-save" disabled>Salvar</button></div>';
+  }
+  function saveEstimates() {
+    var E = S.est, keys = estPicks();
+    if (!keys.length || E.saving) return;
+    E.saving = true; E.skipped = {}; estCounter();
+    var entries = keys.map(function (k) { var p = k.split(':'); return { type: p[0], id: +p[1], minutes: E.picks[k] }; });
+    track('estimate_save');
+    api(base() + '/agenda/estimates', { json: { entries: entries } }).then(function (res) {
+      E.saving = false;
+      if (!res.ok || !res.body.success) { E.error = errText(res, 'Não foi possível salvar as estimativas.'); renderLayer(); estCounter(); return; }
+      var saved = res.body.saved || [], skipped = res.body.skipped || [];
+      E.items = E.items.filter(function (it) { return saved.indexOf(it.key) < 0; });
+      E.listTotal = Math.max(0, (E.listTotal || 0) - saved.length);
+      saved.forEach(function (k) { delete E.picks[k]; });
+      skipped.forEach(function (x) { E.skipped[x.key] = x.reason; });
+      E.error = null;
+      toast(saved.length + (saved.length === 1 ? ' estimativa salva.' : ' estimativas salvas.') + (skipped.length ? ' ' + skipped.length + ' não puderam ser salvas.' : ''), skipped.length > 0 && !saved.length);
+      renderLayer(); estCounter(); loadEstCount(); loadBlocks();
+    });
+  }
 
   /* ---------- blocos e sinais (somente leitura; nunca bloqueiam) ---------- */
   function bday(d) { return S.blocks.on ? (S.blocks.days[d] || null) : null; }
@@ -576,10 +650,12 @@
     else if (L.kind === 'create') inner = createHtml(L);
     else if (L.kind === 'form') inner = formHtml(L);
     else if (L.kind === 'menu') inner = menuHtml();
+    else if (L.kind === 'est') inner = estHtml();
     else inner = googleHtml();
     host.innerHTML = sheetWrap(inner, panel, 'agDlg');
     var f = host.querySelector('[data-autofocus]') || host.querySelector('input,select,textarea,a,button');
     if (f) f.focus();
+    if (L.kind === 'est') estCounter();
   }
   function openLayer(layer, trigger) {
     S.lastFocus = trigger || document.activeElement;
@@ -683,8 +759,8 @@
   });
   root.addEventListener('change', function (ev) {
     var t = ev.target;
-    if (t.matches('[data-fscope]')) { S.filters.scope = t.value; S.filters.employee = ''; renderFilters(); load(); loadLate(); return; }
-    if (t.matches('[data-femp]')) { S.filters.employee = t.value; load(); loadLate(); return; }
+    if (t.matches('[data-fscope]')) { S.filters.scope = t.value; S.filters.employee = ''; renderFilters(); load(); loadLate(); loadEstCount(); return; }
+    if (t.matches('[data-femp]')) { S.filters.employee = t.value; load(); loadLate(); loadEstCount(); return; }
     if (t.matches('[data-lsort]')) { S.late.sort = t.value; track('late_sort', t.value); renderLate(); loadLate(); }
   });
   root.addEventListener('submit', function (ev) {
@@ -700,6 +776,15 @@
   function act(name, node) {
     if (name === 'close') return closeLayer();
     if (name === 'retry') return load();
+    if (name === 'est-open') { track('estimate_open'); S.est.picks = {}; S.est.skipped = {}; openLayer({ kind: 'est' }, node); loadEstList(); return; }
+    if (name === 'est-type') { var ek = node.dataset.k; S.est.types[ek] = !(S.est.types[ek] !== false); S.est.picks = {}; renderLayer(); loadEstList(); return; }
+    if (name === 'est-pick') {
+      var pk = node.dataset.key, pm = +node.dataset.min;
+      S.est.picks[pk] = S.est.picks[pk] === pm ? 0 : pm;
+      Array.prototype.forEach.call(node.parentNode.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(S.est.picks[pk] === +b.dataset.min)); });
+      estCounter(); return;
+    }
+    if (name === 'est-save') return saveEstimates();
     if (name === 'late-toggle') { S.late.open = !S.late.open; if (S.late.open) track('late_open'); keepFocus(function () { renderLate(); }); return; }
     if (name === 'create') {
       var kind = node.dataset.kind, L = S.layer || {}, date = L.date || S.sel;
@@ -765,4 +850,5 @@
   load();
   loadLate();
   loadGoogle();
+  loadEstCount();
 })();

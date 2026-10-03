@@ -341,3 +341,23 @@
 .ag-tg__col .ag-ev, .ag-tg__col .ag-now { z-index: 1; }
 .ag-tg__hd .ag-sig { margin-top: 2px; }
 .ag-wrow__head .ag-sig { margin-left: 4px; }
+
+
+/* ---------- Estimar em lote (Fase 2) ---------- */
+.ag-est { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--ag-line); border-radius: 12px; background: var(--ag-surface-2); font-size: .86rem; }
+.ag-est-types { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.ag-est-list { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow-y: auto; padding-right: 2px; }
+.ag-est-row { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--ag-line); border-radius: 12px; background: var(--ag-surface); }
+.ag-est-row__txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ag-est-row__txt b { overflow-wrap: anywhere; }
+.ag-est-row__txt small { color: var(--ag-muted); }
+.ag-est-row__err { color: var(--ag-danger) !important; font-weight: 600; }
+.ag-est-row__btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ag-est-row__btns button { min-height: 44px; border: 1px solid var(--ag-line); border-radius: 10px; background: var(--ag-surface); font-weight: 700; font-size: .84rem; }
+.ag-est-row__btns button[aria-pressed="true"] { background: var(--ag-brand); color: var(--ag-brand-ink); border-color: var(--ag-brand); }
+.ag-btns--sticky { position: sticky; bottom: 0; background: var(--ag-surface); padding-top: 8px; align-items: center; }
+.ag-est-count { margin-right: auto; font-size: .8rem; color: var(--ag-muted); }
+@media (min-width: 761px) {
+  .ag-est-row { flex-direction: row; align-items: center; justify-content: space-between; }
+  .ag-est-row__btns { width: 280px; flex: none; }
+}
