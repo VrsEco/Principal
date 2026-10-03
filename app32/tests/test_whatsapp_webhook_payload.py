@@ -184,6 +184,7 @@ def test_personalize_whatsapp_greeting_preserves_non_greeting_text():
 
 def test_handle_whatsapp_accepts_form_encoded_payload(monkeypatch):
     app = Flask(__name__)
+    app.testing = True  # sem segredo, so aceito em teste
     app.register_blueprint(whatsapp_webhook_bp, url_prefix="/webhook")
 
     called = {}
@@ -462,6 +463,7 @@ def test_process_whatsapp_unsupported_attachment_returns_operational_message(mon
 
 def test_handle_instagram_uses_menu_intercept_and_logs_messages(monkeypatch):
     app = Flask(__name__)
+    app.testing = True  # sem segredo, so aceito em teste
     app.register_blueprint(whatsapp_webhook_bp, url_prefix="/webhook")
 
     recorded = {"added": [], "sent": []}
@@ -505,6 +507,7 @@ def test_handle_instagram_uses_menu_intercept_and_logs_messages(monkeypatch):
 
 def test_handle_instagram_sends_operational_error_message(monkeypatch):
     app = Flask(__name__)
+    app.testing = True  # sem segredo, so aceito em teste
     app.register_blueprint(whatsapp_webhook_bp, url_prefix="/webhook")
 
     recorded = {"sent": []}

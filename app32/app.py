@@ -1276,7 +1276,9 @@ def register_blueprints(app):
 
     # Webhook Telegram (Sapiens Fase 3)
     from api.webhooks.telegram_webhook import telegram_bp, setup_webhook
-    app.register_blueprint(telegram_bp, url_prefix='/webhook')
+    # Desativado por padrão: o webhook público só existe com opt-in explícito.
+    if os.environ.get('TELEGRAM_WEBHOOK_ENABLED', 'false').lower() == 'true':
+        app.register_blueprint(telegram_bp, url_prefix='/webhook')
 
     # Webhook WhatsApp/Instagram (Sapiens Fase 4)
     from api.webhooks.whatsapp_webhook import whatsapp_webhook_bp

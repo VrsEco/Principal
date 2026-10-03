@@ -81,9 +81,21 @@ def same_origin_verified() -> bool:
     return True
 
 
+def webhook_unsigned_allowed() -> bool:
+    """Aceita webhook sem segredo somente em desenvolvimento, testes ou por opt-in explícito."""
+    if env_flag("WEBHOOK_ALLOW_UNSIGNED", False):
+        return True
+    try:
+        return bool(current_app.testing or current_app.debug)
+    except RuntimeError:
+        return False
+
+
 def webhook_secret_verified(*, expected_secret: str | None, header_names: list[str] | None = None, query_names: list[str] | None = None) -> bool:
     if not expected_secret:
-        return True
+        # Sem segredo configurado o endpoint ficaria aberto à internet (fail-open).
+        # Em produção, negar até que o segredo seja definido.
+        return webhook_unsigned_allowed()
 
     candidates: list[str] = []
     for header_name in header_names or []:
