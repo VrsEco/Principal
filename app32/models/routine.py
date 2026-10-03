@@ -149,6 +149,7 @@ class RoutineJourneyBinding(db.Model):
     routine_id = db.Column(db.Integer, db.ForeignKey('routines.id', ondelete='CASCADE'), nullable=False, index=True)
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.id', ondelete='CASCADE'), nullable=False, index=True)
     block_id = db.Column(db.Integer, db.ForeignKey('work_journey_blocks.id', ondelete='SET NULL'), nullable=True, index=True)
+    person_block_id = db.Column(db.Integer, db.ForeignKey('person_work_blocks.id', ondelete='SET NULL'), nullable=True, index=True)
     notes = db.Column(db.Text)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
