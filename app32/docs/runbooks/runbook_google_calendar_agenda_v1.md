@@ -101,3 +101,15 @@ Tipo: Runbook. Escopo: tela `/agenda` e envio app → Google (Fase 2). Leitura d
 - API: `GET .../agenda/blocks` agora devolve, por bloco, `events` (`type`, `title`, `start`, `end`, `minutes`, `total_minutes`). A visão da **Equipe** não recebe títulos de eventos (inalterada).
 - Observação: o nome de classe `ag-strip` já pertence à faixa de dias do celular; a trilha usa `ag-lane`.
 
+## Etapa 4c: telas e relatórios antigos com blocos da pessoa (2026-10-04)
+- **Sem migração. Deploy `quick`.** Tudo vale **somente para quem migrou**; quem não migrou segue exatamente como antes (testes cobrem os dois lados).
+- **Calendário Operacional antigo** (`/companies/<id>/calendar`) e o **PDF da agenda** (mesmo apresentador): mostram os blocos da pessoa, **somente consulta**. Entradas antigas só com `block_id` legado aparecem em "Sem bloco".
+  Mover itens por lá é bloqueado com mensagem ("use a Agenda"). Há aviso no topo do calendário e na aba de blocos.
+- **Motor** (`_build_agenda_snapshot`): para quem migrou **não sugere bloco por empresa**; o item fica sem bloco e a sugestão de distribuição vive na Agenda unificada (já usa o adaptador). Escolhas manuais da pessoa (`manual_override`) são preservadas.
+- **Relatório gerencial**: capacidade do migrado vem dos blocos da pessoa; vínculos de rotina (`person_block_id`) e eventos com `person_block_id` entram por bloco; itens da jornada ainda apontam para o bloco por empresa e caem em "sem bloco"
+  (a conta total não muda). Há proteção contra colisão de números entre bloco legado e da pessoa.
+- **Grafo de incentivos**: colaboradores migrados passam a ter nós de capacidade dos blocos da pessoa (`capacity_p<id>`), no lugar dos blocos por empresa.
+- **Rotas e MCP de blocos legados** (`GET/POST/PUT/DELETE /work-journey/blocks`, ferramentas `list/save/delete_work_journey_block_tool`): **contrato inalterado**. Só para colaborador migrado a resposta ganha campos
+  extras (`person_mode`, `person_mode_note`, `person_blocks`, ou `warning` nas gravações/exclusões), avisando que os blocos por empresa já não definem o dia dele.
+- **Fora desta etapa:** gerenciar blocos da pessoa por MCP (listar/salvar); reapontar o `block_id` preferido dos itens da jornada para o bloco da pessoa.
+

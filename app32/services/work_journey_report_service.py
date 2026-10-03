@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from sqlalchemy import or_
 
 from models import Employee, Process, Project, ProjectActivityCollaborator, ProjectTask, Routine, RoutineCollaborator, RoutineJourneyBinding, WorkCalendarEvent, WorkJourneyBlock, WorkJourneyItem
+from services.effective_blocks_service import person_block_proxies, person_mode_user
 from services.work_journey_helpers import BLOCK_MODE_LABELS, ITEM_TYPE_LABELS, block_chronology_key, clamp_period, duration_minutes
 from services.work_journey_service import build_item_display_code
 
@@ -59,6 +60,12 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
     for emp in employees:
         emp_id = int(emp.id)
         emp_blocks = blocks_by_emp.get(emp_id, [])
+        # Colaborador que migrou: capacidade pelos blocos da PESSOA; so os vinculos de rotina e eventos com person_block_id
+        # entram por bloco (itens da jornada seguem o bloco por empresa, que nao vale mais para ele) e o resto vai a "sem bloco".
+        person_user = person_mode_user(emp)
+        if person_user is not None:
+            emp_blocks = sorted(person_block_proxies(person_user, company_id, emp_id), key=block_chronology_key)
+        legacy_attribution = person_user is None
         emp_items = [i for i in items if int(i.employee_id) == emp_id]
         emp_routines = [r for r in routine_rows if int(r.employee_id) == emp_id]
         block_stats = _init_blocks(emp_blocks, week_start, week_end, month_start, month_end)
@@ -70,7 +77,11 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
             m = _routine_metrics(float(rel.hours_used or 0), sched, getattr(routine, 'schedule_value', None))
             routine_week += m['week_min']; routine_month += m['month_min']
             binding = bindings.get((int(routine.id), emp_id))
-            block = blocks_by_id.get(int(binding.block_id)) if binding and binding.block_id else None
+            if person_user is not None:
+                person_block_id = getattr(binding, 'person_block_id', None) if binding else None
+                block = next((b for b in emp_blocks if b.id == person_block_id), None) if person_block_id else None
+            else:
+                block = blocks_by_id.get(int(binding.block_id)) if binding and binding.block_id else None
             if block and int(block.id) in block_stats:
                 block_stats[int(block.id)]['occupied_week'] += m['week_min']
                 block_stats[int(block.id)]['occupied_month'] += m['month_min']
@@ -91,7 +102,7 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
                 continue
             if in_week:
                 mix[item.item_type] += mins
-            if item.block_id and int(item.block_id) in block_stats:
+            if legacy_attribution and item.block_id and int(item.block_id) in block_stats:
                 if in_week:
                     block_stats[int(item.block_id)]['occupied_week'] += mins
                     block_stats[int(item.block_id)]['worked_week'] += int(item.worked_minutes or 0)
@@ -121,13 +132,14 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
                 event_week_count += 1
             if in_month:
                 event_month += mins
-            if event.block_id and int(event.block_id) in block_stats:
+            event_block_id = getattr(event, 'person_block_id', None) if person_user is not None else event.block_id
+            if event_block_id and int(event_block_id) in block_stats:
                 if in_week:
-                    block_stats[int(event.block_id)]['occupied_week'] += mins
-                    block_stats[int(event.block_id)]['events_week'] += 1
+                    block_stats[int(event_block_id)]['occupied_week'] += mins
+                    block_stats[int(event_block_id)]['events_week'] += 1
                 if in_month:
-                    block_stats[int(event.block_id)]['occupied_month'] += mins
-                    block_stats[int(event.block_id)]['events_month'] += 1
+                    block_stats[int(event_block_id)]['occupied_month'] += mins
+                    block_stats[int(event_block_id)]['events_month'] += 1
             else:
                 if in_week:
                     unassigned_week += mins

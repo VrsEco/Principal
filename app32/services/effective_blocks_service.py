@@ -102,8 +102,9 @@ ALL_ITEM_TYPES = ["manual", "process_instance", "project_task", "meeting"]
 
 def person_mode_user(employee: Employee | None) -> int | None:
     """user_id do dono do colaborador quando ele migrou para blocos da pessoa; senao None (modo legado)."""
-    if employee is not None and employee.user_id and user_has_person_blocks(employee.user_id):
-        return employee.user_id
+    user_id = getattr(employee, "user_id", None) if employee is not None else None
+    if user_id and user_has_person_blocks(user_id):
+        return user_id
     return None
 
 

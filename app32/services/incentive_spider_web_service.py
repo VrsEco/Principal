@@ -161,8 +161,8 @@ class IncentiveSpiderWebService:
         # Colaboradores que migraram para blocos da pessoa: o no de capacidade vem dos blocos da pessoa (um dia unico).
         migrated_employees = {
             e.id: e.user_id
-            for e in Employee.query.filter(Employee.company_id == company_id, Employee.user_id.isnot(None)).all()
-            if user_has_person_blocks(e.user_id)
+            for e in Employee.query.filter(Employee.company_id == company_id).all()
+            if getattr(e, "user_id", None) and user_has_person_blocks(e.user_id)
         }
         for emp_id, user_id in migrated_employees.items():
             for pb in person_block_proxies(user_id, company_id, emp_id):
