@@ -23,7 +23,7 @@ Protótipo de referência (privado): https://claude.ai/artifact/REcHTjGEo1dS8ZH7
 - [ ] Parecer do DBA sobre migração e índices.
 - [x] Aprovação para iniciar a Fase 1 (2026-10-03).
 - [x] Fase 1 entregue em produção (2026-10-03); validação com colaboradores segue pendente (seção 9.1).
-- [x] Fase 4 (parcial) implementada em branch: tela Equipe com privacidade e soma entre empresas só para migrados. **Pendente (4c):** motor, apresentador legado, relatório/PDF, incentivos e MCP no adaptador.
+- [x] Fase 4 (parcial) implementada em branch: tela Equipe com privacidade e soma entre empresas só para migrados. **4c implementada em branch (2026-10-04):** Calendário Operacional antigo (e o PDF, que sai do mesmo apresentador), motor, relatório gerencial, grafo de incentivos e respostas de blocos de rotas/MCP passam a respeitar os blocos da pessoa de quem migrou.
 - [x] Fase 3 implementada em branch (blocos da pessoa, adaptador, editor, assistente de migração e reversão); **deploy depende dos pareceres do Arquiteto e do DBA**.
 - [x] Fase 2 implementada (sinais por bloco, estimativa e Estimar em lote, Mover para um bloco, sugestão de distribuição); padrão de estimativa em 30 min por decisão de 2026-10-03.
 - [ ] Card de execução por entrega (`aa-j-31-card-execution`), quando houver 3 ou mais etapas.
@@ -564,13 +564,13 @@ Métricas:
 
 ### 15.3 Pendências de parecer
 
-- **Arquiteto:** exceção de `company_id` para `person_work_blocks`, com as condições da seção 6.4. Bloqueia a Fase 3. *(Revisão técnica favorável em 15.4; falta a aceitação humana.)*
-- **DBA:** migração e índices. Bloqueia a Fase 3. *(Revisão técnica favorável em 15.4; falta a aceitação humana.)*
+- **Arquiteto:** exceção de `company_id` para `person_work_blocks`, com as condições da seção 6.4. Bloqueia a Fase 3. **Aceito em 2026-10-04** pelo responsável (parecer 15.4).
+- **DBA:** migração e índices. Bloqueia a Fase 3. **Aceito em 2026-10-04** pelo responsável (parecer 15.4).
 - **Produto:** fluxo de mudança de prazo para instâncias, quando se quiser mover instâncias para outro dia.
 
 ### 15.4 Revisão técnica do Squad Engenharia (2026-10-04)
 
-> **Natureza:** parecer técnico com evidências, emitido pelo Squad Engenharia nos papéis SE-ARCH e SE-DBA. **Não substitui a aprovação humana** das pendências da seção 15.3: o Arquiteto e o DBA responsáveis decidem se aceitam este parecer.
+> **Natureza:** parecer técnico com evidências, emitido pelo Squad Engenharia nos papéis SE-ARCH e SE-DBA. **Aceito pelo responsável (Arquiteto e DBA) em 2026-10-04.**
 
 **SE-ARCH — exceção de `company_id` em `person_work_blocks`: favorável, com condições atendidas no código.**
 1. *Preferência pessoal, não dado de empresa:* a tabela guarda só horário, nome, modo, dias e tipos preferidos; nenhum conteúdo de empresa. Já existe precedente por usuário sem `company_id` (`notes`, `user_mcp_tokens`, `identity_principals`, `user_employee_assignments`, `password_reset_tokens`, `google_calendar_connections`).
@@ -590,7 +590,7 @@ Métricas:
 - *Sem reescrita de histórico:* os `block_id` legados permanecem; nenhuma linha existente é alterada pela migração.
 - **Condição operacional:** deploy em modo `full` (única forma de rodar migração) e, em caso de falha, `downgrade` documentado no cabeçalho do arquivo.
 
-**Recomendação do Squad:** liberar o deploy `full` da Fase 3 **após** a aceitação humana deste parecer. Sem a aceitação, a SPEC mantém a Fase 3 bloqueada.
+**Recomendação do Squad:** liberar o deploy `full` da Fase 3. Aceita e executada em 2026-10-04.
 
 ## 16. Documentação dependente a atualizar após aprovação
 
