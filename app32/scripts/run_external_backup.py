@@ -15,10 +15,13 @@ import hashlib
 import json
 import os
 import shutil
+import smtplib
 import subprocess
 import sys
+import urllib.request
 from contextlib import contextmanager
 from datetime import datetime, timedelta
+from email.message import EmailMessage
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from zoneinfo import ZoneInfo
@@ -39,6 +42,9 @@ TZ = ZoneInfo("America/Bahia")
 DEFAULT_STAGING = "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/backups/gv-external"
 DEFAULT_ENV_FILE = "/home/app/.config/gv-backup/google_oauth.env"
 DEFAULT_MIN_FREE_BYTES = 1024 * 1024 * 1024
+DEFAULT_ALERT_THROTTLE_HOURS = 12
+STATUS_FILE = "last_status.json"
+ALERT_STATE_FILE = ".last-alert.json"
 
 
 class BackupRunError(RuntimeError):
@@ -382,12 +388,131 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             "retention_tier": tier, "retain_until": expires.isoformat(), "local_pruned_runs": removed, "results": results}
 
 
-def main() -> int:
+def _alert_setting(name: str, file_values: dict[str, str]) -> str:
+    return os.getenv(name, file_values.get(name, "")).strip()
+
+
+def load_alert_settings(drive_env_file: Path) -> dict[str, str]:
+    """Le configuracao de alerta do ambiente ou do arquivo protegido do Drive."""
     try:
-        print(json.dumps(run(parse_args()), ensure_ascii=False))
+        file_values = load_env_file(drive_env_file)
+    except Exception:  # arquivo ausente nao deve impedir o alerta por ambiente
+        file_values = {}
+    names = (
+        "GV_BACKUP_ALERT_WEBHOOK_URL",
+        "GV_BACKUP_ALERT_TO",
+        "GV_BACKUP_ALERT_SMTP_HOST",
+        "GV_BACKUP_ALERT_SMTP_PORT",
+        "GV_BACKUP_ALERT_SMTP_USER",
+        "GV_BACKUP_ALERT_SMTP_PASSWORD",
+        "GV_BACKUP_ALERT_FROM",
+        "GV_BACKUP_ALERT_THROTTLE_HOURS",
+    )
+    return {name: _alert_setting(name, file_values) for name in names}
+
+
+def write_status(staging: Path, ok: bool, detail: str, now: datetime) -> None:
+    """Registra o ultimo resultado para monitoramento externo (sem segredos)."""
+    try:
+        staging.mkdir(parents=True, exist_ok=True)
+        path = staging / STATUS_FILE
+        previous: dict[str, object] = {}
+        if path.is_file():
+            previous = json.loads(path.read_text(encoding="utf-8"))
+        payload = {
+            "ok": ok,
+            "checked_at": now.isoformat(),
+            "last_success_at": now.isoformat() if ok else previous.get("last_success_at"),
+            "detail": detail[:500],
+        }
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    except Exception:
+        pass
+
+
+def should_send_alert(staging: Path, now: datetime, throttle_hours: int) -> bool:
+    """Evita repetir o mesmo alerta a cada execucao do cron (5 por dia)."""
+    path = staging / ALERT_STATE_FILE
+    try:
+        last = datetime.fromisoformat(json.loads(path.read_text(encoding="utf-8"))["sent_at"])
+    except Exception:
+        return True
+    return now - last >= timedelta(hours=throttle_hours)
+
+
+def send_failure_alert(settings: dict[str, str], subject: str, body: str) -> list[str]:
+    """Envia por webhook e/ou SMTP; devolve os canais que aceitaram a mensagem."""
+    delivered: list[str] = []
+    webhook = settings.get("GV_BACKUP_ALERT_WEBHOOK_URL", "")
+    if webhook:
+        request = urllib.request.Request(
+            webhook,
+            data=json.dumps({"text": f"{subject}\n{body}"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=15):  # noqa: S310 - URL vem de config protegida
+            delivered.append("webhook")
+    recipient = settings.get("GV_BACKUP_ALERT_TO", "")
+    host = settings.get("GV_BACKUP_ALERT_SMTP_HOST", "")
+    if recipient and host:
+        message = EmailMessage()
+        message["Subject"] = subject
+        message["From"] = settings.get("GV_BACKUP_ALERT_FROM") or settings.get("GV_BACKUP_ALERT_SMTP_USER") or recipient
+        message["To"] = recipient
+        message.set_content(body)
+        port = int(settings.get("GV_BACKUP_ALERT_SMTP_PORT") or 587)
+        with smtplib.SMTP(host, port, timeout=20) as server:
+            server.starttls()
+            user = settings.get("GV_BACKUP_ALERT_SMTP_USER")
+            if user:
+                server.login(user, settings.get("GV_BACKUP_ALERT_SMTP_PASSWORD", ""))
+            server.send_message(message)
+        delivered.append("smtp")
+    return delivered
+
+
+def notify_failure(args: argparse.Namespace, error: str) -> None:
+    """Registra a falha e alerta com throttle. Nunca levanta excecao."""
+    now = datetime.now(TZ)
+    staging = Path(args.staging_dir)
+    write_status(staging, False, error, now)
+    try:
+        settings = load_alert_settings(Path(args.drive_env_file))
+        hours = int(settings.get("GV_BACKUP_ALERT_THROTTLE_HOURS") or DEFAULT_ALERT_THROTTLE_HOURS)
+        if not should_send_alert(staging, now, hours):
+            return
+        last_ok = None
+        status_path = staging / STATUS_FILE
+        if status_path.is_file():
+            last_ok = json.loads(status_path.read_text(encoding="utf-8")).get("last_success_at")
+        body = (
+            f"O backup externo do Gestao Versus falhou em {now.isoformat()}.\n"
+            f"Erro: {error[:500]}\n"
+            f"Ultimo sucesso registrado: {last_ok or 'desconhecido'}.\n"
+            "Log: logs/app32/external_backup_cron.log no Configr."
+        )
+        delivered = send_failure_alert(settings, "[GV] Backup externo FALHOU", body)
+        if delivered:
+            (staging / ALERT_STATE_FILE).write_text(json.dumps({"sent_at": now.isoformat()}) + "\n", encoding="utf-8")
+        else:
+            print("Alerta nao enviado: nenhum canal GV_BACKUP_ALERT_* configurado.", file=sys.stderr)
+    except Exception as exc:  # alerta nunca pode mascarar o erro original
+        print(f"Falha ao enviar alerta: {exc}", file=sys.stderr)
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        result = run(args)
+        if result.get("mode") == "upload":
+            write_status(Path(args.staging_dir), True, "ok", datetime.now(TZ))
+        print(json.dumps(result, ensure_ascii=False))
         return 0
-    except BackupRunError as exc:
+    except Exception as exc:  # inclui BackupDriveError (ex.: token OAuth expirado)
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        if args.upload and not args.dry_run:
+            notify_failure(args, str(exc))
         return 2
 
 

@@ -1,7 +1,7 @@
 # SPEC — Backup externo inicial no Google Drive
 
 **Classe:** SPEC  
-**Status:** Produção recorrente ativa para banco, código e uploads canônicos
+**Status:** Implementada; **upload suspenso desde 2026-09-20** por token OAuth expirado (ver "Incidente"). Alerta de falha implementado, aguardando deploy e canal configurado.
 **Owner:** Engenharia Versus
 
 ## Objetivo
@@ -76,11 +76,59 @@ GCS também não está configurado. Esses documentos históricos não podem entr
 um novo backup antes de localizar uma fonte íntegra, devendo ser tratados como
 incidente de recuperação separado.
 
+## Incidente — token OAuth expirado (2026-09-20 a 2026-10-03)
+Auditoria de 2026-10-03: o último upload bem-sucedido ao Drive foi a execução
+de 2026-09-20 às 12:00 BRT. Desde então, as 65 execuções do cron falharam com
+`Nao foi possivel renovar token OAuth (HTTP 400)`, sem qualquer alerta.
+
+Causa provável: o app OAuth está em modo **Teste** (usuário externo) e o Google
+expira o refresh token em 7 dias nesse modo. O consentimento foi concedido em
+2026-09-13 e o último upload ocorreu 7 dias depois. Reautorizar sem mudar o
+status de publicação repete a falha em 7 dias.
+
+Durante o período, o único backup recente do banco foi o dump diário do
+workflow `backup-database.yml`, mantido em `~/backups` no mesmo servidor de
+produção (sem cópia externa).
+
+Correção exigida, nesta ordem:
+1. Publicar o app OAuth `GV Backup Drive` como **Em produção** (escopo
+   `drive.file`) no Google Cloud Console.
+2. Reautorizar com `google_drive_authorize.py` e instalar o novo token no
+   Configr com permissão 0600.
+3. Executar upload manual e confirmar o `manifest.json` novo no Drive.
+4. Confirmar que o alerta de falha (abaixo) chega ao destino configurado.
+
+## Alerta de falha e status
+`run_external_backup.py` trata qualquer exceção do upload (inclusive
+`BackupDriveError`) como falha: retorna código 2, grava
+`<staging>/last_status.json` (`ok`, `checked_at`, `last_success_at`, `detail`,
+sem segredos) e dispara alerta. O alerta nunca mascara o erro original e só é
+enviado quando a execução usa `--upload`.
+
+Canais, configurados por variáveis de ambiente ou no arquivo protegido
+`google_oauth.env` (fora do Git):
+- `GV_BACKUP_ALERT_WEBHOOK_URL`: POST JSON `{"text": ...}`;
+- e-mail SMTP: `GV_BACKUP_ALERT_TO`, `GV_BACKUP_ALERT_SMTP_HOST`,
+  `GV_BACKUP_ALERT_SMTP_PORT` (padrão 587, STARTTLS),
+  `GV_BACKUP_ALERT_SMTP_USER`, `GV_BACKUP_ALERT_SMTP_PASSWORD`,
+  `GV_BACKUP_ALERT_FROM`.
+
+Para não repetir o aviso a cada execução (5 por dia), há intervalo mínimo de
+`GV_BACKUP_ALERT_THROTTLE_HOURS` (padrão 12 h), registrado em
+`<staging>/.last-alert.json`. Sem nenhum canal configurado, a falha é apenas
+registrada no log e em `last_status.json`; configurar ao menos um canal é
+condição para considerar a rotina monitorada.
+
 ## Pendências
-1. Localizar e recuperar, se possível, os binários históricos da automação
+1. Publicar o app OAuth em produção, reautorizar e validar o próximo upload
+   (ver incidente acima). Até lá, não há cópia externa nova desde 2026-09-20.
+2. Configurar ao menos um canal `GV_BACKUP_ALERT_*` no Configr e testar o aviso.
+3. Localizar e recuperar, se possível, os binários históricos da automação
    financeira ausentes do storage canônico.
-2. Exercício documentado de restauração isolada de banco, código e anexos.
-3. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
+4. Exercício documentado de restauração isolada de banco, código e anexos.
+5. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
+6. Corrigir a sincronização local do Windows (`download_backups.py`, falha de
+   autenticação SSH desde 2026-09-12), que hoje também falha sem aviso.
 
 ## Componentes implementados
 - `app32/scripts/google_drive_backup.py`: uploader direto do Configr, append-only,

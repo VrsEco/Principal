@@ -139,3 +139,79 @@ def test_upload_records_keep_relative_paths_in_inventory_not_drive_properties(tm
     assert asset_record["type"] == "uploads"
     assert "extra_properties" not in asset_record
     assert metadata["files_count"] == 1
+
+
+def _alert_args(tmp_path):
+    return runner.parse_args(
+        ["--repo", str(tmp_path), "--staging-dir", str(tmp_path / "staging"),
+         "--drive-env-file", str(tmp_path / "missing.env"), "--upload"]
+    )
+
+
+def test_failure_sends_alert_once_within_throttle_window(tmp_path, monkeypatch):
+    sent = []
+    monkeypatch.setenv("GV_BACKUP_ALERT_WEBHOOK_URL", "https://alerts.example/hook")
+    monkeypatch.setattr(runner, "send_failure_alert", lambda settings, subject, body: sent.append(body) or ["webhook"])
+    args = _alert_args(tmp_path)
+
+    runner.notify_failure(args, "Nao foi possivel renovar token OAuth (HTTP 400).")
+    runner.notify_failure(args, "Nao foi possivel renovar token OAuth (HTTP 400).")
+
+    assert len(sent) == 1
+    assert "renovar token OAuth" in sent[0]
+    status = json.loads((tmp_path / "staging" / "last_status.json").read_text(encoding="utf-8"))
+    assert status["ok"] is False
+
+
+def test_alert_repeats_after_throttle_window(tmp_path):
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    old = datetime.now(runner.TZ) - timedelta(hours=13)
+    (staging / ".last-alert.json").write_text(json.dumps({"sent_at": old.isoformat()}), encoding="utf-8")
+
+    assert runner.should_send_alert(staging, datetime.now(runner.TZ), 12) is True
+
+
+def test_alert_failure_never_masks_original_error(tmp_path, monkeypatch):
+    def boom(*_args):
+        raise OSError("smtp indisponivel")
+
+    monkeypatch.setattr(runner, "send_failure_alert", boom)
+    monkeypatch.setenv("GV_BACKUP_ALERT_WEBHOOK_URL", "https://alerts.example/hook")
+
+    runner.notify_failure(_alert_args(tmp_path), "erro original")  # nao deve levantar
+
+
+def test_main_alerts_on_drive_error_and_returns_nonzero(tmp_path, monkeypatch):
+    calls = []
+    args = _alert_args(tmp_path)
+    monkeypatch.setattr(runner, "parse_args", lambda: args)
+
+    def failing_run(_args):
+        raise sys.modules["google_drive_backup"].BackupDriveError("token expirado")
+
+    monkeypatch.setattr(runner, "run", failing_run)
+    monkeypatch.setattr(runner, "notify_failure", lambda args, error: calls.append(error))
+
+    assert runner.main() == 2
+    assert calls == ["token expirado"]
+
+
+def test_main_records_success_status(tmp_path, monkeypatch):
+    args = _alert_args(tmp_path)
+    monkeypatch.setattr(runner, "parse_args", lambda: args)
+    monkeypatch.setattr(runner, "run", lambda _args: {"ok": True, "mode": "upload"})
+
+    assert runner.main() == 0
+    status = json.loads((tmp_path / "staging" / "last_status.json").read_text(encoding="utf-8"))
+    assert status["ok"] is True and status["last_success_at"]
+
+
+def test_no_alert_without_upload_flag(tmp_path, monkeypatch):
+    calls = []
+    args = runner.parse_args(["--repo", str(tmp_path), "--staging-dir", str(tmp_path / "staging")])
+    monkeypatch.setattr(runner, "parse_args", lambda: args)
+    monkeypatch.setattr(runner, "notify_failure", lambda *_: calls.append(1))
+
+    assert runner.main() == 2
+    assert calls == []
