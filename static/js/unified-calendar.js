@@ -69,6 +69,8 @@
     google: { configured: false, connected: false, needsReconnect: false, email: null, status: null },
     googleNote: null,
     blocks: { on: false, days: {}, loading: false, error: null },
+    req: { tab: 'abs', loading: false, error: null, data: null, form: false, saving: false, pending: 0 },
+    rules: { loading: false, error: null, items: [], form: null, saving: false, confirmDelete: null },
     team: { loading: false, error: null, data: null, key: '', filter: 'all' },
     pb: { loading: false, error: null, blocks: [], warnings: [], has: false, mode: 'list', editing: null, proposal: null, decisions: {}, saving: false, confirmRevert: false, form: null },
     move: { key: null, loading: false, error: null, options: [], item: null, applyNow: false, sel: null, reason: '', saving: false },
@@ -344,6 +346,151 @@
       E.error = null;
       toast(saved.length + (saved.length === 1 ? ' estimativa salva.' : ' estimativas salvas.') + (skipped.length ? ' ' + skipped.length + ' não puderam ser salvas.' : ''), skipped.length > 0 && !saved.length);
       renderLayer(); estCounter(); loadEstCount(); loadBlocks();
+    });
+  }
+
+  /* ---------- ausências, transferências e regras de recorrência (Configurar) ---------- */
+  var ABS_TYPES = { vacation: 'Férias', absence: 'Ausência', medical_leave: 'Atestado médico' };
+  function planEmployee() { return (S.filters.scope === 'all' && S.filters.employee) ? S.filters.employee : cfg.employeeId; }
+  function empName(id) { var e = cfg.employees.filter(function (x) { return String(x.id) === String(id); })[0]; return e ? e.name : ''; }
+  function dmy(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : ''; }
+  function statusChip(st, label) { return '<span class="ag-st ag-st--' + h(st) + '">' + h(label || st) + '</span>'; }
+  function loadReq(thenRender) {
+    var R = S.req; R.loading = true; R.error = null;
+    api(base() + '/agenda/requests').then(function (res) {
+      R.loading = false;
+      if (!res.ok || !res.body.success) R.error = errText(res, 'Não foi possível carregar os pedidos.');
+      else { R.data = res.body; R.pending = res.body.pending_total || 0; }
+      if (S.layer && S.layer.kind === 'req') renderLayer();
+    });
+  }
+  function reqHtml() {
+    var R = S.req, d = R.data, out = '<h3 id="agDlg">Ausências e transferências</h3>';
+    out += '<div class="ag-seg" role="group" aria-label="Seção"><button type="button" data-act="req-tab" data-tab="abs" aria-pressed="' + (R.tab === 'abs') + '">Ausências</button><button type="button" data-act="req-tab" data-tab="trf" aria-pressed="' + (R.tab === 'trf') + '">Transferências</button></div>';
+    if (R.error) out += '<p class="ag-error" role="alert">' + h(R.error) + '</p>';
+    if (R.loading && !d) return out + '<p class="ag-meta">Carregando…</p>' + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close">Fechar</button></div>';
+    if (!d) return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close">Fechar</button></div>';
+    if (R.tab === 'abs') {
+      if (R.form) return out + absFormHtml();
+      out += '<div class="ag-btns ag-btns--start"><button type="button" class="ag-btn ag-btn--primary" data-act="abs-new">+ Pedir ausência</button></div>';
+      if (!d.absences.length) out += '<p class="ag-state">Nenhuma ausência registrada.</p>';
+      else out += '<div class="ag-req-list">' + d.absences.map(function (a) {
+        return '<div class="ag-req"><div class="ag-req__top"><b>' + h(a.type_label) + '</b>' + statusChip(a.status, a.status_label) + '</div>' +
+          '<small>' + (d.is_manager && a.employee_name ? h(a.employee_name) + ' · ' : '') + dmy(a.start_date) + ' a ' + dmy(a.end_date) + '</small>' +
+          (a.reason ? '<small>' + h(a.reason) + '</small>' : '') +
+          (a.can_approve ? '<div class="ag-req__btns"><button type="button" class="ag-btn ag-btn--primary ag-btn--sm" data-act="abs-approve" data-id="' + a.id + '">Aprovar</button></div>' : '') + '</div>';
+      }).join('') + '</div>';
+    } else {
+      if (!d.transfers.length) out += '<p class="ag-state">Nenhuma transferência pendente ou registrada.</p>';
+      else out += '<div class="ag-req-list">' + d.transfers.map(function (t) {
+        return '<div class="ag-req"><div class="ag-req__top"><b>' + h(t.item_title || 'Item') + '</b>' + statusChip(t.status, t.status_label) + '</div>' +
+          '<small>' + h(t.from_name || '?') + ' → ' + h(t.to_name || '?') + '</small>' + (t.reason ? '<small>' + h(t.reason) + '</small>' : '') +
+          (t.can_approve ? '<div class="ag-req__btns"><button type="button" class="ag-btn ag-btn--primary ag-btn--sm" data-act="trf-approve" data-id="' + t.id + '">Aprovar</button></div>' : '') + '</div>';
+      }).join('') + '</div>' + '<p class="ag-note">Para pedir a transferência de um item, use a tela do item. Aqui você acompanha e, sendo gestor, aprova.</p>';
+    }
+    return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close">Fechar</button></div>';
+  }
+  function absFormHtml() {
+    var emp = '';
+    if (cfg.canViewAll && cfg.employees.length) {
+      emp = field('Colaborador', '<select name="employee_id">' + cfg.employees.map(function (e) { return '<option value="' + e.id + '"' + (String(e.id) === String(cfg.employeeId) ? ' selected' : '') + '>' + h(e.name) + '</option>'; }).join('') + '</select>', 'absEmp');
+    }
+    return '<form class="ag-form" data-absform novalidate>' + emp +
+      field('Tipo', '<select name="absence_type">' + Object.keys(ABS_TYPES).map(function (k) { return '<option value="' + k + '">' + ABS_TYPES[k] + '</option>'; }).join('') + '</select>', 'absType') +
+      '<div class="ag-row2">' + field('De', '<input type="date" name="start_date" required>', 'absFrom') + field('Até', '<input type="date" name="end_date" required>', 'absTo') + '</div>' +
+      field('Motivo (opcional)', '<textarea name="reason" rows="2" maxlength="500"></textarea>', 'absReason') +
+      '<p class="ag-note">O pedido fica pendente até um gestor aprovar. O motivo só é visto por você e pelos gestores.</p>' +
+      '<p class="ag-error" data-error role="alert" hidden></p><div class="ag-btns"><button type="button" class="ag-btn" data-act="abs-cancel">Cancelar</button><button type="submit" class="ag-btn ag-btn--primary" data-submit>Enviar pedido</button></div></form>';
+  }
+  function absSubmit(form) {
+    var fd = new FormData(form), payload = { employee_id: +(fd.get('employee_id') || cfg.employeeId), absence_type: fd.get('absence_type'), start_date: fd.get('start_date'), end_date: fd.get('end_date'), reason: (fd.get('reason') || '').trim() || null };
+    if (!payload.employee_id) { showError(form, 'Seu usuário não tem colaborador vinculado nesta empresa.'); return; }
+    if (!payload.start_date || !payload.end_date) { showError(form, 'Informe as datas.'); return; }
+    var btn = form.querySelector('[data-submit]'); btn.disabled = true;
+    api(base() + '/work-journey/absences', { json: payload }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok || res.body.success === false) { showError(form, errText(res, 'Não foi possível enviar o pedido.')); return; }
+      S.req.form = false; toast('Pedido de ausência enviado.'); loadReq();
+    });
+  }
+  function approve(kind, id, node) {
+    var url = base() + '/work-journey/' + (kind === 'abs' ? 'absences' : 'transfers') + '/' + id + '/approve';
+    node.disabled = true; track('request_approve', kind === 'abs' ? 'absence' : 'transfer');
+    api(url, { json: {} }).then(function (res) {
+      if (!res.ok || res.body.success === false) { node.disabled = false; toast(errText(res, 'Não foi possível aprovar.'), true); return; }
+      toast('Aprovado.'); loadReq();
+    });
+  }
+  function recurTxt(r) {
+    var c = r.recurrence_config || {};
+    if (r.recurrence_type === 'daily') return 'Todo dia';
+    if (r.recurrence_type === 'weekly') return (c.weekdays && c.weekdays.length ? c.weekdays.map(function (d) { return WD[d]; }).join(', ') : 'Segunda') + ' (toda semana)';
+    if (r.recurrence_type === 'monthly') return 'Dias ' + ((c.days && c.days.length) ? c.days.join(', ') : '1') + ' do mês';
+    if (r.recurrence_type === 'annual') return c.mmdd ? 'Todo ano em ' + c.mmdd.slice(3) + '/' + c.mmdd.slice(0, 2) : 'Anual';
+    if (r.recurrence_type === 'sporadic') return c.date ? 'Em ' + dmy(c.date) : 'Pontual';
+    return r.recurrence_type;
+  }
+  function loadRules() {
+    var K = S.rules, emp = planEmployee(); K.loading = true; K.error = null;
+    if (!emp) { K.loading = false; K.error = 'Seu usuário não tem colaborador vinculado nesta empresa.'; renderLayer(); return; }
+    api(base() + '/work-journey/rules?employee_id=' + encodeURIComponent(emp)).then(function (res) {
+      K.loading = false;
+      if (!res.ok || !res.body.success) K.error = errText(res, 'Não foi possível carregar as regras.');
+      else K.items = res.body.rules || [];
+      if (S.layer && S.layer.kind === 'rules') renderLayer();
+    });
+  }
+  function rulesHtml() {
+    var K = S.rules;
+    if (K.form) return ruleFormHtml();
+    var out = '<h3 id="agDlg">Regras de recorrência</h3><p class="ag-meta">Obrigações que se repetem e entram sozinhas na sua agenda' + (S.filters.scope === 'all' && S.filters.employee ? ' (de ' + h(empName(S.filters.employee)) + ')' : '') + '.</p>';
+    if (K.error) out += '<p class="ag-error" role="alert">' + h(K.error) + '</p>';
+    if (K.loading) return out + '<p class="ag-meta">Carregando…</p>';
+    out += '<div class="ag-btns ag-btns--start"><button type="button" class="ag-btn ag-btn--primary" data-act="rule-new">+ Nova regra</button></div>';
+    if (!K.items.length && !K.error) out += '<p class="ag-state">Nenhuma regra ainda. Crie a primeira, por exemplo "Conferir o caixa" todo dia.</p>';
+    else out += '<div class="ag-req-list">' + K.items.map(function (r) {
+      return '<div class="ag-req' + (r.is_active ? '' : ' is-off') + '"><div class="ag-req__top"><b>' + h(r.title) + '</b>' + (r.is_active ? '' : statusChip('cancelled', 'Pausada')) + '</div>' +
+        '<small>' + h(recurTxt(r)) + ' · ' + dur(r.estimated_minutes) + '</small>' +
+        '<div class="ag-req__btns"><button type="button" class="ag-btn ag-btn--sm" data-act="rule-edit" data-id="' + r.id + '">Editar</button><button type="button" class="ag-btn ag-btn--sm ag-btn--danger" data-act="rule-del" data-id="' + r.id + '">Excluir</button></div></div>';
+    }).join('') + '</div>';
+    if (K.confirmDelete) out += '<div class="ag-confirm" role="alert"><span>Excluir “' + h(K.confirmDelete.title) + '”?</span><button type="button" class="ag-btn ag-btn--danger ag-btn--sm" data-act="rule-del-yes">Excluir</button><button type="button" class="ag-btn ag-btn--sm" data-act="rule-del-no">Cancelar</button></div>';
+    return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close">Fechar</button></div>';
+  }
+  function ruleNew() { return { id: null, title: '', description: '', recurrence_type: 'weekly', weekdays: [0], days: '1', date: '', minutes: 60, priority: 'normal', active: true, start_date: '', end_date: '', preferred_block_id: null }; }
+  function ruleFormHtml() {
+    var f = S.rules.form, t = f.recurrence_type;
+    var out = '<h3 id="agDlg">' + (f.id ? 'Editar regra' : 'Nova regra') + '</h3><form class="ag-form" data-ruleform novalidate>' +
+      field('O que precisa ser feito', '<input type="text" name="title" maxlength="180" value="' + h(f.title) + '" required>', 'ruTitle') +
+      field('Repete', '<select name="recurrence_type" data-rtype>' + [['daily', 'Todo dia'], ['weekly', 'Toda semana'], ['monthly', 'Todo mês'], ['annual', 'Todo ano'], ['sporadic', 'Uma data só']].map(function (o) { return '<option value="' + o[0] + '"' + (t === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>', 'ruType');
+    if (t === 'weekly') out += '<div class="ag-field"><span>Dias da semana</span><div class="ag-wdays" role="group" aria-label="Dias da semana">' + WD.map(function (n, i) { return '<button type="button" data-act="rule-day" data-d="' + i + '" aria-pressed="' + (f.weekdays.indexOf(i) >= 0) + '">' + n + '</button>'; }).join('') + '</div></div>';
+    if (t === 'monthly') out += field('Dias do mês (separe por vírgula)', '<input type="text" name="days" inputmode="numeric" value="' + h(f.days) + '" placeholder="1, 15">', 'ruDays');
+    if (t === 'annual' || t === 'sporadic') out += field(t === 'annual' ? 'Dia e mês' : 'Data', '<input type="date" name="date" value="' + h(f.date) + '" required>', 'ruDate');
+    out += '<div class="ag-row2">' + field('Tempo estimado', '<select name="minutes">' + [15, 30, 45, 60, 90, 120, 180, 240].map(function (m) { return '<option value="' + m + '"' + (+f.minutes === m ? ' selected' : '') + '>' + dur(m) + '</option>'; }).join('') + '</select>', 'ruMin') +
+      field('Prioridade', '<select name="priority">' + [['low', 'Baixa'], ['normal', 'Normal'], ['high', 'Alta'], ['urgent', 'Urgente']].map(function (o) { return '<option value="' + o[0] + '"' + (f.priority === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>', 'ruPri') + '</div>' +
+      '<label class="ag-check"><input type="checkbox" name="active"' + (f.active ? ' checked' : '') + '><span>Regra ativa</span></label>' +
+      '<p class="ag-error" data-error role="alert" hidden></p><div class="ag-btns"><button type="button" class="ag-btn" data-act="rule-back">Cancelar</button><button type="submit" class="ag-btn ag-btn--primary" data-submit>Salvar</button></div></form>';
+    return out;
+  }
+  function ruleSubmit(form) {
+    var f = S.rules.form, fd = new FormData(form), type = fd.get('recurrence_type'), cfgR = {};
+    f.title = (fd.get('title') || '').trim();
+    if (!f.title) { showError(form, 'Informe o que precisa ser feito.'); return; }
+    if (type === 'weekly') { if (!f.weekdays.length) { showError(form, 'Escolha ao menos um dia da semana.'); return; } cfgR = { weekdays: f.weekdays.slice().sort() }; }
+    if (type === 'monthly') {
+      var days = String(fd.get('days') || '').split(/[,\s]+/).map(function (x) { return parseInt(x, 10); }).filter(function (n) { return n >= 1 && n <= 31; });
+      if (!days.length) { showError(form, 'Informe ao menos um dia do mês (1 a 31).'); return; }
+      cfgR = { days: days };
+    }
+    if (type === 'annual' || type === 'sporadic') {
+      var dt = fd.get('date'); if (!dt) { showError(form, 'Informe a data.'); return; }
+      cfgR = type === 'annual' ? { mmdd: dt.slice(5) } : { date: dt };
+    }
+    var payload = { employee_id: +planEmployee(), preferred_block_id: f.preferred_block_id, title: f.title, description: f.description || null, item_type: 'manual', recurrence_type: type, recurrence_config: cfgR, estimated_minutes: +fd.get('minutes'), priority: fd.get('priority'), start_date: f.start_date || null, end_date: f.end_date || null, is_active: !!fd.get('active') };
+    var btn = form.querySelector('[data-submit]'); btn.disabled = true;
+    api(base() + '/work-journey/rules' + (f.id ? '/' + f.id : ''), { method: f.id ? 'PUT' : 'POST', json: payload }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok || res.body.success === false) { showError(form, errText(res, 'Não foi possível salvar a regra.')); return; }
+      S.rules.form = null; toast('Regra salva.'); loadRules(); load();
     });
   }
 
@@ -949,12 +1096,26 @@
     out += '<p class="ag-error" data-error role="alert" hidden></p><div class="ag-btns"><button type="submit" class="ag-btn ag-btn--primary" data-submit>' + (ev ? 'Salvar' : 'Criar') + '</button><button type="button" class="ag-btn" data-act="close">Cancelar</button></div></form>';
     return out;
   }
+  function menuItem(act, title, sub, badge) {
+    return '<button type="button" class="ag-menu__btn" data-act="' + act + '">' + title + (badge ? ' <span class="ag-badge">' + badge + '</span>' : '') + '<small>' + sub + '</small></button>';
+  }
   function menuHtml() {
+    var pend = cfg.canViewAll ? S.req.pending : 0;
     var out = '<h3 id="agDlg">Mais opções</h3><div class="ag-menu">' +
-      '<a href="' + h(cfg.legacyUrl) + '" data-track-legacy>Calendário operacional (versão anterior)<small>Planejamento por capacidade</small></a>' +
-      '<button type="button" class="ag-menu__btn" data-act="pb-open">Meus blocos<small>' + (cfg.personBlocks ? 'Seu dia, valendo para todas as empresas' : 'Organize seu dia em um só lugar') + '</small></button>' +
-      '<a href="/companies/' + cfg.companyId + '/work-journey/report">Relatório gerencial<small>PDF da jornada</small></a>';
+      '<p class="ag-menu__sec">Planejamento</p>' +
+      menuItem('pb-open', 'Blocos de horário', cfg.personBlocks ? 'Seu dia, valendo para todas as empresas' : 'Organize seu dia em um só lugar') +
+      menuItem('rules-open', 'Regras de recorrência', 'Obrigações que se repetem todo dia, semana ou mês') +
+      menuItem('req-open-abs', 'Ausências', 'Férias, ausências e atestados', pend ? '' : '') +
+      menuItem('req-open-trf', 'Transferências', 'Pedidos de troca de responsável');
+    if (cfg.canViewAll) {
+      out += '<p class="ag-menu__sec">Gestão</p>' +
+        (pend ? '<button type="button" class="ag-menu__btn ag-menu__btn--alert" data-act="req-open-pending">Aprovações pendentes <span class="ag-badge">' + pend + '</span><small>Ausências e transferências aguardando decisão</small></button>' : '') +
+        '<a href="/companies/' + cfg.companyId + '/work-journey/report">Relatório gerencial<small>PDF da jornada</small></a>';
+    }
+    out += '<p class="ag-menu__sec">Integração</p>';
     if (S.google.configured) out += '<a href="/agenda/google">Conexão com o Google<small>Gerenciar</small></a>';
+    out += '<p class="ag-menu__sec">Versão anterior</p>' +
+      '<a href="' + h(cfg.legacyUrl) + '" data-track-legacy>Calendário operacional<small>Tela antiga de planejamento por capacidade</small></a>';
     return out + '</div><div class="ag-btns"><button type="button" class="ag-btn" data-act="close" data-autofocus>Fechar</button></div>';
   }
   function googleHtml() {
@@ -981,6 +1142,8 @@
     else if (L.kind === 'est') inner = estHtml();
     else if (L.kind === 'move') inner = moveHtml();
     else if (L.kind === 'pblocks') inner = pbHtml();
+    else if (L.kind === 'req') inner = reqHtml();
+    else if (L.kind === 'rules') inner = rulesHtml();
     else if (L.kind === 'sug') inner = sugHtml();
     else inner = googleHtml();
     host.innerHTML = sheetWrap(inner, panel, 'agDlg');
@@ -1093,10 +1256,15 @@
     var t = ev.target;
     if (t.matches('[data-fscope]')) { S.filters.scope = t.value; S.filters.employee = ''; renderFilters(); load(); loadLate(); loadEstCount(); return; }
     if (t.matches('[data-femp]')) { S.filters.employee = t.value; load(); loadLate(); loadEstCount(); return; }
+    if (t.matches('[data-rtype]')) { var rf = S.rules.form, fd2 = new FormData(t.form); rf.title = (fd2.get('title') || ''); rf.minutes = +fd2.get('minutes'); rf.priority = fd2.get('priority'); rf.active = !!fd2.get('active'); rf.recurrence_type = t.value; renderLayer(); return; }
     if (t.matches('[data-pdec]')) { var dd = S.pb.decisions[t.dataset.pid]; if (dd) { var k2 = t.dataset.pdec; dd[k2] = k2 === 'accept' ? t.checked : t.value; if (k2 === 'accept') renderLayer(); } return; }
     if (t.matches('[data-lsort]')) { S.late.sort = t.value; track('late_sort', t.value); renderLate(); loadLate(); }
   });
   root.addEventListener('submit', function (ev) {
+    var aform = ev.target.closest('[data-absform]');
+    if (aform) { ev.preventDefault(); absSubmit(aform); return; }
+    var rform = ev.target.closest('[data-ruleform]');
+    if (rform) { ev.preventDefault(); ruleSubmit(rform); return; }
     var pform = ev.target.closest('[data-pbform]');
     if (pform) { ev.preventDefault(); pbSubmit(pform); return; }
     var form = ev.target.closest('[data-form]');
@@ -1112,6 +1280,37 @@
     if (name === 'close') return closeLayer();
     if (name === 'retry') return load();
     if (name === 'team-filter') { S.team.filter = node.dataset.f; track('team_filter', S.team.filter); renderMain(); return; }
+    if (name === 'req-open-abs' || name === 'req-open-trf' || name === 'req-open-pending') {
+      S.req.tab = name === 'req-open-trf' ? 'trf' : 'abs'; S.req.form = false; track('config_open', S.req.tab === 'abs' ? 'absences' : 'transfers');
+      if (name === 'req-open-pending' && S.req.data && !S.req.data.absences.some(function (a) { return a.status === 'pending'; }) && S.req.data.transfers.some(function (t) { return t.status === 'pending'; })) S.req.tab = 'trf';
+      openLayer({ kind: 'req' }, node); loadReq(); return;
+    }
+    if (name === 'req-tab') { S.req.tab = node.dataset.tab; S.req.form = false; renderLayer(); return; }
+    if (name === 'abs-new') { S.req.form = true; renderLayer(); return; }
+    if (name === 'abs-cancel') { S.req.form = false; renderLayer(); return; }
+    if (name === 'abs-approve') return approve('abs', node.dataset.id, node);
+    if (name === 'trf-approve') return approve('trf', node.dataset.id, node);
+    if (name === 'rules-open') { track('config_open', 'rules'); S.rules.form = null; S.rules.confirmDelete = null; openLayer({ kind: 'rules' }, node); loadRules(); return; }
+    if (name === 'rule-new') { S.rules.form = ruleNew(); renderLayer(); return; }
+    if (name === 'rule-back') { S.rules.form = null; renderLayer(); return; }
+    if (name === 'rule-edit') {
+      var rr = S.rules.items.filter(function (x) { return String(x.id) === node.dataset.id; })[0]; if (!rr) return;
+      var cc = rr.recurrence_config || {};
+      S.rules.form = { id: rr.id, title: rr.title, description: rr.description || '', recurrence_type: rr.recurrence_type, weekdays: (cc.weekdays || [0]).map(Number), days: (cc.days || [1]).join(', '), date: rr.recurrence_type === 'annual' ? '2026-' + (cc.mmdd || '01-01') : (cc.date || ''), minutes: rr.estimated_minutes, priority: rr.priority, active: rr.is_active, start_date: rr.start_date || '', end_date: rr.end_date || '', preferred_block_id: rr.preferred_block_id };
+      renderLayer(); return;
+    }
+    if (name === 'rule-day') { var rd = +node.dataset.d, wl = S.rules.form.weekdays, wi = wl.indexOf(rd); if (wi >= 0) wl.splice(wi, 1); else wl.push(rd); node.setAttribute('aria-pressed', String(wl.indexOf(rd) >= 0)); return; }
+    if (name === 'rule-del') { S.rules.confirmDelete = S.rules.items.filter(function (x) { return String(x.id) === node.dataset.id; })[0] || null; renderLayer(); return; }
+    if (name === 'rule-del-no') { S.rules.confirmDelete = null; renderLayer(); return; }
+    if (name === 'rule-del-yes') {
+      var del = S.rules.confirmDelete; if (!del) return; node.disabled = true;
+      api(base() + '/work-journey/rules/' + del.id, { method: 'DELETE' }).then(function (res) {
+        S.rules.confirmDelete = null;
+        if (!res.ok || res.body.success === false) { toast(errText(res, 'Não foi possível excluir a regra.'), true); renderLayer(); return; }
+        toast('Regra excluída.'); loadRules(); load();
+      });
+      return;
+    }
     if (name === 'pb-open') { track('blocks_edit_open'); S.pb.mode = 'list'; S.pb.form = null; S.pb.confirmRevert = false; S.pb.confirmDelete = null; renderLayer0(); return; }
     if (name === 'pb-new') { S.pb.form = pbNewForm(); S.pb.mode = 'form'; renderLayer(); return; }
     if (name === 'pb-edit') { var eb0 = S.pb.blocks.filter(function (b) { return String(b.id) === node.dataset.id; })[0]; if (eb0) { S.pb.form = { id: eb0.id, name: eb0.name, start: eb0.start, end: eb0.end, mode: eb0.mode, weekdays: eb0.weekdays.slice(), types: eb0.preferred_item_types.slice() }; S.pb.mode = 'form'; renderLayer(); } return; }
@@ -1235,4 +1434,5 @@
   loadLate();
   loadGoogle();
   loadEstCount();
+  if (cfg.canViewAll) loadReq();
 })();

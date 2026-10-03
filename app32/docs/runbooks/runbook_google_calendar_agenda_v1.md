@@ -113,3 +113,16 @@ Tipo: Runbook. Escopo: tela `/agenda` e envio app → Google (Fase 2). Leitura d
   extras (`person_mode`, `person_mode_note`, `person_blocks`, ou `warning` nas gravações/exclusões), avisando que os blocos por empresa já não definem o dia dele.
 - **Fora desta etapa:** gerenciar blocos da pessoa por MCP (listar/salvar); reapontar o `block_id` preferido dos itens da jornada para o bloco da pessoa.
 
+## Fase 5: configurar na Agenda (2026-10-04)
+- **Sem migração. Deploy `quick`.**
+- **Menu ⋮ reorganizado** (RF-NAV-5) em seções: Planejamento (Blocos de horário, Regras de recorrência, Ausências, Transferências), Gestão (Aprovações pendentes com contador, Relatório gerencial; só para quem vê a empresa toda),
+  Integração (Google) e Versão anterior (Calendário operacional).
+- **Regras de recorrência:** antes só existiam por API/MCP, sem tela. Agora lista, cria, edita e exclui (diária, semanal, mensal, anual ou pontual), com tempo estimado e prioridade. Usa `/work-journey/rules` (sem mudança de contrato).
+  O bloco preferido legado de uma regra existente é preservado na edição; a tela não o altera.
+- **Ausências e Transferências:** `GET /api/companies/<id>/agenda/requests` devolve a lista **com escopo** (colaborador: só as próprias, e as transferências em que é origem ou destino; gestor: a empresa) e o total de pendentes.
+  Pedir ausência usa `POST /work-journey/absences`. **Aprovar continua só para gestor/administrador** (`.../approve`), sem mudança. A transferência é pedida na tela do item (como antes); a Agenda acompanha e aprova.
+- **Correção de privacidade:** `GET /work-journey/absences` e `/transfers` sem `employee_id` devolviam a empresa inteira (inclusive o motivo, como atestado) a qualquer pessoa com `processes:view`. Agora quem não é gestor recebe só as próprias.
+  Clientes que já passam `employee_id` não mudam.
+- Telemetria: `config_open` (rules, absences, transfers) e `request_approve` (absence, transfer).
+- **Decisões que seguem em aberto (produto):** desligar a tela antiga e ativar o redirecionamento de `/calendar` para `/agenda` (depende do teste de usabilidade em andamento); agenda travada como blocos de horário no Google (opcional, adiado).
+

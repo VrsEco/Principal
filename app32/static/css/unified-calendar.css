@@ -380,8 +380,7 @@
 
 
 /* ---------- meus blocos (Fase 3) ---------- */
-.ag-menu__btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; border: 1px solid var(--ag-line); background: var(--ag-surface); border-radius: 12px; padding: 12px; min-height: 48px; font-weight: 700; }
-.ag-menu__btn small { color: var(--ag-muted); font-weight: 500; }
+.ag-menu__btn { width: 100%; text-align: left; background: none; border: 0; }
 .ag-pb-list { display: flex; flex-direction: column; gap: 8px; }
 .ag-pb { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--ag-line); border-radius: 12px; background: var(--ag-surface); }
 .ag-pb.is-off { opacity: .6; }
@@ -456,3 +455,20 @@
 .ag-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .ag-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 .k-act { background: var(--ag-act); } .k-inst { background: var(--ag-inst); } .k-goog { background: var(--ag-goog); } .k-meet { background: var(--ag-meet); }
+
+
+/* ---------- configurar: ausências, transferências e regras (Fase 5) ---------- */
+.ag-menu__sec { margin: 10px 0 2px; font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ag-muted); }
+.ag-menu__sec:first-child { margin-top: 0; }
+.ag-menu .ag-menu__btn--alert { background: #fdebd0; border-radius: 10px; }
+.ag-btns--start { justify-content: flex-start; }
+.ag-req-list { display: flex; flex-direction: column; gap: 8px; }
+.ag-req { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border: 1px solid var(--ag-line); border-radius: 12px; background: var(--ag-surface); }
+.ag-req.is-off { opacity: .65; }
+.ag-req small { color: var(--ag-muted); overflow-wrap: anywhere; }
+.ag-req__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ag-req__btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.ag-st { font-size: .68rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--ag-line); background: var(--ag-surface-2); }
+.ag-st--pending { background: #fdebd0; color: #8a4b04; border-color: #f2cf9a; }
+.ag-st--approved { background: #e3f4ec; color: #0b6a4e; border-color: #b8e0cf; }
+.ag-st--rejected, .ag-st--cancelled { background: var(--ag-surface-2); color: var(--ag-muted); }
