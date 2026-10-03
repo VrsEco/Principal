@@ -9,7 +9,15 @@ from flask_login import current_user, login_required
 
 from models import Company, Employee, Project, Process
 from services import google_calendar_service as gcal
-from services.unified_calendar_service import EVENT_TYPES, UnifiedCalendarError, list_unified_events
+from services.agenda_telemetry_service import record_events
+from services.unified_calendar_service import (
+    EVENT_TYPES,
+    OVERDUE_SORTS,
+    OVERDUE_TYPES,
+    UnifiedCalendarError,
+    list_overdue,
+    list_unified_events,
+)
 from utils.permissions import (
     active_company_permission_required,
     can_access_company,
@@ -74,11 +82,22 @@ def _render_agenda(company_id: int):
         company=company,
         can_view_all=can_view_all,
         current_employee_id=employee.id if employee else None,
-        employees=employees,
-        projects=projects,
-        processes=processes,
+        boot={'employees': employees, 'projects': projects, 'processes': processes},
         today=date.today().isoformat(),
     )
+
+
+def _resolve_scope(company_id: int):
+    """Resolve o colaborador do escopo pedido. Devolve (employee_id, scope, resposta_de_erro)."""
+    scope = str(request.args.get('scope') or 'mine').strip().lower()
+    if scope == 'all':
+        if not has_company_full_access(company_id):
+            return None, scope, (jsonify({'success': False, 'message': 'Acesso negado à visão da empresa.'}), 403)
+        return request.args.get('employee_id', type=int), scope, None
+    employee = _current_employee(company_id)
+    if not employee:
+        return None, scope, (jsonify({'success': True, 'events': [], 'items': [], 'total': 0, 'note': 'Usuário sem colaborador vinculado.'}), 200)
+    return employee.id, scope, None
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/events', methods=['GET'])
@@ -89,17 +108,9 @@ def api_agenda_events(company_id: int):
     if not start or not end:
         return jsonify({'success': False, 'message': 'Informe start e end (AAAA-MM-DD).'}), 400
 
-    scope = str(request.args.get('scope') or 'mine').strip().lower()
-    employee_id = None
-    if scope == 'all':
-        if not has_company_full_access(company_id):
-            return jsonify({'success': False, 'message': 'Acesso negado à visão da empresa.'}), 403
-        employee_id = request.args.get('employee_id', type=int)
-    else:
-        employee = _current_employee(company_id)
-        if not employee:
-            return jsonify({'success': True, 'events': [], 'note': 'Usuário sem colaborador vinculado.'})
-        employee_id = employee.id
+    employee_id, scope, error = _resolve_scope(company_id)
+    if error:
+        return error
 
     raw_types = {t.strip() for t in str(request.args.get('types') or '').split(',') if t.strip()}
     want_google = 'google_event' in raw_types and scope != 'all'
@@ -120,6 +131,39 @@ def api_agenda_events(company_id: int):
             payload['google_error'] = str(exc)
     payload['events'] = events
     return jsonify(payload)
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/late', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_late(company_id: int):
+    """Atrasadas ordenadas (padrão: mais antigas primeiro) e filtradas por tipo."""
+    employee_id, _scope, error = _resolve_scope(company_id)
+    if error:
+        return error
+    sort = str(request.args.get('sort') or 'old').strip().lower()
+    if sort not in OVERDUE_SORTS:
+        return jsonify({'success': False, 'message': 'Ordenação inválida.'}), 400
+    raw_types = {t.strip() for t in str(request.args.get('types') or '').split(',') if t.strip()}
+    types = (raw_types & set(OVERDUE_TYPES)) if raw_types else None
+    try:
+        result = list_overdue(company_id, date.today(), employee_id=employee_id, types=types, sort=sort)
+    except UnifiedCalendarError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+    return jsonify({'success': True, **result})
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/telemetry', methods=['POST'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_telemetry(company_id: int):
+    """Eventos de uso da Agenda (só nome da ação e detalhe curto, nunca conteúdo dos itens)."""
+    payload = request.get_json(silent=True) or {}
+    try:
+        saved = record_events(company_id, current_user.id, payload.get('device'), payload.get('events') or [])
+    except Exception:
+        return jsonify({'success': False}), 500
+    return jsonify({'success': True, 'saved': saved})
 
 
 # ---------------------------------------------------------------- Google Calendar

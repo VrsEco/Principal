@@ -24,7 +24,7 @@ from flask import current_app
 from itsdangerous import BadData, URLSafeTimedSerializer
 
 from models import GoogleCalendarConnection, GoogleCalendarEventLink, db
-from services.unified_calendar_service import list_unified_events
+from services.unified_calendar_service import GOOGLE_SYNC_TYPES, list_unified_events
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ REVALIDATE_MINUTES = 5
 MAX_GOOGLE_EVENTS = 250
 MAX_ALL_DAY_SPAN = 31
 STATE_MAX_AGE_SECONDS = 600
-TYPE_PREFIX = {"meeting": "Reunião", "project_task": "Atividade", "process_instance": "Instância"}
+TYPE_PREFIX = {"meeting": "Reunião", "project_task": "Atividade", "process_instance": "Instância", "manual": "Evento avulso"}
 
 
 class GoogleCalendarError(Exception):
@@ -283,7 +283,7 @@ def sync_range(user_id: int, targets: list[tuple[int, int]], start: date, end: d
 
 def _sync_company(session, conn, company_id: int, employee_id: int, start: date, end: date,
                   budget: list[int]) -> dict[str, int]:
-    events = list_unified_events(company_id, start, end, employee_id=employee_id)
+    events = list_unified_events(company_id, start, end, employee_id=employee_id, types=GOOGLE_SYNC_TYPES)
     links = {
         (l.source_type, l.source_id): l
         for l in GoogleCalendarEventLink.query.filter(

@@ -25,3 +25,17 @@ Tipo: Runbook. Escopo: tela `/agenda` e envio app → Google (Fase 2). Leitura d
 - `/agenda/google` é a tela de conexão/reconexão. Após reconectar, executa automaticamente a sincronização de -30 a +60 dias.
 - Dois sentidos: Versus → Google grava eventos; Google → Versus é leitura ao vivo (somente consulta, sem armazenar), ignorando eventos criados pelo Versus e cancelados. Limite de 250 eventos por consulta.
 - Em modo “Teste” do consentimento Google o refresh token expira em ~7 dias: este fluxo é o caminho esperado de reconexão.
+
+## Agenda única (Fase 1 da SPEC `agenda_unificada_blocos_pessoa_v1.md`)
+- Menu lateral: um único item **Agenda** (`/agenda`). O Calendário Operacional segue em `/calendar` e `/companies/<id>/calendar`,
+  acessível pelo menu de três pontos da Agenda ("versão anterior") e por um botão "Ir para a nova Agenda" na tela antiga.
+  O redirecionamento de `/calendar` para `/agenda` só será ativado ao fim da transição (RF-NAV-2).
+- Visões Dia, Semana e Mês. Eventos avulsos (`work_calendar_events` com `source_type = manual`) aparecem na Agenda quando há colaborador definido
+  (escopo "Somente meus" ou colaborador escolhido pelo gestor). **Não são enviados ao Google** (D9 da SPEC).
+- Rotas novas (todas por empresa ativa, permissão `processes:view`): `GET /api/companies/<id>/agenda/late?sort=old|new|type|source&types=`,
+  `POST /api/companies/<id>/agenda/telemetry`. Criar, editar e excluir evento avulso reutilizam
+  `/api/companies/<id>/work-journey/calendar/events`.
+- Atrasadas: atividades e instâncias abertas com prazo anterior a hoje; ordem padrão mais antigas primeiro.
+- Telemetria de uso: tabela `agenda_ui_events` (migração `20261003_1100`). Só nome da ação, detalhe curto de uma lista fixa, dispositivo,
+  empresa e usuário. Nunca grava títulos nem dados dos itens. Consulta de adoção: `select event, detail, device, count(*) from agenda_ui_events group by 1,2,3`.
+- Deploy: modo `full` (roda a migração). Os assets públicos da Agenda existem em `app32/static` e em `static/` (paridade obrigatória).
