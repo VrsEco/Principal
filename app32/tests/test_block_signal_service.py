@@ -49,11 +49,43 @@ def test_concluidos_nao_consomem_e_sem_estimativa_fica_fora():
     assert out["unassigned_without_estimate"] == 1
 
 
-def test_evento_que_cruza_dois_blocos_conta_so_no_que_comeca():
+def test_evento_que_cruza_dois_blocos_e_dividido_proporcionalmente():
     blocks = [_b(1, 480, 600), _b(2, 600, 720)]
-    out = compute_block_signals(blocks, [], [{"start_minutes": 570, "duration_minutes": 90}])
-    assert out["blocks"][0]["consumed_minutes"] == 90
-    assert out["blocks"][1]["consumed_minutes"] == 0
+    out = compute_block_signals(blocks, [], [{"start_minutes": 570, "duration_minutes": 90, "ref": "e1"}])  # 9:30-11:00
+    assert out["blocks"][0]["consumed_minutes"] == 30 and out["blocks"][1]["consumed_minutes"] == 60
+    assert out["blocks"][0]["event_parts"] == [{"ref": "e1", "minutes": 30}]
+    assert out["blocks"][1]["event_parts"] == [{"ref": "e1", "minutes": 60}]
+    assert out["day"]["consumed_minutes"] == 90  # o total do evento, sem duplicar
+
+
+def test_exemplo_do_google_de_4h_em_dois_blocos_de_2h():
+    blocks = [_b(1, 840, 960), _b(2, 960, 1080)]  # 14-16 e 16-18
+    out = compute_block_signals(blocks, [], [{"start_minutes": 840, "duration_minutes": 240}])
+    assert [b["signal"]["label"] for b in out["blocks"]] == ["Completo", "Completo"]  # antes: Acima 2h e Livre 2h
+
+
+def test_trecho_fora_dos_blocos_nao_consome_e_o_resto_conta():
+    out = compute_block_signals([_b(1, 480, 600)], [], [{"start_minutes": 570, "duration_minutes": 120}])  # 9:30-11:30
+    assert out["blocks"][0]["consumed_minutes"] == 30  # só o trecho dentro do bloco
+
+
+def test_blocos_sobrepostos_contam_cada_minuto_uma_vez():
+    blocks = [_b(1, 480, 600), _b(2, 540, 660)]  # 8-10 e 9-11
+    out = compute_block_signals(blocks, [], [{"start_minutes": 540, "duration_minutes": 60}])  # 9-10 está nos dois
+    assert sum(b["consumed_minutes"] for b in out["blocks"]) == 60
+    assert out["day"]["consumed_minutes"] == 60
+
+
+def test_trecho_em_bloco_nao_operacional_nao_entra_no_dia():
+    blocks = [_b(1, 480, 540, mode="reserved_full"), _b(2, 540, 600)]
+    out = compute_block_signals(blocks, [], [{"start_minutes": 510, "duration_minutes": 60}])  # 8:30-9:30
+    assert out["blocks"][0]["consumed_minutes"] == 30 and out["blocks"][1]["consumed_minutes"] == 30
+    assert out["day"]["consumed_minutes"] == 30  # só o trecho do bloco operacional
+
+
+def test_evento_sem_duracao_nao_consome_tempo():
+    out = compute_block_signals([_b(1, 480, 600)], [], [{"start_minutes": 500, "duration_minutes": 0}])
+    assert out["blocks"][0]["consumed_minutes"] == 0 and out["blocks"][0]["event_count"] == 1
 
 
 def test_evento_fora_de_qualquer_bloco_nao_consome():

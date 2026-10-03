@@ -67,6 +67,29 @@ def _tag(entry: dict[str, Any], tag: Any, minutes: int) -> None:
         entry["by_tag"][tag] = entry["by_tag"].get(tag, 0) + minutes
 
 
+def _owner(blocks: list[dict[str, Any]], seg_start: int, seg_end: int) -> dict[str, Any] | None:
+    """Bloco dono do trecho: o primeiro operacional que o contem; senao o primeiro de qualquer modo."""
+    containing = [b for b in blocks if b["start_minutes"] <= seg_start and seg_end <= b["end_minutes"]]
+    operational = [b for b in containing if (b.get("mode") or OPERATIONAL_MODE) == OPERATIONAL_MODE]
+    return (operational or containing or [None])[0]
+
+
+def _split_event(blocks: list[dict[str, Any]], start: int, end: int) -> dict[Any, int]:
+    """Divide [start, end) entre os blocos, contando cada minuto uma vez. Trechos fora dos blocos ficam de fora."""
+    points = {start, end}
+    for block in blocks:
+        for edge in (block["start_minutes"], block["end_minutes"]):
+            if start < edge < end:
+                points.add(edge)
+    ordered = sorted(points)
+    parts: dict[Any, int] = {}
+    for a, b in zip(ordered, ordered[1:]):
+        owner = _owner(blocks, a, b)
+        if owner is not None:
+            parts[owner["id"]] = parts.get(owner["id"], 0) + (b - a)
+    return parts
+
+
 def compute_block_signals(
     blocks: Iterable[dict[str, Any]],
     items: Iterable[dict[str, Any]],
@@ -81,7 +104,8 @@ def compute_block_signals(
 
     - Concluidos nao consomem (RF-SIN-2).
     - Estimativa 0/ausente fica fora da conta e e contada em `without_estimate` (RF-SIN-5).
-    - Evento com horario consome o bloco em que COMECA (secao 5.4).
+    - Evento com horario consome PROPORCIONALMENTE os blocos que atravessa (cada minuto conta uma vez;
+      onde ha blocos sobrepostos vale o primeiro bloco operacional). Evento de dia inteiro fica fora.
     - Apenas blocos operacionais recebem sinal e entram na capacidade do dia.
     """
     blocks = sorted((dict(b) for b in blocks), key=lambda b: (b["start_minutes"], b["end_minutes"]))
@@ -100,6 +124,7 @@ def compute_block_signals(
             "event_count": 0,
             "without_estimate": 0,
             "by_tag": {},
+            "event_parts": [],
         }
 
     unassigned_without_estimate = 0
@@ -122,13 +147,17 @@ def compute_block_signals(
     for event in timed_events:
         start = int(event["start_minutes"])
         duration = max(int(event.get("duration_minutes") or 0), 0)
-        owner = next((b for b in blocks if b["start_minutes"] <= start < b["end_minutes"]), None)
-        if owner is None:
+        if duration == 0:  # sem duracao: so registra no bloco onde comeca, sem consumir tempo
+            owner = _owner(blocks, start, start + 1)
+            if owner is not None:
+                state[owner["id"]]["event_count"] += 1
             continue
-        entry = state[owner["id"]]
-        entry["event_count"] += 1
-        entry["consumed_minutes"] += duration
-        _tag(entry, event.get("tag"), duration)
+        for block_id, minutes in _split_event(blocks, start, start + duration).items():
+            entry = state[block_id]
+            entry["event_count"] += 1
+            entry["consumed_minutes"] += minutes
+            entry["event_parts"].append({"ref": event.get("ref"), "minutes": minutes})
+            _tag(entry, event.get("tag"), minutes)
 
     result_blocks: list[dict[str, Any]] = []
     operational_windows: list[tuple[int, int]] = []
