@@ -260,3 +260,5 @@ __all__ = [
 
 from .financial import FinancialReconciliationPlaybook
 __all__.append("FinancialReconciliationPlaybook")
+
+from . import estimate_defaults  # noqa: E402,F401  (registra a politica de estimativa padrao)

@@ -3,7 +3,7 @@
 {% block title %}Agenda | Versus{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='3') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='6') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -38,6 +38,7 @@
             <h2 class="ag-range" id="agRange" aria-live="polite"></h2>
         </div>
         <div class="ag-toolbar__right">
+            <button type="button" class="ag-chip ag-blocks-toggle" id="agBlocksToggle" aria-pressed="false">Blocos</button>
             <div class="ag-seg" id="agViews" role="group" aria-label="Visão">
                 <button type="button" data-view="day" aria-pressed="false">Dia</button>
                 <button type="button" data-view="week" aria-pressed="false">Semana</button>
@@ -50,6 +51,8 @@
     <div class="ag-filters" id="agFilters" role="group" aria-label="Filtros"></div>
 
     <div class="ag-banner" id="agBanner" role="alert" hidden></div>
+
+    <div class="ag-est" id="agEst" hidden></div>
 
     <section class="ag-late" id="agLate" aria-label="Atrasadas" hidden></section>
 
@@ -71,5 +74,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/unified-calendar.js', v='3') }}"></script>
+<script src="{{ url_for('static', filename='js/unified-calendar.js', v='6') }}"></script>
 {% endblock %}

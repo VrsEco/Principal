@@ -39,3 +39,23 @@ Tipo: Runbook. Escopo: tela `/agenda` e envio app → Google (Fase 2). Leitura d
 - Telemetria de uso: tabela `agenda_ui_events` (migração `20261003_1100`). Só nome da ação, detalhe curto de uma lista fixa, dispositivo,
   empresa e usuário. Nunca grava títulos nem dados dos itens. Consulta de adoção: `select event, detail, device, count(*) from agenda_ui_events group by 1,2,3`.
 - Deploy: modo `full` (roda a migração). Os assets públicos da Agenda existem em `app32/static` e em `static/` (paridade obrigatória).
+
+## Blocos, estimativas e mover (Fase 2 da SPEC)
+- **Sem migração de banco.** Deploy pode ser `quick`. A Fase 2 só lê e grava tabelas existentes (`work_journey_*`, `project_tasks`, `process_instances`).
+- **Interruptor "Blocos"** (Dia e Semana): sinais *Livre* (a partir de 30 min livres), *Completo* e *Acima* por bloco operacional, por dia. Somente leitura:
+  não cria agenda e nunca bloqueia ação. Consumo = estimativa dos itens atribuídos ao bloco + duração de reuniões, eventos avulsos e eventos do Google
+  com horário que **começam** no bloco. Concluídos, adiados, suspensos e cancelados não consomem. Item atrasado só consome depois que a **pessoa** o planeja
+  (a sugestão automática do motor antigo não conta). O mesmo item em duas agendas (dia e semana) conta uma vez.
+- **Estimativa:** atividades e instâncias **novas** sem tempo nascem com **30 min** (listener `models/estimate_defaults.py`, só no INSERT; registros existentes
+  não mudam). O motor da agenda deixou de assumir 15 min: item sem estimativa fica fora da conta e o cartão mostra "Sem estimativa".
+  **Estimar em lote** (aviso "N itens sem estimativa"): atalhos 30 min, 1 h, 2 h e 4 h; grava na origem (`estimated_hours`) e espelha em `work_journey_items`.
+  Atividade: exige poder editar (responsável, dono do projeto ou `projects:edit`); instância: responsável/dono/executor ou `processes:edit`.
+- **Mover para um bloco** (detalhe de atividade ou instância): até 5 destinos com o estado atual e o que ficaria. Mesmo dia não altera o prazo. Atividade em
+  outro dia exige motivo e usa `ProjectTaskDueDateChangeService` (vale na hora ou vira pedido pendente; a tela avisa antes). Instância só no mesmo dia.
+- **Sugerir distribuição** (Dia): o sistema aplica marcando `metadata_json.suggested_by = system`; **Aceitar** tira a marca; **Desfazer sugestão** remove só o marcado,
+  nunca o que a pessoa atribuiu.
+- Rotas novas (permissão `processes:view`): `GET .../agenda/blocks?start&end`, `GET|POST .../agenda/estimates`, `GET .../agenda/move-options?type&id`,
+  `POST .../agenda/assign`, `GET|POST .../agenda/suggestions`.
+- Telemetria nova: `blocks_toggle`, `estimate_open`, `estimate_save`, `move_open`, `move_confirm`, `suggest_open|apply|accept|undo`.
+- Observação de dados: a produção tem itens duplicados entre agendas (dia e semana); a leitura de blocos os deduplica, mas as agendas antigas continuam como estão.
+

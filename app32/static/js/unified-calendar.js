@@ -67,12 +67,17 @@
     late: { open: false, sort: 'old', types: { project_task: true, process_instance: true }, items: [], total: 0, loading: false, error: null },
     google: { configured: false, connected: false, needsReconnect: false, email: null, status: null },
     googleNote: null,
+    blocks: { on: false, days: {}, loading: false, error: null },
+    move: { key: null, loading: false, error: null, options: [], item: null, applyNow: false, sel: null, reason: '', saving: false },
+    sug: { date: null, loading: false, error: null, proposals: [], unplaced: [], saving: false },
+    est: { total: 0, items: [], loaded: false, types: { project_task: true, process_instance: true }, picks: {}, loading: false, saving: false, error: null, skipped: {} },
     layer: null,
     filtersOpen: false,
     lastFocus: null,
     toastTimer: null
   };
 
+  S.blocks.on = store('agenda.blocks') === '1';
   var saved = store('agenda.view');
   S.view = (saved === 'day' || saved === 'week' || saved === 'month') ? saved : (isMobile() ? 'day' : 'week');
 
@@ -172,6 +177,21 @@
       renderMain();
       renderChrome();
     });
+    loadBlocks();
+  }
+  function loadBlocks() {
+    var B = S.blocks;
+    if (!B.on || S.view === 'month') { B.days = {}; B.loading = false; B.error = null; return; }
+    var r = range(), key = r.start + '|' + r.end + '|' + scopeParams();
+    B.loading = true; B.error = null; B.key = key;
+    api(base() + '/agenda/blocks?start=' + r.start + '&end=' + r.end + '&' + scopeParams()).then(function (res) {
+      if (B.key !== key) return;
+      B.loading = false;
+      B.days = {};
+      if (!res.ok || !res.body.success) B.error = errText(res, 'Não foi possível carregar os blocos.');
+      else (res.body.days || []).forEach(function (d) { B.days[d.date] = d; });
+      renderMain();
+    });
   }
   function ensureLoaded() {
     var r = range(), key = r.start + '|' + r.end + '|' + typesParam() + '|' + scopeParams();
@@ -238,6 +258,210 @@
   }
   function ariaEv(e) { return TYPES[e.type] + ', ' + e.title + ', ' + whenTxt(e); }
 
+  /* ---------- estimativas (Estimar em lote) ---------- */
+  var EST_SHORTCUTS = [30, 60, 120, 240];
+  function estTypes() { return Object.keys(S.est.types).filter(function (k) { return S.est.types[k]; }).join(','); }
+  function loadEstCount() {
+    api(base() + '/agenda/estimates?limit=1&' + scopeParams()).then(function (res) {
+      if (!res.ok || !res.body.success) return;
+      S.est.total = res.body.total || 0;
+      renderEst();
+    });
+  }
+  function renderEst() {
+    var el = $('agEst'), n = S.est.total;
+    if (!n) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.innerHTML = '<span><b>' + n + (n === 1 ? ' item sem estimativa.' : ' itens sem estimativa.') + '</b> Eles ficam fora da conta dos blocos.</span>' +
+      '<button type="button" class="ag-btn ag-btn--sm" data-act="est-open" data-fk="est-open">Estimar agora</button>';
+  }
+  function loadEstList() {
+    var E = S.est, types = estTypes();
+    E.loading = true; E.error = null;
+    if (!types) { E.items = []; E.loading = false; renderLayer(); return; }
+    api(base() + '/agenda/estimates?types=' + types + '&' + scopeParams()).then(function (res) {
+      E.loading = false; E.loaded = true;
+      if (!res.ok || !res.body.success) E.error = errText(res, 'Não foi possível carregar os itens.');
+      else { E.items = res.body.items || []; E.listTotal = res.body.total || 0; }
+      if (S.layer && S.layer.kind === 'est') renderLayer();
+    });
+  }
+  function estPicks() { return Object.keys(S.est.picks).filter(function (k) { return S.est.picks[k]; }); }
+  function estCounter() {
+    var n = estPicks().length, btn = document.querySelector('[data-act="est-save"]'), c = document.getElementById('agEstCount');
+    if (c) c.textContent = n ? n + (n === 1 ? ' selecionado' : ' selecionados') : 'Escolha um tempo para cada item';
+    if (btn) { btn.disabled = !n || S.est.saving; btn.textContent = S.est.saving ? 'Salvando…' : (n ? 'Salvar ' + n : 'Salvar'); }
+  }
+  function dueTxt(d) { return d ? 'prazo ' + ddmm(d) : 'sem prazo'; }
+  function estHtml() {
+    var E = S.est, out = '<h3 id="agDlg">Estimar em lote</h3><p class="ag-meta">Itens abertos sem tempo estimado, do prazo mais próximo ao mais distante. Só os itens que você escolher serão alterados.</p>';
+    out += '<div class="ag-est-types">' + ['project_task', 'process_instance'].map(function (k) {
+      return '<button type="button" class="ag-fchip t-' + k + '" data-act="est-type" data-k="' + k + '" aria-pressed="' + (E.types[k] !== false) + '"><span>' + (k === 'project_task' ? 'Atividades' : 'Instâncias') + '</span></button>';
+    }).join('') + '</div>';
+    if (E.error) out += '<p class="ag-error" role="alert">' + h(E.error) + '</p>';
+    if (E.loading) out += '<p class="ag-meta">Carregando…</p>';
+    else if (!E.items.length) out += '<p class="ag-state">Nenhum item sem estimativa com este filtro.</p>';
+    else {
+      out += '<div class="ag-est-list">' + E.items.map(function (it) {
+        var picked = E.picks[it.key] || 0, why = E.skipped[it.key];
+        return '<div class="ag-est-row t-' + it.type + '"><div class="ag-est-row__txt"><span class="ag-tl">' + TYPES[it.type] + '</span><b>' + h(it.title) + '</b><small>' + h(it.subtitle || '') + (it.subtitle ? ' · ' : '') + dueTxt(it.due_date) + '</small>' +
+          (why ? '<small class="ag-est-row__err" role="alert">' + h(why) + '</small>' : '') + '</div><div class="ag-est-row__btns" role="group" aria-label="Tempo para ' + h(it.title) + '">' +
+          EST_SHORTCUTS.map(function (m) { return '<button type="button" data-act="est-pick" data-key="' + h(it.key) + '" data-min="' + m + '" aria-pressed="' + (picked === m) + '">' + (m >= 60 ? (m / 60) + ' h' : m + ' min') + '</button>'; }).join('') + '</div></div>';
+      }).join('') + '</div>' + (E.listTotal > E.items.length ? '<p class="ag-meta">Mostrando ' + E.items.length + ' de ' + E.listTotal + '.</p>' : '');
+    }
+    return out + '<div class="ag-btns ag-btns--sticky"><span class="ag-est-count" id="agEstCount" aria-live="polite"></span><button type="button" class="ag-btn" data-act="close">Fechar</button><button type="button" class="ag-btn ag-btn--primary" data-act="est-save" disabled>Salvar</button></div>';
+  }
+  function saveEstimates() {
+    var E = S.est, keys = estPicks();
+    if (!keys.length || E.saving) return;
+    E.saving = true; E.skipped = {}; estCounter();
+    var entries = keys.map(function (k) { var p = k.split(':'); return { type: p[0], id: +p[1], minutes: E.picks[k] }; });
+    track('estimate_save');
+    api(base() + '/agenda/estimates', { json: { entries: entries } }).then(function (res) {
+      E.saving = false;
+      if (!res.ok || !res.body.success) { E.error = errText(res, 'Não foi possível salvar as estimativas.'); renderLayer(); estCounter(); return; }
+      var saved = res.body.saved || [], skipped = res.body.skipped || [];
+      E.items = E.items.filter(function (it) { return saved.indexOf(it.key) < 0; });
+      E.listTotal = Math.max(0, (E.listTotal || 0) - saved.length);
+      saved.forEach(function (k) { delete E.picks[k]; });
+      skipped.forEach(function (x) { E.skipped[x.key] = x.reason; });
+      E.error = null;
+      toast(saved.length + (saved.length === 1 ? ' estimativa salva.' : ' estimativas salvas.') + (skipped.length ? ' ' + skipped.length + ' não puderam ser salvas.' : ''), skipped.length > 0 && !saved.length);
+      renderLayer(); estCounter(); loadEstCount(); loadBlocks();
+    });
+  }
+
+  /* ---------- mover para um bloco e sugestão de distribuição ---------- */
+  function planQs() { return scopeParams(); }
+  function loadMove() {
+    var M = S.move, e = lookup(M.key);
+    if (!e) return;
+    M.loading = true; M.error = null; M.options = []; M.sel = null; M.reason = '';
+    api(base() + '/agenda/move-options?type=' + e.type + '&id=' + e.id + '&' + planQs()).then(function (res) {
+      M.loading = false;
+      if (!res.ok || !res.body.success) M.error = errText(res, 'Não foi possível carregar os destinos.');
+      else { M.options = res.body.options || []; M.item = res.body.item || null; M.applyNow = !!res.body.due_change_applies_now; }
+      if (S.layer && S.layer.kind === 'move') renderLayer();
+    });
+  }
+  function optLabel(o) { return cap1(DOW[dow(o.date)].toLowerCase()) + ' ' + ddmm(o.date) + ' · ' + o.block_name + ' ' + o.start + '–' + o.end; }
+  function moveHtml() {
+    var M = S.move, e = lookup(M.key), out = '<h3 id="agDlg">Mover para um bloco</h3>';
+    if (e) out += '<p class="ag-meta"><b>' + h(e.title) + '</b>' + (M.item && M.item.without_estimate ? ' · sem estimativa (não altera a conta)' : (M.item ? ' · ' + dur(M.item.estimated_minutes) : '')) + '</p>';
+    if (M.error) out += '<p class="ag-error" role="alert">' + h(M.error) + '</p>';
+    if (M.loading) out += '<p class="ag-meta">Buscando os melhores blocos…</p>';
+    else if (!M.options.length && !M.error) out += '<p class="ag-state">Nenhum bloco disponível nos próximos 14 dias para este tipo de item.' + (e && e.type === 'process_instance' ? ' Instâncias só se movem entre blocos do mesmo dia.' : '') + '</p>';
+    else {
+      out += '<div class="ag-opts" role="list">' + M.options.map(function (o, i) {
+        var sel = M.sel === i;
+        var card = '<div class="ag-opt' + (sel ? ' is-sel' : '') + '" role="listitem"><button type="button" class="ag-opt__main" data-act="move-pick" data-i="' + i + '" aria-pressed="' + sel + '">' +
+          '<span class="ag-opt__title">' + h(optLabel(o)) + '</span><span class="ag-opt__states">' + sigChip(o.before, true) + '<span aria-hidden="true">→</span><span class="sr-only"> ficaria </span>' + sigChip(o.after, true) +
+          (o.changes_due_date ? '<span class="ag-tag">Muda o prazo</span>' : '') + (!o.fits ? '<span class="ag-tag ag-tag--warn">Passa da capacidade</span>' : '') + '</span></button>';
+        if (sel) {
+          if (o.needs_reason) {
+            card += '<div class="ag-opt__form"><p class="ag-note">' + (M.applyNow ? 'Você pode alterar este prazo: a mudança vale na hora.' : 'Você não pode alterar este prazo sozinho: o pedido segue para aprovação e o item fica onde está até a decisão.') + '</p>' +
+              '<label class="ag-field" for="agMoveReason">Motivo da mudança de prazo<textarea id="agMoveReason" rows="2" data-move-reason maxlength="500" placeholder="Por que mudar o prazo?">' + h(M.reason) + '</textarea></label>';
+          } else card += '<div class="ag-opt__form">';
+          card += '<p class="ag-error" data-move-error role="alert" hidden></p><button type="button" class="ag-btn ag-btn--primary" data-act="move-confirm"' + (M.saving ? ' disabled' : '') + '>' + (M.saving ? 'Movendo…' : (o.needs_reason ? (M.applyNow ? 'Mudar prazo e mover' : 'Pedir mudança de prazo') : 'Mover para cá')) + '</button></div>';
+        }
+        return card + '</div>';
+      }).join('') + '</div>';
+    }
+    return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close" data-autofocus>Fechar</button></div>';
+  }
+  function moveConfirm() {
+    var M = S.move, o = M.options[M.sel], e = lookup(M.key);
+    if (!o || !e || M.saving) return;
+    var box = $('agLayer').querySelector('[data-move-error]'), rs = $('agLayer').querySelector('[data-move-reason]');
+    M.reason = rs ? rs.value.trim() : '';
+    if (o.needs_reason && !M.reason) { box.textContent = 'Informe o motivo da mudança de prazo.'; box.hidden = false; rs.focus(); return; }
+    M.saving = true; renderLayer();
+    track('move_confirm', o.needs_reason ? 'other_day' : 'same_day');
+    api(base() + '/agenda/assign?' + planQs(), { json: { type: e.type, id: e.id, date: o.date, block_id: o.block_id, reason: M.reason || null } }).then(function (res) {
+      M.saving = false;
+      if (!res.ok || !res.body.success) { M.error = errText(res, 'Não foi possível mover o item.'); renderLayer(); return; }
+      S.layer = null; renderLayer();
+      toast(res.body.message || 'Item movido.');
+      load(); loadLate(); loadEstCount();
+    });
+  }
+  function loadSug() {
+    var G = S.sug;
+    G.loading = true; G.error = null;
+    api(base() + '/agenda/suggestions?date=' + G.date + '&' + planQs()).then(function (res) {
+      G.loading = false;
+      if (!res.ok || !res.body.success) G.error = errText(res, 'Não foi possível calcular a sugestão.');
+      else { G.proposals = res.body.proposals || []; G.unplaced = res.body.unplaced || []; }
+      if (S.layer && S.layer.kind === 'sug') renderLayer();
+    });
+  }
+  function sugHtml() {
+    var G = S.sug, out = '<h3 id="agDlg">Sugerir distribuição</h3><p class="ag-meta">' + h(cap1(longDay(G.date))) + '. O sistema só sugere; nada é bloqueado. Você pode aceitar ou desfazer depois.</p>';
+    if (G.error) out += '<p class="ag-error" role="alert">' + h(G.error) + '</p>';
+    if (G.loading) out += '<p class="ag-meta">Calculando…</p>';
+    else if (!G.proposals.length && !G.unplaced.length && !G.error) out += '<p class="ag-state">Não há itens deste dia esperando um bloco.</p>';
+    else {
+      if (G.proposals.length) out += '<div class="ag-sug-list">' + G.proposals.map(function (p) { return '<div class="ag-sug-row"><b>' + h(p.title) + '</b><small>' + dur(p.minutes) + ' → ' + h(p.block_name) + '</small></div>'; }).join('') + '</div>';
+      if (G.unplaced.length) out += '<p class="ag-sec">Não cabem (ficam sem bloco)</p><div class="ag-sug-list">' + G.unplaced.map(function (p) { return '<div class="ag-sug-row"><b>' + h(p.title) + '</b><small>' + dur(p.minutes) + '</small></div>'; }).join('') + '</div>';
+    }
+    return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close" data-autofocus>Cancelar</button>' +
+      '<button type="button" class="ag-btn ag-btn--primary" data-act="sug-apply"' + (!G.proposals.length || G.saving ? ' disabled' : '') + '>' + (G.saving ? 'Aplicando…' : 'Aplicar sugestão') + '</button></div>';
+  }
+  function sugAction(action, doneMsg) {
+    var d = S.sel;
+    api(base() + '/agenda/suggestions?' + planQs(), { json: { action: action, date: d } }).then(function (res) {
+      S.sug.saving = false;
+      if (!res.ok || !res.body.success) { toast(errText(res, 'Não foi possível concluir.'), true); return; }
+      var b = res.body;
+      S.layer = null; renderLayer();
+      toast(doneMsg(b));
+      loadBlocks();
+    });
+  }
+
+  /* ---------- blocos e sinais (somente leitura; nunca bloqueiam) ---------- */
+  function bday(d) { return S.blocks.on ? (S.blocks.days[d] || null) : null; }
+  function dur(m) { m = Math.max(0, Math.round(m)); var hh = Math.floor(m / 60), mm = m % 60; return hh && mm ? hh + 'h' + pad(mm) : (hh ? hh + 'h' : mm + 'min'); }
+  function sigChip(sig, small) {
+    if (!sig || sig.state === 'none' || !sig.label) return '';
+    return '<span class="ag-sig ag-sig--' + sig.state + (small ? ' ag-sig--sm' : '') + '">' + h(sig.label) + '</span>';
+  }
+  function dayBar(bd) {
+    var d = bd.day;
+    if (!d || d.state === 'none') return '<p class="ag-bk-day"><b>Sem expediente</b></p>';
+    var pct = d.capacity_minutes ? Math.min(100, Math.round(d.consumed_minutes / d.capacity_minutes * 100)) : 0;
+    return '<div class="ag-bk-day"><div class="ag-bk-day__txt"><b>Dia</b> ' + dur(d.consumed_minutes) + ' de ' + dur(d.capacity_minutes) + ' ' + sigChip(d, true) +
+      '</div><div class="ag-bar" role="img" aria-label="Ocupação do dia: ' + dur(d.consumed_minutes) + ' de ' + dur(d.capacity_minutes) + '"><i class="ag-bar--' + d.state + '" style="width:' + pct + '%"></i></div></div>';
+  }
+  function blocksMobile(d) {
+    var B = S.blocks;
+    if (!B.on) return '';
+    if (B.loading && !B.days[d]) return '<p class="ag-note">Carregando blocos…</p>';
+    if (B.error) return '<p class="ag-note">' + h(B.error) + '</p>';
+    var bd = B.days[d];
+    if (!bd) return '<p class="ag-note">Escolha um colaborador para ver os blocos.</p>';
+    var out = '<section class="ag-bk" aria-label="Blocos do dia">' + dayBar(bd), sc = bd.day.suggested_count || 0;
+    if (sc) out += '<div class="ag-sugbar" role="status"><span><b>' + sc + (sc === 1 ? ' item sugerido' : ' itens sugeridos') + '</b> pelo sistema.</span><span class="ag-sugbar__btns"><button type="button" class="ag-btn ag-btn--sm" data-act="sug-accept">Aceitar</button><button type="button" class="ag-btn ag-btn--sm" data-act="sug-undo">Desfazer sugestão</button></span></div>';
+    else if (bd.day.state !== 'none') out += '<div class="ag-sugbar"><span>Itens do dia sem bloco?</span><button type="button" class="ag-btn ag-btn--sm" data-act="sug-open">Sugerir distribuição</button></div>';
+    bd.blocks.forEach(function (b) {
+      out += '<div class="ag-bk-row"><span class="ag-bk-row__time">' + h(b.start) + '–' + h(b.end) + '</span><span class="ag-bk-row__name">' + h(b.name) + '</span>' +
+        sigChip(b.signal) + (b.without_estimate ? '<span class="ag-bk-row__warn">' + b.without_estimate + ' sem estimativa</span>' : '');
+      if (b.items && b.items.length) out += '<ul class="ag-bk-items">' + b.items.map(function (it) { return '<li>' + h(it.title) + ' <small>' + (it.minutes ? dur(it.minutes) : 'sem estimativa') + (it.suggested ? ' · sugerido' : '') + '</small></li>'; }).join('') + '</ul>';
+      out += '</div>';
+    });
+    return out + '</section>';
+  }
+  function blockBands(x, H0, H1) {
+    var bd = bday(x), out = '';
+    if (!bd) return '';
+    bd.blocks.forEach(function (b) {
+      var s0 = Math.max(b.start_minutes, H0), e0 = Math.min(b.end_minutes, H1);
+      if (e0 <= s0) return;
+      out += '<div class="ag-bk-band ag-bk-band--' + (b.signal.state || 'none') + '" style="top:' + ((s0 - H0) / 60 * HP) + 'px;height:' + ((e0 - s0) / 60 * HP) + 'px" aria-hidden="true"><span>' + h(b.name) + ' ' + sigChip(b.signal, true) + '</span></div>';
+    });
+    return out;
+  }
+
   /* ---------- visões ---------- */
   function dayMobile() {
     var d = S.sel, strip = '<div class="ag-strip" role="group" aria-label="Dias da semana">';
@@ -252,14 +476,14 @@
     if (!list.length) body = '<p class="ag-state">Nada marcado para este dia. Toque em Criar.</p>';
     if (all.length) body += '<p class="ag-sec">Dia todo</p><div class="ag-cards">' + all.map(card).join('') + '</div>';
     if (tm.length) body += '<p class="ag-sec">Horários</p><div class="ag-cards">' + tm.map(card).join('') + '</div>';
-    return strip + '<div class="ag-cards--day">' + body + '</div>';
+    return strip + '<div class="ag-bk-m">' + blocksMobile(d) + '</div><div class="ag-cards--day">' + body + '</div>';
   }
   function weekMobile() {
     var out = '<div class="ag-weeklist">', ws = weekStart(S.sel);
     for (var i = 0; i < 7; i++) {
       var x = add(ws, i), l = onDay(x);
       out += '<button type="button" class="ag-wrow' + (x === cfg.today ? ' is-today' : '') + '" data-go="' + x + '"><span class="ag-wrow__head">' + DOW[i] + ' ' + dnum(x) + dots(x) +
-        '<small>' + l.length + (l.length === 1 ? ' item' : ' itens') + '</small></span>' +
+        (bday(x) ? sigChip(bday(x).day, true) : '') + '<small>' + l.length + (l.length === 1 ? ' item' : ' itens') + '</small></span>' +
         '<span class="ag-wrow__txt">' + (l.length ? h(l.slice(0, 2).map(function (e) { return e.title; }).join(' · ')) : 'Livre') + '</span></button>';
     }
     return out + '</div>';
@@ -282,7 +506,7 @@
       if (e.start == null) return;
       min = Math.min(min, Math.floor(e.start / 60) * 60);
       max = Math.max(max, Math.ceil((e.start + (e.dur || 60)) / 60) * 60);
-    }); });
+    }); var bd = bday(x); if (bd) bd.blocks.forEach(function (b) { min = Math.min(min, Math.floor(b.start_minutes / 60) * 60); max = Math.max(max, Math.ceil(b.end_minutes / 60) * 60); }); });
     return [Math.max(0, min), Math.min(24 * 60, max)];
   }
   function layout(events) {
@@ -307,7 +531,7 @@
     var hr = hourRange(days), H0 = hr[0], H1 = hr[1], height = (H1 - H0) / 60 * HP;
     var head = '<div class="ag-tg__head" style="' + cols + '"><div class="ag-tg__hd is-gut"></div>';
     days.forEach(function (x) {
-      head += '<div class="ag-tg__hd' + (x === cfg.today ? ' is-today' : '') + '"><small>' + DOW[dow(x)] + '</small><b>' + dnum(x) + '</b></div>';
+      head += '<div class="ag-tg__hd' + (x === cfg.today ? ' is-today' : '') + '"><small>' + DOW[dow(x)] + '</small><b>' + dnum(x) + '</b>' + (bday(x) ? sigChip(bday(x).day, true) : '') + '</div>';
     });
     head += '</div>';
     var allday = '<div class="ag-tg__allday" style="' + cols + '"><div class="ag-tg__al is-gut">dia todo</div>';
@@ -322,7 +546,7 @@
     var body = '<div class="ag-tg__body" style="' + cols + '"><div class="ag-tg__gut" style="height:' + height + 'px">' + lab + '</div>';
     var now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
     days.forEach(function (x) {
-      var timed = onDay(x).filter(function (e) { return e.start != null; }), inner = '';
+      var timed = onDay(x).filter(function (e) { return e.start != null; }), inner = blockBands(x, H0, H1);
       layout(timed).forEach(function (it) {
         var e = it.e, top = (it.s - H0) / 60 * HP, hh = Math.max((it.f - it.s) / 60 * HP - 2, 22), w = 100 / it.lanes, left = it.lane * w;
         inner += '<button type="button" class="ag-ev t-' + e.type + (e.closed ? ' is-closed' : '') + '" data-key="' + h(e.key) + '" aria-label="' + h(ariaEv(e)) + '" style="top:' + top + 'px;height:' + hh + 'px;left:calc(' + left + '% + 2px);width:calc(' + w + '% - 4px)"><b>' + h(e.title) + '</b>' + hm(it.s) + (e.dur ? '–' + hm(it.f) : '') + '</button>';
@@ -356,7 +580,7 @@
       return;
     }
     var v = S.view, html;
-    if (v === 'day') html = dayMobile() + grid([S.sel]);
+    if (v === 'day') html = dayMobile() + '<div class="ag-bk-d">' + blocksMobile(S.sel) + '</div>' + grid([S.sel]);
     else if (v === 'week') { var ws = weekStart(S.sel), days = []; for (var i = 0; i < 7; i++) days.push(add(ws, i)); html = weekMobile() + grid(days); }
     else html = monthMobile() + monthDesktop();
     var note = S.googleNote ? '<p class="ag-note">' + h(S.googleNote) + '</p>' : '';
@@ -374,6 +598,8 @@
   }
   function renderChrome() {
     $('agRange').textContent = rangeLabel();
+    var bt = $('agBlocksToggle');
+    if (bt) { bt.setAttribute('aria-pressed', String(S.blocks.on)); bt.disabled = S.view === 'month'; bt.title = S.view === 'month' ? 'Os blocos aparecem nas visões Dia e Semana.' : ''; }
     Array.prototype.forEach.call($('agViews').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.view === S.view)); });
     var g = S.google, chip = $('agGoogleChip');
     if (!g.configured) chip.hidden = true;
@@ -453,7 +679,8 @@
         (e.closed ? '' : '<button type="button" class="ag-btn" data-act="complete-manual" data-key="' + h(e.key) + '">Marcar como concluído</button>') +
         '<button type="button" class="ag-btn ag-btn--danger" data-act="ask-delete" data-key="' + h(e.key) + '">Excluir</button></div><div data-confirm></div>';
     } else {
-      out += '<a class="ag-btn ag-btn--primary" href="' + h(e.url) + '" data-track-item="' + e.type + '" data-autofocus>Abrir página de gestão</a></div>';
+      out += '<a class="ag-btn ag-btn--primary" href="' + h(e.url) + '" data-track-item="' + e.type + '" data-autofocus>Abrir página de gestão</a>' +
+        ((e.type === 'project_task' || e.type === 'process_instance') && !e.closed ? '<button type="button" class="ag-btn" data-act="move-open" data-key="' + h(e.key) + '">Mover para um bloco</button>' : '') + '</div>';
     }
     return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close">Fechar</button></div>';
   }
@@ -518,10 +745,14 @@
     else if (L.kind === 'create') inner = createHtml(L);
     else if (L.kind === 'form') inner = formHtml(L);
     else if (L.kind === 'menu') inner = menuHtml();
+    else if (L.kind === 'est') inner = estHtml();
+    else if (L.kind === 'move') inner = moveHtml();
+    else if (L.kind === 'sug') inner = sugHtml();
     else inner = googleHtml();
     host.innerHTML = sheetWrap(inner, panel, 'agDlg');
     var f = host.querySelector('[data-autofocus]') || host.querySelector('input,select,textarea,a,button');
     if (f) f.focus();
+    if (L.kind === 'est') estCounter();
   }
   function openLayer(layer, trigger) {
     S.lastFocus = trigger || document.activeElement;
@@ -625,8 +856,8 @@
   });
   root.addEventListener('change', function (ev) {
     var t = ev.target;
-    if (t.matches('[data-fscope]')) { S.filters.scope = t.value; S.filters.employee = ''; renderFilters(); load(); loadLate(); return; }
-    if (t.matches('[data-femp]')) { S.filters.employee = t.value; load(); loadLate(); return; }
+    if (t.matches('[data-fscope]')) { S.filters.scope = t.value; S.filters.employee = ''; renderFilters(); load(); loadLate(); loadEstCount(); return; }
+    if (t.matches('[data-femp]')) { S.filters.employee = t.value; load(); loadLate(); loadEstCount(); return; }
     if (t.matches('[data-lsort]')) { S.late.sort = t.value; track('late_sort', t.value); renderLate(); loadLate(); }
   });
   root.addEventListener('submit', function (ev) {
@@ -642,6 +873,22 @@
   function act(name, node) {
     if (name === 'close') return closeLayer();
     if (name === 'retry') return load();
+    if (name === 'move-open') { track('move_open'); S.move.key = node.dataset.key; S.move.saving = false; openLayer({ kind: 'move' }, node); loadMove(); return; }
+    if (name === 'move-pick') { S.move.sel = +node.dataset.i; S.move.error = null; renderLayer(); var rf = $('agLayer').querySelector('[data-move-reason], [data-act="move-confirm"]'); if (rf) rf.focus(); return; }
+    if (name === 'move-confirm') return moveConfirm();
+    if (name === 'sug-open') { track('suggest_open'); S.sug.date = S.sel; S.sug.saving = false; S.sug.proposals = []; S.sug.unplaced = []; openLayer({ kind: 'sug' }, node); loadSug(); return; }
+    if (name === 'sug-apply') { S.sug.saving = true; track('suggest_apply'); renderLayer(); sugAction('apply', function (b) { return b.applied + (b.applied === 1 ? ' item sugerido.' : ' itens sugeridos.') + (b.unplaced && b.unplaced.length ? ' ' + b.unplaced.length + ' sem bloco.' : ''); }); return; }
+    if (name === 'sug-accept') { track('suggest_accept'); sugAction('accept', function (b) { return b.accepted + (b.accepted === 1 ? ' sugestão aceita.' : ' sugestões aceitas.'); }); return; }
+    if (name === 'sug-undo') { track('suggest_undo'); sugAction('undo', function (b) { return b.removed + (b.removed === 1 ? ' sugestão desfeita.' : ' sugestões desfeitas.'); }); return; }
+    if (name === 'est-open') { track('estimate_open'); S.est.picks = {}; S.est.skipped = {}; openLayer({ kind: 'est' }, node); loadEstList(); return; }
+    if (name === 'est-type') { var ek = node.dataset.k; S.est.types[ek] = !(S.est.types[ek] !== false); S.est.picks = {}; renderLayer(); loadEstList(); return; }
+    if (name === 'est-pick') {
+      var pk = node.dataset.key, pm = +node.dataset.min;
+      S.est.picks[pk] = S.est.picks[pk] === pm ? 0 : pm;
+      Array.prototype.forEach.call(node.parentNode.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(S.est.picks[pk] === +b.dataset.min)); });
+      estCounter(); return;
+    }
+    if (name === 'est-save') return saveEstimates();
     if (name === 'late-toggle') { S.late.open = !S.late.open; if (S.late.open) track('late_open'); keepFocus(function () { renderLate(); }); return; }
     if (name === 'create') {
       var kind = node.dataset.kind, L = S.layer || {}, date = L.date || S.sel;
@@ -690,6 +937,10 @@
   $('agToday').addEventListener('click', function () { S.sel = cfg.today; renderChrome(); ensureLoaded(); });
   $('agPrev').addEventListener('click', function () { shift(-1); });
   $('agNext').addEventListener('click', function () { shift(1); });
+  $('agBlocksToggle').addEventListener('click', function () {
+    S.blocks.on = !S.blocks.on; store('agenda.blocks', S.blocks.on ? '1' : '0'); track('blocks_toggle', S.blocks.on ? 'on' : 'off');
+    renderChrome(); if (S.blocks.on) loadBlocks(); else S.blocks.days = {}; renderMain();
+  });
   $('agCreateBtn').addEventListener('click', function () { openCreate(S.sel, null, $('agCreateBtn')); });
   $('agFilterToggle').addEventListener('click', function () { S.filtersOpen = !S.filtersOpen; renderFilters(); });
   $('agFab').addEventListener('click', function () { openCreate(S.sel, null, $('agFab')); });
@@ -703,4 +954,5 @@
   load();
   loadLate();
   loadGoogle();
+  loadEstCount();
 })();

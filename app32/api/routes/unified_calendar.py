@@ -7,9 +7,14 @@ import secrets
 from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, session
 from flask_login import current_user, login_required
 
-from models import Company, Employee, Project, Process
+from models import Company, Employee, Project, ProjectTask, Process, db
 from services import google_calendar_service as gcal
+from services.agenda_block_view_service import BlockViewError, build_block_view
+from services import block_assignment_service as assignment
 from services.agenda_telemetry_service import record_events
+from services.work_journey_base import WorkJourneyError
+from services.estimate_batch_service import ESTIMATE_TYPES, EstimateError, list_without_estimate, save_estimates
+from services.project_task_due_date_change_service import ProjectTaskDueDateChangeService
 from services.unified_calendar_service import (
     EVENT_TYPES,
     OVERDUE_SORTS,
@@ -24,6 +29,7 @@ from utils.permissions import (
     get_active_company_id,
     get_default_company_id,
     has_company_full_access,
+    has_permission,
 )
 
 unified_calendar_bp = Blueprint('unified_calendar', __name__)
@@ -152,6 +158,173 @@ def api_agenda_late(company_id: int):
     except Exception:
         return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
     return jsonify({'success': True, **result})
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/blocks', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_blocks(company_id: int):
+    """Sinais por bloco (Livre/Completo/Acima), somente leitura. Nunca bloqueia nada."""
+    start = _parse_date(request.args.get('start'))
+    end = _parse_date(request.args.get('end'))
+    if not start or not end:
+        return jsonify({'success': False, 'message': 'Informe start e end (AAAA-MM-DD).'}), 400
+    employee_id, scope, error = _resolve_scope(company_id)
+    if error:
+        return error
+    if not employee_id:
+        return jsonify({'success': True, 'days': [], 'note': 'Informe um colaborador.'})
+    extra = []
+    if scope != 'all':
+        try:
+            extra = gcal.list_google_events(current_user.id, start, end)
+        except gcal.GoogleCalendarError:
+            extra = []
+    try:
+        view = build_block_view(company_id, employee_id, start, end, extra_events=extra)
+    except BlockViewError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+    return jsonify({'success': True, **view})
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/estimates', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_estimates(company_id: int):
+    """Itens abertos sem estimativa (prazo mais próximo primeiro). `limit=1` serve de contador."""
+    employee_id, _scope, error = _resolve_scope(company_id)
+    if error:
+        return error
+    raw_types = {t.strip() for t in str(request.args.get('types') or '').split(',') if t.strip()}
+    types = (raw_types & set(ESTIMATE_TYPES)) if raw_types else None
+    try:
+        result = list_without_estimate(company_id, employee_id=employee_id, types=types, limit=request.args.get('limit', type=int) or 200)
+    except EstimateError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+    return jsonify({'success': True, **result})
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/estimates', methods=['POST'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_save_estimates(company_id: int):
+    """Grava estimativas em lote; cada item respeita a permissão de edição própria."""
+    payload = request.get_json(silent=True) or {}
+    employee = _current_employee(company_id)
+    full_edit = has_permission(company_id, 'processes', 'edit')
+
+    def can_edit_task(task, project):
+        return ProjectTaskDueDateChangeService.user_can_apply_due_date_change(task, project, company_id)
+
+    def can_edit_instance(instance):
+        if full_edit:
+            return True
+        return bool(employee and employee.id in {instance.owner_employee_id, instance.responsible_id, instance.executor_id})
+
+    try:
+        result = save_estimates(company_id, payload.get('entries') or [], can_edit_task=can_edit_task, can_edit_instance=can_edit_instance)
+    except EstimateError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+    return jsonify({'success': True, **result})
+
+
+def _planning_employee(company_id: int):
+    """Colaborador do planejamento (escrita): o próprio, ou o informado por quem vê a empresa toda."""
+    scope = str(request.args.get('scope') or (request.get_json(silent=True) or {}).get('scope') or 'mine').strip().lower()
+    if scope == 'all':
+        if not has_company_full_access(company_id):
+            return None, (jsonify({'success': False, 'message': 'Acesso negado à visão da empresa.'}), 403)
+        employee_id = request.args.get('employee_id', type=int) or (request.get_json(silent=True) or {}).get('employee_id')
+        if not employee_id:
+            return None, (jsonify({'success': False, 'message': 'Informe o colaborador.'}), 400)
+        return int(employee_id), None
+    employee = _current_employee(company_id)
+    if not employee:
+        return None, (jsonify({'success': False, 'message': 'Usuário sem colaborador vinculado.'}), 400)
+    return employee.id, None
+
+
+def _planning_call(fn):
+    try:
+        return jsonify({'success': True, **fn()})
+    except (assignment.AssignmentError, WorkJourneyError) as exc:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('agenda planning call failed')
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/move-options', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_move_options(company_id: int):
+    """Até 5 destinos para o item, com o estado atual do bloco e o que ficaria."""
+    employee_id, error = _planning_employee(company_id)
+    if error:
+        return error
+    source_type = str(request.args.get('type') or '')
+    source_id = request.args.get('id', type=int)
+    if not source_id:
+        return jsonify({'success': False, 'message': 'Informe o item.'}), 400
+    def build():
+        data = assignment.move_options(company_id, employee_id, source_type, source_id)
+        if source_type == 'project_task':
+            task = ProjectTask.query.get(source_id)
+            project = Project.query.filter_by(id=task.project_id, company_id=company_id).first() if task else None
+            data['due_change_applies_now'] = bool(task and project and ProjectTaskDueDateChangeService.user_can_apply_due_date_change(task, project, company_id))
+        return data
+
+    return _planning_call(build)
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/assign', methods=['POST'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_assign(company_id: int):
+    """Atribui o item a um bloco/dia. Atividade em outro dia exige motivo e usa o fluxo de prazo."""
+    employee_id, error = _planning_employee(company_id)
+    if error:
+        return error
+    payload = request.get_json(silent=True) or {}
+    target = _parse_date(payload.get('date'))
+    block_id = payload.get('block_id')
+    source_id = payload.get('id')
+    if not target or not block_id or not source_id:
+        return jsonify({'success': False, 'message': 'Informe item, data e bloco.'}), 400
+    return _planning_call(lambda: assignment.assign_item(
+        company_id, employee_id, str(payload.get('type') or ''), int(source_id), target, int(block_id), reason=payload.get('reason')))
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/suggestions', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_suggestions(company_id: int):
+    """Prévia da distribuição sugerida para o dia (não grava nada)."""
+    employee_id, error = _planning_employee(company_id)
+    if error:
+        return error
+    target = _parse_date(request.args.get('date'))
+    if not target:
+        return jsonify({'success': False, 'message': 'Informe a data (AAAA-MM-DD).'}), 400
+    return _planning_call(lambda: assignment.suggest_distribution(company_id, employee_id, target))
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/suggestions', methods=['POST'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_suggestions_action(company_id: int):
+    """Aplica, aceita ou desfaz a sugestão do dia. Desfazer remove só o que o sistema sugeriu."""
+    employee_id, error = _planning_employee(company_id)
+    if error:
+        return error
+    payload = request.get_json(silent=True) or {}
+    target = _parse_date(payload.get('date'))
+    action = str(payload.get('action') or '')
+    handlers = {'apply': assignment.apply_suggestions, 'accept': assignment.accept_suggestions, 'undo': assignment.undo_suggestions}
+    if not target or action not in handlers:
+        return jsonify({'success': False, 'message': 'Informe a data e a ação (apply, accept ou undo).'}), 400
+    return _planning_call(lambda: handlers[action](company_id, employee_id, target))
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/telemetry', methods=['POST'])
