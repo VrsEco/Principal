@@ -11,8 +11,10 @@ import base64
 import os
 from typing import Any, Optional
 
+from pydantic import StrictInt
 
-def register_financial_mcp_tools(mcp: Any) -> None:
+
+def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = False) -> None:
     """Registra as tools MCP financeiras no servidor informado."""
 
     def _attach_mcp_audit_payload(payload: dict | None) -> dict:
@@ -892,6 +894,42 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         if error:
             return {"success": False, "error": error}
         return {"success": True, "item": FinancialService.serialize_settlement(settlement)}
+
+    # Opt-in only from the trusted analytics registry, never a client payload.
+    if include_diagnostic_reads:
+        @mcp.tool()
+        def list_financial_reconciliation_batches(company_id: StrictInt) -> dict:
+            """Lista lotes para diagnóstico somente leitura, restrito à empresa 9."""
+            from services.financial_reconciliation_diagnostic_service import FinancialReconciliationDiagnosticService
+
+            result, error = _run_financial_action(
+                FinancialReconciliationDiagnosticService.list_batches, company_id=company_id,
+            )
+            return {"success": False, "error": error} if error else {"success": True, **result}
+
+        @mcp.tool()
+        def get_financial_reconciliation_batch(
+            company_id: StrictInt, batch_id: StrictInt, row_ids: Optional[list[StrictInt]] = None,
+        ) -> dict:
+            """Lê linhas, matches e sugestões persistidos, sem executar matching; empresa 9."""
+            from services.financial_reconciliation_diagnostic_service import FinancialReconciliationDiagnosticService
+
+            result, error = _run_financial_action(
+                FinancialReconciliationDiagnosticService.get_batch,
+                company_id=company_id, batch_id=batch_id, row_ids=row_ids,
+            )
+            return {"success": False, "error": error} if error else {"success": True, **result}
+
+        @mcp.tool()
+        def get_financial_reconciliation_settlement(company_id: StrictInt, settlement_id: StrictInt) -> dict:
+            """Lê uma baixa com metadados inversos e componentes; somente empresa 9."""
+            from services.financial_reconciliation_diagnostic_service import FinancialReconciliationDiagnosticService
+
+            result, error = _run_financial_action(
+                FinancialReconciliationDiagnosticService.get_settlement,
+                company_id=company_id, settlement_id=settlement_id,
+            )
+            return {"success": False, "error": error} if error else {"success": True, **result}
 
     @mcp.tool()
     def list_financial_import_batches(company_id: int) -> dict:
