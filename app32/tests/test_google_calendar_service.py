@@ -12,7 +12,7 @@ from flask import Flask
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from models import (Company, Employee, GoogleCalendarConnection, GoogleCalendarEventLink, Meeting, Process,
-                    ProcessInstance, Project, ProjectTask, User, db)
+                    ProcessInstance, Project, ProjectTask, User, WorkCalendarEvent, db)
 from services import google_calendar_service as svc
 
 START, END = date(2026, 10, 1), date(2026, 10, 31)
@@ -59,7 +59,7 @@ def ctx(monkeypatch):
     with app.app_context():
         db.metadata.create_all(bind=db.engine, tables=[m.__table__ for m in (
             Company, User, Employee, Meeting, Process, ProcessInstance, Project, ProjectTask,
-            GoogleCalendarConnection, GoogleCalendarEventLink)])
+            WorkCalendarEvent, GoogleCalendarConnection, GoogleCalendarEventLink)])
         db.session.add(Company(id=1, name="A"))
         db.session.add(Employee(id=10, company_id=1, name="Ana", status="active"))
         db.session.add(Project(id=1, company_id=1, name="Proj"))

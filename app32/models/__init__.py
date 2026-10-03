@@ -196,6 +196,7 @@ from .ai_capability import (
     AICapabilityAuditLog,
 )
 from .google_calendar import GoogleCalendarConnection, GoogleCalendarEventLink
+from .agenda_ui_event import AgendaUiEvent
 from .work_journey import (
     WorkJourneyBlock,
     WorkJourneyAgenda,
@@ -251,7 +252,7 @@ __all__ = [
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
     'WorkflowGapCandidate', 'WorkflowExecutionLog', 'IntegrationRequest',
     'AICapability', 'AICapabilityGrant', 'AICapabilityCompanySetting', 'AICapabilityAuditLog',
-    'GoogleCalendarConnection', 'GoogleCalendarEventLink', 'WorkJourneyBlock', 'WorkJourneyAgenda', 'WorkJourneyAgendaItem', 'WorkCalendarEvent', 'WorkJourneyRule', 'WorkJourneyItem', 'WorkJourneyAbsenceRequest', 'WorkJourneyTransferRequest',
+    'GoogleCalendarConnection', 'GoogleCalendarEventLink', 'AgendaUiEvent', 'WorkJourneyBlock', 'WorkJourneyAgenda', 'WorkJourneyAgendaItem', 'WorkCalendarEvent', 'WorkJourneyRule', 'WorkJourneyItem', 'WorkJourneyAbsenceRequest', 'WorkJourneyTransferRequest',
     'IncentiveRuleSet', 'IncentiveRule',
     'IncentiveGovernabilityMatrix', 'IncentiveCalculation',
     'IncentiveParticipant'

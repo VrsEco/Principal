@@ -1,115 +1,72 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Agenda Unificada | Versus{% endblock %}
+{% block title %}Agenda | Versus{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='3') }}">
 {% endblock %}
 
 {% block workspace_content %}
-<div class="uc-app fade-in" id="ucRoot"
+<div class="ag" id="agRoot"
      data-company-id="{{ company.id }}"
+     data-company-name="{{ company.name }}"
      data-today="{{ today }}"
      data-can-view-all="{{ can_view_all|tojson }}"
-     data-employee-id="{{ current_employee_id or '' }}">
+     data-employee-id="{{ current_employee_id or '' }}"
+     data-legacy-url="/companies/{{ company.id }}/calendar">
 
-    <header class="uc-header">
-        <div>
-            <h1 class="uc-title">Agenda Unificada</h1>
-            <p class="uc-subtitle">Reuniões, atividades de projetos e instâncias de processos em um só calendário.</p>
-        </div>
-        <div class="uc-nav" role="group" aria-label="Navegação do calendário">
-            <button type="button" class="uc-btn" id="ucPrev" aria-label="Mês anterior">‹</button>
-            <button type="button" class="uc-btn" id="ucToday">Hoje</button>
-            <button type="button" class="uc-btn" id="ucNext" aria-label="Próximo mês">›</button>
-            <h2 class="uc-month" id="ucMonthLabel" aria-live="polite"></h2>
+    <header class="ag-top">
+        <h1 class="ag-title">Agenda</h1>
+        <div class="ag-top__right">
+            <button type="button" class="ag-chip ag-filter-toggle" id="agFilterToggle" aria-expanded="false" aria-controls="agFilters">Filtros</button>
+            <button type="button" class="ag-chip" id="agGoogleChip" hidden></button>
+            <button type="button" class="ag-ibtn" id="agMenuBtn" aria-label="Mais opções" aria-haspopup="dialog">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+            </button>
         </div>
     </header>
 
-    <section class="uc-filters" aria-label="Filtros">
-        <label class="uc-chip uc-chip--meeting"><input type="checkbox" data-type="meeting" checked><span>Reuniões</span></label>
-        <label class="uc-chip uc-chip--project_task"><input type="checkbox" data-type="project_task" checked><span>Atividades</span></label>
-        <label class="uc-chip uc-chip--process_instance"><input type="checkbox" data-type="process_instance" checked><span>Instâncias</span></label>
-        <label class="uc-chip uc-chip--google_event" id="ucChipGoogle" hidden><input type="checkbox" data-type="google_event" checked disabled><span>Google</span></label>
-        {% if can_view_all %}
-        <div class="uc-scope">
-            <select id="ucScope" class="uc-select" aria-label="Escopo">
-                <option value="mine">Somente meus</option>
-                <option value="all">Toda a empresa</option>
-            </select>
-            <select id="ucEmployee" class="uc-select" aria-label="Colaborador" hidden>
-                <option value="">Todos os colaboradores</option>
-                {% for e in employees %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}
-            </select>
+    <div class="ag-toolbar">
+        <div class="ag-nav" role="group" aria-label="Navegação de datas">
+            <button type="button" class="ag-btn ag-btn--sm" id="agToday">Hoje</button>
+            <button type="button" class="ag-ibtn ag-ibtn--sm" id="agPrev" aria-label="Anterior">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button type="button" class="ag-ibtn ag-ibtn--sm" id="agNext" aria-label="Próximo">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <h2 class="ag-range" id="agRange" aria-live="polite"></h2>
         </div>
-        {% endif %}
-    </section>
-
-    <div class="uc-alert uc-alert--warn" id="ucGBanner" role="alert" hidden>
-        <span>Sua conexão com o Google Calendar expirou e a sincronização está pausada.</span>
-        <a class="uc-btn uc-btn--primary" href="/agenda/google">Reconectar agora</a>
+        <div class="ag-toolbar__right">
+            <div class="ag-seg" id="agViews" role="group" aria-label="Visão">
+                <button type="button" data-view="day" aria-pressed="false">Dia</button>
+                <button type="button" data-view="week" aria-pressed="false">Semana</button>
+                <button type="button" data-view="month" aria-pressed="false">Mês</button>
+            </div>
+            <button type="button" class="ag-btn ag-btn--primary ag-create-desktop" id="agCreateBtn" aria-haspopup="dialog">+ Criar</button>
+        </div>
     </div>
 
-    <section class="uc-google" id="ucGoogle" aria-label="Google Calendar" hidden>
-        <span class="uc-google__label" id="ucGoogleLabel">Google Calendar</span>
-        <a class="uc-btn" id="ucGConnect" href="/agenda/google/connect" hidden>Conectar Google</a>
-        <button type="button" class="uc-btn" id="ucGSync" hidden title="Envia ao Google só os compromissos desta empresa, no mês exibido">Sincronizar esta empresa</button>
-        <button type="button" class="uc-btn" id="ucGSyncAll" hidden title="Envia ao Google os compromissos de todas as empresas em que você atua, no mês exibido">Sincronizar todas as empresas</button>
-        <button type="button" class="uc-btn" id="ucGDisconnect" hidden>Desconectar</button>
-    </section>
+    <div class="ag-filters" id="agFilters" role="group" aria-label="Filtros"></div>
 
-    <div class="uc-layout">
-        <section class="uc-card uc-calendar" aria-label="Calendário">
-            <div class="uc-weekdays" aria-hidden="true">
-                <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
-            </div>
-            <div class="uc-grid" id="ucGrid" role="grid"></div>
-            <p class="uc-status" id="ucStatus" role="status"></p>
-        </section>
+    <div class="ag-banner" id="agBanner" role="alert" hidden></div>
 
-        <aside class="uc-card uc-daypanel" id="ucDayPanel" aria-label="Dia selecionado">
-            <div class="uc-daypanel__head">
-                <h3 id="ucDayTitle">Selecione um dia</h3>
-            </div>
-            <div class="uc-create" id="ucCreate" hidden>
-                <span class="uc-create__label">Criar neste dia:</span>
-                <div class="uc-create__buttons">
-                    <button type="button" class="uc-btn uc-btn--meeting" data-create="meeting">+ Reunião</button>
-                    <button type="button" class="uc-btn uc-btn--project_task" data-create="project_task">+ Atividade</button>
-                    <button type="button" class="uc-btn uc-btn--process_instance" data-create="process_instance">+ Instância</button>
-                </div>
-            </div>
-            <ul class="uc-list" id="ucDayList"></ul>
-        </aside>
-    </div>
+    <section class="ag-late" id="agLate" aria-label="Atrasadas" hidden></section>
 
-    <div class="uc-modal" id="ucModal" hidden>
-        <div class="uc-modal__backdrop" data-close></div>
-        <form class="uc-modal__dialog" id="ucForm" role="dialog" aria-modal="true" aria-labelledby="ucModalTitle">
-            <h3 id="ucModalTitle"></h3>
-            <label class="uc-field">Título
-                <input type="text" id="ucFTitle" maxlength="255" required>
-            </label>
-            <label class="uc-field" data-for="project_task" hidden>Projeto
-                <select id="ucFProject">
-                    {% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-                </select>
-            </label>
-            <label class="uc-field" data-for="process_instance" hidden>Processo
-                <select id="ucFProcess">
-                    {% for p in processes %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
-                </select>
-            </label>
-            <label class="uc-field">Data
-                <input type="date" id="ucFDate" required>
-            </label>
-            <p class="uc-error" id="ucFError" role="alert" hidden></p>
-            <div class="uc-modal__actions">
-                <button type="button" class="uc-btn" data-close>Cancelar</button>
-                <button type="submit" class="uc-btn uc-btn--primary" id="ucFSubmit">Criar e abrir</button>
-            </div>
-        </form>
-    </div>
+    <main class="ag-main" id="agMain" aria-live="polite" aria-busy="true">
+        <p class="ag-state">Carregando a agenda…</p>
+    </main>
+
+    <button type="button" class="ag-fab" id="agFab" aria-label="Criar" aria-haspopup="dialog">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Criar
+    </button>
+
+    <div id="agLayer"></div>
+    <div class="ag-toast" id="agToast" role="status" aria-live="polite" hidden></div>
+    <noscript><p class="ag-state">Ative o JavaScript para usar a Agenda.</p></noscript>
+
+    <script type="application/json" id="agBoot">{{ boot|tojson }}</script>
 </div>
 {% endblock %}
 

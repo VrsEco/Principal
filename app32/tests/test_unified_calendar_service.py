@@ -11,7 +11,7 @@ from flask import Flask
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from models import Company, Employee, Meeting, Process, ProcessInstance, Project, ProjectTask, db
+from models import Company, Employee, Meeting, Process, ProcessInstance, Project, ProjectTask, WorkCalendarEvent, db
 from services.unified_calendar_service import UnifiedCalendarError, list_unified_events
 
 START, END = date(2026, 10, 1), date(2026, 10, 31)
@@ -25,7 +25,7 @@ def app_ctx():
     with app.app_context():
         db.metadata.create_all(
             bind=db.engine,
-            tables=[m.__table__ for m in (Company, Employee, Meeting, Process, ProcessInstance, Project, ProjectTask)],
+            tables=[m.__table__ for m in (Company, Employee, Meeting, Process, ProcessInstance, Project, ProjectTask, WorkCalendarEvent)],
         )
         yield app
         db.session.remove()

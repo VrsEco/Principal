@@ -24,12 +24,16 @@ def _build_app():
     return app
 
 
-def test_sidebar_quick_access_exposes_calendar_link():
+def test_sidebar_has_single_agenda_entry_replacing_calendar():
     app = _build_app()
     with app.test_request_context('/calendar'):
         session['active_company_id'] = 9
         rendered = render_template_string('{% include "partials/sidebar_standard.html" %}')
 
     assert 'Meu Trabalho' in rendered
-    assert 'Calendário' in rendered
-    assert 'href="/calendar"' in rendered
+    assert 'href="/agenda"' in rendered
+    assert 'href="/calendar"' not in rendered
+    assert 'Agenda Unificada' not in rendered
+    # a tela anterior (/calendar) mantém o item Agenda destacado durante a transição
+    agenda_link = rendered[rendered.index('href="/agenda"'):][:260]
+    assert 'active' in agenda_link

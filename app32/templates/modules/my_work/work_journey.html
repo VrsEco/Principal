@@ -17,6 +17,7 @@
                 <p class="journey-hero__subtitle">Calendário de: <strong>{{ selected_employee_name or 'Colaborador não definido' }}</strong> — agenda operacional com tarefas vinculadas a atividades de projetos, instâncias de processos, reuniões e eventos avulsos.</p>
             </div>
             <div class="journey-hero__actions">
+                <a class="btn btn-secondary" href="/agenda">Ir para a nova Agenda</a>
                 <a class="btn btn-secondary" href="{{ url_for('work_journey_report.work_journey_report_page', company_id=company.id, employee_id=selected_employee_id) }}">Relatório gerencial</a>
                 <button id="journeyRefreshBtn" class="btn btn-primary">Atualizar visão</button>
             </div>
