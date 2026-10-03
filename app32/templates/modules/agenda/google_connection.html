@@ -1,0 +1,47 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Conexão Google Calendar | Versus{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-calendar.css', v='2') }}">
+{% endblock %}
+
+{% block workspace_content %}
+<div class="uc-app fade-in uc-conn" id="gcRoot" data-company-id="{{ company.id }}" data-today="{{ today }}" data-has-employee="{{ has_employee|tojson }}">
+    <header class="uc-header">
+        <div>
+            <h1 class="uc-title">Conexão com o Google Calendar</h1>
+            <p class="uc-subtitle">Mantenha sua agenda do Versus e a do Google atualizadas nos dois sentidos.</p>
+        </div>
+        <a class="uc-btn" href="/agenda">← Voltar à Agenda</a>
+    </header>
+
+    <section class="uc-card uc-conn__card" aria-live="polite">
+        <div class="uc-alert" id="gcAlert" role="alert" hidden></div>
+        <h2 class="uc-conn__title" id="gcTitle">Verificando conexão…</h2>
+        <p class="uc-conn__text" id="gcText"></p>
+        <div class="uc-conn__actions">
+            <a class="uc-btn uc-btn--primary" id="gcConnect" href="/agenda/google/connect" hidden>Conectar com o Google</a>
+            <button type="button" class="uc-btn uc-btn--primary" id="gcSync" hidden>Sincronizar esta empresa</button>
+            <button type="button" class="uc-btn uc-btn--primary" id="gcSyncAll" hidden>Sincronizar todas as empresas</button>
+            <button type="button" class="uc-btn" id="gcDisconnect" hidden>Desconectar</button>
+        </div>
+        <ul class="uc-conn__result" id="gcResult"></ul>
+    </section>
+
+    <section class="uc-card uc-conn__card">
+        <h2 class="uc-conn__title">Como funciona a sincronização</h2>
+        <ul class="uc-conn__list">
+            <li><strong>Versus → Google:</strong> reuniões, atividades e instâncias seus são enviados como eventos, com link para abrir no Versus.</li>
+            <li><strong>Google → Versus:</strong> seus compromissos do Google aparecem na Agenda, somente para consulta (edite-os no Google).</li>
+            <li>A conexão é <strong>sua</strong> e vale em todas as empresas em que você atua.</li>
+            <li><strong>Esta empresa:</strong> envia só os compromissos da empresa ativa. <strong>Todas as empresas:</strong> envia os de todas em que você atua.</li>
+            <li>A sincronização cobre de 30 dias atrás até 60 dias à frente.</li>
+        </ul>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/google-connection.js', v='2') }}"></script>
+{% endblock %}
