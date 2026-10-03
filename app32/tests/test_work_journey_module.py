@@ -1,6 +1,7 @@
 from collections import defaultdict
 import json
 import os
+import re
 import sys
 from datetime import date, datetime, time
 from types import SimpleNamespace
@@ -1055,7 +1056,14 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'data-tab="agendas"' in journey_template
     assert 'work-journey-agendas.js' in journey_template
     assert 'work-journey-agendas-render.js' in journey_template
-    assert journey_template.count("v='20260524-taxonomia-tarefas-1'") == 5
+    versioned_scripts = re.findall(r"filename='js/(work-[a-z-]+\.js)', v='[^']+'", journey_template)
+    assert sorted(versioned_scripts) == sorted([
+        'work-journey-utils.js',
+        'work-journey.js',
+        'work-journey-agendas-render.js',
+        'work-journey-agendas.js',
+        'work-calendar-events.js',
+    ])
     assert 'work-calendar-events.js' in journey_template
     assert 'journeySearchInput' in journey_template
     assert 'journeyApplyFiltersBtn' in journey_template
