@@ -1,7 +1,7 @@
 # SPEC — Backup externo inicial no Google Drive
 
 **Classe:** SPEC  
-**Status:** Implementada; **upload suspenso desde 2026-09-20** por token OAuth expirado (ver "Incidente"). Alerta de falha implementado, aguardando deploy e canal configurado.
+**Status:** Produção ativa. Upload restabelecido em 2026-10-03 após incidente de token OAuth (ver "Incidente"). Alerta de falha por e-mail ativo.
 **Owner:** Engenharia Versus
 
 ## Objetivo
@@ -76,7 +76,15 @@ GCS também não está configurado. Esses documentos históricos não podem entr
 um novo backup antes de localizar uma fonte íntegra, devendo ser tratados como
 incidente de recuperação separado.
 
-## Incidente — token OAuth expirado (2026-09-20 a 2026-10-03)
+## Incidente — token OAuth expirado (2026-09-20 a 2026-10-03) — RESOLVIDO
+Resolvido em 2026-10-03: app OAuth `GV Backup Drive` publicado como **Em produção**
+(branding com página inicial, Política de Privacidade pública em
+`https://app.gestaoversus.com.br/privacidade` e domínio `gestaoversus.com.br`),
+token reautorizado e provisionado no Configr. Execução manual às 14:03 BRT concluiu
+com `exit=0` (banco e bundle de código enviados), confirmada no Drive. A conta
+`versusconsultoria@gmail.com` passou a ter verificação em duas etapas, exigida
+pelo Google Cloud desde 2026-09-28. O alerta por e-mail foi testado de ponta a ponta.
+
 Auditoria de 2026-10-03: o último upload bem-sucedido ao Drive foi a execução
 de 2026-09-20 às 12:00 BRT. Desde então, as 65 execuções do cron falharam com
 `Nao foi possivel renovar token OAuth (HTTP 400)`, sem qualquer alerta.
@@ -120,15 +128,15 @@ registrada no log e em `last_status.json`; configurar ao menos um canal é
 condição para considerar a rotina monitorada.
 
 ## Pendências
-1. Publicar o app OAuth em produção, reautorizar e validar o próximo upload
-   (ver incidente acima). Até lá, não há cópia externa nova desde 2026-09-20.
-2. Configurar ao menos um canal `GV_BACKUP_ALERT_*` no Configr e testar o aviso.
-3. Localizar e recuperar, se possível, os binários históricos da automação
+1. Acompanhar o próximo ciclo do cron (03h, 07h, 12h, 18h, 22h BRT) e confirmar que
+   `last_status.json` fica com `ok: true` e `last_success_at` atualizado.
+2. Localizar e recuperar, se possível, os binários históricos da automação
    financeira ausentes do storage canônico.
-4. Exercício documentado de restauração isolada de banco, código e anexos.
-5. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
-6. Corrigir a sincronização local do Windows (`download_backups.py`, falha de
+3. Exercício documentado de restauração isolada de banco, código e anexos.
+4. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
+5. Corrigir a sincronização local do Windows (`download_backups.py`, falha de
    autenticação SSH desde 2026-09-12), que hoje também falha sem aviso.
+6. Revisar o texto da Política de Privacidade (razão social, encarregado/DPO, prazos).
 
 ## Componentes implementados
 - `app32/scripts/google_drive_backup.py`: uploader direto do Configr, append-only,
