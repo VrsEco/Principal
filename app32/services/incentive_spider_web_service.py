@@ -4,6 +4,7 @@ from typing import Any
 import re
 import unicodedata
 
+from services.effective_blocks_service import person_block_proxies, user_has_person_blocks
 from models import (
     db,
     Employee,
@@ -157,7 +158,31 @@ class IncentiveSpiderWebService:
             )
             .all()
         )
+        # Colaboradores que migraram para blocos da pessoa: o no de capacidade vem dos blocos da pessoa (um dia unico).
+        migrated_employees = {
+            e.id: e.user_id
+            for e in Employee.query.filter(Employee.company_id == company_id, Employee.user_id.isnot(None)).all()
+            if user_has_person_blocks(e.user_id)
+        }
+        for emp_id, user_id in migrated_employees.items():
+            for pb in person_block_proxies(user_id, company_id, emp_id):
+                add_node(
+                    f"capacity_p{pb.id}",
+                    pb.name,
+                    "capacity",
+                    {
+                        "employee_id": emp_id,
+                        "block_mode": pb.block_mode,
+                        "start_time": pb.start_time.strftime("%H:%M") if pb.start_time else None,
+                        "end_time": pb.end_time.strftime("%H:%M") if pb.end_time else None,
+                        "accepted_item_types": list(pb.accepted_item_types or []),
+                        "source": "person",
+                    },
+                )
+                add_link(f"colab_{emp_id}", f"capacity_p{pb.id}", "jornada", "direct")
         for block in journey_blocks:
+            if block.employee_id in migrated_employees:
+                continue  # os blocos por empresa continuam guardados, mas o dia dele vem dos blocos da pessoa
             add_node(
                 f"capacity_{block.id}",
                 block.name,
@@ -184,7 +209,9 @@ class IncentiveSpiderWebService:
             .all()
         )
         for binding in routine_bindings:
-            if binding.block_id:
+            if binding.employee_id in migrated_employees and getattr(binding, "person_block_id", None):
+                add_link(f"routine_{binding.routine_id}", f"capacity_p{binding.person_block_id}", "alocada em bloco", "direct")
+            elif binding.block_id and binding.employee_id not in migrated_employees:
                 add_link(f"routine_{binding.routine_id}", f"capacity_{binding.block_id}", "alocada em bloco", "direct")
 
         indicators = Indicator.query.filter_by(company_id=company_id, is_active=True).all()
