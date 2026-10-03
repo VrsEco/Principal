@@ -103,6 +103,21 @@ def test_dia_unico_agrega_as_empresas_do_proprio_usuario(ctx):
     assert entry.person_block_id == 1 and entry.block_id is None and entry.manual_override is True
 
 
+def test_vinculo_ativo_sem_permissao_na_empresa_nao_entra_no_dia_unico(ctx):
+    assign.assign_item(1, 10, "project_task", 1, MONDAY, 1, viewer_user_id=USER)
+    assign.assign_item(2, 20, "project_task", 2, MONDAY, 1, viewer_user_id=USER)
+    # a pessoa ainda tem vínculo ativo na empresa 2, mas perdeu a permissão de ver a agenda de lá
+    view = build_block_view(1, 10, MONDAY, MONDAY, viewer_user_id=USER, allowed_company_ids={1})
+    morning = _day(view)["blocks"][0]
+    assert view["companies"] == 1 and morning["consumed_minutes"] == 120  # só a empresa 1
+    assert all(i.get("company") is None for i in morning["items"])  # sem rótulo de empresa quando é uma só
+    full = build_block_view(1, 10, MONDAY, MONDAY, viewer_user_id=USER, allowed_company_ids={1, 2})
+    assert _day(full)["blocks"][0]["consumed_minutes"] == 180
+    # sugestão e desfazer também respeitam o conjunto permitido
+    plan = assign.suggest_distribution(1, 10, MONDAY, viewer_user_id=USER, allowed_company_ids={1})
+    assert all(p["title"] != "Tarefa B 1h" for p in plan["proposals"])
+
+
 def test_gestor_nao_ve_o_dia_unico_nem_itens_de_outra_empresa(ctx):
     assign.assign_item(2, 20, "project_task", 2, MONDAY, 1, viewer_user_id=USER)
     # sem viewer (ou com outro usuário) a visão é a legada da empresa, sem dados da outra empresa

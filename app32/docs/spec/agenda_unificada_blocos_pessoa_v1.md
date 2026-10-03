@@ -562,9 +562,33 @@ Métricas:
 
 ### 15.3 Pendências de parecer
 
-- **Arquiteto:** exceção de `company_id` para `person_work_blocks`, com as condições da seção 6.4. Bloqueia a Fase 3.
-- **DBA:** migração e índices. Bloqueia a Fase 3.
+- **Arquiteto:** exceção de `company_id` para `person_work_blocks`, com as condições da seção 6.4. Bloqueia a Fase 3. *(Revisão técnica favorável em 15.4; falta a aceitação humana.)*
+- **DBA:** migração e índices. Bloqueia a Fase 3. *(Revisão técnica favorável em 15.4; falta a aceitação humana.)*
 - **Produto:** fluxo de mudança de prazo para instâncias, quando se quiser mover instâncias para outro dia.
+
+### 15.4 Revisão técnica do Squad Engenharia (2026-10-04)
+
+> **Natureza:** parecer técnico com evidências, emitido pelo Squad Engenharia nos papéis SE-ARCH e SE-DBA. **Não substitui a aprovação humana** das pendências da seção 15.3: o Arquiteto e o DBA responsáveis decidem se aceitam este parecer.
+
+**SE-ARCH — exceção de `company_id` em `person_work_blocks`: favorável, com condições atendidas no código.**
+1. *Preferência pessoal, não dado de empresa:* a tabela guarda só horário, nome, modo, dias e tipos preferidos; nenhum conteúdo de empresa. Já existe precedente por usuário sem `company_id` (`notes`, `user_mcp_tokens`, `identity_principals`, `user_employee_assignments`, `password_reset_tokens`, `google_calendar_connections`).
+2. *Sem junção com dados de empresa:* o bloco da pessoa nunca é unido a tabelas de empresa por chave; o vínculo é por `person_block_id` nas entradas de agenda, que continuam com `company_id`.
+3. *Leitura de terceiros só agregada:* o gestor usa `team_block_signal_service`; itens e reuniões de outras empresas e eventos avulsos saem só como minutos. Coberto por teste que procura textos sentinela na resposta inteira.
+4. *Auditoria de gravação:* toda criação, edição, exclusão, reordenação e reversão grava `user_logs` com antes e depois.
+- **Achado corrigido nesta revisão:** o dia único somava as empresas em que a pessoa tinha vínculo ativo, sem conferir se ela ainda podia ver a Agenda em cada uma. Agora todas as leituras e planejamentos em modo pessoa filtram por `processes:view` por empresa (`allowed_company_ids`), com teste.
+- **Risco residual aceito:** a soma de minutos de outras empresas é visível ao gestor por desenho (SPEC 8.3). Se a regra mudar, alterar `team_block_signal_service`.
+- **Risco residual até a Fase 4c:** motor, Calendário Operacional antigo, relatório/PDF, incentivos e MCP ainda leem só `block_id`.
+
+**SE-DBA — migração `20261004_1000` e índices: favorável.**
+- *Escala medida (cópia de produção de agosto):* `work_journey_agenda_items` com 1.354 linhas e 536 kB; `routine_journey_bindings` 6; `work_calendar_events` 2; `employees` 84; `users` 34. O bloqueio de tabela do `ADD COLUMN` nulo e do `CREATE INDEX` comum é desprezível nessa escala. Se a produção estiver bem maior que 100 mil linhas em `work_journey_agenda_items`, preferir `CREATE INDEX CONCURRENTLY` fora da migração.
+- *Reversível e idempotente:* verificada em PostgreSQL descartável: sobe, sobe de novo sem erro, restrição `end_time > start_time` rejeita dado inválido, `downgrade` remove tudo.
+- *FKs:* `person_work_blocks.user_id` com `ON DELETE CASCADE`; `person_block_id` com `ON DELETE SET NULL`. Excluir o usuário apaga os blocos e solta as entradas, sem apagar histórico.
+- *Índices:* `(user_id, is_active)` na tabela nova; `person_block_id` indexado nas três tabelas. As consultas por colaborador usam `idx_employees_user_company_unique (user_id, company_id)`, cujo prefixo cobre `user_id`.
+- *Colunas JSON:* `weekdays_json` e `preferred_item_types` como `JSON`, igual ao padrão de `work_journey_blocks`.
+- *Sem reescrita de histórico:* os `block_id` legados permanecem; nenhuma linha existente é alterada pela migração.
+- **Condição operacional:** deploy em modo `full` (única forma de rodar migração) e, em caso de falha, `downgrade` documentado no cabeçalho do arquivo.
+
+**Recomendação do Squad:** liberar o deploy `full` da Fase 3 **após** a aceitação humana deste parecer. Sem a aceitação, a SPEC mantém a Fase 3 bloqueada.
 
 ## 16. Documentação dependente a atualizar após aprovação
 

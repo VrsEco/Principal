@@ -133,6 +133,7 @@ def build_block_view(
     idle_threshold: int = DEFAULT_IDLE_THRESHOLD_MINUTES,
     extra_events: list[dict[str, Any]] | None = None,
     viewer_user_id: int | None = None,
+    allowed_company_ids: set[int] | None = None,
 ) -> dict[str, Any]:
     """Sinais por bloco, dia a dia.
 
@@ -145,7 +146,7 @@ def build_block_view(
         raise BlockViewError("Colaborador não encontrado.")
 
     if viewer_user_id is not None and employee.user_id == viewer_user_id and user_has_person_blocks(viewer_user_id):
-        return _build_person_view(viewer_user_id, employee_id, start_date, end_date, idle_threshold, extra_events)
+        return _build_person_view(viewer_user_id, employee_id, start_date, end_date, idle_threshold, extra_events, allowed_company_ids, company_id)
 
     blocks = legacy_blocks(company_id, employee_id)
     entries = (
@@ -176,8 +177,13 @@ def _build_person_view(
     end_date: date,
     idle_threshold: int,
     extra_events: list[dict[str, Any]] | None,
+    allowed_company_ids: set[int] | None = None,
+    active_company_id: int | None = None,
 ) -> dict[str, Any]:
     employees = Employee.query.filter(Employee.user_id == user_id, Employee.status == "active").all()
+    if allowed_company_ids is not None:
+        # Só entram empresas em que a pessoa AINDA pode ver a agenda (vínculo ativo não basta).
+        employees = [e for e in employees if e.company_id in allowed_company_ids or e.company_id == active_company_id]
     employee_ids = {e.id for e in employees}
     company_ids = sorted({e.company_id for e in employees})
     company_names = {c.id: c.name for c in Company.query.filter(Company.id.in_(company_ids)).all()} if company_ids else {}
