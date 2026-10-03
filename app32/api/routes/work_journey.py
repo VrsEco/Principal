@@ -425,6 +425,11 @@ def api_list_transfers(company_id: int):
         employee_id = request.args.get('employee_id', type=int)
         if employee_id and not _can_access_employee(company_id, employee_id):
             return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
+        if not employee_id and not has_company_full_access(company_id):
+            # Sem colaborador informado, quem nao e gestor ve so as proprias (antes devolvia a empresa toda).
+            employee_id = _current_employee_id(company_id)
+            if not employee_id:
+                return jsonify({'success': True, 'transfers': []})
         return jsonify({'success': True, 'transfers': list_transfer_requests(company_id, employee_id)})
     except Exception:
         return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
@@ -454,6 +459,11 @@ def api_list_absences(company_id: int):
         employee_id = request.args.get('employee_id', type=int)
         if employee_id and not _can_access_employee(company_id, employee_id):
             return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
+        if not employee_id and not has_company_full_access(company_id):
+            # Sem colaborador informado, quem nao e gestor ve so as proprias (antes devolvia a empresa toda, com o motivo).
+            employee_id = _current_employee_id(company_id)
+            if not employee_id:
+                return jsonify({'success': True, 'absences': []})
         return jsonify({'success': True, 'absences': list_absence_requests(company_id, employee_id)})
     except Exception:
         return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500

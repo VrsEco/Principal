@@ -13,6 +13,7 @@ from services.agenda_block_view_service import BlockViewError, build_block_view
 from services import block_assignment_service as assignment
 from services import block_migration_service as migration
 from services.team_block_signal_service import build_team_view
+from services.agenda_requests_service import list_requests
 from services import person_work_block_service as person_blocks
 from services.agenda_telemetry_service import record_events
 from services.work_journey_base import WorkJourneyError
@@ -427,6 +428,18 @@ def api_agenda_team(company_id: int):
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
         current_app.logger.exception('agenda team view failed')
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/requests', methods=['GET'])
+@active_company_permission_required('processes', 'view')
+def api_agenda_requests(company_id: int):
+    """Ausências e transferências com escopo: o colaborador vê as próprias; o gestor, as da empresa (e o total de pendentes)."""
+    employee = _current_employee(company_id)
+    try:
+        return jsonify({'success': True, **list_requests(company_id, viewer_employee_id=employee.id if employee else None, is_manager=has_company_full_access(company_id))})
+    except Exception:
+        current_app.logger.exception('agenda requests failed')
         return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
 
 
