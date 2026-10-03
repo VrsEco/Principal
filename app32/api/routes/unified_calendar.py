@@ -11,6 +11,8 @@ from models import Company, Employee, Project, ProjectTask, Process, db
 from services import google_calendar_service as gcal
 from services.agenda_block_view_service import BlockViewError, build_block_view
 from services import block_assignment_service as assignment
+from services import block_migration_service as migration
+from services import person_work_block_service as person_blocks
 from services.agenda_telemetry_service import record_events
 from services.work_journey_base import WorkJourneyError
 from services.estimate_batch_service import ESTIMATE_TYPES, EstimateError, list_without_estimate, save_estimates
@@ -88,7 +90,7 @@ def _render_agenda(company_id: int):
         company=company,
         can_view_all=can_view_all,
         current_employee_id=employee.id if employee else None,
-        boot={'employees': employees, 'projects': projects, 'processes': processes},
+        boot={'employees': employees, 'projects': projects, 'processes': processes, 'person_blocks': person_blocks.has_blocks(current_user.id)},
         today=date.today().isoformat(),
     )
 
@@ -180,7 +182,7 @@ def api_agenda_blocks(company_id: int):
         except gcal.GoogleCalendarError:
             extra = []
     try:
-        view = build_block_view(company_id, employee_id, start, end, extra_events=extra)
+        view = build_block_view(company_id, employee_id, start, end, extra_events=extra, viewer_user_id=(current_user.id if scope != 'all' else None))
     except BlockViewError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -247,6 +249,12 @@ def _planning_employee(company_id: int):
     return employee.id, None
 
 
+def _viewer_user_id():
+    """Só quem opera a PRÓPRIA agenda usa os blocos da pessoa; o gestor segue isolado por empresa."""
+    scope = str(request.args.get('scope') or (request.get_json(silent=True) or {}).get('scope') or 'mine').strip().lower()
+    return current_user.id if scope != 'all' and current_user.is_authenticated else None
+
+
 def _planning_call(fn):
     try:
         return jsonify({'success': True, **fn()})
@@ -271,7 +279,7 @@ def api_agenda_move_options(company_id: int):
     if not source_id:
         return jsonify({'success': False, 'message': 'Informe o item.'}), 400
     def build():
-        data = assignment.move_options(company_id, employee_id, source_type, source_id)
+        data = assignment.move_options(company_id, employee_id, source_type, source_id, viewer_user_id=_viewer_user_id())
         if source_type == 'project_task':
             task = ProjectTask.query.get(source_id)
             project = Project.query.filter_by(id=task.project_id, company_id=company_id).first() if task else None
@@ -295,7 +303,7 @@ def api_agenda_assign(company_id: int):
     if not target or not block_id or not source_id:
         return jsonify({'success': False, 'message': 'Informe item, data e bloco.'}), 400
     return _planning_call(lambda: assignment.assign_item(
-        company_id, employee_id, str(payload.get('type') or ''), int(source_id), target, int(block_id), reason=payload.get('reason')))
+        company_id, employee_id, str(payload.get('type') or ''), int(source_id), target, int(block_id), reason=payload.get('reason'), viewer_user_id=_viewer_user_id()))
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/suggestions', methods=['GET'])
@@ -308,7 +316,7 @@ def api_agenda_suggestions(company_id: int):
     target = _parse_date(request.args.get('date'))
     if not target:
         return jsonify({'success': False, 'message': 'Informe a data (AAAA-MM-DD).'}), 400
-    return _planning_call(lambda: assignment.suggest_distribution(company_id, employee_id, target))
+    return _planning_call(lambda: assignment.suggest_distribution(company_id, employee_id, target, viewer_user_id=_viewer_user_id()))
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/suggestions', methods=['POST'])
@@ -324,7 +332,74 @@ def api_agenda_suggestions_action(company_id: int):
     handlers = {'apply': assignment.apply_suggestions, 'accept': assignment.accept_suggestions, 'undo': assignment.undo_suggestions}
     if not target or action not in handlers:
         return jsonify({'success': False, 'message': 'Informe a data e a ação (apply, accept ou undo).'}), 400
-    return _planning_call(lambda: handlers[action](company_id, employee_id, target))
+    return _planning_call(lambda: handlers[action](company_id, employee_id, target, viewer_user_id=_viewer_user_id()))
+
+
+def _own_call(fn):
+    """Chamada de serviço dos blocos da PESSOA: sempre sobre o próprio usuário logado."""
+    try:
+        return jsonify({'success': True, **fn(current_user.id)})
+    except person_blocks.PersonBlockError as exc:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('person blocks call failed')
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@unified_calendar_bp.route('/api/agenda/person-blocks', methods=['GET'])
+@login_required
+def api_person_blocks_list():
+    return _own_call(lambda uid: {**person_blocks.list_blocks(uid), 'has_blocks': person_blocks.has_blocks(uid)})
+
+
+@unified_calendar_bp.route('/api/agenda/person-blocks', methods=['POST'])
+@login_required
+def api_person_blocks_create():
+    payload = request.get_json(silent=True) or {}
+    return _own_call(lambda uid: person_blocks.create_block(uid, payload))
+
+
+@unified_calendar_bp.route('/api/agenda/person-blocks/<int:block_id>', methods=['PATCH'])
+@login_required
+def api_person_blocks_update(block_id: int):
+    payload = request.get_json(silent=True) or {}
+    return _own_call(lambda uid: person_blocks.update_block(uid, block_id, payload))
+
+
+@unified_calendar_bp.route('/api/agenda/person-blocks/<int:block_id>', methods=['DELETE'])
+@login_required
+def api_person_blocks_delete(block_id: int):
+    return _own_call(lambda uid: person_blocks.delete_block(uid, block_id))
+
+
+@unified_calendar_bp.route('/api/agenda/person-blocks/reorder', methods=['POST'])
+@login_required
+def api_person_blocks_reorder():
+    payload = request.get_json(silent=True) or {}
+    return _own_call(lambda uid: person_blocks.reorder_blocks(uid, [int(i) for i in (payload.get('ids') or [])]))
+
+
+@unified_calendar_bp.route('/api/agenda/person-blocks/migration', methods=['GET'])
+@login_required
+def api_person_blocks_migration_proposal():
+    """Proposta do assistente: lista única a partir dos blocos de todas as empresas do usuário. Não grava nada."""
+    return _own_call(migration.propose)
+
+
+@unified_calendar_bp.route('/api/agenda/person-blocks/migration/apply', methods=['POST'])
+@login_required
+def api_person_blocks_migration_apply():
+    payload = request.get_json(silent=True) or {}
+    return _own_call(lambda uid: migration.apply(uid, payload.get('decisions') or []))
+
+
+@unified_calendar_bp.route('/api/agenda/person-blocks/migration/revert', methods=['POST'])
+@login_required
+def api_person_blocks_migration_revert():
+    """Volta aos blocos por empresa. Os blocos legados nunca foram alterados."""
+    return _own_call(migration.revert)
 
 
 @unified_calendar_bp.route('/api/companies/<int:company_id>/agenda/telemetry', methods=['POST'])

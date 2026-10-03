@@ -59,3 +59,22 @@ Tipo: Runbook. Escopo: tela `/agenda` e envio app → Google (Fase 2). Leitura d
 - Telemetria nova: `blocks_toggle`, `estimate_open`, `estimate_save`, `move_open`, `move_confirm`, `suggest_open|apply|accept|undo`.
 - Observação de dados: a produção tem itens duplicados entre agendas (dia e semana); a leitura de blocos os deduplica, mas as agendas antigas continuam como estão.
 
+## Blocos da pessoa (Fase 3 da SPEC)
+- **Exige migração** (`20261004_1000_person_work_blocks`, deploy `full`): cria `person_work_blocks` (por usuário, **sem `company_id`**, decisão D3) e as colunas nulas
+  `person_block_id` em `work_journey_agenda_items`, `routine_journey_bindings` e `work_calendar_events` (FK `ON DELETE SET NULL`). Idempotente; downgrade remove tudo.
+  Validada em PostgreSQL descartável (upgrade, repetição, restrição `end_time > start_time`, downgrade). **Antes do deploy: parecer do Arquiteto (exceção de isolamento
+  da tabela sem `company_id`) e do DBA (migração e índice `(user_id, is_active)`), conforme SPEC seções 6.4 e 15.**
+- Ninguém muda sozinho: o usuário só "vira" pessoa ao confirmar o assistente (menu ⋮ > **Meus blocos**). Quem não migra segue exatamente como hoje.
+- **Assistente** (`GET /api/agenda/person-blocks/migration`, `POST .../migration/apply`, `POST .../migration/revert`): monta uma proposta a partir dos blocos ativos de todas as
+  empresas do usuário; junta blocos de mesmo nome e modo que se sobrepõem em dias comuns (janela mais ampla); nada é criado sem confirmação bloco a bloco; vínculos de
+  rotina dos blocos aceitos são reapontados (`person_block_id`). **Reverter** apaga os blocos da pessoa; os blocos por empresa nunca são alterados; itens que a pessoa
+  colocou nos blocos da pessoa voltam a ser sugeridos pelo motor.
+- **Editor** (`/api/agenda/person-blocks`, só o próprio usuário): nome, início, fim, modo, dias, tipos preferidos (só sugestão). Sobreposição gera **aviso** e não impede.
+  Toda gravação grava `user_logs` (`entity_type = person_work_block`, antes e depois).
+- **Adaptador** `get_effective_blocks(company_id, employee_id)`: blocos da pessoa se o dono do colaborador tem blocos ativos; senão, legados. Na Agenda, o **dia único**
+  (itens e eventos de todas as empresas do próprio usuário, capacidade do dia pela **união** dos intervalos) só vale quando a pessoa olha a **própria** agenda. O gestor
+  (escopo "Toda a empresa") continua vendo cada empresa isolada: sem itens de outras empresas.
+- Atribuir/mover/sugerir em modo pessoa grava `person_block_id` (e `block_id` fica nulo). **Limite conhecido até a Fase 4:** o Calendário Operacional antigo, o motor de agendas,
+  relatório e PDF ainda leem só `block_id`; itens colocados em bloco da pessoa aparecem como "sem bloco" naquela tela até esses consumidores usarem o adaptador.
+- Telemetria nova: `blocks_edit_open`, `blocks_edit_save` (create/update/delete), `migration_open`, `migration_apply`, `migration_revert`.
+

@@ -125,7 +125,7 @@ def propose(user_id: int) -> dict[str, Any]:
                 ],
             }
         )
-    return {"already_migrated": False, "proposals": proposals, "legacy_count": len(legacy), "companies": len(company_names)}
+    return {"already_migrated": False, "proposals": proposals, "legacy_count": len(legacy), "companies": len({b["company_id"] for b in legacy})}
 
 
 def apply(user_id: int, decisions: list[dict[str, Any]]) -> dict[str, Any]:

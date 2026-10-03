@@ -17,7 +17,8 @@
     legacyUrl: root.dataset.legacyUrl || '/calendar',
     employees: boot.employees || [],
     projects: boot.projects || [],
-    processes: boot.processes || []
+    processes: boot.processes || [],
+    personBlocks: !!boot.person_blocks
   };
 
   var TYPE_ORDER = ['meeting', 'project_task', 'process_instance', 'manual', 'google_event'];
@@ -68,6 +69,7 @@
     google: { configured: false, connected: false, needsReconnect: false, email: null, status: null },
     googleNote: null,
     blocks: { on: false, days: {}, loading: false, error: null },
+    pb: { loading: false, error: null, blocks: [], warnings: [], has: false, mode: 'list', editing: null, proposal: null, decisions: {}, saving: false, confirmRevert: false, form: null },
     move: { key: null, loading: false, error: null, options: [], item: null, applyNow: false, sel: null, reason: '', saving: false },
     sug: { date: null, loading: false, error: null, proposals: [], unplaced: [], saving: false },
     est: { total: 0, items: [], loaded: false, types: { project_task: true, process_instance: true }, picks: {}, loading: false, saving: false, error: null, skipped: {} },
@@ -328,6 +330,117 @@
       E.error = null;
       toast(saved.length + (saved.length === 1 ? ' estimativa salva.' : ' estimativas salvas.') + (skipped.length ? ' ' + skipped.length + ' não puderam ser salvas.' : ''), skipped.length > 0 && !saved.length);
       renderLayer(); estCounter(); loadEstCount(); loadBlocks();
+    });
+  }
+
+  /* ---------- meus blocos (blocos da pessoa) e assistente de migração ---------- */
+  var WD = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];   /* 0 = segunda, igual ao servidor */
+  var PB_TYPES = [['project_task', 'Atividade'], ['process_instance', 'Instância'], ['meeting', 'Reunião'], ['manual', 'Evento avulso']];
+  var PB_MODES = { operational: 'Operacional (recebe tarefas)', reserved_full: 'Capacidade ocupada', buffer: 'Vazio / Buffer (urgências)' };
+  function wdTxt(list) {
+    if (!list || !list.length) return '';
+    if (list.length === 7) return 'Todos os dias';
+    if (list.join() === '0,1,2,3,4') return 'Seg a Sex';
+    return list.map(function (d) { return WD[d]; }).join(', ');
+  }
+  function pbApi(path, opts) { return api('/api/agenda/person-blocks' + path, opts); }
+  function loadPb() {
+    var P = S.pb; P.loading = true; P.error = null;
+    pbApi('').then(function (res) {
+      P.loading = false;
+      if (!res.ok || !res.body.success) P.error = errText(res, 'Não foi possível carregar seus blocos.');
+      else { P.blocks = res.body.blocks || []; P.warnings = res.body.warnings || []; P.has = !!res.body.has_blocks; cfg.personBlocks = P.has; P.mode = P.has ? 'list' : 'intro'; }
+      if (S.layer && S.layer.kind === 'pblocks') renderLayer();
+    });
+  }
+  function pbAfterChange() { loadPb(); loadBlocks(); renderChrome(); }
+  function pbWarnHtml(list) {
+    return list && list.length ? '<div class="ag-warnbox" role="status"><b>Atenção:</b> ' + list.map(function (w) { return h(w.message); }).join(' ') + ' Isso não impede o uso.</div>' : '';
+  }
+  function pbFormHtml() {
+    var f = S.pb.form, out = '<h3 id="agDlg">' + (f.id ? 'Editar bloco' : 'Novo bloco') + '</h3><form class="ag-form" data-pbform novalidate>';
+    out += field('Nome', '<input type="text" name="name" maxlength="160" value="' + h(f.name) + '" required>', 'pbName');
+    out += '<div class="ag-row2">' + field('Início', '<input type="time" name="start" value="' + h(f.start) + '" required>', 'pbStart') + field('Fim', '<input type="time" name="end" value="' + h(f.end) + '" required>', 'pbEnd') + '</div>';
+    out += field('Modo', '<select name="mode">' + Object.keys(PB_MODES).map(function (k) { return '<option value="' + k + '"' + (f.mode === k ? ' selected' : '') + '>' + h(PB_MODES[k]) + '</option>'; }).join('') + '</select>', 'pbMode');
+    out += '<div class="ag-field"><span>Dias da semana</span><div class="ag-wdays" role="group" aria-label="Dias da semana">' + WD.map(function (n, i) {
+      return '<button type="button" data-act="pb-day" data-d="' + i + '" aria-pressed="' + (f.weekdays.indexOf(i) >= 0) + '">' + n + '</button>';
+    }).join('') + '</div></div>';
+    out += '<div class="ag-field"><span>Tipos preferidos <small>(só sugestão; o bloco aceita qualquer item)</small></span><div class="ag-est-types">' + PB_TYPES.map(function (t) {
+      return '<button type="button" class="ag-fchip" data-act="pb-type" data-t="' + t[0] + '" aria-pressed="' + (f.types.indexOf(t[0]) >= 0) + '"><span>' + t[1] + '</span></button>';
+    }).join('') + '</div></div>';
+    out += '<p class="ag-error" data-error role="alert" hidden></p><div class="ag-btns"><button type="button" class="ag-btn" data-act="pb-back">Cancelar</button><button type="submit" class="ag-btn ag-btn--primary" data-submit>Salvar</button></div></form>';
+    return out;
+  }
+  function pbListHtml() {
+    var P = S.pb, out = '<h3 id="agDlg">Meus blocos</h3><p class="ag-meta">Valem para todas as empresas em que você atua. Eles organizam o seu dia; nada é bloqueado.</p>' + pbWarnHtml(P.warnings);
+    if (!P.blocks.length) out += '<p class="ag-state">Você ainda não tem blocos. Crie o primeiro.</p>';
+    else out += '<div class="ag-pb-list">' + P.blocks.map(function (b) {
+      return '<div class="ag-pb' + (b.is_active ? '' : ' is-off') + '"><div class="ag-pb__txt"><b>' + h(b.name) + '</b><small>' + h(b.start) + '–' + h(b.end) + ' · ' + h(wdTxt(b.weekdays)) + ' · ' + h((PB_MODES[b.mode] || '').split(' (')[0]) + '</small></div>' +
+        '<div class="ag-pb__btns"><button type="button" class="ag-btn ag-btn--sm" data-act="pb-edit" data-id="' + b.id + '">Editar</button><button type="button" class="ag-btn ag-btn--sm ag-btn--danger" data-act="pb-del" data-id="' + b.id + '">Excluir</button></div></div>';
+    }).join('') + '</div>';
+    out += '<div data-confirm>' + (P.confirmDelete ? '<div class="ag-confirm" role="alert"><span>Excluir “' + h(P.confirmDelete.name) + '”?</span><button type="button" class="ag-btn ag-btn--danger ag-btn--sm" data-act="pb-del-yes">Excluir</button><button type="button" class="ag-btn ag-btn--sm" data-act="pb-del-no">Cancelar</button></div>' : '') + '</div>';
+    out += '<div class="ag-btns"><button type="button" class="ag-btn ag-btn--primary" data-act="pb-new" data-autofocus>+ Novo bloco</button></div>';
+    out += '<details class="ag-revert"><summary>Voltar aos blocos por empresa</summary><p class="ag-meta">Seus blocos por empresa continuam guardados. Os itens que você colocou nos blocos da pessoa voltam a ser sugeridos pelo sistema.</p>' +
+      (P.confirmRevert ? '<div class="ag-confirm" role="alert"><span>Voltar agora?</span><button type="button" class="ag-btn ag-btn--danger ag-btn--sm" data-act="pb-revert-yes">Voltar</button><button type="button" class="ag-btn ag-btn--sm" data-act="pb-revert-no">Cancelar</button></div>' : '<button type="button" class="ag-btn ag-btn--sm" data-act="pb-revert">Voltar aos blocos por empresa</button>') + '</details>';
+    return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close">Fechar</button></div>';
+  }
+  function pbIntroHtml() {
+    return '<h3 id="agDlg">Meus blocos</h3><p class="ag-meta">Hoje seus blocos são cadastrados <b>por empresa</b>, e a mesma hora pode aparecer duas vezes. Com <b>blocos da pessoa</b> você tem um dia só, válido para todas as empresas.</p>' +
+      '<ul class="ag-bullets"><li>O assistente monta uma proposta a partir dos seus blocos atuais e agrupa os repetidos (como “Almoço”).</li><li>Nada é criado sem a sua confirmação, bloco a bloco.</li><li>Você pode voltar aos blocos por empresa quando quiser.</li></ul>' +
+      (S.pb.error ? '<p class="ag-error" role="alert">' + h(S.pb.error) + '</p>' : '') +
+      '<div class="ag-btns"><button type="button" class="ag-btn" data-act="pb-new">Criar do zero</button><button type="button" class="ag-btn ag-btn--primary" data-act="pb-proposal" data-autofocus>Ver proposta</button></div>';
+  }
+  function pbProposalHtml() {
+    var P = S.pb, pr = P.proposal || { proposals: [] }, out = '<h3 id="agDlg">Proposta de blocos</h3>';
+    if (P.loading) return out + '<p class="ag-meta">Montando a proposta…</p>';
+    if (P.error) out += '<p class="ag-error" role="alert">' + h(P.error) + '</p>';
+    if (!pr.proposals.length) return out + '<p class="ag-state">Não encontramos blocos por empresa para propor. Você pode criar do zero.</p><div class="ag-btns"><button type="button" class="ag-btn" data-act="pb-back">Voltar</button><button type="button" class="ag-btn ag-btn--primary" data-act="pb-new">Criar do zero</button></div>';
+    out += '<p class="ag-meta">Encontramos ' + pr.legacy_count + ' blocos em ' + pr.companies + (pr.companies === 1 ? ' empresa' : ' empresas') + '. Confirme os que quer manter; você pode ajustar nome e horário.</p><div class="ag-pb-list">';
+    pr.proposals.forEach(function (x) {
+      var d = P.decisions[x.id] || (P.decisions[x.id] = { accept: true, name: x.name, start: x.start, end: x.end });
+      out += '<div class="ag-pb ag-pb--prop' + (d.accept ? '' : ' is-off') + '"><label class="ag-check"><input type="checkbox" data-pdec="accept" data-pid="' + x.id + '"' + (d.accept ? ' checked' : '') + '><span>Criar este bloco</span></label>' +
+        '<div class="ag-row3"><input type="text" aria-label="Nome" data-pdec="name" data-pid="' + x.id + '" value="' + h(d.name) + '" maxlength="160"><input type="time" aria-label="Início" data-pdec="start" data-pid="' + x.id + '" value="' + h(d.start) + '"><input type="time" aria-label="Fim" data-pdec="end" data-pid="' + x.id + '" value="' + h(d.end) + '"></div>' +
+        '<small>' + h(wdTxt(x.weekdays)) + ' · ' + h((PB_MODES[x.mode] || '').split(' (')[0]) + '</small>' +
+        '<small class="ag-pb__src">' + (x.merged ? 'Junta: ' : 'Vem de: ') + x.sources.map(function (sr) { return h((sr.company || '') + ' ' + sr.start + '–' + sr.end); }).join('; ') + '</small>' +
+        (x.note ? '<small class="ag-pb__note">' + h(x.note) + '</small>' : '') + '</div>';
+    });
+    out += '</div><p class="ag-error" data-error role="alert" hidden></p><div class="ag-btns"><button type="button" class="ag-btn" data-act="pb-back">Voltar</button><button type="button" class="ag-btn ag-btn--primary" data-act="pb-apply"' + (P.saving ? ' disabled' : '') + '>' + (P.saving ? 'Criando…' : 'Criar meus blocos') + '</button></div>';
+    return out;
+  }
+  function pbHtml() {
+    var P = S.pb;
+    if (P.loading && !P.blocks.length && P.mode !== 'proposal') return '<h3 id="agDlg">Meus blocos</h3><p class="ag-meta">Carregando…</p>';
+    if (P.mode === 'form') return pbFormHtml();
+    if (P.mode === 'proposal') return pbProposalHtml();
+    if (P.error && !P.blocks.length && !P.has) return '<h3 id="agDlg">Meus blocos</h3><p class="ag-error" role="alert">' + h(P.error) + '</p><div class="ag-btns"><button type="button" class="ag-btn" data-act="close" data-autofocus>Fechar</button></div>';
+    return P.has ? pbListHtml() : pbIntroHtml();
+  }
+  function pbNewForm() { return { id: null, name: '', start: '08:00', end: '12:00', mode: 'operational', weekdays: [0, 1, 2, 3, 4], types: [] }; }
+  function pbSubmit(form) {
+    var f = S.pb.form, fd = new FormData(form), payload = { name: fd.get('name'), start: fd.get('start'), end: fd.get('end'), mode: fd.get('mode'), weekdays: f.weekdays, preferred_item_types: f.types };
+    var btn = form.querySelector('[data-submit]'); btn.disabled = true;
+    var req = f.id ? pbApi('/' + f.id, { method: 'PATCH', json: payload }) : pbApi('', { json: payload });
+    req.then(function (res) {
+      btn.disabled = false;
+      if (!res.ok || !res.body.success) { showError(form, errText(res, 'Não foi possível salvar o bloco.')); return; }
+      track('blocks_edit_save', f.id ? 'update' : 'create');
+      S.pb.mode = 'list'; S.pb.form = null;
+      toast('Bloco salvo.' + (res.body.warnings && res.body.warnings.length ? ' Há blocos que se sobrepõem.' : ''));
+      S.blocks.on = true; store('agenda.blocks', '1');
+      pbAfterChange();
+    });
+  }
+  function pbApply() {
+    var P = S.pb, decisions = Object.keys(P.decisions).map(function (id) { var d = P.decisions[id]; return { id: +id, accept: d.accept, name: d.name, start: d.start, end: d.end }; });
+    if (!decisions.some(function (d) { return d.accept; })) { var eb = $('agLayer').querySelector('[data-error]'); eb.textContent = 'Confirme ao menos um bloco.'; eb.hidden = false; return; }
+    P.saving = true; renderLayer(); track('migration_apply');
+    pbApi('/migration/apply', { json: { decisions: decisions } }).then(function (res) {
+      P.saving = false;
+      if (!res.ok || !res.body.success) { P.error = errText(res, 'Não foi possível criar os blocos.'); renderLayer(); return; }
+      P.error = null; P.mode = 'list';
+      toast((res.body.created || []).length + ' blocos criados' + (res.body.routines_rebound ? ' e ' + res.body.routines_rebound + ' rotinas reapontadas' : '') + '.');
+      S.blocks.on = true; store('agenda.blocks', '1');
+      pbAfterChange();
     });
   }
 
@@ -720,6 +833,7 @@
   function menuHtml() {
     var out = '<h3 id="agDlg">Mais opções</h3><div class="ag-menu">' +
       '<a href="' + h(cfg.legacyUrl) + '" data-track-legacy>Calendário operacional (versão anterior)<small>Planejamento por capacidade</small></a>' +
+      '<button type="button" class="ag-menu__btn" data-act="pb-open">Meus blocos<small>' + (cfg.personBlocks ? 'Seu dia, valendo para todas as empresas' : 'Organize seu dia em um só lugar') + '</small></button>' +
       '<a href="/companies/' + cfg.companyId + '/work-journey/report">Relatório gerencial<small>PDF da jornada</small></a>';
     if (S.google.configured) out += '<a href="/agenda/google">Conexão com o Google<small>Gerenciar</small></a>';
     return out + '</div><div class="ag-btns"><button type="button" class="ag-btn" data-act="close" data-autofocus>Fechar</button></div>';
@@ -747,6 +861,7 @@
     else if (L.kind === 'menu') inner = menuHtml();
     else if (L.kind === 'est') inner = estHtml();
     else if (L.kind === 'move') inner = moveHtml();
+    else if (L.kind === 'pblocks') inner = pbHtml();
     else if (L.kind === 'sug') inner = sugHtml();
     else inner = googleHtml();
     host.innerHTML = sheetWrap(inner, panel, 'agDlg');
@@ -754,6 +869,7 @@
     if (f) f.focus();
     if (L.kind === 'est') estCounter();
   }
+  function renderLayer0() { openLayer({ kind: 'pblocks' }, $('agMenuBtn')); loadPb(); }
   function openLayer(layer, trigger) {
     S.lastFocus = trigger || document.activeElement;
     S.layer = layer; renderLayer();
@@ -858,9 +974,12 @@
     var t = ev.target;
     if (t.matches('[data-fscope]')) { S.filters.scope = t.value; S.filters.employee = ''; renderFilters(); load(); loadLate(); loadEstCount(); return; }
     if (t.matches('[data-femp]')) { S.filters.employee = t.value; load(); loadLate(); loadEstCount(); return; }
+    if (t.matches('[data-pdec]')) { var dd = S.pb.decisions[t.dataset.pid]; if (dd) { var k2 = t.dataset.pdec; dd[k2] = k2 === 'accept' ? t.checked : t.value; if (k2 === 'accept') renderLayer(); } return; }
     if (t.matches('[data-lsort]')) { S.late.sort = t.value; track('late_sort', t.value); renderLate(); loadLate(); }
   });
   root.addEventListener('submit', function (ev) {
+    var pform = ev.target.closest('[data-pbform]');
+    if (pform) { ev.preventDefault(); pbSubmit(pform); return; }
     var form = ev.target.closest('[data-form]');
     if (form) { ev.preventDefault(); submitForm(form); }
   });
@@ -873,6 +992,47 @@
   function act(name, node) {
     if (name === 'close') return closeLayer();
     if (name === 'retry') return load();
+    if (name === 'pb-open') { track('blocks_edit_open'); S.pb.mode = 'list'; S.pb.form = null; S.pb.confirmRevert = false; S.pb.confirmDelete = null; renderLayer0(); return; }
+    if (name === 'pb-new') { S.pb.form = pbNewForm(); S.pb.mode = 'form'; renderLayer(); return; }
+    if (name === 'pb-edit') { var eb0 = S.pb.blocks.filter(function (b) { return String(b.id) === node.dataset.id; })[0]; if (eb0) { S.pb.form = { id: eb0.id, name: eb0.name, start: eb0.start, end: eb0.end, mode: eb0.mode, weekdays: eb0.weekdays.slice(), types: eb0.preferred_item_types.slice() }; S.pb.mode = 'form'; renderLayer(); } return; }
+    if (name === 'pb-back') { S.pb.mode = S.pb.has ? 'list' : 'intro'; S.pb.form = null; renderLayer(); return; }
+    if (name === 'pb-day') { var di = +node.dataset.d, wl = S.pb.form.weekdays, wi = wl.indexOf(di); if (wi >= 0) wl.splice(wi, 1); else wl.push(di); wl.sort(); node.setAttribute('aria-pressed', String(wl.indexOf(di) >= 0)); return; }
+    if (name === 'pb-type') { var tl = S.pb.form.types, tk = node.dataset.t, ti = tl.indexOf(tk); if (ti >= 0) tl.splice(ti, 1); else tl.push(tk); node.setAttribute('aria-pressed', String(tl.indexOf(tk) >= 0)); return; }
+    if (name === 'pb-del') { S.pb.confirmDelete = S.pb.blocks.filter(function (b) { return String(b.id) === node.dataset.id; })[0] || null; renderLayer(); return; }
+    if (name === 'pb-del-no') { S.pb.confirmDelete = null; renderLayer(); return; }
+    if (name === 'pb-del-yes') {
+      var dbk = S.pb.confirmDelete; if (!dbk) return; node.disabled = true;
+      pbApi('/' + dbk.id, { method: 'DELETE' }).then(function (res) {
+        S.pb.confirmDelete = null;
+        if (!res.ok || !res.body.success) { toast(errText(res, 'Não foi possível excluir o bloco.'), true); renderLayer(); return; }
+        track('blocks_edit_save', 'delete'); toast('Bloco excluído.'); pbAfterChange();
+      });
+      return;
+    }
+    if (name === 'pb-revert') { S.pb.confirmRevert = true; renderLayer(); var dt = $('agLayer').querySelector('details'); if (dt) dt.open = true; return; }
+    if (name === 'pb-revert-no') { S.pb.confirmRevert = false; renderLayer(); return; }
+    if (name === 'pb-revert-yes') {
+      node.disabled = true; track('migration_revert');
+      pbApi('/migration/revert', { json: {} }).then(function (res) {
+        S.pb.confirmRevert = false;
+        if (!res.ok || !res.body.success) { toast(errText(res, 'Não foi possível voltar.'), true); renderLayer(); return; }
+        cfg.personBlocks = false; S.pb.has = false; S.pb.blocks = []; S.pb.mode = 'intro';
+        toast('Você voltou aos blocos por empresa.'); pbAfterChange();
+      });
+      return;
+    }
+    if (name === 'pb-proposal') {
+      track('migration_open'); S.pb.mode = 'proposal'; S.pb.proposal = null; S.pb.decisions = {}; S.pb.loading = true; S.pb.error = null; renderLayer();
+      pbApi('/migration').then(function (res) {
+        S.pb.loading = false;
+        if (!res.ok || !res.body.success) S.pb.error = errText(res, 'Não foi possível montar a proposta.');
+        else if (res.body.already_migrated) { S.pb.mode = 'list'; loadPb(); return; }
+        else S.pb.proposal = res.body;
+        renderLayer();
+      });
+      return;
+    }
+    if (name === 'pb-apply') return pbApply();
     if (name === 'move-open') { track('move_open'); S.move.key = node.dataset.key; S.move.saving = false; openLayer({ kind: 'move' }, node); loadMove(); return; }
     if (name === 'move-pick') { S.move.sel = +node.dataset.i; S.move.error = null; renderLayer(); var rf = $('agLayer').querySelector('[data-move-reason], [data-act="move-confirm"]'); if (rf) rf.focus(); return; }
     if (name === 'move-confirm') return moveConfirm();
