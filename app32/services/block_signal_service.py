@@ -18,6 +18,21 @@ SIGNAL_NONE = "none"  # bloco nao operacional: nao recebe sinal
 OPERATIONAL_MODE = "operational"
 
 
+def union_minutes(intervals: Iterable[tuple[int, int]]) -> int:
+    """Minutos da uniao dos intervalos (cada hora conta uma vez)."""
+    total, cur_start, cur_end = 0, None, None
+    for start, end in sorted((a, b) for a, b in intervals if b > a):
+        if cur_end is None or start > cur_end:
+            if cur_end is not None:
+                total += cur_end - cur_start
+            cur_start, cur_end = start, end
+        else:
+            cur_end = max(cur_end, end)
+    if cur_end is not None:
+        total += cur_end - cur_start
+    return total
+
+
 def fmt_minutes(minutes: int) -> str:
     """90 -> '1h30', 120 -> '2h', 30 -> '30min'."""
     minutes = max(int(minutes), 0)
@@ -107,18 +122,20 @@ def compute_block_signals(
         entry["consumed_minutes"] += duration
 
     result_blocks: list[dict[str, Any]] = []
-    day_capacity = 0
+    operational_windows: list[tuple[int, int]] = []
     day_consumed = 0
     for block in blocks:
         entry = state[block["id"]]
         if entry["mode"] == OPERATIONAL_MODE:
             entry["signal"] = signal_for(entry["capacity_minutes"], entry["consumed_minutes"], idle_threshold)
-            day_capacity += entry["capacity_minutes"]
+            operational_windows.append((entry["start_minutes"], entry["end_minutes"]))
             day_consumed += entry["consumed_minutes"]
         else:
             entry["signal"] = {"state": SIGNAL_NONE, "minutes": 0, "label": ""}
         result_blocks.append(entry)
 
+    # Capacidade do dia = UNIAO dos intervalos: blocos sobrepostos nao contam a mesma hora duas vezes (RF-BLO-5).
+    day_capacity = union_minutes(operational_windows)
     if day_capacity <= 0:
         day = {"state": SIGNAL_NONE, "minutes": 0, "label": "Sem expediente"}
     else:

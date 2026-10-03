@@ -262,3 +262,6 @@ from .financial import FinancialReconciliationPlaybook
 __all__.append("FinancialReconciliationPlaybook")
 
 from . import estimate_defaults  # noqa: E402,F401  (registra a politica de estimativa padrao)
+
+from .person_work_block import PersonWorkBlock  # noqa: E402
+__all__.append('PersonWorkBlock')

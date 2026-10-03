@@ -84,3 +84,10 @@ def test_nunca_bloqueia_mesmo_muito_acima():
 
 def test_fmt_minutes():
     assert [fmt_minutes(m) for m in (0, 30, 60, 90, 150)] == ["0min", "30min", "1h", "1h30", "2h30"]
+
+
+def test_capacidade_do_dia_e_a_uniao_dos_blocos_sobrepostos():
+    blocks = [_b(1, 480, 600), _b(2, 540, 660)]  # 8-10 e 9-11: união = 3 h, soma = 4 h
+    out = compute_block_signals(blocks, [{"block_id": 1, "estimated_minutes": 60}], [])
+    assert out["day"]["capacity_minutes"] == 180
+    assert out["blocks"][0]["capacity_minutes"] == 120  # cada bloco mantém a própria capacidade

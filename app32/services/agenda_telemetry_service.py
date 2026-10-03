@@ -28,6 +28,11 @@ ALLOWED_EVENTS: dict[str, set[str] | None] = {
     "suggest_apply": None,
     "suggest_accept": None,
     "suggest_undo": None,
+    "blocks_edit_open": None,
+    "blocks_edit_save": {"create", "update", "delete"},
+    "migration_open": None,
+    "migration_apply": None,
+    "migration_revert": None,
 }
 
 
