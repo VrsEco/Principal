@@ -552,6 +552,10 @@
     const json = await api(`/api/companies/${companyId}/work-journey/blocks?employee_id=${selectedEmployeeId()}`);
     state.blocks = json.blocks;
     renderBlocksList();
+    const blocksBox = document.getElementById('journeyBlocksList');
+    if (json.person_mode && blocksBox) {
+      blocksBox.insertAdjacentHTML('afterbegin', '<div class="journey-person-note" role="note" style="margin:8px 0 12px;padding:10px 12px;border-radius:10px;background:#eaf0fd;color:#1f3a7a;font-size:.9rem;line-height:1.4">Este colaborador usa <b>blocos da pessoa</b>. Os blocos por empresa abaixo continuam guardados, mas já não definem o dia dele. Edite em <a href="/agenda">Agenda</a> &gt; menu &gt; Meus blocos.</div>');
+    }
   }
 
   async function loadAbsences() {

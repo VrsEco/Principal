@@ -271,7 +271,10 @@
     }
 
     const html = renderer.renderAgendaHTML(agenda, state, agenda.locked);
-    boardContainer.innerHTML = html.boardHTML || '<div class="agenda-empty-state">Sem dias na agenda.</div>';
+    const personNote = agenda.person_mode
+      ? '<div class="journey-person-note" role="note" style="margin:8px 0 12px;padding:10px 12px;border-radius:10px;background:#eaf0fd;color:#1f3a7a;font-size:.9rem;line-height:1.4">Você usa <b>blocos da pessoa</b>. Aqui os blocos são só de consulta; para planejar e mover itens entre blocos, use a <a href="/agenda">Agenda</a>. Itens sem bloco aparecem em "Sem bloco".</div>'
+      : '';
+    boardContainer.innerHTML = personNote + (html.boardHTML || '<div class="agenda-empty-state">Sem dias na agenda.</div>');
     applyPanelCollapseState();
   }
 
