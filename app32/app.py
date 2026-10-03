@@ -192,6 +192,7 @@ def create_app(config_name=None):
     app.config.from_object(app_configs[config_name])
     app.config["FLASK_CONFIG"] = config_name
 
+    from api.routes.public_pages import PUBLIC_PAGE_ENDPOINTS
 
     @app.get("/healthz")
     def healthz():
@@ -579,6 +580,7 @@ def create_app(config_name=None):
             'telegram.telegram_webhook',
         ]
         public_endpoints.extend(['healthz', 'oauth_pilot_protected_resource_metadata'])
+        public_endpoints.extend(PUBLIC_PAGE_ENDPOINTS)
         if app.config.get("DEV_ROUTES_ENABLED"):
             public_endpoints.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
         
@@ -640,6 +642,7 @@ def create_app(config_name=None):
                 'auth.change_password',
                 'auth.logout',
                 'static',
+                *PUBLIC_PAGE_ENDPOINTS,
                 'integrations.integrations_page',
                 'integrations.integration_requests_page',
                 'integrations.integrations_admin_page',
@@ -1206,6 +1209,7 @@ def register_blueprints(app):
             abort(404)
 
     from api.routes.main import main_bp
+    from api.routes.public_pages import public_pages_bp
     from api.routes.auth import auth_bp
     from api.routes.companies import companies_bp
     from api.routes.projects import projects_bp
@@ -1239,6 +1243,7 @@ def register_blueprints(app):
     from api.routes.users import usuarios_bp
  
     app.register_blueprint(main_bp)
+    app.register_blueprint(public_pages_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(companies_bp)
     app.register_blueprint(projects_bp)
