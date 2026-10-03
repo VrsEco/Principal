@@ -1,6 +1,7 @@
 from collections import defaultdict
 import json
 import os
+import re
 import sys
 from datetime import date, datetime, time
 from types import SimpleNamespace
@@ -1055,7 +1056,14 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'data-tab="agendas"' in journey_template
     assert 'work-journey-agendas.js' in journey_template
     assert 'work-journey-agendas-render.js' in journey_template
-    assert journey_template.count("v='20260524-taxonomia-tarefas-1'") == 5
+    versioned_scripts = re.findall(r"filename='js/(work-[a-z-]+\.js)', v='[^']+'", journey_template)
+    assert sorted(versioned_scripts) == sorted([
+        'work-journey-utils.js',
+        'work-journey.js',
+        'work-journey-agendas-render.js',
+        'work-journey-agendas.js',
+        'work-calendar-events.js',
+    ])
     assert 'work-calendar-events.js' in journey_template
     assert 'journeySearchInput' in journey_template
     assert 'journeyApplyFiltersBtn' in journey_template
@@ -1094,7 +1102,8 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_legacy_template
-    assert 'Horas/Info' in project_task_template
+    assert 'section-card--hours' in project_task_template
+    assert 'addHoursFormContainer' in project_task_template
     assert 'Horas/Info' in process_instance_template
 
 
@@ -1317,9 +1326,9 @@ def test_allocate_item_keeps_single_card_when_no_block_has_full_capacity(monkeyp
 
 def test_calendar_scripts_support_collaborator_without_employee_selector():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    with open(os.path.join(root, 'static', 'js', 'work-journey.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-journey.js'), 'r', encoding='utf-8') as handle:
         journey_script = handle.read()
-    with open(os.path.join(root, 'static', 'js', 'work-calendar-events.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-calendar-events.js'), 'r', encoding='utf-8') as handle:
         calendar_events_script = handle.read()
 
     assert 'employeeSelect?.addEventListener' in journey_script
@@ -1334,7 +1343,7 @@ def test_calendar_scripts_support_collaborator_without_employee_selector():
 
 def test_agendas_script_supports_legacy_fallback_drag_and_drop():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
         agendas_script = handle.read()
 
     assert 'state.legacyFallback || !state.agenda?.id' in agendas_script
@@ -1345,9 +1354,9 @@ def test_agendas_script_supports_legacy_fallback_drag_and_drop():
 
 def test_agendas_sections_default_collapsed_and_render_typed_cards():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
         agendas_script = handle.read()
-    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
         render_script = handle.read()
 
     assert "DEFAULT_COLLAPSED_PANELS = ['process-instances', 'project-activities', 'meetings', 'manual-events']" in agendas_script
@@ -1366,9 +1375,9 @@ def test_agendas_sections_default_collapsed_and_render_typed_cards():
 
 def test_agendas_scripts_support_drag_between_columns_and_blocks():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
         agendas_script = handle.read()
-    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
         render_script = handle.read()
 
     assert 'data-dropzone="block"' in render_script
@@ -1384,9 +1393,9 @@ def test_agendas_scripts_support_drag_between_columns_and_blocks():
 
 def test_agenda_manual_cards_expose_edit_and_complete_actions():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
         agendas_script = handle.read()
-    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
+    with open(os.path.join(root, '..', 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
         render_script = handle.read()
 
     assert 'journey_item_id: item.journey_item_id || null' in render_script
@@ -2203,6 +2212,7 @@ def test_sync_process_instance_item_materializes_operational_task(monkeypatch):
     monkeypatch.setattr(work_journey_sync, '_resolve_process_instance_employee_id', lambda *_args, **_kwargs: 3)
     monkeypatch.setattr(work_journey_sync, 'get_bound_block_id', lambda *_args, **_kwargs: 21)
     monkeypatch.setattr(work_journey_sync, 'current_manual_assignment', lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(work_journey_sync, 'assigned_employee_id', lambda *_args, **_kwargs: None)
     monkeypatch.setattr(work_journey_sync, 'upsert_source_item', lambda **kwargs: captured.update(kwargs))
 
     item = work_journey_sync.sync_process_instance_item(9, 501, preferred_employee_id=3)
