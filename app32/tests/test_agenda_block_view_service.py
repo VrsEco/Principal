@@ -93,6 +93,34 @@ def test_evento_encerrado_nao_consome(ctx):
     assert _day(view, "2026-10-05")["blocks"][1]["consumed_minutes"] == 120
 
 
+def test_mesmo_item_em_duas_agendas_conta_uma_vez(ctx):
+    db.session.add(WorkJourneyAgenda(id=3, company_id=1, employee_id=10, anchor_date=date(2026, 10, 4), scope="week"))
+    db.session.flush()
+    db.session.add(WorkJourneyAgendaItem(id=10, agenda_id=3, company_id=1, employee_id=10, journey_item_id=1,
+                                         block_id=2, planned_date=MONDAY, allocated_minutes=120))
+    db.session.commit()
+    middle = _day(build_block_view(1, 10, MONDAY, MONDAY), "2026-10-05")["blocks"][1]
+    assert middle["consumed_minutes"] == 120 + 90
+    assert [i["title"] for i in middle["items"]] == ["Atividade 2h", "Sem estimativa"]
+
+
+def test_item_adiado_nao_consome(ctx):
+    WorkJourneyItem.query.filter_by(id=1).update({"status": "postponed"})
+    db.session.commit()
+    middle = _day(build_block_view(1, 10, MONDAY, MONDAY), "2026-10-05")["blocks"][1]
+    assert middle["consumed_minutes"] == 90
+
+
+def test_atrasado_so_consome_depois_de_planejado_pela_pessoa(ctx):
+    WorkJourneyItem.query.filter_by(id=1).update({"due_date": date(2026, 9, 1)})
+    db.session.commit()
+    middle = lambda: _day(build_block_view(1, 10, MONDAY, MONDAY), "2026-10-05")["blocks"][1]
+    assert middle()["consumed_minutes"] == 90  # sugestão do motor para item atrasado não conta
+    WorkJourneyAgendaItem.query.filter_by(id=1).update({"manual_override": True})
+    db.session.commit()
+    assert middle()["consumed_minutes"] == 120 + 90  # a pessoa planejou: passa a contar
+
+
 def test_nao_bloqueia_nem_cria_nada(ctx):
     before = WorkJourneyAgenda.query.count(), WorkJourneyAgendaItem.query.count()
     build_block_view(1, 10, MONDAY, MONDAY)

@@ -68,6 +68,8 @@
     google: { configured: false, connected: false, needsReconnect: false, email: null, status: null },
     googleNote: null,
     blocks: { on: false, days: {}, loading: false, error: null },
+    move: { key: null, loading: false, error: null, options: [], item: null, applyNow: false, sel: null, reason: '', saving: false },
+    sug: { date: null, loading: false, error: null, proposals: [], unplaced: [], saving: false },
     est: { total: 0, items: [], loaded: false, types: { project_task: true, process_instance: true }, picks: {}, loading: false, saving: false, error: null, skipped: {} },
     layer: null,
     filtersOpen: false,
@@ -329,6 +331,94 @@
     });
   }
 
+  /* ---------- mover para um bloco e sugestão de distribuição ---------- */
+  function planQs() { return scopeParams(); }
+  function loadMove() {
+    var M = S.move, e = lookup(M.key);
+    if (!e) return;
+    M.loading = true; M.error = null; M.options = []; M.sel = null; M.reason = '';
+    api(base() + '/agenda/move-options?type=' + e.type + '&id=' + e.id + '&' + planQs()).then(function (res) {
+      M.loading = false;
+      if (!res.ok || !res.body.success) M.error = errText(res, 'Não foi possível carregar os destinos.');
+      else { M.options = res.body.options || []; M.item = res.body.item || null; M.applyNow = !!res.body.due_change_applies_now; }
+      if (S.layer && S.layer.kind === 'move') renderLayer();
+    });
+  }
+  function optLabel(o) { return cap1(DOW[dow(o.date)].toLowerCase()) + ' ' + ddmm(o.date) + ' · ' + o.block_name + ' ' + o.start + '–' + o.end; }
+  function moveHtml() {
+    var M = S.move, e = lookup(M.key), out = '<h3 id="agDlg">Mover para um bloco</h3>';
+    if (e) out += '<p class="ag-meta"><b>' + h(e.title) + '</b>' + (M.item && M.item.without_estimate ? ' · sem estimativa (não altera a conta)' : (M.item ? ' · ' + dur(M.item.estimated_minutes) : '')) + '</p>';
+    if (M.error) out += '<p class="ag-error" role="alert">' + h(M.error) + '</p>';
+    if (M.loading) out += '<p class="ag-meta">Buscando os melhores blocos…</p>';
+    else if (!M.options.length && !M.error) out += '<p class="ag-state">Nenhum bloco disponível nos próximos 14 dias para este tipo de item.' + (e && e.type === 'process_instance' ? ' Instâncias só se movem entre blocos do mesmo dia.' : '') + '</p>';
+    else {
+      out += '<div class="ag-opts" role="list">' + M.options.map(function (o, i) {
+        var sel = M.sel === i;
+        var card = '<div class="ag-opt' + (sel ? ' is-sel' : '') + '" role="listitem"><button type="button" class="ag-opt__main" data-act="move-pick" data-i="' + i + '" aria-pressed="' + sel + '">' +
+          '<span class="ag-opt__title">' + h(optLabel(o)) + '</span><span class="ag-opt__states">' + sigChip(o.before, true) + '<span aria-hidden="true">→</span><span class="sr-only"> ficaria </span>' + sigChip(o.after, true) +
+          (o.changes_due_date ? '<span class="ag-tag">Muda o prazo</span>' : '') + (!o.fits ? '<span class="ag-tag ag-tag--warn">Passa da capacidade</span>' : '') + '</span></button>';
+        if (sel) {
+          if (o.needs_reason) {
+            card += '<div class="ag-opt__form"><p class="ag-note">' + (M.applyNow ? 'Você pode alterar este prazo: a mudança vale na hora.' : 'Você não pode alterar este prazo sozinho: o pedido segue para aprovação e o item fica onde está até a decisão.') + '</p>' +
+              '<label class="ag-field" for="agMoveReason">Motivo da mudança de prazo<textarea id="agMoveReason" rows="2" data-move-reason maxlength="500" placeholder="Por que mudar o prazo?">' + h(M.reason) + '</textarea></label>';
+          } else card += '<div class="ag-opt__form">';
+          card += '<p class="ag-error" data-move-error role="alert" hidden></p><button type="button" class="ag-btn ag-btn--primary" data-act="move-confirm"' + (M.saving ? ' disabled' : '') + '>' + (M.saving ? 'Movendo…' : (o.needs_reason ? (M.applyNow ? 'Mudar prazo e mover' : 'Pedir mudança de prazo') : 'Mover para cá')) + '</button></div>';
+        }
+        return card + '</div>';
+      }).join('') + '</div>';
+    }
+    return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close" data-autofocus>Fechar</button></div>';
+  }
+  function moveConfirm() {
+    var M = S.move, o = M.options[M.sel], e = lookup(M.key);
+    if (!o || !e || M.saving) return;
+    var box = $('agLayer').querySelector('[data-move-error]'), rs = $('agLayer').querySelector('[data-move-reason]');
+    M.reason = rs ? rs.value.trim() : '';
+    if (o.needs_reason && !M.reason) { box.textContent = 'Informe o motivo da mudança de prazo.'; box.hidden = false; rs.focus(); return; }
+    M.saving = true; renderLayer();
+    track('move_confirm', o.needs_reason ? 'other_day' : 'same_day');
+    api(base() + '/agenda/assign?' + planQs(), { json: { type: e.type, id: e.id, date: o.date, block_id: o.block_id, reason: M.reason || null } }).then(function (res) {
+      M.saving = false;
+      if (!res.ok || !res.body.success) { M.error = errText(res, 'Não foi possível mover o item.'); renderLayer(); return; }
+      S.layer = null; renderLayer();
+      toast(res.body.message || 'Item movido.');
+      load(); loadLate(); loadEstCount();
+    });
+  }
+  function loadSug() {
+    var G = S.sug;
+    G.loading = true; G.error = null;
+    api(base() + '/agenda/suggestions?date=' + G.date + '&' + planQs()).then(function (res) {
+      G.loading = false;
+      if (!res.ok || !res.body.success) G.error = errText(res, 'Não foi possível calcular a sugestão.');
+      else { G.proposals = res.body.proposals || []; G.unplaced = res.body.unplaced || []; }
+      if (S.layer && S.layer.kind === 'sug') renderLayer();
+    });
+  }
+  function sugHtml() {
+    var G = S.sug, out = '<h3 id="agDlg">Sugerir distribuição</h3><p class="ag-meta">' + h(cap1(longDay(G.date))) + '. O sistema só sugere; nada é bloqueado. Você pode aceitar ou desfazer depois.</p>';
+    if (G.error) out += '<p class="ag-error" role="alert">' + h(G.error) + '</p>';
+    if (G.loading) out += '<p class="ag-meta">Calculando…</p>';
+    else if (!G.proposals.length && !G.unplaced.length && !G.error) out += '<p class="ag-state">Não há itens deste dia esperando um bloco.</p>';
+    else {
+      if (G.proposals.length) out += '<div class="ag-sug-list">' + G.proposals.map(function (p) { return '<div class="ag-sug-row"><b>' + h(p.title) + '</b><small>' + dur(p.minutes) + ' → ' + h(p.block_name) + '</small></div>'; }).join('') + '</div>';
+      if (G.unplaced.length) out += '<p class="ag-sec">Não cabem (ficam sem bloco)</p><div class="ag-sug-list">' + G.unplaced.map(function (p) { return '<div class="ag-sug-row"><b>' + h(p.title) + '</b><small>' + dur(p.minutes) + '</small></div>'; }).join('') + '</div>';
+    }
+    return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close" data-autofocus>Cancelar</button>' +
+      '<button type="button" class="ag-btn ag-btn--primary" data-act="sug-apply"' + (!G.proposals.length || G.saving ? ' disabled' : '') + '>' + (G.saving ? 'Aplicando…' : 'Aplicar sugestão') + '</button></div>';
+  }
+  function sugAction(action, doneMsg) {
+    var d = S.sel;
+    api(base() + '/agenda/suggestions?' + planQs(), { json: { action: action, date: d } }).then(function (res) {
+      S.sug.saving = false;
+      if (!res.ok || !res.body.success) { toast(errText(res, 'Não foi possível concluir.'), true); return; }
+      var b = res.body;
+      S.layer = null; renderLayer();
+      toast(doneMsg(b));
+      loadBlocks();
+    });
+  }
+
   /* ---------- blocos e sinais (somente leitura; nunca bloqueiam) ---------- */
   function bday(d) { return S.blocks.on ? (S.blocks.days[d] || null) : null; }
   function dur(m) { m = Math.max(0, Math.round(m)); var hh = Math.floor(m / 60), mm = m % 60; return hh && mm ? hh + 'h' + pad(mm) : (hh ? hh + 'h' : mm + 'min'); }
@@ -350,10 +440,14 @@
     if (B.error) return '<p class="ag-note">' + h(B.error) + '</p>';
     var bd = B.days[d];
     if (!bd) return '<p class="ag-note">Escolha um colaborador para ver os blocos.</p>';
-    var out = '<section class="ag-bk" aria-label="Blocos do dia">' + dayBar(bd);
+    var out = '<section class="ag-bk" aria-label="Blocos do dia">' + dayBar(bd), sc = bd.day.suggested_count || 0;
+    if (sc) out += '<div class="ag-sugbar" role="status"><span><b>' + sc + (sc === 1 ? ' item sugerido' : ' itens sugeridos') + '</b> pelo sistema.</span><span class="ag-sugbar__btns"><button type="button" class="ag-btn ag-btn--sm" data-act="sug-accept">Aceitar</button><button type="button" class="ag-btn ag-btn--sm" data-act="sug-undo">Desfazer sugestão</button></span></div>';
+    else if (bd.day.state !== 'none') out += '<div class="ag-sugbar"><span>Itens do dia sem bloco?</span><button type="button" class="ag-btn ag-btn--sm" data-act="sug-open">Sugerir distribuição</button></div>';
     bd.blocks.forEach(function (b) {
       out += '<div class="ag-bk-row"><span class="ag-bk-row__time">' + h(b.start) + '–' + h(b.end) + '</span><span class="ag-bk-row__name">' + h(b.name) + '</span>' +
-        sigChip(b.signal) + (b.without_estimate ? '<span class="ag-bk-row__warn">' + b.without_estimate + ' sem estimativa</span>' : '') + '</div>';
+        sigChip(b.signal) + (b.without_estimate ? '<span class="ag-bk-row__warn">' + b.without_estimate + ' sem estimativa</span>' : '');
+      if (b.items && b.items.length) out += '<ul class="ag-bk-items">' + b.items.map(function (it) { return '<li>' + h(it.title) + ' <small>' + (it.minutes ? dur(it.minutes) : 'sem estimativa') + (it.suggested ? ' · sugerido' : '') + '</small></li>'; }).join('') + '</ul>';
+      out += '</div>';
     });
     return out + '</section>';
   }
@@ -382,7 +476,7 @@
     if (!list.length) body = '<p class="ag-state">Nada marcado para este dia. Toque em Criar.</p>';
     if (all.length) body += '<p class="ag-sec">Dia todo</p><div class="ag-cards">' + all.map(card).join('') + '</div>';
     if (tm.length) body += '<p class="ag-sec">Horários</p><div class="ag-cards">' + tm.map(card).join('') + '</div>';
-    return strip + blocksMobile(d) + '<div class="ag-cards--day">' + body + '</div>';
+    return strip + '<div class="ag-bk-m">' + blocksMobile(d) + '</div><div class="ag-cards--day">' + body + '</div>';
   }
   function weekMobile() {
     var out = '<div class="ag-weeklist">', ws = weekStart(S.sel);
@@ -486,7 +580,7 @@
       return;
     }
     var v = S.view, html;
-    if (v === 'day') html = dayMobile() + grid([S.sel]);
+    if (v === 'day') html = dayMobile() + '<div class="ag-bk-d">' + blocksMobile(S.sel) + '</div>' + grid([S.sel]);
     else if (v === 'week') { var ws = weekStart(S.sel), days = []; for (var i = 0; i < 7; i++) days.push(add(ws, i)); html = weekMobile() + grid(days); }
     else html = monthMobile() + monthDesktop();
     var note = S.googleNote ? '<p class="ag-note">' + h(S.googleNote) + '</p>' : '';
@@ -585,7 +679,8 @@
         (e.closed ? '' : '<button type="button" class="ag-btn" data-act="complete-manual" data-key="' + h(e.key) + '">Marcar como concluído</button>') +
         '<button type="button" class="ag-btn ag-btn--danger" data-act="ask-delete" data-key="' + h(e.key) + '">Excluir</button></div><div data-confirm></div>';
     } else {
-      out += '<a class="ag-btn ag-btn--primary" href="' + h(e.url) + '" data-track-item="' + e.type + '" data-autofocus>Abrir página de gestão</a></div>';
+      out += '<a class="ag-btn ag-btn--primary" href="' + h(e.url) + '" data-track-item="' + e.type + '" data-autofocus>Abrir página de gestão</a>' +
+        ((e.type === 'project_task' || e.type === 'process_instance') && !e.closed ? '<button type="button" class="ag-btn" data-act="move-open" data-key="' + h(e.key) + '">Mover para um bloco</button>' : '') + '</div>';
     }
     return out + '<div class="ag-btns"><button type="button" class="ag-btn" data-act="close">Fechar</button></div>';
   }
@@ -651,6 +746,8 @@
     else if (L.kind === 'form') inner = formHtml(L);
     else if (L.kind === 'menu') inner = menuHtml();
     else if (L.kind === 'est') inner = estHtml();
+    else if (L.kind === 'move') inner = moveHtml();
+    else if (L.kind === 'sug') inner = sugHtml();
     else inner = googleHtml();
     host.innerHTML = sheetWrap(inner, panel, 'agDlg');
     var f = host.querySelector('[data-autofocus]') || host.querySelector('input,select,textarea,a,button');
@@ -776,6 +873,13 @@
   function act(name, node) {
     if (name === 'close') return closeLayer();
     if (name === 'retry') return load();
+    if (name === 'move-open') { track('move_open'); S.move.key = node.dataset.key; S.move.saving = false; openLayer({ kind: 'move' }, node); loadMove(); return; }
+    if (name === 'move-pick') { S.move.sel = +node.dataset.i; S.move.error = null; renderLayer(); var rf = $('agLayer').querySelector('[data-move-reason], [data-act="move-confirm"]'); if (rf) rf.focus(); return; }
+    if (name === 'move-confirm') return moveConfirm();
+    if (name === 'sug-open') { track('suggest_open'); S.sug.date = S.sel; S.sug.saving = false; S.sug.proposals = []; S.sug.unplaced = []; openLayer({ kind: 'sug' }, node); loadSug(); return; }
+    if (name === 'sug-apply') { S.sug.saving = true; track('suggest_apply'); renderLayer(); sugAction('apply', function (b) { return b.applied + (b.applied === 1 ? ' item sugerido.' : ' itens sugeridos.') + (b.unplaced && b.unplaced.length ? ' ' + b.unplaced.length + ' sem bloco.' : ''); }); return; }
+    if (name === 'sug-accept') { track('suggest_accept'); sugAction('accept', function (b) { return b.accepted + (b.accepted === 1 ? ' sugestão aceita.' : ' sugestões aceitas.'); }); return; }
+    if (name === 'sug-undo') { track('suggest_undo'); sugAction('undo', function (b) { return b.removed + (b.removed === 1 ? ' sugestão desfeita.' : ' sugestões desfeitas.'); }); return; }
     if (name === 'est-open') { track('estimate_open'); S.est.picks = {}; S.est.skipped = {}; openLayer({ kind: 'est' }, node); loadEstList(); return; }
     if (name === 'est-type') { var ek = node.dataset.k; S.est.types[ek] = !(S.est.types[ek] !== false); S.est.picks = {}; renderLayer(); loadEstList(); return; }
     if (name === 'est-pick') {

@@ -22,7 +22,8 @@ Protótipo de referência (privado): https://claude.ai/artifact/REcHTjGEo1dS8ZH7
 - [ ] Parecer do Arquiteto sobre o modelo de dados e o isolamento (seção 6.4).
 - [ ] Parecer do DBA sobre migração e índices.
 - [x] Aprovação para iniciar a Fase 1 (2026-10-03).
-- [ ] Fase 1 entregue e validada com colaboradores (seção 9.1).
+- [x] Fase 1 entregue em produção (2026-10-03); validação com colaboradores segue pendente (seção 9.1).
+- [x] Fase 2 implementada (sinais por bloco, estimativa e Estimar em lote, Mover para um bloco, sugestão de distribuição); padrão de estimativa em 30 min por decisão de 2026-10-03.
 - [ ] Card de execução por entrega (`aa-j-31-card-execution`), quando houver 3 ou mais etapas.
 
 ## 1. Contexto e problema

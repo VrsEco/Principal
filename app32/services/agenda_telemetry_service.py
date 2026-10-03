@@ -22,6 +22,12 @@ ALLOWED_EVENTS: dict[str, set[str] | None] = {
     "blocks_toggle": {"on", "off"},
     "estimate_open": None,
     "estimate_save": None,
+    "move_open": None,
+    "move_confirm": {"same_day", "other_day"},
+    "suggest_open": None,
+    "suggest_apply": None,
+    "suggest_accept": None,
+    "suggest_undo": None,
 }
 
 

@@ -20,7 +20,7 @@ from services.block_signal_service import DEFAULT_IDLE_THRESHOLD_MINUTES, comput
 from services.unified_calendar_service import list_unified_events
 
 MAX_DAYS = 14
-_CLOSED_ITEM_STATUSES = {"completed", "done", "cancelled"}
+_CLOSED_ITEM_STATUSES = {"completed", "done", "cancelled", "postponed", "suspended"}
 _TIMED_TYPES = {"meeting", "manual", "google_event"}
 
 
@@ -109,20 +109,37 @@ def build_block_view(
         ]
 
         items = []
+        listing: dict[Any, list[dict[str, Any]]] = {}
+        suggested = 0
+        # O mesmo item pode estar em agendas diferentes (dia e semana): conta uma vez, preferindo o que a pessoa atribuiu.
+        chosen: dict[int, WorkJourneyAgendaItem] = {}
         for entry in entries:
-            if entry.planned_date != current or entry.id in seen_entry_ids:
+            if entry.planned_date != current or not entry.journey_item_id:
                 continue
-            seen_entry_ids.add(entry.id)
+            best = chosen.get(entry.journey_item_id)
+            if best is None or (bool(entry.manual_override), entry.id) > (bool(best.manual_override), best.id):
+                chosen[entry.journey_item_id] = entry
+        for entry in chosen.values():
             journey = journey_by_id.get(entry.journey_item_id)
             if journey is None:
                 continue
-            items.append(
-                {
-                    "block_id": entry.block_id,
-                    "estimated_minutes": journey.estimated_minutes,
-                    "completed": (journey.status or "") in _CLOSED_ITEM_STATUSES,
-                }
-            )
+            # RF-SIN-3: atrasado só consome depois de planejado pela pessoa; a sugestão automática do motor não conta.
+            if not entry.manual_override and journey.due_date and journey.due_date < current:
+                continue
+            closed = (journey.status or "") in _CLOSED_ITEM_STATUSES
+            is_suggested = (entry.metadata_json or {}).get("suggested_by") == "system"
+            items.append({"block_id": entry.block_id, "estimated_minutes": journey.estimated_minutes, "completed": closed})
+            if not closed:
+                suggested += 1 if is_suggested else 0
+                listing.setdefault(entry.block_id, []).append(
+                    {
+                        "key": f"{journey.item_type}:{journey.source_id}" if journey.source_id else None,
+                        "type": journey.item_type,
+                        "title": journey.title,
+                        "minutes": int(journey.estimated_minutes or 0),
+                        "suggested": is_suggested,
+                    }
+                )
 
         timed = []
         for event in events:
@@ -142,6 +159,8 @@ def build_block_view(
         for block in computed["blocks"]:
             block["start"] = label_by_id[block["id"]]["start"]
             block["end"] = label_by_id[block["id"]]["end"]
+            block["items"] = listing.get(block["id"], [])
+        computed["day"]["suggested_count"] = suggested
         days.append({"date": current.isoformat(), **computed})
         current += timedelta(days=1)
 
