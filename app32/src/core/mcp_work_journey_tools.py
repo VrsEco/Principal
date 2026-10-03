@@ -42,6 +42,7 @@ from services.work_journey_admin_service import (
     list_absence_requests,
     list_transfer_requests,
 )
+from services.effective_blocks_service import person_mode_extras
 from services.work_journey_service import (
     create_manual_task,
     delete_work_item,
@@ -148,7 +149,10 @@ def register_work_journey_tools(mcp) -> None:
             employee_id=employee_id,
             payload={"company_id": company_id, "employee_id": employee_id},
         )
-        return {'blocks': _run(list_employee_blocks, actor_scope.company_id, actor_scope.employee_ids[0])}
+        return {
+            'blocks': _run(list_employee_blocks, actor_scope.company_id, actor_scope.employee_ids[0]),
+            **_run(person_mode_extras, actor_scope.company_id, actor_scope.employee_ids[0]),
+        }
 
     @mcp.tool()
     def save_work_journey_block_tool(company_id: int, payload: dict, block_id: Optional[int] = None) -> dict:
@@ -161,7 +165,9 @@ def register_work_journey_tools(mcp) -> None:
             employee_id=int(data["employee_id"]),
             payload={"company_id": company_id, **payload},
         )
-        return {'block': _run(save_block, resolved_company_id, data, block_id)}
+        saved = _run(save_block, resolved_company_id, data, block_id)
+        extras = _run(person_mode_extras, resolved_company_id, int(data["employee_id"]), with_blocks=False)
+        return {'block': saved, **({'warning': extras['person_mode_note']} if extras else {})}
 
     @mcp.tool()
     def delete_work_journey_block_tool(company_id: int, block_id: int) -> dict:
@@ -175,8 +181,9 @@ def register_work_journey_tools(mcp) -> None:
             employee_id=int(block.employee_id),
             payload={"company_id": company_id, "employee_id": int(block.employee_id)},
         )
+        extras = _run(person_mode_extras, resolved_company_id, int(block.employee_id), with_blocks=False)
         _run(delete_block, resolved_company_id, block_id)
-        return {'success': True}
+        return {'success': True, **({'warning': extras['person_mode_note']} if extras else {})}
 
     @mcp.tool()
     def list_work_journey_rules_tool(company_id: int, employee_id: int) -> dict:

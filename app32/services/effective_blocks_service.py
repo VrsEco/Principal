@@ -170,3 +170,23 @@ class PersonModeView:
     def block_id(self):
         block = object.__getattribute__(self, "_block")
         return block.id if block is not None else None
+
+
+PERSON_MODE_NOTE = (
+    "Este colaborador usa blocos da pessoa. Os blocos por empresa abaixo continuam guardados, mas nao definem mais o dia dele; "
+    "edite os blocos da pessoa em Agenda > Meus blocos."
+)
+
+
+def person_mode_extras(company_id: int, employee_id: int | None, *, with_blocks: bool = True) -> dict[str, Any]:
+    """Campos ADITIVOS para respostas de blocos legados. Vazio quando o colaborador nao migrou (contrato intacto)."""
+    if not employee_id:
+        return {}
+    employee = Employee.query.filter_by(id=employee_id, company_id=company_id).first()
+    user_id = person_mode_user(employee)
+    if user_id is None:
+        return {}
+    extras: dict[str, Any] = {"person_mode": True, "person_mode_note": PERSON_MODE_NOTE}
+    if with_blocks:
+        extras["person_blocks"] = [b.to_dict() for b in person_block_proxies(user_id, company_id, employee_id)]
+    return extras

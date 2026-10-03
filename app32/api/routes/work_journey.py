@@ -41,6 +41,7 @@ from services.work_journey_admin_service import (
     list_absence_requests,
     list_transfer_requests,
 )
+from services.effective_blocks_service import person_mode_extras
 from services.work_journey_service import (
     WorkJourneyError,
     create_manual_task,
@@ -122,7 +123,7 @@ def api_list_blocks(company_id: int):
         employee_id = _resolve_read_employee_id(company_id)
         if not employee_id or not _can_access_employee(company_id, employee_id):
             return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
-        return jsonify({'success': True, 'blocks': list_employee_blocks(company_id, employee_id)})
+        return jsonify({'success': True, 'blocks': list_employee_blocks(company_id, employee_id), **person_mode_extras(company_id, employee_id)})
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -150,8 +151,9 @@ def api_delete_block(company_id: int, block_id: int):
             return jsonify({'success': False, 'message': 'Bloco não encontrado.'}), 404
         if not _can_manage_employee(company_id, block.employee_id):
             return jsonify({'success': False, 'message': 'Você não pode excluir blocos deste colaborador.'}), 403
+        extras = person_mode_extras(company_id, block.employee_id, with_blocks=False)
         delete_block(company_id, block_id)
-        return jsonify({'success': True})
+        return jsonify({'success': True, **({'warning': extras['person_mode_note']} if extras else {})})
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -542,7 +544,8 @@ def _save_block(company_id: int, block_id: int | None = None):
         if not _can_manage_employee(company_id, payload['employee_id']):
             return jsonify({'success': False, 'message': 'Você não pode editar blocos deste colaborador.'}), 403
         block = save_block(company_id, payload, block_id)
-        return jsonify({'success': True, 'block': block})
+        extras = person_mode_extras(company_id, payload['employee_id'], with_blocks=False)
+        return jsonify({'success': True, 'block': block, **({'warning': extras['person_mode_note']} if extras else {})})
     except ValidationError as exc:
         return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:

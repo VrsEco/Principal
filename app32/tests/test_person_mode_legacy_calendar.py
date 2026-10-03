@@ -143,3 +143,14 @@ def test_motor_segue_alocando_para_quem_nao_migrou(ctx, monkeypatch):
     db.session.commit()
     entry = WorkJourneyAgendaItem.query.filter_by(agenda_id=agenda.id, journey_item_id=3).one()
     assert entry.block_id == 2  # comportamento legado: aloca no bloco por empresa
+
+
+def test_extras_aditivos_so_aparecem_para_quem_migrou(ctx):
+    from services.effective_blocks_service import person_mode_extras
+
+    migrated = person_mode_extras(1, 10)
+    assert migrated["person_mode"] is True and "Meus blocos" in migrated["person_mode_note"]
+    assert [b["name"] for b in migrated["person_blocks"]] == ["Manhã da pessoa"]
+    assert person_mode_extras(1, 11) == {}  # contrato intacto para quem não migrou
+    assert person_mode_extras(1, None) == {}
+    assert "person_blocks" not in person_mode_extras(1, 10, with_blocks=False)
