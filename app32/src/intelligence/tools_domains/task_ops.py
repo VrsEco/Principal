@@ -286,12 +286,15 @@ def list_project_tasks_secure(
 
 
 def create_project_task_secure(
-    project_code: str,
     task_name: str,
+    idempotency_key: str,
+    project_id: int | None = None,
+    project_code: str | None = None,
     responsible_name: str = None,
     due_date: str = None,
     description: str = None,
     priority: str = "normal",
+    status: str = "planned",
     notes: str = None,
     company_id: int | None = None,
 ):
@@ -317,25 +320,36 @@ def create_project_task_secure(
     payload, error = ProjectTaskMCPService.create_task(
         company_id=int(decision.resolved_company_id),
         user_id=int(principal["user_id"]),
-        project_code=project_code,
         task_name=task_name,
+        idempotency_key=idempotency_key,
+        project_id=int(project_id) if project_id else None,
+        project_code=project_code,
         responsible_name=responsible_name,
         due_date=due_date,
         description=description,
         priority=priority,
+        status=status,
         notes=notes,
     )
     if error:
         return {"success": False, "error": error}
 
-    record_mutation_success(
-        action="create",
-        company_id=int(decision.resolved_company_id),
-        user_id=int(principal["user_id"]),
-        tool_name="create_project_task_secure",
-        domain="projects",
-        metadata={"project_code": project_code},
-    )
+    if not (payload or {}).get("idempotent_replay"):
+        record_mutation_success(
+            action="create",
+            company_id=int(decision.resolved_company_id),
+            user_id=int(principal["user_id"]),
+            tool_name="create_project_task_secure",
+            domain="projects",
+            metadata={
+                "origin": "MCP",
+                "actor_user_id": int(principal["user_id"]),
+                "project_id": (payload or {}).get("project_id"),
+                "project_code": (payload or {}).get("project_code"),
+                "task_id": ((payload or {}).get("task") or {}).get("id"),
+                "idempotency_key": str(idempotency_key).strip(),
+            },
+        )
     return {"success": True, **(payload or {})}
 
 

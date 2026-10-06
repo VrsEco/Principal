@@ -70,6 +70,7 @@ client público desta jornada.
   `describe_app32_surface_playbooks_tool` e `list_process_hierarchy`
   (expansão aprovada por Fabiano Diretor em 2026-09-27, ver
   `docs/handoffs/handoff_squad_cliente_2026-09-27_expansao_mcp_versus_manual_ia.md`).
+- Cohort de criação de atividade em projeto: `create_project_task_secure` (scope `mcp:user` + RBAC `project.task.create`, `human_gate=True`, `idempotency_key` obrigatória; ver `docs/runbooks/runbook_operacao_mcp_oauth_rbac_v1.md`).
 - Cohort de mutação de processos (cohort/scope próprio, não misturado ao
   catálogo de leitura acima): `create_process_area`, `create_macro_process`,
   `update_macro_process` e `create_process`. Descoberta exige scope

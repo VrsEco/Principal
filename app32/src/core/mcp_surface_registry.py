@@ -181,6 +181,16 @@ PILOT_MEETING_SENSITIVE_TOOL_NAMES: tuple[str, ...] = (
     "send_meeting_minutes",
 )
 
+# Criação de atividade em projeto é uma coorte OAuth própria e exclusiva da
+# surface `user`, no mesmo padrão de PILOT_MEETING_SENSITIVE_TOOL_NAMES:
+# descoberta condicionada ao scope `mcp:user` e à permissão RBAC
+# `project.task.create`, revalidada por chamada. `create_project_task_secure`
+# mantém `human_gate=True` no catálogo (aprovação humana obrigatória), exige
+# `idempotency_key` e valida tenant do projeto/responsável no service.
+PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES: tuple[str, ...] = (
+    "create_project_task_secure",
+)
+
 # Descoberta de empresa por nome/prefixo é uma coorte própria, sempre exposta,
 # no mesmo padrão de PILOT_MEETING_READ_TOOL_NAMES: `list_my_companies` não
 # recebe company_id (é o próprio mecanismo de resolver um company_id a partir
@@ -305,6 +315,7 @@ def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
             or name in PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES
             or name in PILOT_MEETING_MUTATION_TOOL_NAMES
             or name in PILOT_MEETING_SENSITIVE_TOOL_NAMES
+            or name in PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES
         ):
             scope = "mcp:user"
         else:
@@ -335,6 +346,7 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
                 *PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES,
                 *PILOT_MEETING_MUTATION_TOOL_NAMES,
                 *PILOT_MEETING_SENSITIVE_TOOL_NAMES,
+                *PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES,
                 *PILOT_AUDIT_READ_TOOL_NAMES,
             ))
         )
@@ -878,6 +890,7 @@ def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> An
         *PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES,
         *PILOT_MEETING_MUTATION_TOOL_NAMES,
         *PILOT_MEETING_SENSITIVE_TOOL_NAMES,
+        *PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES,
     )
     mcp = _build_policy_fast_mcp(
         name,
@@ -996,6 +1009,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         *PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES,
         *PILOT_MEETING_MUTATION_TOOL_NAMES,
         *PILOT_MEETING_SENSITIVE_TOOL_NAMES,
+        *PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES,
         *PILOT_AUDIT_READ_TOOL_NAMES,
     )
     mcp = _build_policy_fast_mcp(
@@ -1027,6 +1041,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         *PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES,
         *PILOT_MEETING_MUTATION_TOOL_NAMES,
         *PILOT_MEETING_SENSITIVE_TOOL_NAMES,
+        *PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES,
     ):
         tool = tools_by_name.get(tool_name)
         if tool is not None:

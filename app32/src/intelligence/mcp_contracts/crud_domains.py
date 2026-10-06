@@ -320,6 +320,21 @@ def build_app32_crud_contracts_manifest() -> CRUDContractsManifest:
                     ),
                     _operation(
                         domain="projects",
+                        action="create",
+                        entity="project_task",
+                        description=(
+                            "Cria atividade em projeto (create_project_task_secure) com idempotency_key, "
+                            "validação de tenant do projeto/responsável, recusa de projeto "
+                            "arquivado/cancelado/concluído/excluído, gate humano e auditoria MCP."
+                        ),
+                        roles=operational_roles,
+                        permission="project.task.create",
+                        risk="medium",
+                        human_gate_required=True,
+                        implementation_status="implemented",
+                    ),
+                    _operation(
+                        domain="projects",
                         action="delete",
                         entity="project_task",
                         description="Executa soft delete de atividade de projeto com gate humano e auditoria MCP.",
