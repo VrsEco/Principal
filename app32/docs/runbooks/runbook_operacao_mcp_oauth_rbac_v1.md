@@ -63,6 +63,30 @@ a solicitação persistida exibida no APP32 e repetir **o mesmo payload**. Não
 passar booleano de confirmação, não alterar o payload após a aprovação e não
 repetir operação com outro `company_id`.
 
+## Coorte de criação de atividade em projeto
+
+`create_project_task_secure` (domínio `projects`, surface `user`, scope
+`mcp:user`) cria atividade em projeto da empresa sem passar por reunião.
+Descoberta exige a permissão RBAC `project.task.create`; a execução revalida
+principal, grant e `company_id` por chamada e tem `human_gate=True`: executar a
+chamada, aprovar a solicitação exibida no APP32 e repetir **o mesmo payload**.
+
+- Parâmetros: `company_id`, `project_id` ou `project_code` (ex.: `AA.J.26`),
+  `task_name` (obrigatório, máx. 300), `idempotency_key` (obrigatória, máx. 128),
+  e opcionais `responsible_name` (colaborador da empresa), `due_date`
+  (`AAAA-MM-DD` ou `DD/MM/AAAA`), `priority` (`low|normal|high|urgent`),
+  `status` inicial (`planned|in_progress`), `description`, `notes`.
+- Tenant: o projeto precisa pertencer ao `company_id`; responsável fora da
+  empresa é recusado. Projetos `archived`, `cancelled`, `completed` ou
+  soft-deletados são recusados (reabrir o projeto antes, se for o caso).
+- Idempotência: mesma `idempotency_key` + mesmo payload no projeto devolve a
+  atividade existente (`idempotent_replay=true`); mesma chave com payload
+  diferente é recusada. A chave fica no `logs` da atividade.
+- Auditoria: `actor_user_id`, `company_id`, `project_id`, `origin=MCP` e
+  `idempotency_key` no `logs` da atividade e no evento de auditoria MCP.
+- Leitura posterior: `list_project_tasks_secure`. Fluxo reunião → projeto
+  (`sync_meeting_activities_to_project`) permanece inalterado.
+
 ## Provisionamento automático de identidade
 
 1. Crie ou ative o usuário apenas no APP32 e confirme o vínculo ativo com a

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from collections import Counter
 from datetime import datetime
@@ -8,6 +10,7 @@ from typing import Any
 from sqlalchemy import func
 
 from models import db
+from models.employee import Employee
 from models.project import Project, ProjectTask
 from services.project_task_service import ProjectTaskService
 
@@ -168,40 +171,186 @@ class ProjectTaskMCPService:
             "items": items,
         }, None
 
+    CREATE_TITLE_MAX = 300
+    CREATE_TEXT_MAX = 5000
+    CREATE_KEY_MAX = 128
+    CREATE_PRIORITIES = frozenset({"low", "normal", "high", "urgent"})
+    CREATE_STATUS_STAGE = {"planned": "inbox", "in_progress": "executing"}
+    # Projeto encerrado/cancelado/arquivado não recebe atividades via MCP; para
+    # "completed" o usuário deve reabrir o projeto antes (evita regredir progresso).
+    CREATE_BLOCKED_PROJECT_STATUSES = frozenset({"archived", "cancelled", "canceled", "completed"})
+
+    @staticmethod
+    def _create_payload_hash(fields: dict[str, Any]) -> str:
+        canonical = json.dumps(fields, sort_keys=True, ensure_ascii=False, default=str)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _find_idempotent_task(*, project_id: int, idempotency_key: str) -> tuple[ProjectTask | None, dict | None]:
+        rows = (
+            ProjectTask.query.filter(ProjectTask.project_id == int(project_id))
+            .order_by(ProjectTask.id.desc())
+            .limit(5000)
+            .all()
+        )
+        for row in rows:
+            for entry in row.logs or []:
+                if (
+                    isinstance(entry, dict)
+                    and entry.get("origin") == "MCP"
+                    and entry.get("idempotency_key") == idempotency_key
+                ):
+                    return row, entry
+        return None, None
+
     @staticmethod
     def create_task(
         *,
         company_id: int,
         user_id: int,
-        project_code: str,
         task_name: str,
+        idempotency_key: str,
+        project_id: int | None = None,
+        project_code: str | None = None,
         responsible_name: str | None = None,
         due_date: str | None = None,
         description: str | None = None,
         priority: str = "normal",
+        status: str = "planned",
         notes: str | None = None,
     ) -> tuple[dict[str, Any] | None, str | None]:
+        cls = ProjectTaskMCPService
+        key = str(idempotency_key or "").strip()
+        if not key:
+            return None, "idempotency_key é obrigatória para criar atividade via MCP."
+        if len(key) > cls.CREATE_KEY_MAX:
+            return None, f"idempotency_key excede {cls.CREATE_KEY_MAX} caracteres."
+
+        title = str(task_name or "").strip()
+        if not title:
+            return None, "Título da atividade não pode ser vazio."
+        if len(title) > cls.CREATE_TITLE_MAX:
+            return None, f"Título excede {cls.CREATE_TITLE_MAX} caracteres."
+        for label, value in (("Descrição", description), ("Observações", notes)):
+            if value is not None and len(str(value)) > cls.CREATE_TEXT_MAX:
+                return None, f"{label} excede {cls.CREATE_TEXT_MAX} caracteres."
+
+        normalized_priority = str(priority or "normal").strip() or "normal"
+        if normalized_priority not in cls.CREATE_PRIORITIES:
+            return None, "Valor inválido para priority."
+        normalized_status = str(status or "planned").strip() or "planned"
+        if normalized_status not in cls.CREATE_STATUS_STAGE:
+            return None, "Status inicial inválido (use planned ou in_progress)."
+        _, due_date_error = ProjectTaskService.parse_due_date(due_date)
+        if due_date_error:
+            return None, due_date_error
+
+        if not project_id and not str(project_code or "").strip():
+            return None, "Informe project_id ou project_code."
+
+        project = None
+        if project_id:
+            project = Project.query.filter_by(id=int(project_id), company_id=int(company_id)).first()
+            if project is None:
+                return None, "Projeto não encontrado na empresa informada."
+        if str(project_code or "").strip():
+            by_code, code_error = ProjectTaskService.resolve_project_by_code(
+                project_code=str(project_code).strip(),
+                allowed_company_ids=[int(company_id)],
+            )
+            if code_error:
+                return None, code_error
+            if project is not None and by_code is not None and int(by_code.id) != int(project.id):
+                return None, "project_id e project_code apontam para projetos diferentes."
+            project = project or by_code
+        if project is None or int(project.company_id) != int(company_id):
+            return None, "Projeto não encontrado na empresa informada."
+
+        # Serializa criações concorrentes no mesmo projeto (no-op em SQLite).
+        locked = Project.query.filter_by(id=project.id).with_for_update().first()
+        project = locked or project
+
+        if project.is_deleted:
+            return None, "Projeto excluído não aceita novas atividades."
+        project_status = str(project.status or "").strip().lower()
+        if project_status in cls.CREATE_BLOCKED_PROJECT_STATUSES:
+            return None, f"Projeto com status '{project_status}' não aceita novas atividades."
+
+        employee_id = None
+        final_responsible = str(responsible_name or "").strip()
+        if final_responsible:
+            employee = (
+                Employee.query.filter(
+                    Employee.company_id == int(company_id),
+                    func.lower(Employee.name) == final_responsible.lower(),
+                )
+                .order_by(Employee.id.asc())
+                .first()
+            )
+            if employee is None:
+                return None, "Responsável não pertence à empresa informada."
+            employee_id = employee.id
+            final_responsible = str(employee.name).strip()
+
+        payload_hash = cls._create_payload_hash({
+            "project_id": int(project.id),
+            "title": title,
+            "description": str(description or "").strip(),
+            "responsible": final_responsible.lower(),
+            "due_date": str(due_date or "").strip(),
+            "priority": normalized_priority,
+            "status": normalized_status,
+            "notes": str(notes or "").strip(),
+        })
+        existing, entry = cls._find_idempotent_task(project_id=project.id, idempotency_key=key)
+        if existing is not None:
+            db.session.rollback()
+            if (entry or {}).get("payload_hash") != payload_hash:
+                return None, "idempotency_key já utilizada com um payload diferente."
+            return {
+                "task": cls._serialize_task(existing),
+                "project_id": int(project.id),
+                "project_code": project.code,
+                "project_name": project.name,
+                "idempotent_replay": True,
+            }, None
+
+        audit_entry = {
+            "type": "mcp_create",
+            "origin": "MCP",
+            "actor_user_id": int(user_id),
+            "company_id": int(company_id),
+            "project_id": int(project.id),
+            "idempotency_key": key,
+            "payload_hash": payload_hash,
+            "at": datetime.utcnow().isoformat(),
+        }
         result, error = ProjectTaskService.create_project_task(
-            project_code=project_code,
-            task_name=task_name,
-            user_id=user_id,
-            allowed_company_ids=[int(company_id)],
-            responsible_name=responsible_name,
+            project_code=project.code,
+            task_name=title,
+            user_id=int(user_id),
+            project=project,
+            responsible_name=final_responsible or None,
+            employee_id=employee_id,
             due_date=due_date,
             description=description,
-            priority=priority,
+            status=normalized_status,
+            stage=cls.CREATE_STATUS_STAGE[normalized_status],
+            priority=normalized_priority,
             notes=notes,
+            initial_logs=[audit_entry],
         )
         if error:
             return None, error
         if not result:
             return None, "Falha ao criar atividade de projeto."
 
-        task = result["task"]
         return {
-            "task": ProjectTaskMCPService._serialize_task(task),
-            "project_code": getattr(result["project"], "code", project_code),
+            "task": cls._serialize_task(result["task"]),
+            "project_id": int(project.id),
+            "project_code": getattr(result["project"], "code", None),
             "project_name": getattr(result["project"], "name", None),
+            "idempotent_replay": False,
         }, None
 
     @staticmethod

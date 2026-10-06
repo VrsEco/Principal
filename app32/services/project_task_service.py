@@ -135,17 +135,21 @@ class ProjectTaskService:
         stage: str = "inbox",
         priority: str = "normal",
         notes: Optional[str] = None,
+        project: Optional[Project] = None,
+        employee_id: Optional[int] = None,
+        initial_logs: Optional[list] = None,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         normalized_name = str(task_name or "").strip()
         if not normalized_name:
             return None, "Não encontrei o nome da atividade. Informe no formato: nome_atividade: Nome da Atividade"
 
-        project, error = ProjectTaskService.resolve_project_by_code(
-            project_code=project_code,
-            allowed_company_ids=allowed_company_ids,
-        )
-        if error:
-            return None, error
+        if project is None:
+            project, error = ProjectTaskService.resolve_project_by_code(
+                project_code=project_code,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if error:
+                return None, error
         if not project:
             return None, "Projeto não encontrado para criar a atividade."
 
@@ -153,7 +157,6 @@ class ProjectTaskService:
         if due_date_error:
             return None, due_date_error
 
-        employee_id = None
         final_responsible_name = str(responsible_name or "").strip()
         if not final_responsible_name:
             employee_id, final_responsible_name = ProjectTaskService.resolve_default_responsible(
@@ -174,6 +177,7 @@ class ProjectTaskService:
                 stage=(str(stage or "inbox").strip() or "inbox"),
                 priority=(str(priority or "normal").strip() or "normal"),
                 notes=(str(notes).strip() if notes else None),
+                logs=(list(initial_logs) if initial_logs else []),
             )
             db.session.add(task)
             db.session.flush()

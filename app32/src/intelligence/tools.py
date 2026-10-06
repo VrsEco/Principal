@@ -1070,17 +1070,24 @@ def list_project_tasks_secure(project_id: int = None, company_id: int = None, in
 
 
 @tool
-def create_project_task_secure(project_code: str, task_name: str, responsible_name: str = None, due_date: str = None, description: str = None, priority: str = "normal", notes: str = None, company_id: int = None):
+def create_project_task_secure(task_name: str, idempotency_key: str, project_id: int = None, project_code: str = None, responsible_name: str = None, due_date: str = None, description: str = None, priority: str = "normal", status: str = "planned", notes: str = None, company_id: int = None):
     """
-    Cria atividade de projeto via MCP com política, quota de mutação e auditoria reforçada.
+    Cria atividade em projeto da empresa via MCP (RBAC project.task.create, aprovação humana, idempotente).
+    Informe project_id ou project_code (ex.: AA.J.26) e uma idempotency_key estável por atividade.
+    :param status: Status inicial: 'planned' (padrão) ou 'in_progress'.
+    :param priority: 'low', 'normal', 'high' ou 'urgent'.
+    :param responsible_name: Nome de um colaborador da empresa; se omitido, usa o usuário atual.
     """
     return task_ops_domain.create_project_task_secure(
-        project_code=project_code,
         task_name=task_name,
+        idempotency_key=idempotency_key,
+        project_id=project_id,
+        project_code=project_code,
         responsible_name=responsible_name,
         due_date=due_date,
         description=description,
         priority=priority,
+        status=status,
         notes=notes,
         company_id=company_id,
     )
