@@ -1,0 +1,144 @@
+{
+  "company_code": "AA",
+  "project_id": 187,
+  "project_code": "AA.J.26",
+  "approval_source": "human_request_2026-10-07",
+  "enabled": false,
+  "arts": [
+    {
+      "code": "versus-01",
+      "kit_code": "versus",
+      "version": 1,
+      "position": 1,
+      "filename": "versus-01.png",
+      "sha256": "ec6ec37d0e73f8005c7e377bba600db41ab7e39aad1f0c1ffb8f52a0a2909bb2",
+      "mime": "image/png"
+    },
+    {
+      "code": "versus-02",
+      "kit_code": "versus",
+      "version": 1,
+      "position": 2,
+      "filename": "versus-02.png",
+      "sha256": "297588a6046293a08ee7e99b44ddd6e907510f776c21fbefdb5fa3620e479061",
+      "mime": "image/png"
+    },
+    {
+      "code": "versus-03",
+      "kit_code": "versus",
+      "version": 1,
+      "position": 3,
+      "filename": "versus-03.png",
+      "sha256": "b88e48ba371bc7a520fc064ec5132393692a60ac1969a3eefb616a49ceaf6046",
+      "mime": "image/png"
+    },
+    {
+      "code": "phub-01",
+      "kit_code": "phub",
+      "version": 1,
+      "position": 1,
+      "filename": "phub-01.png",
+      "sha256": "c8643001e8e58513f5244a2ef2cfb82375467e9a935eaf79f724de80fbe9c22b",
+      "mime": "image/png"
+    },
+    {
+      "code": "phub-02",
+      "kit_code": "phub",
+      "version": 1,
+      "position": 2,
+      "filename": "phub-02.png",
+      "sha256": "b2ab95c5c762811118f423472fa09d05565dd76cd1013b2e07b74857e035f867",
+      "mime": "image/png"
+    },
+    {
+      "code": "phub-03",
+      "kit_code": "phub",
+      "version": 1,
+      "position": 3,
+      "filename": "phub-03.png",
+      "sha256": "e1c9667fe9cd97aeb87fd12122b6c796fe230ca8b97237c28dd859db53a6f33c",
+      "mime": "image/png"
+    },
+    {
+      "code": "cases-01",
+      "kit_code": "cases",
+      "version": 1,
+      "position": 1,
+      "filename": "cases-01.png",
+      "sha256": "778f78d548728e1aa6a6e58405912cf20aef30dadd72db2f91fdcad73a1a8833",
+      "mime": "image/png"
+    },
+    {
+      "code": "cases-02",
+      "kit_code": "cases",
+      "version": 1,
+      "position": 2,
+      "filename": "cases-02.png",
+      "sha256": "1b12c8fcb6fad60a9b922e83af7fe7cb1e20659e94e2a645bebf815f6a87eb8b",
+      "mime": "image/png"
+    },
+    {
+      "code": "cases-03",
+      "kit_code": "cases",
+      "version": 1,
+      "position": 3,
+      "filename": "cases-03.png",
+      "sha256": "976218e5e4a0cab2c2be0ace6c49e8bac7296b7f3e7e937ee04196d0edd45d03",
+      "mime": "image/png"
+    },
+    {
+      "code": "cases-04",
+      "kit_code": "cases",
+      "version": 1,
+      "position": 4,
+      "filename": "cases-04.png",
+      "sha256": "872281a44220671740d0ad574a36d596f7f6b69ec0dcaeeec5b898b6feccd721",
+      "mime": "image/png"
+    },
+    {
+      "code": "contato-01",
+      "kit_code": "contato",
+      "version": 1,
+      "position": 1,
+      "filename": "contato-01.png",
+      "sha256": "4758128e1afabca5443620bc2e1918b3a5a8ddbc35a0b6f942b2b11a8c68d776",
+      "mime": "image/png"
+    },
+    {
+      "code": "contato-02",
+      "kit_code": "contato",
+      "version": 1,
+      "position": 2,
+      "filename": "contato-02.png",
+      "sha256": "3538cfeb6c0f99b2e05fbff8d3562ed154d46b652a914ddf1a30f37c491ad908",
+      "mime": "image/png"
+    }
+  ],
+  "weekly_codes": {
+    "0": [
+      "versus-01",
+      "versus-02",
+      "versus-03"
+    ],
+    "1": [
+      "phub-01",
+      "phub-02",
+      "phub-03"
+    ],
+    "2": [
+      "cases-01"
+    ],
+    "3": [
+      "cases-02"
+    ],
+    "4": [
+      "cases-03",
+      "cases-04"
+    ],
+    "5": [
+      "contato-01",
+      "contato-02"
+    ],
+    "6": []
+  }
+}

@@ -21,6 +21,7 @@ from src.intelligence.knowledge_tools import knowledge_langchain_tools
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_analysis_catalog_tools import register_analysis_catalog_tools
 from src.core.mcp_agent_deployment_tools import register_agent_deployment_mcp_tools
+from src.core.mcp_whatsapp_status_tools import register_whatsapp_status_tools, STATUS_TOOL_NAMES
 from src.core.mcp_commercial_tools import register_commercial_mcp_tools
 from src.core.mcp_consultive_assisted_analysis_tools import register_consultive_assisted_analysis_tools
 from src.core.mcp_runtime import wrap_mcp_callable
@@ -266,6 +267,8 @@ _supplemental_mcp_tools = (
     SimpleNamespace(name="approve_agent_deployment", description="Aprova (somente humano) e dispara o workflow oficial de deploy."),
     SimpleNamespace(name="get_agent_deployment", description="Consulta um deploy do tenant de governança com trilha de eventos."),
     SimpleNamespace(name="list_agent_deployments", description="Lista deploys do tenant de governança."),
+    *(SimpleNamespace(name=name, description='Status WhatsApp: acervo aprovado, agenda e ledger tenant-safe.')
+      for name in STATUS_TOOL_NAMES),
     SimpleNamespace(name="get_internal_audit_summary", description="Retorna os totais tenant-safe da Auditoria Interna."),
     SimpleNamespace(name="list_internal_audit_points", description="Lista pontos de Auditoria Interna do tenant com filtro de status."),
     SimpleNamespace(name="list_internal_audit_findings", description="Lista achados de Auditoria Interna do tenant com filtro de status."),
@@ -738,6 +741,7 @@ catalog = ToolCatalog(
         registrar
         for registrar in (
         register_agent_deployment_mcp_tools,
+        register_whatsapp_status_tools,
         register_analysis_catalog_tools,
         register_commercial_mcp_tools,
         register_consultive_assisted_analysis_tools,
