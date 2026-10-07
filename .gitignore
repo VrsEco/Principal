@@ -97,6 +97,10 @@ app32/tests/e2e/outputs/
 /app32/instance/**
 /app32/uploads/uploads/**
 /app32/uploads/**
+# Uploads financeiros de runtime gravados na raiz do checkout (ex.: NF-e da automação).
+# Sem esta regra o git status do servidor fica sujo e o deploy_configr.sh recusa o reset.
+/uploads/financial/
+/uploads/financial/**
 
 # P0: evitar que variantes de ambiente e artefatos temporários com credenciais sejam versionados.
 **/.env.*
