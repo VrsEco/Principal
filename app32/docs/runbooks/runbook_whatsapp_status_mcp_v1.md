@@ -45,7 +45,7 @@ existentes; esta entrega não cria uma nova solicitação automaticamente.
   validando dependências de runtime/surfaces antes de formar o SHA de release.
 - Modo: full; restart_mcp=true; reiniciar/verificar scheduler dedicado pelo
   fluxo oficial. WHATSAPP_STATUS_ENABLED continua false até homologação.
-- Migração: nova revisão depende de 20261002_1000. Checkout já tinha heads de
+- Migração: nova revisão depende de 20261004_1000 (head da main). Checkout antigo tinha heads de
   Google Calendar/knowledge. O executor existente usa upgrade(revision='heads');
   consultar versões reais e aprovar o grafo exato do SHA, sem incluir migrações
   alheias inadvertidamente. Rollback de ledger não destrói evidências.
@@ -163,3 +163,21 @@ existentes; esta entrega não cria uma nova solicitação automaticamente.
 
 Fonte OAuth: https://developers.openai.com/plugins/build/auth
 Evidência: [Harness](../harnesses/harness_whatsapp_status_mcp_v1.md).
+
+### Release v2 — reconstruído sobre a main real (07/10/2026)
+
+- Base: origin/main e1af7c18cdd4d977ed7c5872f9834259e00e9f82. Branch
+  codex/whatsapp-status-versus-v2 contém **somente** o commit WhatsApp
+  (cherry-pick limpo de 4de916568); o PR #106 foi fechado por carregar cinco
+  commits anteriores. Conflitos de catálogo/registry resolvidos preservando as
+  ferramentas de deploy da main e adicionando as de Status em surface admin.
+- Migração 20261007_1000 revisa 20261004_1000; Alembic reporta head único.
+- Domínio whatsapp_status adicionado a CANONICAL_TOOL_DOMAINS (taxonomy) e à
+  lista de domínios sem CRUD do teste de playbooks.
+- Executor oficial: o workflow faz reset --hard para origin/main e exige
+  origin/main == github.sha. Portanto só se implanta o HEAD da main: o PR deve
+  ser mergeado (com aprovação) antes do dispatch; não há deploy de branch.
+- Deploy: modo full, restart_mcp=true, WHATSAPP_STATUS_ENABLED=false, agenda
+  desativada, sem publicar nem enviar Status. Rollback: reverter o merge na main
+  e novo deploy aprovado; a migration só cria tabelas novas (downgrade seguro
+  sem dados de produção; com ledger, preservar evidências).

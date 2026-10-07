@@ -26,6 +26,12 @@ try:
 finally:
     sys.path[:] = saved_path
 
+def _run_async(coro):
+    """Run in a private thread/loop so a loop leaked by other tests cannot interfere."""
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()
+
 
 def _identity(*, user_id, principal_id, company_id, role, scopes, issuer, client):
     return auth.App32McpHttpIdentity(
@@ -233,7 +239,7 @@ def test_middleware_projects_verified_identity_and_context_in_current_request_sc
         assert current_request.scope["app32_mcp_identity"] is current
         assert current_request.scope["app32_mcp_context"] == payload
         return JSONResponse({"scope_identity_verified": True})
-    response = asyncio.run(middleware.dispatch(request, endpoint))
+    response = _run_async(middleware.dispatch(request, endpoint))
     assert response.status_code == 200
     assert request.scope["app32_mcp_identity"] is current
     assert request.scope["app32_mcp_context"] == payload

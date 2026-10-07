@@ -8,6 +8,12 @@ from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES, _actor
 from src.intelligence.tooling.capabilities import infer_tool_capability, infer_tool_action
 from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
 
+def _run_async(coro):
+    """Run in a private thread/loop so a loop leaked by other tests cannot interfere."""
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()
+
 
 @pytest.fixture
 def auth(monkeypatch):
@@ -80,7 +86,7 @@ def test_status_discovery_requires_admin_scope_and_exact_permission(monkeypatch)
     assert not set(STATUS_TOOL_NAMES).intersection(registry._visible_privileged_tool_names(frozenset(STATUS_TOOL_NAMES)))
     monkeypatch.setattr('src.core.mcp_http_auth.get_http_request_identity',lambda:SimpleNamespace(scopes=('mcp:access','mcp:admin')))
     server=registry.build_oauth_unified_mcp_server()
-    tools=asyncio.run(server.list_tools())
+    tools=_run_async(server.list_tools())
     assert set(STATUS_TOOL_NAMES).issubset({t.name for t in tools})
     # No MCP tool can accept an arbitrary media URL/path, token or instance ID.
     for tool in tools:

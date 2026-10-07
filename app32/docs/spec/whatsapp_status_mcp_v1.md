@@ -14,7 +14,7 @@ conforme fallback de aa-j-31-card-execution; não usar SSH de produção.
 - [x] Registrar ferramentas no MCP existente com teto explícito e OAuth (local).
 - [x] Executar testes, incluindo PostgreSQL, concorrência e reinício (laboratório).
 - [x] Revalidar correções e grafo local: 191 testes aprovados, 07/10/2026.
-- [x] Formar candidato isolado e testar sem mudanças alheias do checkout: 234 passed.
+- [x] Formar candidato isolado e testar sem mudanças alheias do checkout: reconstruído como v2 sobre a main e1af7c18.
 - [ ] Ensaiar reversão de runtime com schema aditivo em homologação.
 - [ ] Aprovar release, implantar via control plane e validar atendimento.
 - [ ] Coordenar uma publicação real e conferência no celular.

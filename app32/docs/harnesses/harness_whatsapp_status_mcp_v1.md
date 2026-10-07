@@ -90,3 +90,13 @@ laboratório permanecem apenas em tmp para reprodução.
 - Webhook testado em laboratório não prova atendimento real; exige teste humano.
 - Status accepted simulado não prova presença no celular; homologação real
   coordenada pelo [Runbook](../runbooks/runbook_whatsapp_status_mcp_v1.md).
+
+## Rodada v2 sobre a main e1af7c18 (07/10/2026)
+
+- Worktree limpa a partir de origin/main; PostgreSQL 14 descartável em
+  127.0.0.1:55439 (banco whatsapp_status_test), nunca banco operacional.
+- Suítes de Status, teto de permissão, auth, runtime e registry: 221 passed.
+- Regressão contra a main pura: as falhas pré-existentes (drift Alembic/deploy)
+  não mudam; duas regressões causadas pela entrega (domínio canônico e
+  coerência surface/CRUD) foram corrigidas. Resultado da suíte completa no PR.
+- Os 234 testes anteriores pertencem ao candidato antigo, não a esta base.
