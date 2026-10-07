@@ -319,6 +319,14 @@ def initialize_scheduler(app):
     try:
         # Configurar jobs de sistema
         setup_routine_jobs(app)
+
+        # Persistência/locks ficam no PostgreSQL; nenhum job depende do chat aberto.
+        if app.config.get('WHATSAPP_STATUS_ENABLED', False):
+            scheduler_service.add_job(
+                func=lambda: process_whatsapp_status_tick(app), trigger='cron',
+                job_id='whatsapp_status_tick', minute='*',
+                name='Status WhatsApp aprovado (tenant-safe)',
+            )
         
         # Configurar jobs proativos (Fase 4)
         setup_proactive_jobs(app)
@@ -354,6 +362,18 @@ def shutdown_scheduler():
     """
     logger.info("🛑 Desligando scheduler...")
     scheduler_service.stop()
+
+
+def process_whatsapp_status_tick(app):
+    with app.app_context():
+        try:
+            from services.whatsapp_status_service import tick
+            tick()
+        except Exception:
+            # Nunca imprimir exceção que possa conter URL/token do fornecedor.
+            from models import db
+            db.session.rollback()
+            logger.error('whatsapp_status_tick_failed')
 
 
 # Para usar no Flask

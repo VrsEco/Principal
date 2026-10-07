@@ -9,6 +9,7 @@ from src.intelligence.tool_catalog import catalog
 from src.intelligence.tooling.capabilities import ToolScope, build_capability_manifest, infer_tool_action
 from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
 from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
+from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
     from mcp.server.fastmcp import FastMCP
@@ -50,6 +51,7 @@ PILOT_FINANCE_OPERATIONAL_TOOL_NAMES: tuple[str, ...] = (
     "create_financial_settlement",
 )
 PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES: tuple[str, ...] = (
+    *STATUS_TOOL_NAMES,
     *PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
     *PILOT_FINANCE_OPERATIONAL_TOOL_NAMES,
 )
@@ -143,7 +145,8 @@ def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
     permission_results: dict[str, bool] = {}
     for name in sorted(requested_names):
         capability = catalog.get_tool_capability(name)
-        scope = "mcp:finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else "mcp:analytics"
+        scope = ('mcp:admin' if name in STATUS_TOOL_NAMES else
+                 "mcp:finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else "mcp:analytics")
         if capability is not None and scope in token_scopes:
             for permission in capability.permissions:
                 if permission not in permission_results:
@@ -162,7 +165,7 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
         capability = catalog.get_tool_capability(name)
         if capability is None:
             continue
-        surface = ("finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else
+        surface = ('admin' if name in STATUS_TOOL_NAMES else "finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else
                    "analytics" if name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES else "user")
         capabilities.append(replace(capability, scopes=get_surface_scope_filter(surface)))
     manifest = build_capability_manifest(capabilities, domain=domain, include_tools=include_tools)
@@ -770,6 +773,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         tool_names=set(PILOT_FINANCE_OPERATIONAL_TOOL_NAMES),
         policy_surface="finance",
     )
+    _register_shared_registrars(mcp, tool_names=set(STATUS_TOOL_NAMES), policy_surface='admin')
     return mcp
 
 

@@ -2,6 +2,9 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+from .whatsapp_status import (WhatsAppStatusAccount, WhatsAppStatusArt, WhatsAppStatusBatch,
+                              WhatsAppStatusPublication, WhatsAppStatusSchedule)
+
 # Core Models
 from .company import Company
 from .user import User

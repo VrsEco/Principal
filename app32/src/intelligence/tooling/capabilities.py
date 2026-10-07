@@ -1775,6 +1775,10 @@ def _expand_domain_aliases(domains: set[str]) -> set[str]:
 
 def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
     lowered = str(tool_name or "").strip().lower()
+    if 'whatsapp_status' in lowered:
+        if lowered.startswith(('list_', 'get_')):
+            return 'read'
+        return 'create' if lowered.startswith('create_') else 'update'
     normalized_domain = normalize_tool_domain(domain) if domain else None
 
     if normalized_domain == "knowledge" and lowered.startswith("strategic_tree_"):
@@ -1923,6 +1927,26 @@ def _infer_financial_tool_capability(tool_name: str, description: str) -> ToolCa
         tags=tuple(tags),
         required_context=(TOOL_CONTEXT_COMPANY,),
     )
+
+
+from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES as _STATUS_TOOL_NAMES
+
+for _status_name in _STATUS_TOOL_NAMES:
+    _status_permission = (
+        'publish' if _status_name.startswith('publish_') else
+        'review' if _status_name.startswith(('confirm_', 'verify_', 'configure_', 'register_')) else
+        'read' if _status_name.startswith(('list_', 'get_')) else 'schedule'
+    )
+    _status_gated = _status_name.startswith(('publish_', 'resume_', 'confirm_', 'configure_', 'register_'))
+    _PRESET_CAPABILITIES[_status_name] = {
+        'domain': 'whatsapp_status', 'scopes': (ToolScope.MCP_ADMIN.value,),
+        'risk': ToolRiskLevel.HIGH if _status_gated else ToolRiskLevel.LOW,
+        'permissions': (f'whatsapp_status.{_status_permission}',),
+        'human_gate': _status_gated,
+        'human_gate_reason': 'Publicação externa ou conferência humana persistida.' if _status_gated else None,
+        'required_context': (TOOL_CONTEXT_COMPANY, TOOL_CONTEXT_USER),
+        'tags': ('tenant_safe', 'status_only', 'approved_media'),
+    }
 
 
 def infer_tool_capability(tool: Any) -> ToolCapability:

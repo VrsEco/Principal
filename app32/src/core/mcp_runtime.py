@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import inspect
+import re
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Callable, Mapping, get_type_hints
@@ -176,6 +177,39 @@ def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
     return (str(raw_permissions).strip().lower(),) if str(raw_permissions).strip() else ()
 
 
+def _resolve_mcp_permission_ceiling(grant_decision: Any) -> tuple[str, ...]:
+    """Preserva o teto original do grant antes da normalização permissiva.
+
+    Vazio/None mantém o contrato USER de ausência de teto adicional. Um valor
+    preenchido malformado nunca pode ser descartado e virar acesso sem teto.
+    A decisão e seu grant vêm exclusivamente do resolver confiável do servidor.
+    """
+    grant = getattr(grant_decision, "grant", None)
+    raw = (
+        getattr(grant, "mcp_permissions", None)
+        if grant is not None
+        else getattr(grant_decision, "mcp_permissions", None)
+    )
+    if raw is None:
+        return ()
+    if isinstance(raw, str):
+        values = raw.split(",")
+    elif isinstance(raw, (list, tuple, set, frozenset)):
+        values = raw
+    else:
+        raise PermissionError("teto MCP de permissões inválido")
+    ceiling: list[str] = []
+    for value in values:
+        if not isinstance(value, str):
+            raise PermissionError("teto MCP de permissões inválido")
+        atom = value.strip().lower()
+        if not re.fullmatch(r"\*|[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*", atom):
+            raise PermissionError("teto MCP de permissões inválido")
+        if atom not in ceiling:
+            ceiling.append(atom)
+    return tuple(ceiling)
+
+
 def _intersect_mcp_permission_ceiling(
     app32_permissions: tuple[str, ...],
     grant_permissions: tuple[str, ...],
@@ -190,7 +224,7 @@ def _intersect_mcp_permission_ceiling(
 
     app32 = tuple(dict.fromkeys(app32_permissions))
     ceiling = tuple(dict.fromkeys(grant_permissions))
-    if not ceiling:
+    if not ceiling or "*" in ceiling:
         return app32
     if "*" in app32:
         return ceiling
@@ -297,6 +331,12 @@ def resolve_mcp_execution_context(
     raw_payload = dict(payload or {})
     http_request_context = dict(get_http_request_context() or {})
     authenticated_http_context = _is_authenticated_http_context(http_request_context)
+    if not authenticated_http_context:
+        from src.core.mcp_http_auth import _get_current_mcp_server_request
+        if _get_current_mcp_server_request() is not None:
+            # Missing authentication on a current SDK HTTP request must not
+            # turn it into a legacy stdio call using privileged environment IDs.
+            raise PermissionError("CURRENT_AUTHENTICATED_HTTP_CONTEXT_REQUIRED")
 
     legacy_user_id = _coerce_optional_int(
         http_request_context.get("user_id")
@@ -334,6 +374,7 @@ def resolve_mcp_execution_context(
     user_id = legacy_user_id
     employee_id: int | None = None
     principal_grant_enforced = False
+    mcp_permission_ceiling: tuple[str, ...] = ()
 
     if principal_grant_mode:
         from services.principal_authorization_service import principal_authorization_service
@@ -365,6 +406,7 @@ def resolve_mcp_execution_context(
         )
         if not grant_decision.allowed:
             raise PermissionError(f"principal grant negado: {grant_decision.reason}")
+        mcp_permission_ceiling = _resolve_mcp_permission_ceiling(grant_decision)
 
         # A identidade vem do principal persistido, não do token legado, env
         # do processo ou headers. SERVICE/AGENT continuam sem user sintético.
@@ -396,13 +438,13 @@ def resolve_mcp_execution_context(
                 app32_permissions = ("*", *app32_permissions)
             permissions = _intersect_mcp_permission_ceiling(
                 app32_permissions,
-                _normalize_permissions(getattr(grant_decision, "mcp_permissions", ())),
+                mcp_permission_ceiling,
             )
         else:
             # SERVICE/AGENT não possuem RBAC humano a espelhar. Para eles o
             # grant explícito continua sendo a autoridade de permissões.
             role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
-            permissions = _normalize_permissions(getattr(grant_decision, "mcp_permissions", ()))
+            permissions = mcp_permission_ceiling
         principal_grant_enforced = True
     else:
         if user_id:
@@ -460,6 +502,7 @@ def resolve_mcp_execution_context(
         "client_id": str(http_request_context.get("client_id") or "").strip() or None,
         "principal_id": principal_id,
         "principal_grant_enforced": principal_grant_enforced,
+        "mcp_permission_ceiling": mcp_permission_ceiling,
         "accessible_company_ids": list(accessible_company_ids),
         "multi_company": len(accessible_company_ids) > 1,
         "selection_required_for_mutations": len(accessible_company_ids) > 1 and resolved_company_id is None,
@@ -647,7 +690,10 @@ def wrap_mcp_callable(
 
     try:
         original_signature = inspect.signature(callback)
-        resolved_hints = get_type_hints(callback, globalns=getattr(callback, "__globals__", {}))
+        # Keep Annotated validation metadata when FastMCP builds the input model.
+        resolved_hints = get_type_hints(
+            callback, globalns=getattr(callback, "__globals__", {}), include_extras=True
+        )
         resolved_parameters = [
             parameter.replace(
                 annotation=resolved_hints.get(parameter.name, parameter.annotation),

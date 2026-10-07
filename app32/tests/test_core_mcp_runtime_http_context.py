@@ -317,7 +317,7 @@ def test_runtime_principal_grant_uses_persisted_mcp_permissions_as_ceiling(monke
         reset_http_request_context(tokens)
 
     assert context.role == "cliente"
-    assert context.permissions == ("financial", "financial.view")
+    assert context.permissions == ("financial.view",)
 
 
 def test_runtime_principal_grant_uses_live_app32_permissions_when_ceiling_is_empty(monkeypatch):

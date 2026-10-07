@@ -104,7 +104,8 @@ def test_oauth_unified_server_keeps_user_tools_and_adds_privileged_tools_only_wh
     allowed_tools = {tool.name for tool in asyncio.run(allowed_server.list_tools())}
 
     assert set(registry.PILOT_USER_TOOL_NAMES).issubset(allowed_tools)
-    assert set(registry.PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES).issubset(allowed_tools)
+    assert set(registry.PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES + registry.PILOT_FINANCE_OPERATIONAL_TOOL_NAMES).issubset(allowed_tools)
+    assert not set(registry.STATUS_TOOL_NAMES).intersection(allowed_tools)
 
 
 def test_unified_privileged_discovery_respects_oauth_scope_per_tool_surface(monkeypatch):

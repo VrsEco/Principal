@@ -252,6 +252,17 @@ def _resolve_identity_from_mcp_auth_context() -> tuple[App32McpHttpIdentity | No
 
 
 def get_http_request_identity() -> App32McpHttpIdentity | None:
+    request = _get_current_mcp_server_request()
+    if request is not None:
+        scoped_identity = request.scope.get("app32_mcp_identity")
+        if isinstance(scoped_identity, App32McpHttpIdentity):
+            return scoped_identity
+        identity, _ = _resolve_identity_from_current_request(
+            request, preferred_surface=_infer_surface_from_request(request),
+        )
+        # A current request must never inherit another request's identity.
+        return identity
+
     identity = _http_identity_ctx.get()
     if identity is not None:
         return identity
@@ -260,18 +271,28 @@ def get_http_request_identity() -> App32McpHttpIdentity | None:
     if auth_identity is not None:
         return auth_identity
 
-    request = _get_current_mcp_server_request()
-    if request is None:
-        return None
-
-    identity, _ = _resolve_identity_from_current_request(
-        request,
-        preferred_surface=_infer_surface_from_request(request),
-    )
-    return identity
+    return None
 
 
 def get_http_request_context() -> dict[str, Any] | None:
+    request = _get_current_mcp_server_request()
+    if request is not None:
+        scoped_payload = request.scope.get("app32_mcp_context")
+        if isinstance(scoped_payload, Mapping) and scoped_payload:
+            return dict(scoped_payload)
+        identity, surface = _resolve_identity_from_current_request(
+            request, preferred_surface=_infer_surface_from_request(request),
+        )
+        if identity is None or surface is None:
+            return None
+        try:
+            resolved = resolve_request_context_payload(request, surface=surface)
+        except Exception:
+            return None
+        # SDK session tasks can retain initialization ContextVars. A failure
+        # on this request must not fall back to those cached claims.
+        return resolved or None
+
     payload = _http_request_ctx.get()
     if payload:
         return payload
@@ -280,26 +301,7 @@ def get_http_request_context() -> dict[str, Any] | None:
     if auth_identity is not None and auth_surface is not None:
         return _build_identity_context_payload(auth_identity, surface=auth_surface)
 
-    request = _get_current_mcp_server_request()
-    if request is None:
-        return payload
-
-    scoped_payload = request.scope.get("app32_mcp_context")
-    if isinstance(scoped_payload, Mapping) and scoped_payload:
-        return dict(scoped_payload)
-
-    identity, surface = _resolve_identity_from_current_request(
-        request,
-        preferred_surface=_infer_surface_from_request(request),
-    )
-    if identity is None or surface is None:
-        return payload
-
-    try:
-        resolved = resolve_request_context_payload(request, surface=surface)
-    except Exception:
-        return payload
-    return resolved or payload
+    return payload
 
 
 def get_http_actor_role(default: str | None = None) -> str | None:
@@ -905,6 +907,7 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
                 },
                 status_code=403,
             )
+        request.scope["app32_mcp_identity"] = identity
         request.scope["app32_mcp_context"] = dict(payload)
         tokens = set_http_request_context(identity, payload)
         try:

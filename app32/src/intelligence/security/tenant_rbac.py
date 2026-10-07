@@ -38,6 +38,10 @@ ACTION_ALIASES = {
     "approve": "update",
 }
 DOMAIN_MATRIX = {
+    'whatsapp_status': {
+        'colaborador': set(), 'cliente': set(),
+        'administrador': set(), 'administrador_tecnico': set(),
+    },  # Only explicit APP32 permission intersection, never role-based escalation.
     "routine": {
         "colaborador": READ_ACTIONS | {"create", "update"},
         "cliente": {"discover", "read", "list", "search"},
@@ -514,6 +518,26 @@ def validate_permission(
     required = {perm.lower() for perm in (required_permissions or ()) if _normalize_text(perm)}
     checks = ["normalize_domain", "normalize_action"]
     profile_contract = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile(normalized_role)
+
+    # Somente o runtime MCP projeta este teto a partir do grant confiável.
+    # A interseção efetiva pode ser vazia: isso não significa ausência de teto.
+    # Nem a matriz de role nem admin_override podem ampliar a delegação MCP.
+    metadata = principal.metadata or {}
+    ceiling = metadata.get("mcp_permission_ceiling", ())
+    if metadata.get("principal_grant_enforced") is True and ceiling:
+        effective_match = "*" in principal.permissions or required.issubset(principal.permissions)
+        if "*" not in ceiling and (
+            not required or not required.issubset(ceiling) or not effective_match
+        ):
+            return PermissionDecision(
+                allowed=False,
+                principal=principal,
+                domain=normalized_domain,
+                action=normalized_action,
+                reason="permissões requeridas fora da interseção APP32/teto MCP do grant",
+                checks=(*checks, "mcp_permission_ceiling_denied"),
+            )
+        checks.append("mcp_permission_ceiling_checked")
 
     if required and ("*" in principal.permissions or required.issubset(principal.permissions)):
         return PermissionDecision(

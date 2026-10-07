@@ -11,6 +11,7 @@ from .profiles import APP32_PROFILE_CONTRACTS_MANIFEST, MCPMutationRisk, MCPOver
 
 PermissionAction = Literal["discover", "read", "create", "update", "delete", "analyze", "audit", "review"]
 PermissionDomain = Literal[
+    "whatsapp_status",
     "routine",
     "processes",
     "projects",
@@ -701,6 +702,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 summary="Administrador usa a surface admin para governança, mutações sensíveis e operações multiempresa com company_id explícito.",
                 default_scope="explicit_company_id",
                 domains=[
+                    _rule("whatsapp_status", ["discover", "read", "create", "update", "review"], requires_explicit_company_id=True, notes=["Status-only: teto restrito e gate por capability; sem conversas ou contatos."]),
                     _rule("routine", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Delete requer confirmação explícita."]),
                     _rule("processes", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Processos sensíveis exigem confirmação em exclusão e escopo explícito."]),
                     _rule("projects", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Projetos sensíveis pedem gate em exclusão."]),
