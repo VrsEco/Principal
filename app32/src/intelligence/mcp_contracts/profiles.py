@@ -579,6 +579,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 allowed_surfaces=["user", "admin", "analytics", "finance"],
                 default_surface="admin",
                 allowed_domains=[
+                    "whatsapp_status",
                     "routine",
                     "projects",
                     "processes",
@@ -604,6 +605,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 allowed_surfaces=["admin", "analytics", "ops"],
                 default_surface="ops",
                 allowed_domains=[
+                    "whatsapp_status",
                     "routine",
                     "projects",
                     "processes",

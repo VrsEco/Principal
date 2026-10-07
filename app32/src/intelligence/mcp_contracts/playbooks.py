@@ -189,6 +189,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 objective="Executar operações administrativas explícitas com governança, auditoria e gates humanos.",
                 actor_roles=["administrador", "admin_tecnico"],
                 allowed_domains=[
+                    "whatsapp_status",
                     "routine",
                     "projects",
                     "processes",

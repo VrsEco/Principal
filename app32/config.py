@@ -23,6 +23,10 @@ class Config:
     """Base configuration class"""
 
     SECRET_KEY = get_or_create_dev_secret()
+    WHATSAPP_STATUS_ENABLED = env_flag('WHATSAPP_STATUS_ENABLED', False)
+    WHATSAPP_STATUS_APPROVED_SOURCE_ROOT = os.environ.get('WHATSAPP_STATUS_APPROVED_SOURCE_ROOT') or str(Path(__file__).resolve().parent / 'seeds' / 'whatsapp_status_versus_20261007')
+    # Outside /uploads and /static, which may be publicly served by the app/proxy.
+    WHATSAPP_STATUS_PRIVATE_ROOT = os.environ.get('WHATSAPP_STATUS_PRIVATE_ROOT') or str(Path(__file__).resolve().parent / 'instance' / 'whatsapp_status')
     _env_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = _env_database_url or "postgresql://postgres@localhost:5432/bdversusv2"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
