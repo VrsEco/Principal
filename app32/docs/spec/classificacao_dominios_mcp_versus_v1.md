@@ -64,7 +64,7 @@ Uma tool só entra no mcp-versus quando **todos** os itens abaixo estão cumprid
 1. Declarada no catálogo com domínio, permissão, risco, gate humano e contexto exigido.
 2. Domínio presente na matriz de permissões, nos playbooks e no RBAC por domínio.
 3. Permissão exigida pela tool mapeada para o vocabulário que o APP32 resolve por empresa em cada chamada.
-4. Escopo de surface coerente com o modelo vigente (não usar o escopo legado `sapiens` como contrato de publicação).
+4. Escopo de surface coerente com o modelo vigente. O escopo `sapiens` identifica o canal do agente Sapiens dentro do app e **coexiste** com os escopos `mcp_*`; ele não impede nem substitui a publicação (ver Correção de 2026-10-08).
 5. Mutação com `company_id` explícito, idempotência quando financeira e gate humano persistido quando o risco exigir.
 6. Linha de base da catraca atualizada somente para **reduzir** divergências.
 7. Evidência de teste e liberação em coorte antes de ampliar.
@@ -76,7 +76,7 @@ Uma tool só entra no mcp-versus quando **todos** os itens abaixo estão cumprid
 | audit | Ausente da matriz de permissões e dos playbooks |
 | knowledge | `answer_product_help` sem permissão declarada |
 | identity_self_service | Uma tool de classificação financeira está no domínio de identidade |
-| finance, strategy, consultive, governance | A maioria carrega o escopo legado `sapiens` (83 de 86 em finance; 37 de 37 em strategy; 12 de 12 em consultive; 59 de 63 em governance), sem correspondência com surface do mcp-versus |
+| finance, strategy, consultive, governance | *(retirado, ver Correção)* O escopo `sapiens` não é defeito de publicação: marca o canal do agente Sapiens e coexiste com `mcp_*` |
 | geral | 17 combinações distintas de escopos entre as tools; duas formas de registro (LangChain e registradores MCP); vocabulário de permissões das tools (118 nomes) diferente do da matriz |
 
 ## 6. Ordem de execução
@@ -103,3 +103,13 @@ Cada etapa com efeito em produção segue o fluxo oficial de deploy, plano únic
 - Todo domínio do catálogo tem classe e onda neste documento (verificável contra `mcp_drift_report.py`).
 - Nenhuma tool das classes Fora ou Avaliar depois é publicada sem revisão deste SPEC.
 - Cada onda cita o PR e o teste de contrato que a comprova.
+
+## 9. Correção de 2026-10-08 (medições posteriores à aprovação)
+
+A versão inicial desta SPEC tratava o escopo `sapiens` como defeito que impedia a publicação. A medição no catálogo e nos registradores mostrou o contrário:
+
+- **O `sapiens` é o marcador do canal do agente Sapiens dentro do app**, não escopo morto. Das 348 capabilities, **nenhuma** tem só `sapiens`; todas têm ao menos um escopo `mcp_*`, e 295 têm os dois.
+- Já há 43 tools publicadas no mcp-versus que carregam `sapiens` junto de `mcp_*`.
+- **345 das 348 capabilities têm implementação MCP registrada** (276 via registradores MCP e 72 via LangChain); as 3 restantes (conciliação financeira) já estão publicadas por registrador próprio do piloto.
+- Consequência: publicar uma onda é, em essência, **liberar nomes na lista de publicação do registro**, com escopo e permissão corretos, testes e coorte. Não há necessidade de reescrever tools nem de remover o `sapiens`.
+- O que continua verdadeiro: 17 combinações distintas de escopos, duas formas de registro e vocabulário de permissões duplicado são dívidas a reduzir no manifesto único (E2), mas não bloqueiam a onda 1.
