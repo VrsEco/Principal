@@ -33,6 +33,7 @@ from src.core.mcp_external_llm_factory_tools import register_external_llm_factor
 from src.core.mcp_financial_tools import register_financial_mcp_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_internal_audit_tools import register_internal_audit_mcp_tools
+from src.core.mcp_my_work_tools import register_my_work_mcp_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
 from src.core.mcp_knowledge_tools import register_knowledge_tools
@@ -269,6 +270,7 @@ _supplemental_mcp_tools = (
     SimpleNamespace(name="list_agent_deployments", description="Lista deploys do tenant de governança."),
     *(SimpleNamespace(name=name, description='Status WhatsApp: acervo aprovado, agenda e ledger tenant-safe.')
       for name in STATUS_TOOL_NAMES),
+    SimpleNamespace(name="list_my_work_secure", description="Lista minhas atividades abertas (projetos e processos) em uma empresa, tenant-safe e somente leitura."),
     SimpleNamespace(name="get_internal_audit_summary", description="Retorna os totais tenant-safe da Auditoria Interna."),
     SimpleNamespace(name="list_internal_audit_points", description="Lista pontos de Auditoria Interna do tenant com filtro de status."),
     SimpleNamespace(name="list_internal_audit_findings", description="Lista achados de Auditoria Interna do tenant com filtro de status."),
@@ -755,6 +757,7 @@ catalog = ToolCatalog(
         register_implantation_persona_profile_tools,
         register_incentive_tools,
         register_internal_audit_mcp_tools,
+        register_my_work_mcp_tools,
         register_integration_request_tools,
         register_instruction_registry_tools,
         register_knowledge_tools,
