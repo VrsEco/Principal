@@ -17,7 +17,7 @@ def _published_static_names(registry: Any) -> set[str]:
     for attr in dir(registry):
         if not attr.isupper() or not attr.endswith("TOOL_NAMES"):
             continue
-        if not (attr.startswith("PILOT_") or attr.startswith("STATUS_")):
+        if not (attr.startswith("PILOT_") or attr.startswith("STATUS_") or attr.startswith("UNIFIED_")):
             continue
         value = getattr(registry, attr)
         if isinstance(value, (set, frozenset, tuple, list)):

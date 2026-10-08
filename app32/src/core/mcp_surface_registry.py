@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import logging
 from dataclasses import replace
@@ -223,6 +224,42 @@ PILOT_AUDIT_READ_TOOL_NAMES: tuple[str, ...] = (
     "list_internal_audit_findings",
 )
 
+# Onda 1 de `routine` (SPEC classificacao_dominios_mcp_versus_v1): 14 leituras da
+# jornada de trabalho, todas de risco baixo, sem gate humano e com `company`
+# obrigatório no contexto. Coorte da surface `user` (scope `mcp:user`), com o
+# mesmo gate duplo das demais: scope OAuth + permissão por tool, revalidada na
+# descoberta por `_has_authenticated_mcp_permission` e, por chamada, pelo wrapper
+# de política. Ficam FORA desta onda: get_my_work/get_tasks_today (sem contexto de
+# empresa, exigem revisão de isolamento), as 2 workspaces financeiras (domínio
+# errado) e todas as mutações (onda 2).
+# Publicação controlada por MCP_VERSUS_ROUTINE_READ_ENABLED (desligada por padrão):
+# a flag governa a listagem E o registro, para que uma tool oculta não seja
+# invocável por quem conheça o nome.
+UNIFIED_ROUTINE_READ_TOOL_NAMES: tuple[str, ...] = (
+    "get_work_journey_agenda_tool",
+    "get_work_journey_board_tool",
+    "get_work_journey_capacity_report_tool",
+    "get_efficiency_collaborators_analysis_tool",
+    "get_process_routines_analysis_tool",
+    "list_employee_process_routines_for_journey_tool",
+    "list_routine_journey_bindings_tool",
+    "list_work_calendar_events_tool",
+    "list_work_journey_absences_tool",
+    "list_work_journey_blocks_tool",
+    "list_work_journey_manual_tasks_tool",
+    "list_work_journey_rules_tool",
+    "list_work_journey_task_inventory_tool",
+    "list_work_journey_transfers_tool",
+)
+
+
+def _routine_read_enabled() -> bool:
+    return str(os.getenv("MCP_VERSUS_ROUTINE_READ_ENABLED", "")).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _routine_read_names() -> tuple[str, ...]:
+    return UNIFIED_ROUTINE_READ_TOOL_NAMES if _routine_read_enabled() else ()
+
 
 def _has_authenticated_mcp_permission(permission: str) -> bool:
     """Verifica discovery por principal, sem aceitar permissão do cliente."""
@@ -320,6 +357,7 @@ def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
             or name in PILOT_MEETING_MUTATION_TOOL_NAMES
             or name in PILOT_MEETING_SENSITIVE_TOOL_NAMES
             or name in PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES
+            or name in UNIFIED_ROUTINE_READ_TOOL_NAMES
         ):
             scope = "mcp:user"
         else:
@@ -352,6 +390,7 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
                 *PILOT_MEETING_SENSITIVE_TOOL_NAMES,
                 *PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES,
                 *PILOT_AUDIT_READ_TOOL_NAMES,
+                *_routine_read_names(),
             ))
         )
     )
@@ -1016,6 +1055,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         *PILOT_MEETING_SENSITIVE_TOOL_NAMES,
         *PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES,
         *PILOT_AUDIT_READ_TOOL_NAMES,
+        *_routine_read_names(),
     )
     mcp = _build_policy_fast_mcp(
         name,
@@ -1072,6 +1112,9 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         policy_surface="analytics",
     )
     _register_shared_registrars(mcp, tool_names=set(STATUS_TOOL_NAMES), policy_surface='admin')
+    routine_names = _routine_read_names()
+    if routine_names:
+        _register_shared_registrars(mcp, tool_names=set(routine_names), policy_surface="user")
     return mcp
 
 
