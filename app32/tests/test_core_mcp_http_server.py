@@ -148,7 +148,7 @@ def test_unified_oauth_route_uses_one_public_endpoint_and_metadata(monkeypatch):
     response = TestClient(app).get("/.well-known/oauth-protected-resource/mcp/pilot")
     assert response.status_code == 200
     assert response.json()["scopes_supported"] == [
-        "mcp:access", "mcp:user", "mcp:analytics", "mcp:finance", "mcp:admin"
+        "mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"
     ]
 
 
