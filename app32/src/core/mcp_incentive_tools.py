@@ -125,6 +125,15 @@ def _fetch_indicator_catalog(
     return [_serialize_indicator(indicator) for indicator in indicators]
 
 
+def _authenticated_user_id() -> int | None:
+    """Ator vem da sessão autenticada; identidade nunca é aceita como parâmetro do cliente."""
+
+    from src.intelligence.tools_support import get_active_user_id
+
+    user_id = get_active_user_id()
+    return user_id if isinstance(user_id, int) and user_id > 0 else None
+
+
 def _analytics_context(
     operation: str,
     *,
@@ -305,18 +314,15 @@ def register_incentive_tools(mcp: Any) -> None:
         collection_mode: str | None = None,
         source_module: str | None = None,
         limit: int = 100,
-        user_id: int | None = None,
-        request_id: str | None = None,
-        trace_id: str | None = None,
     ) -> dict[str, Any]:
         """Expõe via MCP o catálogo multi-tenant de indicadores canônicos do domínio de incentivos."""
 
         operation = "get_incentive_indicators"
         context = {
             "company_id": company_id,
-            "user_id": user_id,
-            "request_id": request_id,
-            "trace_id": trace_id,
+            "user_id": _authenticated_user_id(),
+            "request_id": None,
+            "trace_id": None,
         }
 
         if company_id <= 0:
@@ -368,9 +374,6 @@ def register_incentive_tools(mcp: Any) -> None:
         include_nodes: bool = True,
         include_links: bool = True,
         anonymize: bool = False,
-        user_id: int | None = None,
-        request_id: str | None = None,
-        trace_id: str | None = None,
     ) -> dict[str, Any]:
         """Expõe a Teia de Conexões atual como grafo analítico tenant-safe para MCP/Sapiens."""
 
@@ -378,9 +381,7 @@ def register_incentive_tools(mcp: Any) -> None:
         context = _analytics_context(
             operation,
             company_id=company_id,
-            user_id=user_id,
-            request_id=request_id,
-            trace_id=trace_id,
+            user_id=_authenticated_user_id(),
         )
         if company_id <= 0:
             return _error("invalid_company_id", "company_id deve ser um inteiro positivo.", operation=operation, **context)
@@ -397,9 +398,6 @@ def register_incentive_tools(mcp: Any) -> None:
     def get_strategic_connection_metrics(
         company_id: int,
         anonymize: bool = True,
-        user_id: int | None = None,
-        request_id: str | None = None,
-        trace_id: str | None = None,
     ) -> dict[str, Any]:
         """Retorna métricas pré-calculadas da Teia para análise executiva por IA externa."""
 
@@ -407,9 +405,7 @@ def register_incentive_tools(mcp: Any) -> None:
         context = _strategic_read_context(
             operation,
             company_id=company_id,
-            user_id=user_id,
-            request_id=request_id,
-            trace_id=trace_id,
+            user_id=_authenticated_user_id(),
         )
         if company_id <= 0:
             return _error("invalid_company_id", "company_id deve ser um inteiro positivo.", operation=operation, **context)

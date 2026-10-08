@@ -36,7 +36,7 @@ REVIEWED_PARAM_EXCEPTIONS: dict[str, dict[str, str]] = {}
 
 _SUSPICIOUS_PARAM = re.compile(
     r"(force|regenerate|apply|confirm|approve|execute|trigger|send|publish|delete|remove|overwrite|reset|"
-    r"lock|commit|write|save|create|update|sync|import|dispatch|dry_run)",
+    r"lock|commit|write|save|create|update|sync|import|dispatch|dry_run|user_id|actor|request_id|trace_id)",
     re.IGNORECASE,
 )
 _WRITE_IN_SOURCE = re.compile(
