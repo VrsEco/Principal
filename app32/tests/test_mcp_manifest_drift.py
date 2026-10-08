@@ -15,10 +15,12 @@ BASELINE = {
     "domains_missing_in_permission_matrix": {"audit"},
     "domains_missing_in_playbooks": {"audit"},
     "domains_missing_in_tenant_rbac": set(),
-    "tools_without_permissions": {"answer_product_help"},
+    "tools_without_permissions": set(),
     "published_not_in_catalog": set(),
 }
 MAX_SCOPE_COMBINATIONS = 17
+# Tools públicas por decisão (sem permissão) precisam ser revisadas ao entrar aqui.
+EXPLICITLY_PUBLIC = {"answer_product_help"}
 
 
 @pytest.fixture(scope="module")
@@ -68,3 +70,10 @@ def test_whatsapp_status_is_consistent_across_sources(drift):
 def test_report_renders_without_error(drift):
     text = render_report(drift)
     assert "Exposição por domínio" in text and "| finance |" in text
+
+
+def test_explicitly_public_tools_are_reviewed(drift):
+    assert set(drift["tools_explicitly_public"]) == EXPLICITLY_PUBLIC, (
+        "Tool sem permissão declarada precisa de revisão: use uma permissão do catálogo ou, se for pública "
+        "por decisão, registre-a em EXPLICITLY_PUBLIC e no SPEC."
+    )

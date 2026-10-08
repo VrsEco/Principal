@@ -63,7 +63,14 @@ def compute_drift() -> dict[str, Any]:
         "domains_missing_in_permission_matrix": sorted(catalog_domains - matrix_domains),
         "domains_missing_in_playbooks": sorted(catalog_domains - playbook_domains),
         "domains_missing_in_tenant_rbac": sorted(catalog_domains - rbac_domains),
-        "tools_without_permissions": sorted(t["name"] for t in tools if not t.get("permissions")),
+        "tools_without_permissions": sorted(
+            t["name"] for t in tools
+            if not t.get("permissions") and "no_permission_required" not in (t.get("tags") or ())
+        ),
+        "tools_explicitly_public": sorted(
+            t["name"] for t in tools
+            if not t.get("permissions") and "no_permission_required" in (t.get("tags") or ())
+        ),
         "scope_combinations": len(scope_combinations),
         "per_domain": {domain: dict(counts) for domain, counts in sorted(per_domain.items())},
     }
@@ -84,6 +91,7 @@ def render_report(data: dict[str, Any]) -> str:
         f"- Domínios do catálogo fora dos playbooks: {data['domains_missing_in_playbooks']}",
         f"- Domínios do catálogo fora do RBAC por domínio: {data['domains_missing_in_tenant_rbac']}",
         f"- Tools sem permissão declarada: {data['tools_without_permissions']}",
+        f"- Tools explicitamente públicas (sem permissão, por decisão): {data['tools_explicitly_public']}",
         f"- Nomes do registro ausentes do catálogo: {data['published_not_in_catalog']}",
         "",
         "## Exposição por domínio (catálogo × publicáveis no mcp-versus)",
