@@ -189,3 +189,18 @@ def test_contract_rejects_client_supplied_identity_parameters(param):
 def test_teia_tools_do_not_accept_identity_from_the_client(name, probes):
     props = set((probes[name].schema or {}).get("properties", {}))
     assert props.isdisjoint({"user_id", "request_id", "trace_id"})
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "get_financial_bank_reconciliation_workspace",
+        "get_financial_budget_execution_workspace",
+        "get_financial_budget_planning_workspace",
+    ],
+)
+def test_finance_workspace_reads_require_the_financial_permission(name):
+    capability = catalog.get_tool_capability(name)
+    assert capability.domain == "finance"
+    assert tuple(capability.permissions) == ("financial.view",)
+    assert getattr(capability.risk, "value", capability.risk) == "low"

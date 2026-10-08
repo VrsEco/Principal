@@ -714,6 +714,29 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("finance", "read", "tenant_safe", "diagnostic_company_9"),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
+    # O nome destes três casa antes com palavras-chave de outros domínios (workspace, plan,
+    # reconcil) e a inferência os classificava como routine/strategy, com permissão alheia ao
+    # financeiro. Contrato explícito: leitura financeira, mesma permissão das demais leituras.
+    **{
+        _name: {
+            "domain": "finance",
+            "scopes": (
+                ToolScope.SAPIENS.value,
+                ToolScope.MCP_USER.value,
+                ToolScope.MCP_ADMIN.value,
+                ToolScope.MCP_ANALYTICS.value,
+            ),
+            "risk": ToolRiskLevel.LOW,
+            "permissions": ("financial.view",),
+            "tags": ("finance", "read", "tenant_safe"),
+            "required_context": (TOOL_CONTEXT_COMPANY,),
+        }
+        for _name in (
+            "get_financial_bank_reconciliation_workspace",
+            "get_financial_budget_execution_workspace",
+            "get_financial_budget_planning_workspace",
+        )
+    },
     "create_financial_entry": {
         "domain": "finance",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_FINANCE.value),
