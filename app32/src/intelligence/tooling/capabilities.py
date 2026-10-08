@@ -114,7 +114,9 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.LOW,
         "permissions": (),
-        "tags": ("read", "product_help", "citations"),
+        # Ajuda de produto é conteúdo público para qualquer usuário autenticado; declarado de
+        # forma explícita (decisão registrada no SPEC classificacao_dominios_mcp_versus_v1).
+        "tags": ("read", "product_help", "citations", "no_permission_required"),
     },
     "search_organizational_knowledge": {
         "domain": "knowledge",
