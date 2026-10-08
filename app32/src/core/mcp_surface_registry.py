@@ -11,6 +11,7 @@ from src.intelligence.tooling.capabilities import ToolScope, build_capability_ma
 from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
 from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
 from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES
+from src.core.mcp_payload_guard import guard_tool_callable, limit_mcp_payload
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
     from mcp.server.fastmcp import FastMCP
@@ -702,6 +703,7 @@ def _register_shared_registrars(
     *,
     tool_names: set[str] | None = None,
     policy_surface: str | None = None,
+    limit_response_size: bool = False,
 ) -> None:
     """Registra tools diretas do catálogo, opcionalmente por allowlist.
 
@@ -727,6 +729,8 @@ def _register_shared_registrars(
                 if not _control_plane_tool_allowed_on_surface(tool_name, policy_surface):
                     return func
                 wrapped = wrap_mcp_callable(func, policy_surface=policy_surface)
+                if limit_response_size:
+                    wrapped = guard_tool_callable(wrapped, limit_mcp_payload)
                 setattr(wrapped, "__app32_tool_name__", tool_name)
                 return decorator(wrapped)
 
@@ -1116,7 +1120,12 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
     _register_shared_registrars(mcp, tool_names=set(STATUS_TOOL_NAMES), policy_surface='admin')
     routine_names = _routine_read_names()
     if routine_names:
-        _register_shared_registrars(mcp, tool_names=set(routine_names), policy_surface="user")
+        _register_shared_registrars(
+            mcp,
+            tool_names=set(routine_names),
+            policy_surface="user",
+            limit_response_size=True,
+        )
     return mcp
 
 
