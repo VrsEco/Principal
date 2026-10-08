@@ -5,6 +5,44 @@ from typing import Any, Optional
 from src.core.mcp_http_auth import get_http_request_context
 
 
+_PAGE_DEFAULT = 20
+_PAGE_MAX = 100
+# Texto livre das leituras MCP: pode carregar e-mail pessoal, nomes e valores de contratação.
+_FREE_TEXT_KEYS = ("notes",)
+
+
+def validated_page(limit: Any, offset: Any) -> tuple[int, int]:
+    """Valida a paginação das listagens pesadas (sem isso a resposta estoura o limite do cliente)."""
+    for value in (limit, offset):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError("limit e offset devem ser inteiros.")
+    if limit < 1 or limit > _PAGE_MAX:
+        raise ValueError(f"limit deve estar entre 1 e {_PAGE_MAX}.")
+    if offset < 0:
+        raise ValueError("offset deve ser maior ou igual a 0.")
+    return limit, offset
+
+
+def page_of(rows: list, limit: int, offset: int) -> dict:
+    window = rows[offset : offset + limit]
+    return {
+        "total": len(rows),
+        "limit": limit,
+        "offset": offset,
+        "returned": len(window),
+        "has_more": offset + len(window) < len(rows),
+        "next_offset": offset + len(window) if offset + len(window) < len(rows) else None,
+        "window": window,
+    }
+
+
+def without_free_text(record: Any) -> Any:
+    """Remove campos de texto livre de um registro de listagem (a leitura completa fica na tela do APP)."""
+    if isinstance(record, dict):
+        return {key: value for key, value in record.items() if key not in _FREE_TEXT_KEYS}
+    return record
+
+
 def register_commercial_mcp_tools(mcp: Any) -> None:
     """Registra tools MCP da frente comercial/contratos."""
 
@@ -121,7 +159,7 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
                 or needle in str(item.get("legal_name") or "").lower()
                 or needle in str(item.get("document_number") or "").lower()
             ]
-        return _ok(items=items, count=len(items))
+        return _ok(items=[without_free_text(item) for item in items], count=len(items))
 
     @mcp.tool()
     def update_commercial_customer(company_id: int, customer_id: int, payload: dict) -> dict:
@@ -692,8 +730,11 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         )
 
     @mcp.tool()
-    def list_commercial_billings_done(company_id: int, filters: Optional[dict] = None) -> dict:
-        """Lista faturamentos comerciais já gerados."""
+    def list_commercial_billings_done(
+        company_id: int, filters: Optional[dict] = None, limit: int = _PAGE_DEFAULT, offset: int = 0
+    ) -> dict:
+        """Lista faturamentos comerciais já gerados, paginados (limit até 100; use next_offset para a próxima página)."""
+        limit, offset = validated_page(limit, offset)
         from services.contracts_service import ContractService
 
         rows = _run_action(ContractService.list_native_billings_done, company_id, filters or {})
@@ -701,9 +742,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         for row in rows:
             normalized.append(
                 {
-                    "billing": row["billing"].to_dict(),
-                    "contract": row["contract"].to_dict() if row.get("contract") else None,
-                    "party": row["party"].to_dict() if row.get("party") else None,
+                    "billing": without_free_text(row["billing"].to_dict()),
+                    "contract": without_free_text(row["contract"].to_dict()) if row.get("contract") else None,
+                    "party": without_free_text(row["party"].to_dict()) if row.get("party") else None,
                     "retention_amount": float(row.get("retention_amount") or 0),
                     "financial_integration": row.get("financial_integration") or {},
                     "item_count": row.get("item_count") or 0,
@@ -711,7 +752,12 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
                     "financial_anomaly": bool(row.get("financial_anomaly")),
                 }
             )
-        return _ok(items=normalized, count=len(normalized))
+        window = page_of(normalized, limit, offset)
+        return _ok(
+            items=window.pop("window"),
+            count=window["total"],
+            **window,
+        )
 
     @mcp.tool()
     def generate_commercial_financial_titles_for_billing(company_id: int, billing_id: int, user_id: Optional[int] = None) -> dict:
@@ -760,8 +806,11 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(item=billing.to_dict())
 
     @mcp.tool()
-    def list_commercial_fiscal_workspace(company_id: int, filters: Optional[dict] = None) -> dict:
-        """Lista o workspace de Notas Fiscais do comercial."""
+    def list_commercial_fiscal_workspace(
+        company_id: int, filters: Optional[dict] = None, limit: int = _PAGE_DEFAULT, offset: int = 0
+    ) -> dict:
+        """Lista o workspace de Notas Fiscais do comercial, paginado (limit até 100; use next_offset para a próxima página)."""
+        limit, offset = validated_page(limit, offset)
         from services.contracts_service import ContractService
 
         workspace = _run_action(ContractService.list_fiscal_invoice_workspace, company_id, filters or {})
@@ -769,9 +818,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         for row in workspace.get("rows") or []:
             rows.append(
                 {
-                    "billing": row["billing"].to_dict(),
-                    "contract": row["contract"].to_dict() if row.get("contract") else None,
-                    "party": row["party"].to_dict() if row.get("party") else None,
+                    "billing": without_free_text(row["billing"].to_dict()),
+                    "contract": without_free_text(row["contract"].to_dict()) if row.get("contract") else None,
+                    "party": without_free_text(row["party"].to_dict()) if row.get("party") else None,
                     "fiscal_invoice": row.get("fiscal_invoice") or {},
                     "fiscal_data": row.get("fiscal_data") or {},
                     "batch_code": row.get("batch_code"),
@@ -779,7 +828,14 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
                     "item_count": row.get("item_count") or 0,
                 }
             )
-        return _ok(rows=rows, batches=workspace.get("batches") or [], kpis=workspace.get("kpis") or {}, status_counts=workspace.get("status_counts") or {})
+        window = page_of(rows, limit, offset)
+        return _ok(
+            rows=window.pop("window"),
+            batches=workspace.get("batches") or [],
+            kpis=workspace.get("kpis") or {},
+            status_counts=workspace.get("status_counts") or {},
+            **window,
+        )
 
     @mcp.tool()
     def update_commercial_fiscal_entry(company_id: int, billing_id: int, payload: dict, user_id: Optional[int] = None) -> dict:
