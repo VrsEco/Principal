@@ -18,7 +18,12 @@ from src.core import mcp_read_cohorts
 READ_VERBS = frozenset({"get", "list", "search", "describe", "read", "find", "show"})
 
 # Exceções REVISADAS: tool -> motivo. Entram só com revisão do código da tool.
-REVIEWED_VERB_EXCEPTIONS: dict[str, str] = {}
+REVIEWED_VERB_EXCEPTIONS: dict[str, str] = {
+    "answer_organizational_question_secure": (
+        "Responde com claims e citações de conhecimento autorizado; o serviço só lê e registra "
+        "medição de uso (telemetria), como a ferramenta original."
+    ),
+}
 # tool -> {parametro: motivo}
 REVIEWED_PARAM_EXCEPTIONS: dict[str, dict[str, str]] = {}
 

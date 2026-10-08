@@ -56,6 +56,8 @@ Todo `source` e todo `chunk` devem portar, no mínimo: `knowledge_scope`, `compa
 
 Os tools não recebem `company_id`, papel ou surface como parâmetros. Estes valores são exclusivamente derivados por `resolve_mcp_execution_context`.
 
+> **Emenda de 2026-10-08 (ver 16.10):** a regra vale para todas as ferramentas, **exceto** as duas variantes `*_secure` da lista fechada, que aceitam `company_id` apenas como *seleção* entre empresas que o grant do principal já autoriza.
+
 ```text
 answer_product_help(question, limit=3)
 search_organizational_knowledge(question, limit=5)
@@ -350,3 +352,20 @@ No mesmo contêiner de teste: simulação (3 trechos pendentes, tokens estimados
 (2 + 1 trechos), reexecução sem pendências (nenhuma chamada), 3 vetores gravados com 1536
 dimensões, 2 execuções no ledger `manual_embedding_backfill` e 2 eventos de consumo datados (UTC)
 com custo calculado a partir do preço informado. Provedor **falso**: nenhuma chamada à OpenAI foi feita.
+
+### 16.10 Emenda: seleção de empresa validada (2026-10-08)
+
+**Motivo.** Um usuário pode ter grants em várias empresas (hoje, 16). O MCP não tem "empresa ativa" de sessão, então as ferramentas de conhecimento, que não recebiam `company_id`, não funcionavam para esse usuário.
+
+**Decisão do responsável do produto.** Alterar a regra de forma **estreita**: apenas as ferramentas `search_organizational_knowledge_secure` e `answer_organizational_question_secure` (lista fechada, `SECURE_COMPANY_SELECTION_TOOLS`) recebem `company_id`.
+
+**Salvaguardas (todas testadas):**
+1. `company_id` é uma **seleção**, nunca identidade confiável: `resolve_mcp_execution_context({"company_id": X})` valida o grant do principal e o teto de permissões; sem grant, a chamada é negada antes de qualquer leitura.
+2. Defesa em profundidade: a empresa resolvida precisa ser igual à solicitada.
+3. O usuário e o colaborador vêm **sempre** do contexto autenticado; `user_id`, `employee_id`, `tenant_id`, papel e surface continuam proibidos no schema.
+4. A busca é feita em **uma** empresa por chamada; o conhecimento de empresas diferentes nunca é misturado numa resposta.
+5. As ferramentas originais (`search_organizational_knowledge`, `answer_organizational_question`, `answer_product_help`) **não mudam** e continuam sem `company_id`.
+6. `limit` entre 1 e 20 e `question` entre 1 e 2000 caracteres.
+7. A ACL do RAG (grants por empresa, usuário e colaborador) continua aplicada pelo serviço.
+
+**Teste de governança.** `test_knowledge_rag_governance.py` aceita `company_id` somente nas duas ferramentas da lista fechada; qualquer outra ferramenta de conhecimento com `company_id`, `tenant_id`, papel, surface ou squad continua reprovada.

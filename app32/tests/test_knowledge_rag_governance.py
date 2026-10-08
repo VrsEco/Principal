@@ -34,6 +34,12 @@ KNOWLEDGE_TOOLS = (
     "answer_organizational_question",
 )
 FORBIDDEN_PARAMS = {"company_id", "tenant_id", "role", "surface", "squad", "squad_cliente", "squad_versus"}
+# Emenda de 2026-10-08 (SPEC rag_mcp_governado_squads_v1, 16.10): lista FECHADA de variantes que
+# aceitam company_id como seleção validada pelo grant. Nenhuma outra tool pode aceitá-lo.
+SECURE_COMPANY_SELECTION_TOOLS = (
+    "search_organizational_knowledge_secure",
+    "answer_organizational_question_secure",
+)
 
 
 def _source(company_id, ref, content, *, scope="company", grant=("company", None), **overrides):
@@ -142,9 +148,14 @@ def test_company_id_is_not_selectable_through_public_tool_signatures():
 
     mcp = _Mcp()
     register_knowledge_tools(mcp)
-    assert set(mcp.registered) == set(KNOWLEDGE_TOOLS)
-    for fn in mcp.registered.values():
-        assert not FORBIDDEN_PARAMS & set(inspect.signature(fn).parameters)
+    assert set(mcp.registered) == set(KNOWLEDGE_TOOLS) | set(SECURE_COMPANY_SELECTION_TOOLS)
+    for name, fn in mcp.registered.items():
+        params = set(inspect.signature(fn).parameters)
+        if name in SECURE_COMPANY_SELECTION_TOOLS:
+            assert "company_id" in params
+            assert not (FORBIDDEN_PARAMS - {"company_id"}) & params
+        else:
+            assert not FORBIDDEN_PARAMS & params, f"{name} não pode aceitar company_id/tenant/papel/surface"
     for tool in knowledge_tools.knowledge_langchain_tools:
         assert not FORBIDDEN_PARAMS & set(tool.args)
 

@@ -126,6 +126,22 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("read", "search", "tenant_safe"),
         "required_context": (TOOL_CONTEXT_COMPANY,),
     },
+    "search_organizational_knowledge_secure": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("knowledge.read",),
+        "tags": ("read", "search", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
+    "answer_organizational_question_secure": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("knowledge.read",),
+        "tags": ("read", "answer", "citations", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
     "answer_organizational_question": {
         "domain": "knowledge",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),

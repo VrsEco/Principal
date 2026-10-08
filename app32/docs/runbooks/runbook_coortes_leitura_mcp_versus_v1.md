@@ -16,6 +16,7 @@ permissão declarada e sem escrita no código da tool. Todas passam pelo limitad
 | `strategy` | 13 | **ligado** |
 | `processes` | 4 | **ligado** |
 | `platform` | 3 | **ligado** |
+| `knowledge` | 2 | **ligado** (variantes `*_secure`, `company_id` validado pelo grant; SPEC RAG 16.10) |
 | `commercial` | 14 | desligado (dados sensíveis) |
 | `finance` | 25 | desligado (dados sensíveis) |
 | `routine` | 14 | flag própria `MCP_VERSUS_ROUTINE_READ_ENABLED` |
@@ -26,7 +27,7 @@ Variável `MCP_VERSUS_READ_DOMAINS` no `.env` do servidor (`app32/.env`), lida a
 
 | Valor | Efeito |
 |---|---|
-| ausente | `strategy`, `processes`, `platform` |
+| ausente | `strategy`, `processes`, `platform`, `knowledge` |
 | `strategy,processes,platform,commercial,finance` | exatamente a lista (acrescente os sensíveis) |
 | `none` ou vazia | **interruptor de emergência**: nenhuma coorte nova |
 
@@ -48,8 +49,8 @@ Assuntos fora da lista não são listados **nem registrados**.
 ## 5. Fora das coortes, por design
 
 `get_my_work`, `get_tasks_today`, `search_organizational_knowledge`, `answer_organizational_question`
-e `list_team_workload` (usam a "empresa ativa" da sessão; a governança de conhecimento proíbe
-`company_id` nas ferramentas públicas, decisão pendente do responsável); a agenda da jornada
+e `list_team_workload` (usam a "empresa ativa" da sessão; o conhecimento por empresa é atendido pelas
+variantes `*_secure`, e as atividades pessoais por `list_my_work_secure`); a agenda da jornada
 (`force_regenerate`); `get_project_task_analytics_report` (`include_deleted`); as 18
 `describe_app32_*` de metadados internos; as ferramentas de deploy e **todas as mutações**
 (onda 2, com gate humano).
