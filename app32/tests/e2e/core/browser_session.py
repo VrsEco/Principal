@@ -50,33 +50,48 @@ def managed_page(
             pass
 
     playwright = sync_playwright().start()
-    browser_launcher = getattr(playwright, settings.browser_name)
-    launch_options = {"headless": settings.headless}
-    if settings.browser_name == "chromium":
-        launch_options["args"] = [
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--disable-software-rasterizer",
-        ]
-    browser = browser_launcher.launch(**launch_options)
+    browser = None
+    context = None
+    try:
+        browser_launcher = getattr(playwright, settings.browser_name)
+        launch_options = {"headless": settings.headless}
+        if settings.browser_name == "chromium":
+            launch_options["args"] = [
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+            ]
+        browser = browser_launcher.launch(**launch_options)
 
-    video_dir = evidence.videos_dir
-    video_dir.mkdir(parents=True, exist_ok=True)
-    context = browser.new_context(
-        base_url=settings.base_url or None,
-        ignore_https_errors=True,
-        record_video_dir=str(video_dir),
-        storage_state=(
-            str(settings.storage_state_path)
-            if use_storage_state and settings.storage_state_path.exists()
-            else None
-        ),
-        viewport={"width": 1440, "height": 960},
-    )
-    context.tracing.start(screenshots=True, snapshots=True, sources=True)
-    page = context.new_page()
-    setattr(page, "_e2e_settings", settings)
+        video_dir = evidence.videos_dir
+        video_dir.mkdir(parents=True, exist_ok=True)
+        context = browser.new_context(
+            base_url=settings.base_url or None,
+            ignore_https_errors=True,
+            record_video_dir=str(video_dir),
+            storage_state=(
+                str(settings.storage_state_path)
+                if use_storage_state and settings.storage_state_path.exists()
+                else None
+            ),
+            viewport={"width": 1440, "height": 960},
+        )
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        page = context.new_page()
+        setattr(page, "_e2e_settings", settings)
+
+    except BaseException:
+        # Sem isto, uma falha ao abrir o navegador deixa o Playwright iniciado e o
+        # event loop do asyncio ativo, quebrando asyncio.run() nos testes seguintes.
+        for closer in (context, browser):
+            try:
+                if closer is not None:
+                    closer.close()
+            except Exception:
+                pass
+        playwright.stop()
+        raise
 
     try:
         yield playwright, browser, context, page

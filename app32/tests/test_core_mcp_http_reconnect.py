@@ -8,8 +8,9 @@ import src.core.mcp_http_server as http_server
 
 
 def _load_connections_module():
-    module_path = Path(
-        r"C:\GestaoVersus\app32\app32\.agent\vendor-skills\skills\mcp-builder\scripts\connections.py"
+    module_path = (
+        Path(__file__).resolve().parents[1]
+        / ".agent" / "vendor-skills" / "skills" / "mcp-builder" / "scripts" / "connections.py"
     )
     spec = importlib.util.spec_from_file_location("mcp_builder_connections", module_path)
     if spec is None or spec.loader is None:

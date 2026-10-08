@@ -69,5 +69,8 @@ def page_context(
     e2e_evidence: EvidencePaths,
     e2e_collector: EvidenceCollector,
 ):
+    if e2e_settings.missing_requirements:
+        # Pular antes de iniciar o Playwright: ele mantém um event loop ativo no processo.
+        pytest.skip("Configuração E2E incompleta. Defina: " + ", ".join(e2e_settings.missing_requirements))
     with managed_page(e2e_settings, e2e_evidence, e2e_collector) as payload:
         yield payload

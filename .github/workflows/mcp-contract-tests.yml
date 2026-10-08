@@ -1,0 +1,65 @@
+name: MCP Contract Tests
+
+# Protege o contrato do mcp-versus (catalogo, RBAC, surfaces, playbooks, auth).
+# Falha em qualquer teste novo; divergencias antigas ficam em
+# .github/mcp-contract-known-failures.txt (a lista so pode encolher).
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'app32/src/**'
+      - 'app32/services/**'
+      - 'app32/models/**'
+      - 'app32/tests/**'
+      - 'app32/config.py'
+      - '.github/workflows/mcp-contract-tests.yml'
+      - '.github/mcp-contract-known-failures.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mcp-contract:
+    name: MCP contract gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OPENAI_API_KEY: ci-not-a-real-key
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: app32/requirements.txt
+
+      - name: Install application dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r app32/requirements.txt pytest
+
+      - name: Run MCP contract tests (known failures deselected)
+        working-directory: app32
+        run: |
+          shopt -s nullglob
+          files=(tests/test_*mcp*.py tests/test_*tool_catalog*.py tests/test_*tenant_rbac*.py \
+                 tests/test_*playbook*.py tests/test_*permission*.py tests/test_*capabilit*.py \
+                 tests/test_*surface*.py)
+          # remove duplicatas preservando a ordem
+          mapfile -t files < <(printf '%s\n' "${files[@]}" | awk '!seen[$0]++')
+          deselect=()
+          while IFS= read -r line; do
+            case "$line" in ''|'#'*) continue ;; esac
+            deselect+=(--deselect "$line")
+          done < ../.github/mcp-contract-known-failures.txt
+          echo "Arquivos de contrato: ${#files[@]} | falhas conhecidas ignoradas: $(( ${#deselect[@]} / 2 ))"
+          python -m pytest "${files[@]}" "${deselect[@]}" -q -p no:cacheprovider
