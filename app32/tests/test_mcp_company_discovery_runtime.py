@@ -119,4 +119,21 @@ def test_explicit_company_still_goes_through_grant_gate(oauth):
 
 
 def test_only_read_discovery_tools_are_exempt():
-    assert runtime.COMPANY_DISCOVERY_TOOLS == {"list_my_companies", "bootstrap_session_context"}
+    # Fronteira de segurança: só leituras que descobrem a empresa ou agregam dados PESSOAIS sobre as
+    # empresas com grant ativo (lista do servidor, cada empresa validada) podem rodar sem company_id.
+    assert runtime.COMPANY_DISCOVERY_TOOLS == {
+        "list_my_companies",
+        "bootstrap_session_context",
+        "list_my_work_all_companies",
+    }
+
+
+def test_every_exempt_tool_is_a_low_risk_read_without_human_gate():
+    from src.intelligence.tool_catalog import catalog
+
+    for name in runtime.COMPANY_DISCOVERY_TOOLS:
+        capability = catalog.get_tool_capability(name)
+        assert capability is not None, name
+        assert getattr(capability.risk, "value", capability.risk) == "low", name
+        assert capability.human_gate is False, name
+        assert name.split("_")[0] in {"list", "bootstrap", "get"}, f"{name}: isento de empresa só se for leitura"

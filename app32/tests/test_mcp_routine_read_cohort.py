@@ -28,6 +28,7 @@ EXPECTED = {
     "list_work_journey_task_inventory_tool",
     "list_work_journey_transfers_tool",
     "list_my_work_secure",
+    "list_my_work_all_companies",
 }
 USER_TOKEN = SimpleNamespace(scopes=("mcp:access", "mcp:user"))
 
@@ -43,8 +44,8 @@ def _list_tools(monkeypatch, *, flag, permission=True, identity=USER_TOKEN):
     return server, {tool.name for tool in asyncio.run(server.list_tools())}
 
 
-def test_cohort_is_exactly_the_approved_fourteen_reads():
-    assert len(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == len(set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES)) == 14
+def test_cohort_is_exactly_the_approved_fifteen_reads():
+    assert len(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == len(set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES)) == 15
     assert set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == EXPECTED
 
 
@@ -55,7 +56,9 @@ def test_each_tool_is_a_low_risk_tenant_scoped_read_without_gate(name):
     assert capability.domain == "routine"
     assert getattr(capability.risk, "value", capability.risk) == "low"
     assert capability.human_gate is False
-    assert "company" in tuple(capability.required_context or ())
+    from src.core.mcp_cohort_contract import REVIEWED_COMPANY_PARAM_EXCEPTIONS
+
+    assert "company" in tuple(capability.required_context or ()) or name in REVIEWED_COMPANY_PARAM_EXCEPTIONS
     assert "mcp_user" in tuple(capability.scopes)
     assert name.split("_")[0] in {"get", "list"}, "onda 1 só publica leituras"
 
@@ -128,3 +131,10 @@ def test_manifest_follows_the_flag(monkeypatch):
     on = {t["name"] for t in registry.get_unified_manifest()["tools"]}
     assert EXPECTED.isdisjoint(off)
     assert EXPECTED.issubset(on)
+
+
+def test_company_blind_exceptions_are_exactly_the_reviewed_one():
+    from src.core.mcp_cohort_contract import REVIEWED_COMPANY_PARAM_EXCEPTIONS
+
+    assert set(REVIEWED_COMPANY_PARAM_EXCEPTIONS) == {"list_my_work_all_companies"}
+    assert all(len(reason) > 60 for reason in REVIEWED_COMPANY_PARAM_EXCEPTIONS.values())

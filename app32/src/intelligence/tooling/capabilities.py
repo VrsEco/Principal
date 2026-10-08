@@ -609,6 +609,14 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("personal", "read", "tenant_safe", "my_work"),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
+    "list_my_work_all_companies": {
+        "domain": "routine",
+        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("work.read_self",),
+        "tags": ("personal", "read", "tenant_safe", "my_work", "cross_company"),
+        "required_context": (TOOL_CONTEXT_USER,),
+    },
     "list_my_companies": {
         "domain": "identity_self_service",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

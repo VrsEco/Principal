@@ -256,7 +256,10 @@ class MCPExecutionContext:
 
 # Tools somente de leitura que existem para descobrir a empresa; sem elas o
 # usuário OAuth com vários grants não consegue obter o company_id exigido.
-COMPANY_DISCOVERY_TOOLS = frozenset({"list_my_companies", "bootstrap_session_context"})
+# ``list_my_work_all_companies`` (2026-10-08) agrega as atividades PESSOAIS nas empresas com
+# grant ativo: a lista de empresas vem do servidor (nunca do cliente) e cada empresa é validada
+# individualmente (grant + teto de permissões) antes de qualquer leitura.
+COMPANY_DISCOVERY_TOOLS = frozenset({"list_my_companies", "bootstrap_session_context", "list_my_work_all_companies"})
 
 
 def _resolve_company_discovery_context(

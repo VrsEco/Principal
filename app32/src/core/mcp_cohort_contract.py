@@ -18,6 +18,13 @@ from src.core import mcp_read_cohorts
 READ_VERBS = frozenset({"get", "list", "search", "describe", "read", "find", "show"})
 
 # Exceções REVISADAS: tool -> motivo. Entram só com revisão do código da tool.
+# Leituras SEM company_id explícito, revisadas: a lista de empresas vem do servidor e cada uma é validada.
+REVIEWED_COMPANY_PARAM_EXCEPTIONS: dict[str, str] = {
+    "list_my_work_all_companies": (
+        "Agrega só atividades pessoais nas empresas com grant ativo do principal; a lista vem do servidor "
+        "(nunca do cliente) e cada empresa é validada individualmente (grant e teto) antes de ler."
+    ),
+}
 REVIEWED_VERB_EXCEPTIONS: dict[str, str] = {
     "answer_organizational_question_secure": (
         "Responde com claims e citações de conhecimento autorizado; o serviço só lê e registra "
@@ -169,7 +176,7 @@ def audit_read_tool(name: str, *, capability: Any, probe: ToolProbe | None) -> l
         problems.append(f"{name}: verbo '{verb}' não é de leitura (exceção só com revisão registrada)")
 
     params = tuple((probe.schema or {}).get("properties", {}).keys())
-    if not any(param in params for param in _COMPANY_PARAMS):
+    if not any(param in params for param in _COMPANY_PARAMS) and name not in REVIEWED_COMPANY_PARAM_EXCEPTIONS:
         problems.append(f"{name}: sem company_id/company_ref (o grant por empresa não seria validado)")
     excused = REVIEWED_PARAM_EXCEPTIONS.get(name, {})
     for param in params:
