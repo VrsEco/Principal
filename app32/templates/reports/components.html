@@ -19,9 +19,9 @@
     {%- set sign = '-' if numeric < 0 else '' -%}
     {%- set absolute = numeric|abs -%}
     {%- set formatted = '{:,.2f}'.format(absolute).replace(',', '_').replace('.', ',').replace('_', '.') -%}
-    {{ sign }}R$ {{ formatted }}
+    {{ sign }}{{ formatted }}
   {%- else -%}
-    R$ 0,00
+    0,00
   {%- endif -%}
 {%- endmacro %}
 

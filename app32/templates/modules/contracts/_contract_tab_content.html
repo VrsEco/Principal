@@ -186,7 +186,7 @@
                                 <div>
                                     <strong>{{ item.billing_code or '-' }} · {{ item.description }}</strong>
                                     <small>
-                                        R$ {{ item.amount }} · {{ item.billing_periodicity or 'sem periodicidade' }}
+                                        {{ item.amount }} · {{ item.billing_periodicity or 'sem periodicidade' }}
                                         {% if item.trigger_type %} · gatilho {{ item.trigger_type }}{% endif %}
                                         {% if item.trigger_reference_date %} · base {{ item.trigger_reference_date }}{% endif %}
                                     </small>
@@ -215,7 +215,7 @@
                         <label><span>Vencimento</span><input type="date" name="due_date"></label>
                         <div class="info-grid full-width">
                             <span><strong>Itens elegíveis:</strong> {{ native_billing_preview.item_count }}</span>
-                            <span><strong>Total previsto:</strong> R$ {{ native_billing_preview.gross_amount }}</span>
+                            <span><strong>Total previsto:</strong> {{ native_billing_preview.gross_amount }}</span>
                         </div>
                     </div>
                     <div class="panel-footer"><button class="btn btn-primary" type="submit">Gerar faturamento nativo</button></div>
@@ -233,7 +233,7 @@
                                         {{ billing.competence_start.strftime('%d/%m/%Y') if billing.competence_start else '-' }}
                                         até
                                         {{ billing.competence_end.strftime('%d/%m/%Y') if billing.competence_end else '-' }}
-                                        · R$ {{ billing.gross_amount }}
+                                        · {{ billing.gross_amount }}
                                         · {{ billing.status }}
                                     </small>
                                     {% set export_payload = native_billing_export_payloads.get(billing.id, {}) %}
@@ -640,10 +640,10 @@
                 </div>
                 <div class="panel-body">
                     <div class="info-grid">
-                        <span><strong>Bruto:</strong> R$ {{ contract_financial_summary.gross_total }}</span>
-                        <span><strong>Em aberto:</strong> R$ {{ contract_financial_summary.open_total }}</span>
-                        <span><strong>Liquidado:</strong> R$ {{ contract_financial_summary.settled_total }}</span>
-                        <span><strong>Satélites:</strong> R$ {{ contract_financial_summary.satellite_total }}</span>
+                        <span><strong>Bruto:</strong> {{ contract_financial_summary.gross_total }}</span>
+                        <span><strong>Em aberto:</strong> {{ contract_financial_summary.open_total }}</span>
+                        <span><strong>Liquidado:</strong> {{ contract_financial_summary.settled_total }}</span>
+                        <span><strong>Satélites:</strong> {{ contract_financial_summary.satellite_total }}</span>
                     </div>
                 </div>
             </div>
@@ -658,14 +658,14 @@
                                 <div>
                                     <strong>{{ group.main_schedule.schedule_code }} · {{ group.main_schedule.name }}</strong>
                                     <small>
-                                        Bruto R$ {{ group.main_balance.principal_amount }}
-                                        · em aberto R$ {{ group.main_balance.principal_open }}
-                                        · liquidado R$ {{ group.main_balance.principal_settled }}
+                                        Bruto {{ group.main_balance.principal_amount }}
+                                        · em aberto {{ group.main_balance.principal_open }}
+                                        · liquidado {{ group.main_balance.principal_settled }}
                                     </small>
                                     {% if group.satellites %}
                                     <p class="list-item-text">
                                         {% for satellite in group.satellites %}
-                                        {{ satellite.schedule.schedule_code }} / {{ satellite.policy.name if satellite.policy else satellite.link.title_nature }} · aberto R$ {{ satellite.balance.principal_open }}{% if not loop.last %}<br>{% endif %}
+                                        {{ satellite.schedule.schedule_code }} / {{ satellite.policy.name if satellite.policy else satellite.link.title_nature }} · aberto {{ satellite.balance.principal_open }}{% if not loop.last %}<br>{% endif %}
                                         {% endfor %}
                                     </p>
                                     {% endif %}
@@ -687,7 +687,7 @@
                             <article class="list-item list-item-column">
                                 <div>
                                     <strong>{{ billing.billing_code }}</strong>
-                                    <small>{{ billing.competence_start.strftime('%d/%m/%Y') if billing.competence_start else '-' }} · R$ {{ billing.gross_amount }}</small>
+                                    <small>{{ billing.competence_start.strftime('%d/%m/%Y') if billing.competence_start else '-' }} · {{ billing.gross_amount }}</small>
                                 </div>
                                 {% if linked %}
                                 <span class="mini-badge">Título {{ linked }}</span>

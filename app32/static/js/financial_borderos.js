@@ -25,7 +25,7 @@
   const settlementCancelButton = $('bordero-settlement-cancel-button');
   const banner = $('bordero-banner');
   const typeInfo = $('bordero-type-info');
-  const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const money = (value) => Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const formatDate = (value) => {
     if (!value) return '-';
     const [year, month, day] = String(value).split('-');

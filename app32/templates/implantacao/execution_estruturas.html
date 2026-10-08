@@ -824,7 +824,7 @@
 
     // Formatar valor para string monetária
     const valueNum = document.getElementById('structure-value').value;
-    const valueFormatted = valueNum ? `R$ ${parseFloat(valueNum).toFixed(2).replace('.', ',')}` : '';
+    const valueFormatted = valueNum ? `${parseFloat(valueNum).toFixed(2).replace('.', ',')}` : '';
 
     // Determinar forma de pagamento
     let paymentForm = 'A definir';
@@ -1039,9 +1039,9 @@
       return '-';
     }
     try {
-      return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     } catch (error) {
-      return `R$ ${Number(value).toFixed(2)}`;
+      return `${Number(value).toFixed(2)}`;
     }
   }
 

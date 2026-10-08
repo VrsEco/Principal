@@ -180,9 +180,9 @@
     const summary = summarizeAllocations();
     rateioSummary.innerHTML = [
       `<span class="rateio-pill ${summary.percentagesOk ? 'is-ok' : 'is-error'}">Percentual total: ${formatPercent(summary.totalPercentage)}%</span>`,
-      `<span class="rateio-pill ${summary.valuesOk ? 'is-ok' : 'is-error'}">Valor total do rateio: ${summary.totalAllocated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`,
+      `<span class="rateio-pill ${summary.valuesOk ? 'is-ok' : 'is-error'}">Valor total do rateio: ${summary.totalAllocated.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`,
       `<span class="rateio-pill ${summary.percentagesOk ? 'is-ok' : 'is-error'}">Faltante percentual: ${formatPercent(summary.remainingPercentage)}%</span>`,
-      `<span class="rateio-pill ${summary.valuesOk ? 'is-ok' : 'is-error'}">Faltante valor: ${summary.remainingValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`
+      `<span class="rateio-pill ${summary.valuesOk ? 'is-ok' : 'is-error'}">Faltante valor: ${summary.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`
     ].join('');
     return summary;
   }

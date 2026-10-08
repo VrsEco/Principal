@@ -535,7 +535,7 @@
         <input type="date" id="capitalGiroDate" name="capitalGiroDate" required>
       </div>
       <div class="form-group">
-        <label for="capitalGiroAmount">Valor (R$)</label>
+        <label for="capitalGiroAmount">Valor</label>
         <input type="number" id="capitalGiroAmount" name="capitalGiroAmount" step="0.01" min="0" required>
       </div>
       <div class="form-group">
@@ -578,7 +578,7 @@
         <input type="text" id="fundingSourceDescription" name="fundingSourceDescription" required>
       </div>
       <div class="form-group">
-        <label for="fundingSourceAmount">Valor (R$)</label>
+        <label for="fundingSourceAmount">Valor</label>
         <input type="number" id="fundingSourceAmount" name="fundingSourceAmount" step="0.01" min="0" required>
       </div>
       <div class="form-group">
@@ -681,10 +681,9 @@
   // =========================================
   
   function formatCurrency(value) {
-    if (!value) return 'R$ 0,00';
+    if (!value) return '0,00';
     return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
+      minimumFractionDigits: 2, maximumFractionDigits: 2
     }).format(value);
   }
   
@@ -1810,7 +1809,7 @@
           ${cards || `
             <div class="value-box">
               <div class="value-label">Sem categorias</div>
-              <div class="value-amount">R$ 0,00</div>
+              <div class="value-amount">0,00</div>
             </div>
           `}
         </div>
@@ -2764,7 +2763,7 @@
         </div>
 
         <div class="form-group" data-field="value">
-          <label>Valor Fixo (R$)</label>
+          <label>Valor Fixo</label>
           <input type="number" id="rr-value" min="0" step="0.01" value="${dadosRegra?.value ?? ''}" placeholder="Ex: 5000,00" data-ref="29">
           <small style="font-size: 12px; color: #64748b;">Valor mensal fixo a ser provisionado.</small>
         </div>

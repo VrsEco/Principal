@@ -171,7 +171,7 @@
                         <td>
                             <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">
                                 {% if record.indicator.unit == 'R$' or 'R$' in (record.indicator.unit or '') or 'moeda' in (record.indicator.unit or '').lower() %}
-                                    R$ {{ record.measured_value | format_currency_br }}
+                                    {{ record.measured_value | format_currency_br }}
                                 {% else %}
                                     {{ "{:,.2f}".format(record.measured_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}
                                     <span style="font-size: 0.8rem; color: var(--text-tertiary); font-weight: 600;">{{ record.indicator.unit }}</span>
@@ -276,7 +276,7 @@
                             data-unit="{{ goal.indicator.unit or '' }}"
                             data-responsible-id="{{ goal.responsible_id or '' }}"
                         >
-                            {% if goal.code %}[{{ goal.code }}] {% endif %}{{ goal.indicator.name }} — {{ goal.name or ('Campanha' if goal.goal_kind == 'campaign' else 'Meta-base') }} — {% if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') or 'moeda' in (goal.indicator.unit or '').lower() %}R$ {% endif %}{{ goal.goal_value | format_currency_br }}{% if goal.indicator.unit and goal.indicator.unit != 'R$' and 'R$' not in goal.indicator.unit and 'moeda' not in goal.indicator.unit.lower() %} {{ goal.indicator.unit }}{% endif %}{% if goal.responsible %} · {{ goal.responsible.name }}{% endif %}
+                            {% if goal.code %}[{{ goal.code }}] {% endif %}{{ goal.indicator.name }} — {{ goal.name or ('Campanha' if goal.goal_kind == 'campaign' else 'Meta-base') }} — {% if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') or 'moeda' in (goal.indicator.unit or '').lower() %}{% endif %}{{ goal.goal_value | format_currency_br }}{% if goal.indicator.unit and goal.indicator.unit != 'R$' and 'R$' not in goal.indicator.unit and 'moeda' not in goal.indicator.unit.lower() %} {{ goal.indicator.unit }}{% endif %}{% if goal.responsible %} · {{ goal.responsible.name }}{% endif %}
                         </option>
                         {% endfor %}
                     </select>
@@ -303,7 +303,7 @@
                     <div class="field-group">
                         <label class="field-label">Valor Medido <span id="record_unit_label" style="text-transform:none;opacity:0.7;"></span> *</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <span id="record_currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;">R$</span>
+                            <span id="record_currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;"></span>
                             <input type="text" inputmode="decimal" id="record_value_visual" class="field-input" placeholder="0,00" required oninput="handleRecordValueInput(this)" title="Aceita valores positivos e negativos">
                             <input type="hidden" name="measured_value" id="record_value_real">
                         </div>

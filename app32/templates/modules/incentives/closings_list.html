@@ -48,7 +48,7 @@
                     {{ c.participants_count or 0 }}
                 </td>
                 <td style="padding: 1rem; text-align: right; font-weight: 800; color: var(--primary);">
-                    R$ {{ c.total_distributed | default(0) | format_currency_br }}
+                    {{ c.total_distributed | default(0) | format_currency_br }}
                 </td>
                 <td style="padding: 1rem; text-align: center;">
                     <span class="status-badge status-{{ c.status }}" style="padding: 2px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; 

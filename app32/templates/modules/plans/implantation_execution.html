@@ -168,7 +168,7 @@
                     <thead style="text-align: left; font-size: 11px; color: #94a3b8; text-transform: uppercase;">
                         <tr>
                             <th style="padding-bottom: 8px;">Data do Pagamento</th>
-                            <th style="padding-bottom: 8px; text-align: right;">Valor (R$)</th>
+                            <th style="padding-bottom: 8px; text-align: right;">Valor</th>
                             <th style="padding-bottom: 8px; text-align: right; width: 40px;"></th>
                         </tr>
                     </thead>
@@ -201,7 +201,7 @@
                 </div>
                 <div>
                     <label style="display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">
-                        Valor Mensal (R$)
+                        Valor Mensal
                     </label>
                     <input type="text" id="modalContractMonthlyAmount" onchange="updateModalTotal()"
                         placeholder="0,00"
@@ -216,7 +216,7 @@
                 style="padding-top: 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <span style="font-size: 12px; color: #64748b;">Total Acumulado:</span>
-                    <div id="modalTotalValue" style="font-size: 20px; font-weight: 800; color: #0f172a;">R$ 0,00</div>
+                    <div id="modalTotalValue" style="font-size: 20px; font-weight: 800; color: #0f172a;">0,00</div>
                 </div>
                 <button onclick="applyPayments()" class="btn btn-primary">Confirmar</button>
             </div>
@@ -451,7 +451,7 @@
             });
         }
 
-        document.getElementById('modalTotalValue').innerText = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
+        document.getElementById('modalTotalValue').innerText = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(total);
     }
 
     function closePaymentsModal() {

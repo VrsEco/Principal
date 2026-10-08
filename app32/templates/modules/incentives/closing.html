@@ -210,7 +210,7 @@
         <div class="summary-stats">
             <div class="stat-box">
                 <span class="stat-label">Total Distribuído</span>
-                <span class="stat-value">R$ {{ calculation.total_distributed | default(0) | format_currency_br }}</span>
+                <span class="stat-value">{{ calculation.total_distributed | default(0) | format_currency_br }}</span>
             </div>
             <div class="stat-box">
                 <span class="stat-label">Colaboradores</span>
@@ -218,7 +218,7 @@
             </div>
             <div class="stat-box">
                 <span class="stat-label">Média por Pessoa</span>
-                <span class="stat-value">R$ {{ ((calculation.total_distributed / calculation.participants_count) if calculation.participants_count and calculation.participants_count > 0 else 0) | format_currency_br }}</span>
+                <span class="stat-value">{{ ((calculation.total_distributed / calculation.participants_count) if calculation.participants_count and calculation.participants_count > 0 else 0) | format_currency_br }}</span>
             </div>
         </div>
     </div>
@@ -263,10 +263,10 @@
                         <span class="emp-score">{{ "{:,.1f}".format((p.total_score * 100) | float).replace('.', ',') }}%</span>
                     </td>
                     <td style="text-align: center; color: var(--text-tertiary);">
-                        R$ {{ p.base_target | default(0) | format_currency_br }}
+                        {{ p.base_target | default(0) | format_currency_br }}
                     </td>
                     <td style="text-align: right;">
-                        <span class="emp-bonus">R$ {{ p.bonus | default(0) | format_currency_br }}</span>
+                        <span class="emp-bonus">{{ p.bonus | default(0) | format_currency_br }}</span>
                         <i class="fas fa-chevron-right" style="margin-left: 1rem; color: var(--border); font-size: 0.8rem;"></i>
                     </td>
                 </tr>

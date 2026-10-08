@@ -65,18 +65,66 @@
 }
 
 .sched-kpi {
-  padding: 1rem;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
-.sched-kpi span,
-.sched-kpi small {
+.sched-kpi-title {
+  margin: 0;
+  padding: 0.6rem 1rem;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--text-secondary);
+  background: rgba(100, 116, 139, 0.08);
+  border-bottom: 1px solid var(--border);
 }
 
-.sched-kpi strong {
-  display: block;
-  margin-top: 0.3rem;
-  font-size: 1.1rem;
+.sched-kpi-values {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sched-kpi-values > div {
+  min-width: 0;
+  padding: 0.7rem 0.75rem;
+  text-align: center;
+}
+
+.sched-kpi-values > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.sched-kpi-values > div:nth-child(1) {
+  background: rgba(100, 116, 139, 0.04);
+}
+
+.sched-kpi-values > div:nth-child(2) {
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.sched-kpi-values > div:nth-child(3) {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.sched-kpi-values dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.sched-kpi-values dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .sched-amount {
@@ -221,5 +269,28 @@
   .sched-list-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .sched-list-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 380px) {
+  .sched-kpi-values {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sched-kpi-values > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sched-kpi-values > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--border);
   }
 }

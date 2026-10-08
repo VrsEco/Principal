@@ -1138,7 +1138,7 @@
           <small class="field-hint">Estimativa de horas necessárias para concluir a atividade.</small>
         </div>
         <div class="field">
-          <label for="activityAmount">Orçamento (R$)</label>
+          <label for="activityAmount">Orçamento</label>
           <input type="number" id="activityAmount" step="0.01" min="0" placeholder="0.00" data-ref="20">
         </div>
         <div class="field">
@@ -2041,7 +2041,7 @@
     card.dataset.stage = activity.stage;
 
     const deadline = activity.when ? window.App32DateUtils.formatCalendarDatePtBr(activity.when) : '-';
-    const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-';
+    const budget = activity.amount ? `${parseFloat(activity.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-';
     const weightLabel = formatScoreWeight(activity.score_weight);
 
     card.innerHTML = `

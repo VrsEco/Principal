@@ -329,7 +329,7 @@
     const batchId = Number(document.querySelector('.batch-page')?.dataset.batchId);
 
     function brl(value) {
-        return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(Number(value || 0));
+        return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));
     }
 
     function badge(status) {

@@ -317,7 +317,7 @@ class FinancialReportService:
     def _format_currency(value: Decimal | float | int) -> str:
         amount = FinancialReportService._serialize_money(value)
         inteiro, decimal = f"{amount:,.2f}".split(".")
-        return f"R$ {inteiro.replace(',', '.')},{decimal}"
+        return f"{inteiro.replace(',', '.')},{decimal}"
 
     @staticmethod
     def _format_currency_compact(value: Decimal | float | int) -> str:
@@ -8707,7 +8707,7 @@ class FinancialReportService:
         for row in source_rows:
             level = int(row.get("level") or 0)
             description = f"{'&nbsp;' * (level * 4)}{row.get('descricao') or row.get('description') or row.get('account_label') or '-'}"
-            liquidation_value = row.get("liquidacao_label") or row.get("liquidation_label") or row.get("liquidacao") or row.get("liquidation") or "R$ 0,00"
+            liquidation_value = row.get("liquidacao_label") or row.get("liquidation_label") or row.get("liquidacao") or row.get("liquidation") or "0,00"
             liquidation_amount = _row_liquidation_amount(row)
             table_data.append(
                 [

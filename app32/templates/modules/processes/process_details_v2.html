@@ -135,21 +135,21 @@
                         <div class="process-kpi-card__icon">💰</div>
                         <div class="process-kpi-card__content">
                             <span class="process-kpi-card__label">Custo mensal alocado</span>
-                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceAllocatedMonthly">R$ 0,00</strong>
+                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceAllocatedMonthly">0,00</strong>
                         </div>
                     </article>
                     <article class="process-kpi-card">
                         <div class="process-kpi-card__icon">🔁</div>
                         <div class="process-kpi-card__content">
                             <span class="process-kpi-card__label">Custo por execução</span>
-                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceExecutionCost">R$ 0,00</strong>
+                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceExecutionCost">0,00</strong>
                         </div>
                     </article>
                     <article class="process-kpi-card">
                         <div class="process-kpi-card__icon">🏗️</div>
                         <div class="process-kpi-card__content">
                             <span class="process-kpi-card__label">CAPEX cadastrado</span>
-                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceCapex">R$ 0,00</strong>
+                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceCapex">0,00</strong>
                         </div>
                     </article>
                 </div>
@@ -2365,7 +2365,7 @@
 
     function formatCurrencyBR(value) {
         const number = Number(value || 0);
-        return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     const resourceTypeLabels = {

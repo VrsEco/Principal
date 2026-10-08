@@ -188,7 +188,7 @@
                         <td style="padding: 1.25rem 1.5rem;">
                             <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">
                                 {% if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') or 'moeda' in (goal.indicator.unit or '').lower() %}
-                                    R$ {{ goal.goal_value | format_currency_br }}
+                                    {{ goal.goal_value | format_currency_br }}
                                 {% else %}
                                     {# Formatação genérica brasileira para decimais #}
                                     {{ "{:,.2f}".format(goal.goal_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}
@@ -370,7 +370,7 @@
                     <div class="field-group">
                         <label class="field-label">Valor Alvo <span id="goal_unit_badge" style="text-transform:none; font-weight:600; opacity:0.7;"></span> *</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <span id="currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;">R$</span>
+                            <span id="currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;"></span>
                             <input type="text" inputmode="decimal" id="goal_value_visual" class="field-input" placeholder="0,00" required oninput="handleGoalValueInput(this)" title="Aceita valores positivos e negativos">
                             <input type="hidden" name="goal_value" id="goal_value_real">
                         </div>

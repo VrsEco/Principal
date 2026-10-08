@@ -131,7 +131,7 @@
     return left.localeCompare(right);
   };
 
-  const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const money = (value) => Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signedAmount = (value, movementNature) => {
     const normalized = Math.abs(Number(value || 0));
     return movementNature === 'debit' ? normalized * -1 : normalized;

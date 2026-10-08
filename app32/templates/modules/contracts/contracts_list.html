@@ -373,7 +373,7 @@
                                     {% set retention_details = (item.metadata_json or {}).get('retention_details', []) %}
                                     <div>
                                         <strong>{{ item.item_code or '-' }} · {{ item.description }}</strong>
-                                        <small>{{ item.quantity }} x R$ {{ item.unit_price or '0,00' }} · Total R$ {{ item.total_price or '0,00' }}</small>
+                                        <small>{{ item.quantity }} x {{ item.unit_price or '0,00' }} · Total {{ item.total_price or '0,00' }}</small>
                                         {% if allocation.get('chart_account_name') or allocation.get('cost_center_name') or allocation.get('project_name') %}
                                         <small>
                                             {% if allocation.get('chart_account_name') %}Conta: {{ allocation.get('chart_account_code') or '-' }} · {{ allocation.get('chart_account_name') }}{% endif %}
@@ -393,7 +393,7 @@
                                         <small>
                                             {{ retention.get('label') or retention.get('kind') }} · Base: {{ retention.get('base_deduction_mode') }} {{ retention.get('base_deduction_value') }}
                                             · Retenção: {{ retention.get('retention_value_mode') }} {{ retention.get('retention_value') }}
-                                            · Valor calculado: R$ {{ retention.get('retention_amount') }}
+                                            · Valor calculado: {{ retention.get('retention_amount') }}
                                             · Compensação: {{ retention.get('bank_account_code') or retention.get('asset_account_code') or '-' }} · {{ retention.get('bank_account_name') or retention.get('asset_account_name') or '-' }}
                                             · Conta retida: {{ retention.get('chart_account_code') or '-' }} · {{ retention.get('chart_account_name') or '-' }}
                                             · Gatilho: {{ retention.get('trigger') or '-' }}

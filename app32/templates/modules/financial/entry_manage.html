@@ -31,11 +31,11 @@
         </article>
         <article class="summary-card">
             <span class="summary-label">Valor original</span>
-            <strong>{{ "R$ {:,.2f}".format(entry.original_amount or 0)|replace(",", "X")|replace(".", ",")|replace("X", ".") }}</strong>
+            <strong>{{ "{:,.2f}".format(entry.original_amount or 0)|replace(",", "X")|replace(".", ",")|replace("X", ".") }}</strong>
         </article>
         <article class="summary-card">
             <span class="summary-label">Saldo disponível</span>
-            <strong id="available-amount-card">R$ 0,00</strong>
+            <strong id="available-amount-card">0,00</strong>
         </article>
     </section>
 
@@ -217,7 +217,7 @@
     let bankAccounts = [];
 
     function formatCurrency(value) {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+        return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));
     }
 
     function parseCurrencyInput(value) {
