@@ -232,11 +232,13 @@ PILOT_AUDIT_READ_TOOL_NAMES: tuple[str, ...] = (
 # de política. Ficam FORA desta onda: get_my_work/get_tasks_today (sem contexto de
 # empresa, exigem revisão de isolamento), as 2 workspaces financeiras (domínio
 # errado) e todas as mutações (onda 2).
+# `get_work_journey_agenda_tool` foi RETIRADA da onda 1 (2026-10-08): expõe o parâmetro
+# `force_regenerate`, que faz uma ferramenta "de leitura" regenerar a agenda (escrita).
+# Só volta quando o parâmetro for removido ou a ferramenta separada em leitura/regeneração.
 # Publicação controlada por MCP_VERSUS_ROUTINE_READ_ENABLED (desligada por padrão):
 # a flag governa a listagem E o registro, para que uma tool oculta não seja
 # invocável por quem conheça o nome.
 UNIFIED_ROUTINE_READ_TOOL_NAMES: tuple[str, ...] = (
-    "get_work_journey_agenda_tool",
     "get_work_journey_board_tool",
     "get_work_journey_capacity_report_tool",
     "get_efficiency_collaborators_analysis_tool",
