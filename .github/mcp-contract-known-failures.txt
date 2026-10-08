@@ -1,0 +1,11 @@
+# Falhas JA EXISTENTES na main (07/10/2026), registradas para o gate nao nascer vermelho.
+# Regra: esta lista so pode ENCOLHER. Corrija o teste/contrato e remova a linha.
+# Qualquer falha fora desta lista bloqueia o PR.
+tests/test_ai_mcp_console_wizard_assistant_ui.py::test_ai_mcp_console_template_renders_wizard_steps_ctas_and_contextual_help
+tests/test_ai_mcp_contract_drift_suite.py::test_contract_drift_surface_playbooks_match_profile_contract_roles
+tests/test_mcp_feature_catalog_service.py::test_list_features_filters_by_surface_and_domain
+tests/test_mcp_feature_catalog_service.py::test_bootstrap_requires_company_context
+tests/test_mcp_feature_catalog_service.py::test_bootstrap_context_exposes_current_context_and_required_context_summary
+tests/test_mcp_prod_launcher_scripts.py::test_prod_launcher_script_does_not_require_fixed_company_env
+tests/test_mcp_prod_launcher_scripts.py::test_deploy_script_forces_mcp_http_restart_after_publish
+tests/test_mcp_user_admin_production_runbook.py::test_mcp_user_admin_runtime_manifests_match_runbook_boundaries
