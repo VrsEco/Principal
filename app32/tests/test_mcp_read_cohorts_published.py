@@ -1,4 +1,4 @@
-"""Coortes de leitura por assunto publicadas no mcp-versus (59 ferramentas, desligadas por padrão)."""
+"""Coortes de leitura por assunto publicadas no mcp-versus (61 ferramentas)."""
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +11,8 @@ import src.core.mcp_read_cohorts as cohorts
 import src.core.mcp_surface_registry as registry
 from src.intelligence.tool_catalog import catalog
 
-EXPECTED_COUNTS = {"strategy": 13, "processes": 4, "platform": 3, "commercial": 14, "finance": 25}
+EXPECTED_COUNTS = {"strategy": 13, "processes": 4, "platform": 3, "knowledge": 2, "commercial": 14, "finance": 25}
+ALL_SUBJECTS = ",".join(EXPECTED_COUNTS)
 IDENTITY = SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"))
 
 
@@ -31,7 +32,7 @@ def _build(monkeypatch, env, *, permission=True, identity=IDENTITY):
 
 def test_subjects_and_sizes_are_exactly_the_approved_ones():
     assert {k: len(v) for k, v in cohorts.READ_COHORT_TOOL_NAMES.items()} == EXPECTED_COUNTS
-    assert len(cohorts.all_read_cohort_names()) == 59
+    assert len(cohorts.all_read_cohort_names()) == 61
 
 
 def test_no_tool_is_in_two_cohorts_or_already_published():
@@ -70,23 +71,23 @@ def test_each_subject_is_off_with_none_and_only_its_own_flag_enables_it(monkeypa
     assert not (others & (listed | registered)), "ligar um assunto não pode expor outro"
 
 
-def test_all_subjects_on_lists_all_59(monkeypatch):
+def test_all_subjects_on_lists_all_61(monkeypatch):
     _, off, _ = _build(monkeypatch, "none")
-    _, on, registered = _build(monkeypatch, "strategy,processes,platform,commercial,finance")
+    _, on, registered = _build(monkeypatch, ALL_SUBJECTS)
     assert on - off == set(cohorts.all_read_cohort_names())
     assert off - on == set()
     assert set(cohorts.all_read_cohort_names()) <= registered
 
 
 def test_every_enabled_tool_is_registered_with_the_size_guard(monkeypatch):
-    server, _, _ = _build(monkeypatch, "strategy,processes,platform,commercial,finance")
+    server, _, _ = _build(monkeypatch, ALL_SUBJECTS)
     manager = server._tool_manager
     missing = [n for n in cohorts.all_read_cohort_names() if getattr(manager.get_tool(n).fn, "__app32_result_guarded__", False) is not True]
     assert not missing, missing
 
 
 def test_permission_and_scope_are_still_required(monkeypatch):
-    _, denied, _ = _build(monkeypatch, "strategy,processes,platform,commercial,finance", permission=False)
+    _, denied, _ = _build(monkeypatch, ALL_SUBJECTS, permission=False)
     assert set(cohorts.all_read_cohort_names()).isdisjoint(denied)
     _, no_access, _ = _build(monkeypatch, "strategy", identity=SimpleNamespace(scopes=("mcp:user",)))
     assert set(cohorts.READ_COHORT_TOOL_NAMES["strategy"]).isdisjoint(no_access)
@@ -94,20 +95,20 @@ def test_permission_and_scope_are_still_required(monkeypatch):
 
 def test_each_tool_is_visible_only_with_its_own_token_scope(monkeypatch):
     user_only = SimpleNamespace(scopes=("mcp:access", "mcp:user"))
-    _, listed, _ = _build(monkeypatch, "strategy,processes,platform,commercial,finance", identity=user_only)
+    _, listed, _ = _build(monkeypatch, ALL_SUBJECTS, identity=user_only)
     for name in cohorts.all_read_cohort_names():
         scope = cohorts.token_scope_for(catalog.get_tool_capability(name))
         assert (name in listed) == (scope == "mcp:user"), (name, scope)
 
 
-DEFAULT_ON = {"strategy", "processes", "platform"}
+DEFAULT_ON = {"strategy", "processes", "platform", "knowledge"}
 
 
 def test_unset_variable_enables_exactly_the_non_sensitive_subjects(monkeypatch):
     _, off, _ = _build(monkeypatch, "none")
     _, default, registered = _build(monkeypatch, None)
     expected = {n for s in DEFAULT_ON for n in cohorts.READ_COHORT_TOOL_NAMES[s]}
-    assert default - off == expected and len(expected) == 20
+    assert default - off == expected and len(expected) == 22
     sensitive = {n for s in ("commercial", "finance") for n in cohorts.READ_COHORT_TOOL_NAMES[s]}
     assert not (sensitive & (default | registered)), "comercial e financeiro nunca vêm ligados por padrão"
 

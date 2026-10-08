@@ -91,7 +91,7 @@ def test_token_scope_and_surface_follow_the_capability(scopes, token, surface):
 
 def test_env_parsing(monkeypatch):
     monkeypatch.delenv(cohorts.ENV_DOMAINS, raising=False)
-    assert cohorts.enabled_read_domains() == cohorts.DEFAULT_ENABLED_DOMAINS == frozenset({"strategy", "processes", "platform"})
+    assert cohorts.enabled_read_domains() == cohorts.DEFAULT_ENABLED_DOMAINS == frozenset({"strategy", "processes", "platform", "knowledge"})
     monkeypatch.setenv(cohorts.ENV_DOMAINS, " Strategy , finance,, ")
     assert cohorts.enabled_read_domains() == frozenset({"strategy", "finance"})
     for off in ("none", "NONE", "", "  ", "strategy,none"):

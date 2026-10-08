@@ -270,6 +270,8 @@ _supplemental_mcp_tools = (
     SimpleNamespace(name="list_agent_deployments", description="Lista deploys do tenant de governança."),
     *(SimpleNamespace(name=name, description='Status WhatsApp: acervo aprovado, agenda e ledger tenant-safe.')
       for name in STATUS_TOOL_NAMES),
+    SimpleNamespace(name="search_organizational_knowledge_secure", description="Busca conhecimento autorizado de uma empresa (company_id explícito), somente leitura."),
+    SimpleNamespace(name="answer_organizational_question_secure", description="Responde pergunta organizacional de uma empresa com citações (company_id explícito), somente leitura."),
     SimpleNamespace(name="list_my_work_secure", description="Lista minhas atividades abertas (projetos e processos) em uma empresa, tenant-safe e somente leitura."),
     SimpleNamespace(name="get_internal_audit_summary", description="Retorna os totais tenant-safe da Auditoria Interna."),
     SimpleNamespace(name="list_internal_audit_points", description="Lista pontos de Auditoria Interna do tenant com filtro de status."),

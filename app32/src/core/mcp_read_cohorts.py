@@ -21,7 +21,7 @@ from typing import Any, Iterable
 
 ENV_DOMAINS = "MCP_VERSUS_READ_DOMAINS"
 # Leituras de baixo risco e sem dados comerciais/financeiros: ligadas por padrão.
-DEFAULT_ENABLED_DOMAINS = frozenset({"strategy", "processes", "platform"})
+DEFAULT_ENABLED_DOMAINS = frozenset({"strategy", "processes", "platform", "knowledge"})
 
 # domínio -> leituras publicáveis. Preenchido por domínio, cada nome validado pelo contrato.
 READ_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
@@ -47,6 +47,11 @@ READ_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "get_process_modeling_package_tool",
         "get_process_pop_step_media_context_tool",
         "list_process_improvement_requests_tool",
+    ),
+    # knowledge: busca e resposta sobre o conhecimento organizacional de UMA empresa (ACL do RAG)
+    "knowledge": (
+        "answer_organizational_question_secure",
+        "search_organizational_knowledge_secure",
     ),
     # platform: diagnóstico cadastral, carga da equipe e solicitações à Engenharia
     "platform": (
