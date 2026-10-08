@@ -1,6 +1,6 @@
 """Onda 1 de `routine` no mcp-versus (SPEC classificacao_dominios_mcp_versus_v1).
 
-13 leituras da jornada de trabalho, publicadas atrás de MCP_VERSUS_ROUTINE_READ_ENABLED
+14 leituras (jornada de trabalho e "meu trabalho"), publicadas atrás de MCP_VERSUS_ROUTINE_READ_ENABLED
 (desligada por padrão). A flag governa listagem e registro.
 """
 from __future__ import annotations
@@ -27,6 +27,7 @@ EXPECTED = {
     "list_work_journey_rules_tool",
     "list_work_journey_task_inventory_tool",
     "list_work_journey_transfers_tool",
+    "list_my_work_secure",
 }
 USER_TOKEN = SimpleNamespace(scopes=("mcp:access", "mcp:user"))
 
@@ -42,8 +43,8 @@ def _list_tools(monkeypatch, *, flag, permission=True, identity=USER_TOKEN):
     return server, {tool.name for tool in asyncio.run(server.list_tools())}
 
 
-def test_cohort_is_exactly_the_approved_thirteen_reads():
-    assert len(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == len(set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES)) == 13
+def test_cohort_is_exactly_the_approved_fourteen_reads():
+    assert len(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == len(set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES)) == 14
     assert set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == EXPECTED
 
 
@@ -62,7 +63,7 @@ def test_each_tool_is_a_low_risk_tenant_scoped_read_without_gate(name):
 def test_mutations_and_untenanted_tools_stay_out_of_wave_one():
     out = {
         "get_work_journey_agenda_tool",  # force_regenerate: leitura que escreve
-        "get_my_work", "get_tasks_today",  # sem contexto de empresa: revisão de isolamento
+        "get_my_work", "get_tasks_today",  # legadas: empresas por conta própria, scope=team/company, texto livre
         "get_financial_bank_reconciliation_workspace",  # domínio errado
         "get_financial_budget_execution_workspace",
         "complete_task", "log_work_hours", "save_work_journey_rule_tool", "delete_work_journey_block_tool",
@@ -82,7 +83,7 @@ def test_flag_off_by_default_hides_and_does_not_register(monkeypatch):
     assert EXPECTED.isdisjoint(_registered(server))
 
 
-def test_flag_on_registers_all_thirteen(monkeypatch):
+def test_flag_on_registers_all_fourteen(monkeypatch):
     server, _ = _list_tools(monkeypatch, flag="1")
     assert EXPECTED.issubset(_registered(server))
 
@@ -94,7 +95,7 @@ def test_flag_falsey_values_keep_cohort_off(monkeypatch, value):
 
 
 @pytest.mark.parametrize("value", ["1", "true", "on"])
-def test_flag_on_lists_all_thirteen_with_scope_and_permission(monkeypatch, value):
+def test_flag_on_lists_all_fourteen_with_scope_and_permission(monkeypatch, value):
     _, tools = _list_tools(monkeypatch, flag=value)
     assert EXPECTED.issubset(tools)
 

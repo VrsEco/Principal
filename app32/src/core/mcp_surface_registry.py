@@ -253,6 +253,7 @@ UNIFIED_ROUTINE_READ_TOOL_NAMES: tuple[str, ...] = (
     "list_work_journey_rules_tool",
     "list_work_journey_task_inventory_tool",
     "list_work_journey_transfers_tool",
+    "list_my_work_secure",
 )
 
 
