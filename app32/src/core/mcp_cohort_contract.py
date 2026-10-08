@@ -7,6 +7,7 @@ e a combinação de escopos nova; aqui ela vira teste repetível.
 """
 from __future__ import annotations
 
+import importlib
 import inspect
 import re
 from dataclasses import dataclass
@@ -32,12 +33,32 @@ _WRITE_IN_SOURCE = re.compile(
     re.IGNORECASE,
 )
 _COMPANY_PARAMS = ("company_id", "company_ref")
+_IDENTIFIER = re.compile(r'\b([A-Za-z_]\w+)\b')
+_FROM_IMPORT = re.compile(r'from\s+([\w.]+)\s+import\s+\(?([\w,\s]+)\)?')
+_SERVICE_PREFIXES = ("services", "src.core", "src.intelligence")
+
+# Escritas INDIRETAS revisadas: tool -> {"modulo.funcao": motivo}. Uma leitura que chama um serviço
+# que grava só entra com revisão explícita (a varredura do código da própria tool não as vê).
+_DERIVED = (
+    "Atualiza dados derivados (snapshot da agenda / itens da jornada) exatamente como a tela ao abrir; "
+    "idempotente, preserva agenda travada e movimentos manuais. Revisado em 2026-10-08."
+)
+REVIEWED_INDIRECT_WRITE_EXCEPTIONS: dict[str, dict[str, str]] = {
+    "list_work_journey_task_inventory_tool": {
+        "work_journey_agenda_service.get_work_journey_agenda": _DERIVED,
+        "work_journey_agenda_service._get_or_build_agenda": _DERIVED,
+    },
+    "get_work_journey_board_tool": {
+        "work_journey_service.sync_work_journey_items": _DERIVED,
+    },
+}
 
 
 @dataclass(frozen=True)
 class ToolProbe:
     schema: dict[str, Any] | None
     source: str | None
+    fn: Any = None
 
 
 def probe_registered_tools() -> dict[str, ToolProbe]:
@@ -54,7 +75,7 @@ def probe_registered_tools() -> dict[str, ToolProbe]:
         except Exception:  # um registrador quebrado não pode esconder os demais
             continue
     for tool in server._tool_manager.list_tools():
-        probes[tool.name] = ToolProbe(schema=dict(tool.parameters or {}), source=_source_of(tool.fn))
+        probes[tool.name] = ToolProbe(schema=dict(tool.parameters or {}), source=_source_of(tool.fn), fn=tool.fn)
     for tool in catalog.get_langchain_tools():
         name = getattr(tool, "name", None)
         if not name or name in probes:
@@ -65,7 +86,7 @@ def probe_registered_tools() -> dict[str, ToolProbe]:
                 schema = tool.args_schema.model_json_schema()
         except Exception:
             schema = {}
-        probes[name] = ToolProbe(schema=schema, source=_source_of(getattr(tool, "func", None)))
+        probes[name] = ToolProbe(schema=schema, source=_source_of(getattr(tool, "func", None)), fn=getattr(tool, "func", None))
     return probes
 
 
@@ -76,6 +97,51 @@ def _source_of(fn: Any) -> str | None:
         return inspect.getsource(inspect.unwrap(fn))
     except (OSError, TypeError):
         return None
+
+
+def _referenced_service_functions(fn: Any, prefixes: tuple[str, ...]) -> list[Any]:
+    """Funções de serviço citadas no código de ``fn`` (chamadas OU passadas como argumento)."""
+    source = _source_of(fn) or ""
+    try:
+        namespace = getattr(inspect.unwrap(fn), "__globals__", {})
+    except Exception:
+        namespace = {}
+    imported: dict[str, str] = {}
+    for match in _FROM_IMPORT.finditer(source):
+        for imported_name in (part.strip() for part in match.group(2).split(",") if part.strip()):
+            imported[imported_name] = match.group(1)
+    found: list[Any] = []
+    for identifier in set(_IDENTIFIER.findall(source)):
+        obj = namespace.get(identifier)
+        if obj is None and identifier in imported:
+            try:
+                obj = getattr(importlib.import_module(imported[identifier]), identifier, None)
+            except Exception:
+                obj = None
+        if inspect.isfunction(obj) and str(getattr(obj, "__module__", "")).startswith(prefixes):
+            found.append(obj)
+    return found
+
+
+def indirect_write_hits(fn: Any, *, depth: int = 2, prefixes: tuple[str, ...] | None = None) -> list[str]:
+    """``modulo.funcao`` dos serviços (até ``depth`` níveis) cujo código grava no banco."""
+    prefixes = prefixes if prefixes is not None else _SERVICE_PREFIXES
+    hits: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    frontier = [fn]
+    for _ in range(depth):
+        next_frontier: list[Any] = []
+        for current in frontier:
+            for callee in _referenced_service_functions(current, prefixes):
+                key = (callee.__module__, callee.__name__)
+                if key in seen:
+                    continue
+                seen.add(key)
+                if _WRITE_IN_SOURCE.search(_source_of(callee) or ""):
+                    hits.append(f"{callee.__module__.split('.')[-1]}.{callee.__name__}")
+                next_frontier.append(callee)
+        frontier = next_frontier
+    return sorted(hits)
 
 
 def audit_read_tool(name: str, *, capability: Any, probe: ToolProbe | None) -> list[str]:
@@ -114,4 +180,9 @@ def audit_read_tool(name: str, *, capability: Any, probe: ToolProbe | None) -> l
 
     if probe.source and _WRITE_IN_SOURCE.search(probe.source):
         problems.append(f"{name}: o código da tool contém operação de escrita")
+    if probe.fn is not None:
+        allowed = REVIEWED_INDIRECT_WRITE_EXCEPTIONS.get(name, {})
+        for hit in indirect_write_hits(probe.fn):
+            if hit not in allowed:
+                problems.append(f"{name}: escrita indireta via serviço {hit} (leitura que grava; exceção só com revisão)")
     return problems
