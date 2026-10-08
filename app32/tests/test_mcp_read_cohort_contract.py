@@ -174,3 +174,18 @@ def test_manifest_follows_the_domain_flag(monkeypatch):
     on = {t["name"] for t in registry.get_unified_manifest()["tools"]}
     assert not ({LC_TOOL, REGISTRAR_TOOL} & off)
     assert {LC_TOOL, REGISTRAR_TOOL} <= on
+
+
+@pytest.mark.parametrize("param", ["user_id", "actor_role", "request_id", "trace_id"])
+def test_contract_rejects_client_supplied_identity_parameters(param):
+    schema = {"properties": {"company_id": {}, param: {}}}
+    probe = ToolProbe(schema=schema, source="", fn=None)
+    capability = catalog.get_tool_capability("list_plans")
+    problems = audit_read_tool("list_plans", capability=capability, probe=probe)
+    assert any(param in problem for problem in problems)
+
+
+@pytest.mark.parametrize("name", ["get_strategic_connection_graph", "get_strategic_connection_metrics"])
+def test_teia_tools_do_not_accept_identity_from_the_client(name, probes):
+    props = set((probes[name].schema or {}).get("properties", {}))
+    assert props.isdisjoint({"user_id", "request_id", "trace_id"})

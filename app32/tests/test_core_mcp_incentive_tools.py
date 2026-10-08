@@ -61,9 +61,6 @@ def test_register_incentive_tools_exposes_get_incentive_indicators(monkeypatch):
         collection_mode="automatic",
         source_module="crm",
         limit=50,
-        user_id=9,
-        request_id="req-1",
-        trace_id="trace-1",
     )
 
     assert result["success"] is True
@@ -71,7 +68,7 @@ def test_register_incentive_tools_exposes_get_incentive_indicators(monkeypatch):
     assert result["data"]["model"] == "Indicator"
     assert result["data"]["items"][0]["code"] == "IND-001"
     assert result["meta"]["company_id"] == 31
-    assert result["meta"]["user_id"] == 9
+    assert result["meta"]["user_id"] is None  # sem sessão autenticada no teste
     assert captured == {
         "company_id": 31,
         "is_active": True,
@@ -122,7 +119,7 @@ def test_strategic_connection_tools_expose_graph_metrics_and_summary(monkeypatch
     mcp = _FakeMCP()
     register_incentive_tools(mcp)
 
-    graph_result = mcp.registered["get_strategic_connection_graph"](company_id=31, anonymize=True, user_id=9)
+    graph_result = mcp.registered["get_strategic_connection_graph"](company_id=31, anonymize=True)
     metrics_result = mcp.registered["get_strategic_connection_metrics"](company_id=31)
     summary_result = mcp.registered["generate_strategic_connection_summary"](company_id=31, max_gaps=5)
 
@@ -198,7 +195,7 @@ def test_strategic_connection_metrics_returns_structured_empty_result(monkeypatc
     mcp = _FakeMCP()
     register_incentive_tools(mcp)
 
-    result = mcp.registered["get_strategic_connection_metrics"](company_id=13, user_id=44)
+    result = mcp.registered["get_strategic_connection_metrics"](company_id=13)
 
     assert result["success"] is True
     assert result["data"]["snapshot"]["company_id"] == 13
