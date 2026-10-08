@@ -133,8 +133,8 @@ def test_registered_tool_uses_the_authenticated_user_not_a_parameter(monkeypatch
     assert calls[0]["user_id"] == 7
 
 
-def test_registrar_exposes_exactly_one_read_tool():
+def test_registrar_exposes_exactly_the_two_read_tools():
     server = FastMCP("probe")
     my_work.register_my_work_mcp_tools(server)
     names = {tool.name for tool in asyncio.run(FastMCP.list_tools(server))}
-    assert names == {"list_my_work_secure"}
+    assert names == {"list_my_work_secure", "list_my_work_all_companies"}

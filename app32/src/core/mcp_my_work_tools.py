@@ -10,7 +10,7 @@ atividades **atribuídas diretamente ao usuário** e dados estruturados com limi
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import Any, Callable
 
 _MAX_LIMIT = 100
 _DUE_MODES = ("today", "open")
@@ -98,6 +98,67 @@ def build_my_work(*, user_id: int, company_id: int, due: str, limit: int, today:
     }
 
 
+def build_my_work_all_companies(
+    *,
+    user_id: int,
+    company_ids: tuple[int, ...],
+    validate_company: Callable[[int], bool],
+    company_names: dict[int, str],
+    due: str,
+    limit: int,
+    today: date | None = None,
+) -> dict[str, Any]:
+    """Agrega as atividades do usuário nas empresas com grant ativo.
+
+    ``company_ids`` vem do SERVIDOR (grants do principal), nunca do cliente; cada empresa ainda
+    passa por ``validate_company`` (grant + teto de permissões) antes de qualquer leitura.
+    Empresas negadas são apenas contadas, sem detalhe do motivo.
+    """
+    today = today or date.today()
+    scanned: list[dict[str, Any]] = []
+    merged: list[dict[str, Any]] = []
+    skipped = 0
+    for company_id in sorted(set(company_ids)):
+        try:
+            allowed = bool(validate_company(company_id))
+        except PermissionError:
+            allowed = False
+        if not allowed:
+            skipped += 1
+            continue
+        single = build_my_work(user_id=user_id, company_id=company_id, due=due, limit=_MAX_LIMIT, today=today)
+        summary = single["summary"]
+        scanned.append(
+            {
+                "company_id": company_id,
+                "company_name": company_names.get(company_id),
+                "total": summary["total"],
+                "overdue": summary["overdue"],
+            }
+        )
+        for item in single["items"]:
+            merged.append({**item, "company_id": company_id, "company_name": company_names.get(company_id)})
+    merged.sort(
+        key=lambda item: (str(item.get("due_date") or "9999"), item["company_id"], str(item.get("type")), int(item.get("id") or 0))
+    )
+    scanned.sort(key=lambda row: (-row["overdue"], -row["total"], row["company_id"]))
+    return {
+        "as_of": today.isoformat(),
+        "due": due,
+        "summary": {
+            "total": sum(row["total"] for row in scanned),
+            "overdue": sum(row["overdue"] for row in scanned),
+            "companies_scanned": len(scanned),
+            "companies_with_items": sum(1 for row in scanned if row["total"]),
+            "companies_skipped": skipped,
+        },
+        "companies": scanned,
+        "limit": limit,
+        "returned": min(len(merged), limit),
+        "items": merged[:limit],
+    }
+
+
 def register_my_work_mcp_tools(mcp: Any) -> None:
     """Registra somente a leitura das atividades do próprio usuário."""
 
@@ -117,3 +178,45 @@ def register_my_work_mcp_tools(mcp: Any) -> None:
         if not isinstance(user_id, int) or user_id <= 0:
             raise PermissionError("Usuário autenticado não identificado.")
         return build_my_work(user_id=user_id, company_id=company_id, due=mode, limit=bounded_limit)
+
+    @mcp.tool()
+    def list_my_work_all_companies(due: str = "today", limit: int = 50) -> dict[str, Any]:
+        """Lista MINHAS atividades abertas em TODAS as empresas onde tenho acesso, juntas e ordenadas.
+
+        due='today' traz as que vencem até hoje (inclui atrasadas); due='open' traz todas as abertas.
+        As empresas vêm do servidor (grants ativos); cada uma é validada individualmente.
+        Só devolve itens atribuídos diretamente ao usuário autenticado; não cria nem altera nada.
+        """
+
+        from models.company import Company
+        from src.core.mcp_runtime import resolve_mcp_execution_context
+        from src.intelligence.tools_support import get_active_user_id
+
+        bounded_limit = _validated_limit(limit)
+        mode = _validated_due(due)
+        user_id = get_active_user_id()
+        if not isinstance(user_id, int) or user_id <= 0:
+            raise PermissionError("Usuário autenticado não identificado.")
+
+        discovery = resolve_mcp_execution_context({}, allow_missing_company=True)
+        candidates = tuple(getattr(discovery, "accessible_company_ids", ()) or ())
+        if not candidates and getattr(discovery, "company_id", None):
+            candidates = (int(discovery.company_id),)
+
+        def _validate(company_id: int) -> bool:
+            context = resolve_mcp_execution_context({"company_id": company_id})
+            return context.company_id == company_id
+
+        names = (
+            {company.id: company.name for company in Company.query.filter(Company.id.in_(list(candidates))).all()}
+            if candidates
+            else {}
+        )
+        return build_my_work_all_companies(
+            user_id=user_id,
+            company_ids=candidates,
+            validate_company=_validate,
+            company_names=names,
+            due=mode,
+            limit=bounded_limit,
+        )
