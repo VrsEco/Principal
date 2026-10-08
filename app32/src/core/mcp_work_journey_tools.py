@@ -71,22 +71,58 @@ def _run(callback, *args, **kwargs) -> Any:
         return callback(*args, **kwargs)
 
 
-def _meta(operation: str) -> MCPResponseMeta:
+def _meta(operation: str, *, company_id: Optional[int] = None, tool_name: Optional[str] = None) -> MCPResponseMeta:
+    """Metadados do envelope. Com ``tool_name`` usa a capability publicada (permissão real).
+
+    O registro de auditoria por chamada é gravado pelo runtime do MCP; este bloco é a
+    descrição que acompanha a resposta e deve refletir o catálogo, não um texto fixo.
+    """
+    permissions = ['work_journey.read']
+    capability = f'work_journey.{operation}'
+    human_gate = False
+    if tool_name:
+        try:
+            from src.intelligence.tool_catalog import catalog
+
+            published = catalog.get_tool_capability(tool_name)
+            if published is not None:
+                permissions = list(published.permissions) or permissions
+                capability = published.permissions[0] if published.permissions else capability
+                human_gate = bool(getattr(published, 'human_gate', False))
+        except Exception:  # metadado nunca pode quebrar a resposta
+            pass
+    user_id = None
+    try:
+        from src.intelligence.tool_context import get_sapiens_context
+
+        raw_user = getattr(get_sapiens_context(), 'user_id', None)
+        user_id = int(raw_user) if isinstance(raw_user, int) and raw_user > 0 else None
+    except Exception:
+        user_id = None
     return MCPResponseMeta(
         domain='work_journey',
         operation=operation,
         scope='mcp_user',
-        capability=f'work_journey.{operation}',
-        permissions=['work_journey.read'],
+        company_id=company_id if isinstance(company_id, int) and company_id > 0 else None,
+        user_id=user_id,
+        capability=capability,
+        permissions=permissions,
         tags=['work-journey', 'routine'],
-        human_gate_required=False,
+        human_gate_required=human_gate,
     )
 
 
-def _success_envelope(*, operation: str, data: dict[str, Any], message: str | None = None) -> dict[str, Any]:
+def _success_envelope(
+    *,
+    operation: str,
+    data: dict[str, Any],
+    message: str | None = None,
+    company_id: Optional[int] = None,
+    tool_name: Optional[str] = None,
+) -> dict[str, Any]:
     return MCPSuccessEnvelope[Any](
         data=data,
-        meta=_meta(operation),
+        meta=_meta(operation, company_id=company_id, tool_name=tool_name),
         message=message or 'Operação work_journey concluída com sucesso.',
     ).model_dump(mode='json')
 
@@ -121,7 +157,12 @@ def _build_work_journey_board_envelope(service_payload: dict[str, Any], query: W
         items=[_normalize_board_item(item) for item in service_payload.get('period_items', [])],
         summary=dict(service_payload.get('summary') or {}),
     )
-    return _success_envelope(operation='board.read', data=payload.model_dump(mode='json'))
+    return _success_envelope(
+        operation='board.read',
+        data=payload.model_dump(mode='json'),
+        company_id=query.company_id,
+        tool_name='get_work_journey_board_tool',
+    )
 
 
 def register_work_journey_tools(mcp) -> None:
