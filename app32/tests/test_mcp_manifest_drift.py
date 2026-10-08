@@ -12,8 +12,8 @@ from src.core.mcp_drift import compute_drift, render_report
 
 # Linha de base em 2026-10-08 (main abffc411f). Só pode diminuir.
 BASELINE = {
-    "domains_missing_in_permission_matrix": {"audit"},
-    "domains_missing_in_playbooks": {"audit"},
+    "domains_missing_in_permission_matrix": set(),
+    "domains_missing_in_playbooks": set(),
     "domains_missing_in_tenant_rbac": set(),
     "tools_without_permissions": set(),
     "published_not_in_catalog": set(),
