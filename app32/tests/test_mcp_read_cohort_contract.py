@@ -91,9 +91,16 @@ def test_token_scope_and_surface_follow_the_capability(scopes, token, surface):
 
 def test_env_parsing(monkeypatch):
     monkeypatch.delenv(cohorts.ENV_DOMAINS, raising=False)
-    assert cohorts.enabled_read_domains() == frozenset()
+    assert cohorts.enabled_read_domains() == cohorts.DEFAULT_ENABLED_DOMAINS == frozenset({"strategy", "processes", "platform"})
     monkeypatch.setenv(cohorts.ENV_DOMAINS, " Strategy , finance,, ")
     assert cohorts.enabled_read_domains() == frozenset({"strategy", "finance"})
+    for off in ("none", "NONE", "", "  ", "strategy,none"):
+        monkeypatch.setenv(cohorts.ENV_DOMAINS, off)
+        assert cohorts.enabled_read_domains() == frozenset(), off
+
+
+def test_sensitive_subjects_are_never_enabled_by_default():
+    assert not {"commercial", "finance"} & cohorts.DEFAULT_ENABLED_DOMAINS
 
 
 # ---- mecanismo ponta a ponta com uma coorte simulada (um caminho LangChain e um de registrador)
@@ -118,8 +125,8 @@ def _server(monkeypatch, env):
     return server, listed, registered
 
 
-def test_domain_off_by_default_is_neither_listed_nor_registered(monkeypatch):
-    _, listed, registered = _server(monkeypatch, None)
+def test_domain_not_in_the_list_is_neither_listed_nor_registered(monkeypatch):
+    _, listed, registered = _server(monkeypatch, "none")
     assert not ({LC_TOOL, REGISTRAR_TOOL} & listed)
     assert not ({LC_TOOL, REGISTRAR_TOOL} & registered)
 
@@ -151,7 +158,7 @@ def test_domain_on_still_requires_permission_and_scope(monkeypatch):
 
 
 def test_enabling_a_domain_changes_nothing_else(monkeypatch):
-    _, off, _ = _server(monkeypatch, None)
+    _, off, _ = _server(monkeypatch, "none")
     _, on, _ = _server(monkeypatch, "demo")
     assert on - off == {LC_TOOL, REGISTRAR_TOOL}
     assert off - on == set()
@@ -161,7 +168,7 @@ def test_manifest_follows_the_domain_flag(monkeypatch):
     monkeypatch.setitem(cohorts.READ_COHORT_TOOL_NAMES, "demo", (LC_TOOL, REGISTRAR_TOOL))
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda _p: True)
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics")))
-    monkeypatch.delenv(cohorts.ENV_DOMAINS, raising=False)
+    monkeypatch.setenv(cohorts.ENV_DOMAINS, "none")
     off = {t["name"] for t in registry.get_unified_manifest()["tools"]}
     monkeypatch.setenv(cohorts.ENV_DOMAINS, "demo")
     on = {t["name"] for t in registry.get_unified_manifest()["tools"]}

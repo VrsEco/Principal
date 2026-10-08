@@ -60,10 +60,10 @@ def test_sensitive_subjects_have_their_own_keys():
 
 
 @pytest.mark.parametrize("subject", sorted(EXPECTED_COUNTS))
-def test_each_subject_is_off_by_default_and_only_its_own_flag_enables_it(monkeypatch, subject):
+def test_each_subject_is_off_with_none_and_only_its_own_flag_enables_it(monkeypatch, subject):
     mine = set(cohorts.READ_COHORT_TOOL_NAMES[subject])
     others = set(cohorts.all_read_cohort_names()) - mine
-    _, listed, registered = _build(monkeypatch, None)
+    _, listed, registered = _build(monkeypatch, "none")
     assert not (mine & (listed | registered))
     _, listed, registered = _build(monkeypatch, subject)
     assert mine <= listed and mine <= registered
@@ -71,7 +71,7 @@ def test_each_subject_is_off_by_default_and_only_its_own_flag_enables_it(monkeyp
 
 
 def test_all_subjects_on_lists_all_59(monkeypatch):
-    _, off, _ = _build(monkeypatch, None)
+    _, off, _ = _build(monkeypatch, "none")
     _, on, registered = _build(monkeypatch, "strategy,processes,platform,commercial,finance")
     assert on - off == set(cohorts.all_read_cohort_names())
     assert off - on == set()
@@ -98,3 +98,26 @@ def test_each_tool_is_visible_only_with_its_own_token_scope(monkeypatch):
     for name in cohorts.all_read_cohort_names():
         scope = cohorts.token_scope_for(catalog.get_tool_capability(name))
         assert (name in listed) == (scope == "mcp:user"), (name, scope)
+
+
+DEFAULT_ON = {"strategy", "processes", "platform"}
+
+
+def test_unset_variable_enables_exactly_the_non_sensitive_subjects(monkeypatch):
+    _, off, _ = _build(monkeypatch, "none")
+    _, default, registered = _build(monkeypatch, None)
+    expected = {n for s in DEFAULT_ON for n in cohorts.READ_COHORT_TOOL_NAMES[s]}
+    assert default - off == expected and len(expected) == 20
+    sensitive = {n for s in ("commercial", "finance") for n in cohorts.READ_COHORT_TOOL_NAMES[s]}
+    assert not (sensitive & (default | registered)), "comercial e financeiro nunca vêm ligados por padrão"
+
+
+def test_none_is_the_emergency_switch(monkeypatch):
+    _, listed, registered = _build(monkeypatch, "none")
+    assert not (set(cohorts.all_read_cohort_names()) & (listed | registered))
+
+
+def test_explicit_list_overrides_the_defaults(monkeypatch):
+    _, listed, _ = _build(monkeypatch, "finance")
+    assert set(cohorts.READ_COHORT_TOOL_NAMES["finance"]) <= listed
+    assert not (set(cohorts.READ_COHORT_TOOL_NAMES["strategy"]) & listed)
