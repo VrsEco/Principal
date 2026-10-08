@@ -271,6 +271,8 @@ def test_oauth_unified_server_exposes_manual_read_and_process_mutation_cohort_on
         - set(registry.PILOT_PROCESS_INSTANCE_READ_TOOL_NAMES)
         - set(registry.PILOT_PROCESS_INSTANCE_MUTATION_TOOL_NAMES)
         - {"list_process_hierarchy"}
+        # coorte de leitura aprovada (MCP_VERSUS_READ_DOMAINS), validada pelo contrato automático
+        - set(registry.mcp_read_cohorts.all_read_cohort_names())
     )
     assert other_process_tool_names, "sanity: catálogo real deve ter outras tools de processes fora do cohort"
     assert not other_process_tool_names.intersection(tools)
