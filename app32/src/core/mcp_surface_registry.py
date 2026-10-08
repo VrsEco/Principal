@@ -12,6 +12,7 @@ from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_to
 from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
 from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES
 from src.core.mcp_payload_guard import guard_tool_callable, limit_mcp_payload
+from src.core import mcp_read_cohorts
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
     from mcp.server.fastmcp import FastMCP
@@ -364,6 +365,9 @@ def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
             or name in UNIFIED_ROUTINE_READ_TOOL_NAMES
         ):
             scope = "mcp:user"
+        elif name in mcp_read_cohorts.all_read_cohort_names():
+            # Sem escopo alcançável pelo token (ex.: só mcp_admin) a tool fica invisível.
+            scope = mcp_read_cohorts.token_scope_for(capability) or "mcp:admin"
         else:
             scope = "mcp:analytics"
         if capability is not None and scope in token_scopes:
@@ -395,6 +399,7 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
                 *PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES,
                 *PILOT_AUDIT_READ_TOOL_NAMES,
                 *_routine_read_names(),
+                *mcp_read_cohorts.enabled_read_cohort_names(),
             ))
         )
     )
@@ -406,7 +411,8 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
         surface = ("admin" if name in STATUS_TOOL_NAMES else
                    "finance" if name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES else
                    "analytics" if name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES
-                   or name in PILOT_AUDIT_READ_TOOL_NAMES else "user")
+                   or name in PILOT_AUDIT_READ_TOOL_NAMES else
+                   mcp_read_cohorts.policy_surface_for(capability) if name in mcp_read_cohorts.all_read_cohort_names() else "user")
         capabilities.append(replace(capability, scopes=get_surface_scope_filter(surface)))
     manifest = build_capability_manifest(capabilities, domain=domain, include_tools=include_tools)
     manifest["discovery"] = {
@@ -662,10 +668,13 @@ def _tool_map() -> dict[str, Any]:
     return {getattr(tool, "name", str(tool)): tool for tool in catalog.get_langchain_tools()}
 
 
-def _register_tool(mcp: Any, tool: Any, *, policy_surface: str | None = None) -> None:
+def _register_tool(mcp: Any, tool: Any, *, policy_surface: str | None = None, limit_response_size: bool = False) -> None:
+    def _finish(callable_: Any) -> Any:
+        return guard_tool_callable(callable_, limit_mcp_payload) if limit_response_size else callable_
+
     if hasattr(tool, "func"):
         mcp.tool(name=tool.name, description=tool.description)(
-            wrap_mcp_callable(tool.func, policy_surface=policy_surface)
+            _finish(wrap_mcp_callable(tool.func, policy_surface=policy_surface))
         )
         return
 
@@ -674,7 +683,7 @@ def _register_tool(mcp: Any, tool: Any, *, policy_surface: str | None = None) ->
             payload = kwargs if kwargs else args[0] if args else {}
             return current_tool.invoke(payload)
 
-        wrapped = wrap_mcp_callable(mcp_tool_wrapper, policy_surface=policy_surface)
+        wrapped = _finish(wrap_mcp_callable(mcp_tool_wrapper, policy_surface=policy_surface))
         return mcp.tool(name=current_tool.name, description=current_tool.description)(wrapped)
 
     make_wrapper(tool)
@@ -1063,6 +1072,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         *PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES,
         *PILOT_AUDIT_READ_TOOL_NAMES,
         *_routine_read_names(),
+        *mcp_read_cohorts.enabled_read_cohort_names(),
     )
     mcp = _build_policy_fast_mcp(
         name,
@@ -1127,7 +1137,34 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
             policy_surface="user",
             limit_response_size=True,
         )
+    _register_read_cohorts(mcp)
     return mcp
+
+
+def _register_read_cohorts(mcp: Any) -> None:
+    """Registra as coortes de leitura habilitadas em MCP_VERSUS_READ_DOMAINS (nada, se vazia)."""
+    names = mcp_read_cohorts.enabled_read_cohort_names()
+    if not names:
+        return
+    tools_by_name = _tool_map()
+    by_surface: dict[str, set[str]] = {}
+    for name in names:
+        capability = catalog.get_tool_capability(name)
+        if capability is None:
+            continue
+        surface = mcp_read_cohorts.policy_surface_for(capability)
+        tool = tools_by_name.get(name)
+        if tool is not None:
+            _register_tool(mcp, tool, policy_surface=surface, limit_response_size=True)
+        else:
+            by_surface.setdefault(surface, set()).add(name)
+    for surface, surface_names in by_surface.items():
+        _register_shared_registrars(
+            mcp,
+            tool_names=surface_names,
+            policy_surface=surface,
+            limit_response_size=True,
+        )
 
 
 def build_admin_mcp_server(name: str = "GestaoVersus Admin MCP") -> Any:
