@@ -3,11 +3,16 @@
 Cada domínio publica um conjunto fixo de leituras, revisadas pelo contrato automático
 (``mcp_cohort_contract``). A publicação é controlada por UMA variável:
 
-    MCP_VERSUS_READ_DOMAINS=strategy,governance,processes
+    MCP_VERSUS_READ_DOMAINS=strategy,processes,platform,commercial,finance
 
-Domínios fora da lista não são listados **nem registrados** (uma tool oculta mas
-registrada seria invocável por quem conhecesse o nome). Vazia ou ausente = nada novo.
-A coorte de ``routine`` mantém a sua flag própria (MCP_VERSUS_ROUTINE_READ_ENABLED).
+- **Ausente**: valem os assuntos NÃO sensíveis (``DEFAULT_ENABLED_DOMAINS``).
+- **Definida**: vale exatamente a lista informada (acrescente ``commercial``/``finance`` para
+  ligá-los). ``none`` (ou vazia) desliga todos: interruptor de emergência.
+
+Assuntos fora da lista não são listados **nem registrados** (uma tool oculta mas
+registrada seria invocável por quem conhecesse o nome). Comercial e financeiro carregam
+dados sensíveis e nunca vêm ligados por padrão. A coorte de ``routine`` mantém a sua
+flag própria (MCP_VERSUS_ROUTINE_READ_ENABLED).
 """
 from __future__ import annotations
 
@@ -15,6 +20,8 @@ import os
 from typing import Any, Iterable
 
 ENV_DOMAINS = "MCP_VERSUS_READ_DOMAINS"
+# Leituras de baixo risco e sem dados comerciais/financeiros: ligadas por padrão.
+DEFAULT_ENABLED_DOMAINS = frozenset({"strategy", "processes", "platform"})
 
 # domínio -> leituras publicáveis. Preenchido por domínio, cada nome validado pelo contrato.
 READ_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
@@ -99,8 +106,11 @@ _SCOPE_PRIORITY = (("mcp_user", "mcp:user", "user"), ("mcp_analytics", "mcp:anal
 
 
 def enabled_read_domains() -> frozenset[str]:
-    raw = os.getenv(ENV_DOMAINS, "")
-    return frozenset(part.strip().lower() for part in raw.split(",") if part.strip())
+    raw = os.environ.get(ENV_DOMAINS)
+    if raw is None:
+        return DEFAULT_ENABLED_DOMAINS
+    parts = {part.strip().lower() for part in raw.split(",") if part.strip()}
+    return frozenset() if "none" in parts else frozenset(parts)
 
 
 def all_read_cohort_names() -> tuple[str, ...]:
