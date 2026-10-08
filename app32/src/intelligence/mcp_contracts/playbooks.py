@@ -358,7 +358,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 title="Playbook MCP Analytics",
                 objective="Executar leituras analíticas tenant-safe sem mutar dados operacionais.",
                 actor_roles=["administrador", "admin_tecnico"],
-                allowed_domains=["analytics", "strategy", "finance", "workload"],
+                allowed_domains=["analytics", "audit", "strategy", "finance", "workload"],
                 default_scope="explicit_company_id",
                 discovery_tools=["list_analytics_app32_capabilities", "describe_app32_crud_contracts_tool"],
                 startup_checklist=[

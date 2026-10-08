@@ -12,6 +12,7 @@ from .profiles import APP32_PROFILE_CONTRACTS_MANIFEST, MCPMutationRisk, MCPOver
 PermissionAction = Literal["discover", "read", "create", "update", "delete", "analyze", "audit", "review"]
 PermissionDomain = Literal[
     "whatsapp_status",
+    "audit",
     "routine",
     "processes",
     "projects",
@@ -724,6 +725,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], requires_explicit_company_id=True, notes=["Estratégia analítica usa read models whitelisted."]),
                     _rule("finance", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="medium", requires_explicit_company_id=True, human_gate_for_actions=["analyze"], notes=["Análises financeiras sensíveis podem exigir gate pela política vigente."]),
                     _rule("workload", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], requires_explicit_company_id=True, notes=["Workload é leitura analítica com company_id explícito e sem replanejamento implícito."]),
+                    _rule("audit", ["discover", "read", "analyze"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Auditoria Interna em leitura tenant-safe; sem mutações na analytics."]),
                 ],
             ),
             ProfilePermissionSurfaceMatrix(
@@ -737,6 +739,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Diagnóstico estratégico técnico continua read-only."]),
                     _rule("finance", ["discover", "read", "analyze"], denied=["create", "update", "delete"], max_risk_without_human_gate="medium", requires_explicit_company_id=True, human_gate_for_actions=["analyze"], notes=["Acesso financeiro técnico continua auditado e sem SQL livre."]),
                     _rule("workload", ["discover", "read", "analyze"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Workload técnico permanece read-only mesmo na analytics."]),
+                    _rule("audit", ["discover", "read", "analyze"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Auditoria Interna em leitura tenant-safe; sem mutações na analytics."]),
                 ],
             ),
             ProfilePermissionSurfaceMatrix(
