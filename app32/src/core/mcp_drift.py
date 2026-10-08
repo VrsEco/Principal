@@ -22,6 +22,9 @@ def _published_static_names(registry: Any) -> set[str]:
         value = getattr(registry, attr)
         if isinstance(value, (set, frozenset, tuple, list)):
             names |= {item for item in value if isinstance(item, str)}
+    from src.core import mcp_read_cohorts
+
+    names |= set(mcp_read_cohorts.all_read_cohort_names())
     return names
 
 

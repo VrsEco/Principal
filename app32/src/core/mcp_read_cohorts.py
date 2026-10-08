@@ -17,7 +17,82 @@ from typing import Any, Iterable
 ENV_DOMAINS = "MCP_VERSUS_READ_DOMAINS"
 
 # domínio -> leituras publicáveis. Preenchido por domínio, cada nome validado pelo contrato.
-READ_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {}
+READ_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
+    # strategy: identidade, alinhamento, planos, diagnósticos e jornada de estruturação
+    "strategy": (
+        "get_organizational_identity_tool",
+        "get_plan_diagnostics_read_model",
+        "get_process_strategic_profile_tool",
+        "get_process_strategy_profile_tool",
+        "get_strategic_alignment_n1_readiness_tool",
+        "get_strategic_connection_graph",
+        "get_strategic_connection_metrics",
+        "get_strategy_alignment_n1_readiness_tool",
+        "get_strategy_identity_tool",
+        "get_structuring_journey_tool",
+        "list_indicator_line_of_sight_tool",
+        "list_plans",
+        "list_process_strategy_alignment_links_tool",
+    ),
+    # processes: contexto de modelagem, melhoria e POP de processos
+    "processes": (
+        "get_process_improvement_analysis_context_tool",
+        "get_process_modeling_package_tool",
+        "get_process_pop_step_media_context_tool",
+        "list_process_improvement_requests_tool",
+    ),
+    # platform: diagnóstico cadastral, carga da equipe e solicitações à Engenharia
+    "platform": (
+        "get_company_registration_diagnostics",
+        "get_team_workload_read_model",
+        "list_my_engineering_suggestions",
+    ),
+    # commercial: contratos, clientes, emissores, faturamento e catálogo comercial (dados sensíveis)
+    "commercial": (
+        "get_commercial_contract_workspace",
+        "get_commercial_dashboard",
+        "get_commercial_offer_contract_guidance",
+        "get_commercial_product_service_readiness",
+        "list_commercial_billing_queue",
+        "list_commercial_billings_done",
+        "list_commercial_catalog_structure",
+        "list_commercial_contracts",
+        "list_commercial_customer_portfolios",
+        "list_commercial_customers",
+        "list_commercial_fiscal_workspace",
+        "list_commercial_issuers",
+        "list_commercial_offer_process_candidates",
+        "list_commercial_products_services",
+    ),
+    # finance: lançamentos, borderôs, orçamento, conciliação, classificação e relatórios (dados sensíveis)
+    "finance": (
+        "get_financial_bank_reconciliation_overview",
+        "get_financial_bank_reconciliation_workspace",
+        "get_financial_bordero",
+        "get_financial_budget_execution_workspace",
+        "get_financial_budget_matrix",
+        "get_financial_budget_planning_workspace",
+        "get_financial_classification_dashboard",
+        "get_financial_entry",
+        "get_financial_executive_dashboard",
+        "get_financial_import_batch",
+        "get_financial_payables_due_summary",
+        "get_incentive_indicators",
+        "list_financial_automation_executions",
+        "list_financial_bank_reconciliation_candidates",
+        "list_financial_borderos",
+        "list_financial_budget_versions",
+        "list_financial_classification_memories",
+        "list_financial_classification_pending",
+        "list_financial_classification_suggestions",
+        "list_financial_closings",
+        "list_financial_domain_enablements",
+        "list_financial_import_batches",
+        "list_financial_ingestion_records",
+        "list_financial_report_types",
+        "list_financial_schedules",
+    ),
+}
 
 # Prioridade do escopo de token usado para publicar a tool (somente os que os clientes recebem).
 _SCOPE_PRIORITY = (("mcp_user", "mcp:user", "user"), ("mcp_analytics", "mcp:analytics", "analytics"), ("mcp_finance", "mcp:finance", "finance"))
