@@ -315,7 +315,7 @@
                         <td class="hide-m">
                             {% if realized is not none %}
                             <div style="font-weight:700; color:var(--primary); font-size:0.9rem;">
-                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ realized | format_currency_br }}
+                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}{{ realized | format_currency_br }}
                                 {% else %}{{ "{:,.2f}".format(realized|float).replace(",","X").replace(".",",").replace("X",".") }} <span style="font-size:0.7rem; color:var(--text-tertiary);">{{ ind.unit or '' }}</span>
                                 {% endif %}
                             </div>
@@ -325,7 +325,7 @@
                         <td class="hide-m">
                             {% if goal %}
                             <div style="font-weight:600; font-size:0.875rem; color:var(--text-primary);">
-                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ target | format_currency_br }}
+                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}{{ target | format_currency_br }}
                                 {% else %}{{ "{:,.2f}".format(target|float).replace(",","X").replace(".",",").replace("X",".") }} <span style="font-size:0.7rem; color:var(--text-tertiary);">{{ ind.unit or '' }}</span>
                                 {% endif %}
                             </div>
@@ -339,7 +339,7 @@
                             </div>
                             {% if item.target_source == 'individual_sum' %}<div style="font-size:0.62rem;color:var(--success);font-weight:700;">Soma das metas individuais</div>{% endif %}
                             {% if item.allocation_gap is not none and item.allocation_gap != 0 %}
-                            <div style="font-size:0.62rem;color:var(--warning);font-weight:800;" title="Diferença entre a meta explícita da equipe e a soma distribuída aos consultores.">Diferença de distribuição: {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {% endif %}{{ item.allocation_gap | format_currency_br }}{% if ind.unit != 'R$' and (not ind.unit or 'R$' not in ind.unit) %} {{ ind.unit or '' }}{% endif %}</div>
+                            <div style="font-size:0.62rem;color:var(--warning);font-weight:800;" title="Diferença entre a meta explícita da equipe e a soma distribuída aos consultores.">Diferença de distribuição: {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}{% endif %}{{ item.allocation_gap | format_currency_br }}{% if ind.unit != 'R$' and (not ind.unit or 'R$' not in ind.unit) %} {{ ind.unit or '' }}{% endif %}</div>
                             {% endif %}
                             {% else %}<span style="font-size:0.78rem; color:var(--text-tertiary);">Sem meta ativa</span>{% endif %}
                         </td>
@@ -385,11 +385,11 @@
                         </td>
                         <td><span class="tpill" style="background:white;color:var(--text-secondary);border:1px solid var(--border);">Individual</span></td>
                         <td class="hide-m">
-                            {% if ir is not none %}<strong style="font-size:0.82rem;color:var(--primary);">{% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ ir | format_currency_br }}{% else %}{{ ir }} {{ ind.unit or '' }}{% endif %}</strong>
+                            {% if ir is not none %}<strong style="font-size:0.82rem;color:var(--primary);">{% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}{{ ir | format_currency_br }}{% else %}{{ ir }} {{ ind.unit or '' }}{% endif %}</strong>
                             {% else %}<span style="font-size:0.75rem;color:var(--text-tertiary);">Sem medição</span>{% endif %}
                         </td>
                         <td class="hide-m">
-                            {% if it is not none %}<strong style="font-size:0.82rem;color:var(--text-primary);">{% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ it | format_currency_br }}{% else %}{{ it }} {{ ind.unit or '' }}{% endif %}</strong>{% else %}—{% endif %}
+                            {% if it is not none %}<strong style="font-size:0.82rem;color:var(--text-primary);">{% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}{{ it | format_currency_br }}{% else %}{{ it }} {{ ind.unit or '' }}{% endif %}</strong>{% else %}—{% endif %}
                         </td>
                         <td>
                             {% if ip is not none %}<span style="font-size:0.75rem;font-weight:800;color:{% if isc in ['exceeded','on_target'] %}var(--success){% elif isc == 'alert' %}var(--warning){% else %}var(--danger){% endif %};">{{ ip }}%</span>{% else %}—{% endif %}

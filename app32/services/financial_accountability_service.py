@@ -620,7 +620,7 @@ class FinancialAccountabilityService:
                 document_type,
                 f"Nº {number}" if number else None,
                 issuer_name,
-                f"R$ {payload['total_amount']:.2f}" if payload["total_amount"] is not None else None,
+                f"{payload['total_amount']:.2f}" if payload["total_amount"] is not None else None,
             ]
             if part
         )

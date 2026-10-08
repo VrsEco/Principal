@@ -495,7 +495,7 @@ async function simularCalculoGlobal() {
         if (data.error) {
             alert('Erro na simulação: ' + data.error);
         } else {
-            alert(`⚡ Resultado da Simulação:\nProvisão Estimada: R$ ${parseFloat(data.total_payout).toLocaleString('pt-BR', {minimumFractionDigits: 2})}\nParticipantes: ${data.participants.length}`);
+            alert(`⚡ Resultado da Simulação:\nProvisão Estimada: ${parseFloat(data.total_payout).toLocaleString('pt-BR', {minimumFractionDigits: 2})}\nParticipantes: ${data.participants.length}`);
         }
     } catch (e) {
         alert('Erro ao conectar com o motor de cálculo.');

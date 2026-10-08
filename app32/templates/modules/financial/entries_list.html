@@ -43,15 +43,15 @@
         </article>
         <article class="stat-card">
             <span class="stat-label">Recebido (lote)</span>
-            <strong id="stat-received" class="stat-value stat-value--positive">R$ 0,00</strong>
+            <strong id="stat-received" class="stat-value stat-value--positive">0,00</strong>
         </article>
         <article class="stat-card">
             <span class="stat-label">Pago (lote)</span>
-            <strong id="stat-paid" class="stat-value stat-value--negative">R$ 0,00</strong>
+            <strong id="stat-paid" class="stat-value stat-value--negative">0,00</strong>
         </article>
         <article class="stat-card">
             <span class="stat-label">Saldo (lote)</span>
-            <strong id="stat-balance" class="stat-value">R$ 0,00</strong>
+            <strong id="stat-balance" class="stat-value">0,00</strong>
         </article>
     </section>
 
@@ -234,7 +234,7 @@
         }
 
         function formatCurrency(value) {
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+            return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));
         }
 
         function normalizeSearchLabel(value) {

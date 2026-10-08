@@ -1,7 +1,7 @@
 {% extends "modules/plans/base_planning.html" %}
 
 {% macro money(value) -%}
-R$ {{ (value|default(0))|format_currency_br }}
+{{ (value|default(0))|format_currency_br }}
 {%- endmacro %}
 
 {% macro percent(value, digits=1) -%}

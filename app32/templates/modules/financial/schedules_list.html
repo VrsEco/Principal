@@ -41,10 +41,16 @@
     </header>
 
     <section class="sched-list-kpis" id="schedule-kpis">
-        <article class="sched-kpi"><span>Total</span><strong>0</strong><small>Títulos filtrados</small></article>
-        <article class="sched-kpi"><span>A Receber</span><strong>R$ 0,00</strong><small>Saldo em recebimentos</small></article>
-        <article class="sched-kpi"><span>A Pagar</span><strong>R$ 0,00</strong><small>Saldo em pagamentos</small></article>
-        <article class="sched-kpi"><span>Em Aberto</span><strong>0</strong><small>Sem baixa integral</small></article>
+        {% for kpi_key, kpi_title in [('receivable', 'Contas a Receber'), ('payable', 'Contas a Pagar'), ('balance', 'Saldo'), ('count', 'Quantidade de Títulos')] %}
+        <article class="sched-kpi" data-kpi="{{ kpi_key }}">
+            <h3 class="sched-kpi-title">{{ kpi_title }}</h3>
+            <dl class="sched-kpi-values">
+                <div><dt>Total</dt><dd data-kpi-field="total">{{ '0' if kpi_key == 'count' else '0,00' }}</dd></div>
+                <div><dt>Realizado</dt><dd data-kpi-field="done">{{ '0' if kpi_key == 'count' else '0,00' }}</dd></div>
+                <div><dt>A realizar</dt><dd data-kpi-field="todo">{{ '0' if kpi_key == 'count' else '0,00' }}</dd></div>
+            </dl>
+        </article>
+        {% endfor %}
     </section>
 
     <section class="sched-list-card">

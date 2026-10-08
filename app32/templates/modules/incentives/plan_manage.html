@@ -401,7 +401,7 @@ function applyNumericMask(input, type = 'factor') {
                     {% for p in participants[:5] %}
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-subtle);">
                         <span style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">{{ p.employee.name if p.employee else '—' }}</span>
-                        <span style="font-size:0.82rem;color:var(--text-secondary);">R$ {{ p.valor_base | format_currency_br }}</span>
+                        <span style="font-size:0.82rem;color:var(--text-secondary);">{{ p.valor_base | format_currency_br }}</span>
                     </div>
                     {% endfor %}
                     {% if participants|length > 5 %}
@@ -453,7 +453,7 @@ function applyNumericMask(input, type = 'factor') {
             <thead>
                 <tr>
                     <th>Colaborador</th>
-                    <th>Valor Base (R$)</th>
+                    <th>Valor Base</th>
                     <th>Entrada no Plano</th>
                     <th>Elegível</th>
                     <th></th>
@@ -524,7 +524,7 @@ function applyNumericMask(input, type = 'factor') {
                     </select>
                 </div>
                 <div>
-                    <label class="field-label">Valor Base (R$) *</label>
+                    <label class="field-label">Valor Base *</label>
                     <input id="newValorBase" type="text" class="field-input" data-format="currency" placeholder="Ex: 5.000,00">
                 </div>
                 <div>
@@ -652,7 +652,7 @@ function applyNumericMask(input, type = 'factor') {
                             <tr style="font-size:0.6rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);">
                                 <th style="padding:0 8px;text-align:left;">Faixa</th>
                                 <th style="padding:0 8px;text-align:left;">
-                                    {% if v.vetor_type == 'desconto_base' %}Valor (R$)
+                                    {% if v.vetor_type == 'desconto_base' %}Valor
                                     {% elif v.vetor_type == 'bloqueador' %}Bloquear?
                                     {% else %}Fator{% endif %}
                                 </th>
@@ -869,7 +869,7 @@ function applyNewVetorVisibility() {
     const type = document.getElementById('newVetorType')?.value;
     if (!type) return;
     const col = document.getElementById('newRangesColLabel');
-    if (col) col.textContent = type === 'desconto_base' ? 'Valor (R$)' : type === 'bloqueador' ? 'Bloquear?' : 'Fator';
+    if (col) col.textContent = type === 'desconto_base' ? 'Valor' : type === 'bloqueador' ? 'Bloquear?' : 'Fator';
     const bands = ['red', 'yellow', 'green', 'blue'];
     bands.forEach(color => {
         const wrap = document.getElementById(`band_${color}_wrap`);
