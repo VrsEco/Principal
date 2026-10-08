@@ -366,7 +366,7 @@ async def _pilot_unified_oauth_protected_resource(_: Request) -> JSONResponse:
         {
             "resource": str(auth_settings.resource_server_url),
             "authorization_servers": [str(auth_settings.issuer_url)],
-            "scopes_supported": ["mcp:access", "mcp:user", "mcp:analytics", "mcp:finance", "mcp:admin"],
+            "scopes_supported": ["mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"],
             "bearer_methods_supported": ["header"],
         }
     )
