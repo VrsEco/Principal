@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function () {
         modalSubtitle.textContent = payload.source_label
           ? payload.source_label + ' que compõem o valor selecionado.'
           : 'Confira os lançamentos que compõem o valor selecionado.';
-        modalTotal.textContent = payload.total_label || 'R$ 0,00';
+        modalTotal.textContent = payload.total_label || '0,00';
         modalCount.textContent = String(payload.item_count || 0);
 
         if (!Array.isArray(payload.items) || !payload.items.length) {
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
         renderRows(payload.items);
       })
       .catch(function (error) {
-        modalTotal.textContent = 'R$ 0,00';
+        modalTotal.textContent = '0,00';
         modalCount.textContent = '0';
         setFeedback((error && error.message) || 'Não foi possível carregar o detalhamento da DRE.', 'danger');
       });

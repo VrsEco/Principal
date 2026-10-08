@@ -252,7 +252,7 @@
 (() => {
     const root = document.querySelector('.consultive-cockpit');
     const companyId = root?.dataset.companyId;
-    const moneyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const moneyFormatter = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const label = {
         urgency: { low: 'baixa', medium: 'média', high: 'alta', critical: 'crítica' },
         status: { inbox: 'entrada', triage: 'triagem', in_review: 'em review', decided: 'decidida', in_execution: 'em execução', closed: 'fechada', cancelled: 'cancelada', draft: 'rascunho', in_analysis: 'em análise', pending_decision: 'valor a consolidar', approved: 'aprovada', risk_accepted: 'risco aceito', rejected: 'rejeitada', conversion_requested: 'ação solicitada', converted: 'ação registrada' },

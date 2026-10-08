@@ -345,7 +345,7 @@
         }
 
         function formatCurrency(value) {
-            return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function formatDate(value) {
@@ -543,7 +543,7 @@
                             <h3>Saída</h3>
                             <p><strong>Código:</strong> ${escapeHtml(result.source_entry?.entry_code || '-')}</p>
                             <p><strong>Conta:</strong> ${escapeHtml(result.summary?.source_bank_account_name || '-')}</p>
-                            <p><strong>Valor:</strong> ${Number(result.summary?.original_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                            <p><strong>Valor:</strong> ${Number(result.summary?.original_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             ${result.summary?.source_entry_url ? `<a href="${escapeHtml(result.summary.source_entry_url)}">Abrir lançamento de saída</a>` : ''}
                         </div>
                         <div class="result-card">

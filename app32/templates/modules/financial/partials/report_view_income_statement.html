@@ -132,7 +132,7 @@
                                 <td class="col-value dre-value">{{ dre_value_cell(row.forecast_label, 'dre-value-button--negative' if row.forecast_value < 0 else ('dre-value-button--positive' if row.forecast_value > 0 else 'dre-value-button--neutral')) }}</td>
                                 {% endif %}
                                 {% for column in monthly_columns %}
-                                {% set item = row.management_values[column.key] if row.management_values is defined and column.key in row.management_values else {'value': 0, 'label': 'R$ 0,00'} %}
+                                {% set item = row.management_values[column.key] if row.management_values is defined and column.key in row.management_values else {'value': 0, 'label': '0,00'} %}
                                 <td class="col-value dre-value">{{ dre_value_cell(item.label, 'dre-value-button--negative' if item.value < 0 else ('dre-value-button--positive' if item.value > 0 else 'dre-value-button--neutral')) }}</td>
                                 {% endfor %}
                             </tr>
@@ -197,7 +197,7 @@
                                 {% if show_budget_column %}
                                 <td class="col-value dre-value">
                                     {{ dre_value_cell(
-                                        row.orcamento_label if row.orcamento_label is defined else (row.budget_label if row.budget_label is defined else 'R$ 0,00'),
+                                        row.orcamento_label if row.orcamento_label is defined else (row.budget_label if row.budget_label is defined else '0,00'),
                                         'dre-value-button--negative' if row.orcamento is defined and row.orcamento < 0 else ('dre-value-button--positive' if row.orcamento is defined and row.orcamento > 0 else 'dre-value-button--neutral')
                                     ) }}
                                 </td>
@@ -273,7 +273,7 @@
                                 <th>Total consolidado</th>
                                 {% if show_budget_column %}
                                 <th>
-                                    <span class="dre-value-button dre-value-static dre-value-button--footer {% if report.totals and report.totals.budget is defined and report.totals.budget < 0 %}dre-value-button--negative{% elif report.totals and report.totals.budget is defined and report.totals.budget > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}">{{ report.totals.budget_label if report.totals and report.totals.budget_label is defined else 'R$ 0,00' }}</span>
+                                    <span class="dre-value-button dre-value-static dre-value-button--footer {% if report.totals and report.totals.budget is defined and report.totals.budget < 0 %}dre-value-button--negative{% elif report.totals and report.totals.budget is defined and report.totals.budget > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}">{{ report.totals.budget_label if report.totals and report.totals.budget_label is defined else '0,00' }}</span>
                                 </th>
                                 {% endif %}
                                 {% if show_competence_column %}
@@ -328,7 +328,7 @@
                                 <td class="col-account">{{ item.label }}</td>
                                 {% for column in monthly_columns %}
                                 {% set bucket_values = item['values'] if item['values'] is defined else {} %}
-                                {% set value = bucket_values[column.key] if column.key in bucket_values else {'value': 0, 'label': 'R$ 0,00'} %}
+                                {% set value = bucket_values[column.key] if column.key in bucket_values else {'value': 0, 'label': '0,00'} %}
                                 <td class="col-value dre-value">{{ dre_value_cell(value.label, 'dre-value-button--positive' if value.value > 0 else 'dre-value-button--neutral') }}</td>
                                 {% endfor %}
                             </tr>
@@ -376,7 +376,7 @@
         <div class="dre-detail-modal__summary">
             <div class="dre-detail-modal__summary-card">
                 <span>Total</span>
-                <strong id="dre-detail-modal-total">R$ 0,00</strong>
+                <strong id="dre-detail-modal-total">0,00</strong>
             </div>
             <div class="dre-detail-modal__summary-card">
                 <span>Itens</span>

@@ -784,7 +784,7 @@
     card.dataset.stage = activity.stage;
 
     const deadline = activity.when ? window.App32DateUtils.formatCalendarDatePtBr(activity.when) : '-';
-    const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
+    const budget = activity.amount ? `${parseFloat(activity.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
 
     card.innerHTML = `
       <div class="kanban-card-header">

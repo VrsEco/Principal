@@ -90,7 +90,7 @@
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return empty;
     if (isCurrencyUnit(unit)) {
-      return numeric.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      return numeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     const formatted = formatNumberBR(numeric, { empty });
     const suffix = String(unit ?? '').trim();

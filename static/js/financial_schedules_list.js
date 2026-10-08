@@ -141,7 +141,7 @@
       return year && month && day ? `${day}/${month}/${year}` : value;
     };
 
-    const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const money = (value) => Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const amountClass = (value) => Number(value || 0) < 0 ? 'sched-amount sched-amount--negative' : 'sched-amount sched-amount--positive';
     const typeLabel = (entryType) => entryType === 'payable' ? 'Pagamento' : 'Recebimento';
     const typeClass = (entryType) => entryType === 'payable' ? 'sched-pill--payable' : 'sched-pill--receivable';
@@ -230,33 +230,47 @@
     }
 
     function renderKpis(items) {
-      const receivableTotal = items
-        .filter((item) => item.entry_type === 'receivable')
-        .reduce((acc, item) => acc + Number(item.summary?.signed_open_total ?? item.signed_template_amount ?? 0), 0);
-      const payableTotal = items
-        .filter((item) => item.entry_type === 'payable')
-        .reduce((acc, item) => acc + Number(item.summary?.signed_open_total ?? item.signed_template_amount ?? 0), 0);
-      const openCount = items.filter((item) => {
-        const effectiveState = resolveScheduleState(item.summary || {}, item);
-        return !['settled', 'cancelled', 'draft'].includes(effectiveState);
-      }).length;
+      // Total = valor do título; A realizar = saldo em aberto; Realizado = Total - A realizar.
+      const sumGroup = (entryType) => items
+        .filter((item) => item.entry_type === entryType)
+        .reduce((acc, item) => {
+          const total = Number(item.signed_template_amount ?? item.template_amount ?? 0);
+          const todo = Number(item.summary?.signed_open_total ?? total);
+          acc.total += total;
+          acc.todo += todo;
+          return acc;
+        }, { total: 0, todo: 0 });
 
-      if (kpis[0]) {
-        kpis[0].querySelector('strong').textContent = String(items.length);
-      }
-      if (kpis[1]) {
-        const target = kpis[1].querySelector('strong');
-        target.textContent = money(receivableTotal);
-        target.className = amountClass(receivableTotal);
-      }
-      if (kpis[2]) {
-        const target = kpis[2].querySelector('strong');
-        target.textContent = money(payableTotal);
-        target.className = amountClass(payableTotal);
-      }
-      if (kpis[3]) {
-        kpis[3].querySelector('strong').textContent = String(openCount);
-      }
+      const rec = sumGroup('receivable');
+      const pay = sumGroup('payable');
+      const toMoneyValues = (g) => ({ total: g.total, done: g.total - g.todo, todo: g.todo });
+      const recValues = toMoneyValues(rec);
+      const payValues = toMoneyValues(pay);
+      const balanceValues = {
+        total: recValues.total + payValues.total,
+        done: recValues.done + payValues.done,
+        todo: recValues.todo + payValues.todo,
+      };
+
+      const isOpenItem = (item) => !['settled', 'cancelled', 'draft'].includes(resolveScheduleState(item.summary || {}, item));
+      const todoCount = items.filter(isOpenItem).length;
+      const countValues = { total: items.length, done: items.length - todoCount, todo: todoCount };
+
+      const fill = (key, values, isMoney) => {
+        const card = kpis.find((el) => el.dataset.kpi === key);
+        if (!card) return;
+        ['total', 'done', 'todo'].forEach((field) => {
+          const target = card.querySelector(`[data-kpi-field="${field}"]`);
+          if (!target) return;
+          target.textContent = isMoney ? money(values[field]) : String(values[field]);
+          target.className = isMoney ? amountClass(values[field]) : '';
+        });
+      };
+
+      fill('receivable', recValues, true);
+      fill('payable', payValues, true);
+      fill('balance', balanceValues, true);
+      fill('count', countValues, false);
     }
 
     function renderTable() {

@@ -128,7 +128,7 @@
                                 <span class="goal-badge">
                                     Meta:
                                     {% if 'R$' in (item.indicator.unit or '') or 'moeda' in (item.indicator.unit or '').lower() %}
-                                        R$ {{ item.goal.goal_value | format_currency_br }}
+                                        {{ item.goal.goal_value | format_currency_br }}
                                     {% else %}
                                         {{ item.goal.goal_value | format_currency_br }}{% if item.indicator.unit %} {{ item.indicator.unit }}{% endif %}
                                     {% endif %}
@@ -139,7 +139,7 @@
                     <td>
                         <div style="position:relative; display:flex; align-items:center;">
                             {% if 'R$' in (item.indicator.unit or '') or 'moeda' in (item.indicator.unit or '').lower() %}
-                            <span style="position:absolute; left:0.6rem; font-size:0.8rem; font-weight:700; color:var(--text-tertiary);">R$</span>
+                            <span style="position:absolute; left:0.6rem; font-size:0.8rem; font-weight:700; color:var(--text-tertiary);"></span>
                             <input type="text" data-format="currency" class="cell-input val-real" placeholder="0,00" style="padding-left:2rem;">
                             {% else %}
                             <input type="text" data-format="decimal" class="cell-input val-real" placeholder="0,00">

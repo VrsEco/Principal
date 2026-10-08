@@ -63,7 +63,7 @@
                                 <div
                                     style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                                     <input type="text" class="wc-value currency-br" value="{{ item.value | default(0) | format_currency_br }}"
-                                        placeholder="Valor R$"
+                                        placeholder="Valor"
                                         style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                                     <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
                                         placeholder="Aporte (YYYY.MM)"
@@ -86,7 +86,7 @@
                         <div
                             style="margin-top: 12px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
                             <span style="font-size: 11px; font-weight: 700; color: #64748b;">Subtotal: </span>
-                            <span id="subtotal-cash" style="font-size: 13px; font-weight: 800; color: #0f172a;">R$
+                            <span id="subtotal-cash" style="font-size: 13px; font-weight: 800; color: #0f172a;">
                                 0,00</span>
                         </div>
                     </div>
@@ -107,7 +107,7 @@
                                 <div
                                     style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                                     <input type="text" class="wc-value currency-br" value="{{ item.value | default(0) | format_currency_br }}"
-                                        placeholder="Valor R$"
+                                        placeholder="Valor"
                                         style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                                     <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
                                         placeholder="Aporte (YYYY.MM)"
@@ -131,7 +131,7 @@
                             style="margin-top: 12px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
                             <span style="font-size: 11px; font-weight: 700; color: #64748b;">Subtotal: </span>
                             <span id="subtotal-receivables"
-                                style="font-size: 13px; font-weight: 800; color: #0f172a;">R$ 0,00</span>
+                                style="font-size: 13px; font-weight: 800; color: #0f172a;">0,00</span>
                         </div>
                     </div>
 
@@ -151,7 +151,7 @@
                                 <div
                                     style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                                     <input type="text" class="wc-value currency-br" value="{{ item.value | default(0) | format_currency_br }}"
-                                        placeholder="Valor R$"
+                                        placeholder="Valor"
                                         style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                                     <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
                                         placeholder="Aporte (YYYY.MM)"
@@ -174,7 +174,7 @@
                         <div
                             style="margin-top: 12px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
                             <span style="font-size: 11px; font-weight: 700; color: #64748b;">Subtotal: </span><span
-                                id="subtotal-inventory" style="font-size: 13px; font-weight: 800; color: #0f172a;">R$
+                                id="subtotal-inventory" style="font-size: 13px; font-weight: 800; color: #0f172a;">
                                 0,00</span>
                         </div>
                     </div>
@@ -189,7 +189,7 @@
                         <p style="font-size: 11px; color: #3b82f6;">Soma consolidada de todos os aportes planejados.</p>
                     </div>
                     <div id="wc-grand-total" style="font-size: 24px; font-weight: 800; color: #1e40af;">
-                        R$ 0,00
+                        0,00
                     </div>
                 </div>
 
@@ -200,7 +200,7 @@
                     <div
                         style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 12px; padding: 16px; background: #f8fafc; border-radius: 12px;">
                         <div>
-                            <label class="field-label" style="font-size: 10px;">Reserva Mínima (R$)</label>
+                            <label class="field-label" style="font-size: 10px;">Reserva Mínima</label>
                             <input type="text" id="cash_reserve" class="currency-br"
                                 value="{{ section_content.working_capital.cash_reserve|default(0)|format_currency_br }}"
                                 style="width:100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 12px;">
@@ -243,7 +243,7 @@
                                     Data Pagamento</th>
                                 <th
                                     style="padding: 12px; font-size: 11px; text-transform: uppercase; color: #64748b; text-align: right;">
-                                    Valor (R$)</th>
+                                    Valor</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -252,7 +252,7 @@
                                 <td style="padding: 12px; font-size: 13px; font-weight: 600;">{{ inv.description }}</td>
                                 <td style="padding: 12px; font-size: 12px; color: #64748b;">{{ inv.item_type or 'imobilizado' }}</td>
                                 <td style="padding: 12px; font-size: 12px; color: #64748b;">{{ inv.date or '-' }}</td>
-                                <td style="padding: 12px; font-size: 13px; font-weight: 700; text-align: right;">R$ {{ inv.amount | format_currency_br }}</td>
+                                <td style="padding: 12px; font-size: 13px; font-weight: 700; text-align: right;">{{ inv.amount | format_currency_br }}</td>
                             </tr>
                             {% else %}
                             <tr>
@@ -263,7 +263,7 @@
                         <tfoot>
                             <tr style="background: #f8fafc;">
                                 <td colspan="3" style="padding: 12px; font-weight: 800; text-align: right;">Total Imobilizado / Ativo Não Circulante</td>
-                                <td style="padding: 12px; font-weight: 800; text-align: right; color: #2563eb;">R$ {{ consolidated.summary.total_fixed_assets | default(0) | format_currency_br }}</td>
+                                <td style="padding: 12px; font-weight: 800; text-align: right; color: #2563eb;">{{ consolidated.summary.total_fixed_assets | default(0) | format_currency_br }}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -277,7 +277,7 @@
                                 Capital de Giro / Ativo Circulante
                             </div>
                             <div style="font-size: 24px; font-weight: 800; color: #1e40af;">
-                                R$ {{ consolidated.summary.total_working_capital | default(0) | format_currency_br }}
+                                {{ consolidated.summary.total_working_capital | default(0) | format_currency_br }}
                             </div>
                         </div>
                         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px;">
@@ -285,7 +285,7 @@
                                 Imobilizado / Ativo Não Circulante
                             </div>
                             <div style="font-size: 24px; font-weight: 800; color: #0f172a;">
-                                R$ {{ consolidated.summary.total_fixed_assets | default(0) | format_currency_br }}
+                                {{ consolidated.summary.total_fixed_assets | default(0) | format_currency_br }}
                             </div>
                         </div>
                         <div style="background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 16px; padding: 20px;">
@@ -293,7 +293,7 @@
                                 Investimento Total
                             </div>
                             <div style="font-size: 24px; font-weight: 800; color: #15803d;">
-                                R$ {{ consolidated.summary.total_investment | default(0) | format_currency_br }}
+                                {{ consolidated.summary.total_investment | default(0) | format_currency_br }}
                             </div>
                         </div>
                     </div>
@@ -452,19 +452,19 @@
                 <div style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px;">
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
                         <span class="field-label">Faturamento</span>
-                        <strong style="font-size:20px; color:#0f172a;">R$ {{ tax_preview.revenue|default(0)|format_currency_br }}</strong>
+                        <strong style="font-size:20px; color:#0f172a;">{{ tax_preview.revenue|default(0)|format_currency_br }}</strong>
                     </div>
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
                         <span class="field-label">Lucro Bruto</span>
-                        <strong style="font-size:20px; color:#2563eb;">R$ {{ tax_preview.gross_margin|default(0)|format_currency_br }}</strong>
+                        <strong style="font-size:20px; color:#2563eb;">{{ tax_preview.gross_margin|default(0)|format_currency_br }}</strong>
                     </div>
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
                         <span class="field-label">Lucro Operacional</span>
-                        <strong style="font-size:20px; color:#10b981;">R$ {{ tax_preview.operating_result|default(0)|format_currency_br }}</strong>
+                        <strong style="font-size:20px; color:#10b981;">{{ tax_preview.operating_result|default(0)|format_currency_br }}</strong>
                     </div>
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
                         <span class="field-label">Lucro Operacional p/ Adicional IR</span>
-                        <strong style="font-size:20px; color:#c2410c;">R$ {{ tax_preview.operating_result_additional_ir|default(0)|format_currency_br }}</strong>
+                        <strong style="font-size:20px; color:#c2410c;">{{ tax_preview.operating_result_additional_ir|default(0)|format_currency_br }}</strong>
                     </div>
                 </div>
 
@@ -504,7 +504,7 @@
                 <div style="margin-top: 20px; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px dashed #e2e8f0;">
                     <p style="font-size: 11px; color: #64748b; margin:0;">
                         Sugestão inicial: <strong>CSLL 9%</strong> e <strong>IRPJ 15%</strong> sobre <strong>Lucro Operacional</strong>,
-                        além do <strong>Adicional de IRPJ 10%</strong> sobre o excedente mensal acima de R$ 20.000,00.
+                        além do <strong>Adicional de IRPJ 10%</strong> sobre o excedente mensal acima de 20.000,00.
                     </p>
                 </div>
             </div>
@@ -761,18 +761,18 @@
                     <div>
                         <span
                             style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Investimento</span>
-                        <span style="font-size: 18px; font-weight: 800; color: #ef4444; display: block;">R$ {{ consolidated.summary.total_equity | format_currency_br }}</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #ef4444; display: block;">{{ consolidated.summary.total_equity | format_currency_br }}</span>
                     </div>
                     <div>
                         <span
                             style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Retorno
                             Acum.</span>
-                        <span style="font-size: 18px; font-weight: 800; color: #10b981; display: block;">R$ {{ consolidated.timeline | sum(attribute='distributions') | format_currency_br }}</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #10b981; display: block;">{{ consolidated.timeline | sum(attribute='distributions') | format_currency_br }}</span>
                     </div>
                     <div>
                         <span
                             style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Líquido</span>
-                        <span style="font-size: 18px; font-weight: 800; color: #0369a1; display: block;">R$ {{ consolidated.timeline | sum(attribute='investor_net_flow') | format_currency_br }}</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #0369a1; display: block;">{{ consolidated.timeline | sum(attribute='investor_net_flow') | format_currency_br }}</span>
                     </div>
                     <div>
                         <span style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">ROI
@@ -819,7 +819,7 @@
                                 style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
                         </div>
                         <div>
-                            <label class="field-label">Valor (R$)</label>
+                            <label class="field-label">Valor</label>
                             <input type="text" class="source-value currency-br" value="{{ s.amount | default(0) | format_currency_br }}"
                                 style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
                         </div>
@@ -855,7 +855,7 @@
                                 style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
                         </div>
                         <div>
-                            <label class="field-label">Valor (R$)</label>
+                            <label class="field-label">Valor</label>
                             <input type="text" class="source-value currency-br" value="{{ val | default(0) | format_currency_br }}"
                                 style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
                         </div>
@@ -1041,8 +1041,7 @@
 
     function formatCurrencyBR(value) {
         return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
+            minimumFractionDigits: 2, maximumFractionDigits: 2
         }).format(parseBrCurrency(value));
     }
 
@@ -1183,7 +1182,7 @@
 
     function updateWCTotals() {
         let grandTotal = 0;
-        const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+        const fmt = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         ['cash', 'receivables', 'inventory'].forEach(cat => {
             let catTotal = 0;
             document.querySelectorAll(`.${cat}-row .wc-value`).forEach(input => {
@@ -1202,7 +1201,7 @@
         const html = `
             <div class="wc-row ${category}-row" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                    <input type="text" class="wc-value currency-br" onchange="updateWCTotals()" placeholder="Valor R$" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                    <input type="text" class="wc-value currency-br" onchange="updateWCTotals()" placeholder="Valor" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                     <input type="text" class="wc-contrib-date" placeholder="Aporte (YYYY.MM)" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                 </div>
                 <input type="text" class="wc-desc" placeholder="Descrição" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; margin-bottom: 4px;">
@@ -1261,7 +1260,7 @@
             labels: labels,
             datasets: [
                 {
-                    label: 'Fluxo Mensal (R$)',
+                    label: 'Fluxo Mensal',
                     data: investorFlows,
                     backgroundColor: investorFlows.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'),
                     borderColor: investorFlows.map(v => v >= 0 ? '#10b981' : '#ef4444'),
@@ -1292,7 +1291,7 @@
                             let label = context.dataset.label || '';
                             if (label) label += ': ';
                             if (context.parsed.y !== null) {
-                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                                label += new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(context.parsed.y);
                             }
                             return label;
                         }

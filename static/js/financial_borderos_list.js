@@ -20,7 +20,7 @@
     let borderos = [];
     let borderoPagination = { page: 1, per_page: 50, total: 0, has_more: false };
     let borderoSummary = {};
-    const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const money = (value) => Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const typeLabel = (value) => value === 'payable' ? 'Pagamento' : 'Recebimento';
     const statusLabel = (value) => ({ open: 'Aberto', partially_settled: 'Parcial', settled: 'Liquidado', cancelled: 'Cancelado', draft: 'Rascunho' }[value] || value || '-');
     const getActiveFilters = () => Object.values(filters).filter((input) => String(input?.value || '').trim());

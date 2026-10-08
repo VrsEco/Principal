@@ -256,7 +256,7 @@
 
         <div class="bonus-display">
             <span class="label">Bônus a Receber</span>
-            <div class="value">R$ {{ statement.bonus | default(0) | format_currency_br }}</div>
+            <div class="value">{{ statement.bonus | default(0) | format_currency_br }}</div>
         </div>
     </div>
 
@@ -316,7 +316,7 @@
                                 </span>
                             {% elif step.vetor_type == 'desconto_base' %}
                                 <span class="contribution-value neg">
-                                    - R$ {{ step.contribution | abs | format_currency_br }}
+                                    - {{ step.contribution | abs | format_currency_br }}
                                 </span>
                             {% else %}
                                 <span class="contribution-value {{ 'pos' if (step.vetor_type == 'multiplicador' and step.contribution > 0) else 'neg' if step.contribution != 0 else '' }}">

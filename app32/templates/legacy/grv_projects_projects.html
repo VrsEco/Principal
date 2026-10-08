@@ -1270,7 +1270,7 @@
 
       // Calcular orçamento total das atividades
       const totalBudget = project.budget_total || 0;
-      const budgetDisplay = totalBudget > 0 ? `R$ ${totalBudget.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'Não definido';
+      const budgetDisplay = totalBudget > 0 ? `${totalBudget.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'Não definido';
 
       // Exibir código do projeto
       const projectCode = project.code || '-';
