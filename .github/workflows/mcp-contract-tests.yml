@@ -58,6 +58,7 @@ jobs:
           mapfile -t files < <(printf '%s\n' "${files[@]}" | awk '!seen[$0]++')
           deselect=()
           while IFS= read -r line; do
+            line="${line%$'\r'}"   # tolera fim de linha CRLF
             case "$line" in ''|'#'*) continue ;; esac
             deselect+=(--deselect "$line")
           done < ../.github/mcp-contract-known-failures.txt
