@@ -72,6 +72,17 @@ def _run(callback, *args, **kwargs) -> Any:
         return callback(*args, **kwargs)
 
 
+def _session_actor(company_id: int):
+    """Empresa validada e usuário da SESSÃO autenticada: o ator nunca vem do cliente."""
+    from src.core.mcp_runtime import resolve_mcp_execution_context
+
+    context = _run(resolve_mcp_execution_context, {"company_id": company_id})
+    user_id = getattr(context, "user_id", None)
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise PermissionError("Usuário autenticado não identificado para a operação MCP.")
+    return int(context.company_id), user_id
+
+
 def _meta(operation: str, *, company_id: Optional[int] = None, tool_name: Optional[str] = None) -> MCPResponseMeta:
     """Metadados do envelope. Com ``tool_name`` usa a capability publicada (permissão real).
 
@@ -324,19 +335,29 @@ def register_work_journey_tools(mcp) -> None:
         return {'success': True}
 
     @mcp.tool()
-    def create_work_journey_transfer_request_tool(company_id: int, item_id: int, to_employee_id: int, reason: Optional[str] = None, user_id: Optional[int] = None) -> dict:
-        """Solicita transferência de uma tarefa da jornada para outro colaborador."""
+    def create_work_journey_transfer_request_tool(company_id: int, item_id: int, to_employee_id: int, reason: Optional[str] = None) -> dict:
+        """Solicita transferência de uma tarefa da jornada para outro colaborador (o solicitante é o usuário da sessão)."""
+        item = _run(lambda: WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first())
+        if not item:
+            return _error_envelope(operation='transfer.create', message='Tarefa da jornada não encontrada.', code='work_journey_item_not_found')
         data = WorkJourneyTransferRequestCreateSchema.model_validate({
             'to_employee_id': to_employee_id,
             'reason': reason,
         }).model_dump(exclude_unset=True)
-        return {'transfer_request': _run(create_transfer_request, company_id, item_id, data['to_employee_id'], data.get('reason'), user_id)}
+        resolved_company_id, execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(item.employee_id),
+            payload={"company_id": company_id, "employee_id": int(item.employee_id)},
+        )
+        return {'transfer_request': _run(create_transfer_request, resolved_company_id, item_id, data['to_employee_id'], data.get('reason'), execution_context.user_id)}
 
     @mcp.tool()
-    def approve_work_journey_transfer_request_tool(company_id: int, request_id: int, approver_user_id: Optional[int] = None, resolution_notes: Optional[str] = None) -> dict:
-        """Aprova uma solicitação de transferência da jornada."""
+    def approve_work_journey_transfer_request_tool(company_id: int, request_id: int, resolution_notes: Optional[str] = None) -> dict:
+        """Aprova uma solicitação de transferência da jornada (o aprovador é o usuário da sessão)."""
         data = WorkJourneyTransferApprovalSchema.model_validate({'resolution_notes': resolution_notes}).model_dump(exclude_unset=True)
-        return {'transfer_request': _run(approve_transfer_request, company_id, request_id, approver_user_id, data.get('resolution_notes'))}
+        resolved_company_id, approver_user_id = _session_actor(company_id)
+        return {'transfer_request': _run(approve_transfer_request, resolved_company_id, request_id, approver_user_id, data.get('resolution_notes'))}
 
     @mcp.tool()
     def list_work_journey_transfers_tool(company_id: int, employee_id: Optional[int] = None) -> dict:
@@ -344,16 +365,23 @@ def register_work_journey_tools(mcp) -> None:
         return {'transfers': _run(list_transfer_requests, company_id, employee_id)}
 
     @mcp.tool()
-    def create_work_journey_absence_request_tool(company_id: int, payload: dict, user_id: Optional[int] = None) -> dict:
-        """Solicita férias, ausência ou licença para um colaborador."""
+    def create_work_journey_absence_request_tool(company_id: int, payload: dict) -> dict:
+        """Solicita férias, ausência ou licença para um colaborador (o solicitante é o usuário da sessão)."""
         data = WorkJourneyAbsenceRequestCreateSchema.model_validate(payload).model_dump()
-        return {'absence_request': _run(create_absence_request, company_id, data, user_id)}
+        resolved_company_id, execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(data['employee_id']),
+            payload={"company_id": company_id, "employee_id": int(data['employee_id'])},
+        )
+        return {'absence_request': _run(create_absence_request, resolved_company_id, data, execution_context.user_id)}
 
     @mcp.tool()
-    def approve_work_journey_absence_request_tool(company_id: int, request_id: int, approver_user_id: Optional[int] = None, cleanup_notes: Optional[str] = None) -> dict:
-        """Aprova uma ausência após limpeza operacional do período."""
+    def approve_work_journey_absence_request_tool(company_id: int, request_id: int, cleanup_notes: Optional[str] = None) -> dict:
+        """Aprova uma ausência após limpeza operacional do período (o aprovador é o usuário da sessão)."""
         data = WorkJourneyAbsenceApprovalSchema.model_validate({'cleanup_notes': cleanup_notes}).model_dump(exclude_unset=True)
-        return {'absence_request': _run(approve_absence_request, company_id, request_id, approver_user_id, data.get('cleanup_notes'))}
+        resolved_company_id, approver_user_id = _session_actor(company_id)
+        return {'absence_request': _run(approve_absence_request, resolved_company_id, request_id, approver_user_id, data.get('cleanup_notes'))}
 
     @mcp.tool()
     def list_work_journey_absences_tool(company_id: int, employee_id: Optional[int] = None) -> dict:
@@ -401,8 +429,8 @@ def register_work_journey_tools(mcp) -> None:
         return {'data': _run(get_work_journey_agenda, resolved_company_id, data['employee_id'], data['anchor_date'], data['scope'], True)}
 
     @mcp.tool()
-    def lock_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week', user_id: Optional[int] = None) -> dict:
-        """Trava a agenda da jornada para impedir novas alterações manuais."""
+    def lock_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week') -> dict:
+        """Trava a agenda da jornada para impedir novas alterações manuais (quem trava é o usuário da sessão)."""
         resolved_company_id, execution_context = _run(
             ensure_employee_mutation_allowed,
             company_id=company_id,
@@ -410,7 +438,7 @@ def register_work_journey_tools(mcp) -> None:
             payload={"company_id": company_id, "employee_id": employee_id},
         )
         anchor = date.fromisoformat(anchor_date)
-        return {'data': _run(lock_work_journey_agenda, resolved_company_id, employee_id, anchor, scope, user_id or execution_context.user_id)}
+        return {'data': _run(lock_work_journey_agenda, resolved_company_id, employee_id, anchor, scope, execution_context.user_id)}
 
     @mcp.tool()
     def unlock_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week') -> dict:
