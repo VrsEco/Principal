@@ -7,6 +7,7 @@ from services.strategy_alignment_n1_service import (
     StrategyAlignmentN1Service,
 )
 from services.structuring_journey_service import StructuringJourneyService
+from src.core.mcp_session_actor import require_session_user_id
 from src.intelligence.mcp_contracts import (
     MCPErrorDetail,
     MCPErrorEnvelope,
@@ -90,9 +91,10 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
         except Exception as exc:  # pragma: no cover - envelope defensivo
             return _error(operation, exc, company_id=company_id)
 
-    def _upsert_identity(company_id: int, payload: dict[str, Any], user_id: Optional[int] = None) -> dict[str, Any]:
+    def _upsert_identity(company_id: int, payload: dict[str, Any]) -> dict[str, Any]:
         operation = "identity.upsert"
         try:
+            user_id = require_session_user_id()
             return _success(
                 operation,
                 StrategyAlignmentN1Service.upsert_identity(
@@ -129,10 +131,10 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
         company_id: int,
         process_id: int,
         payload: dict[str, Any],
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         operation = "process_profile.upsert"
         try:
+            user_id = require_session_user_id()
             return _success(
                 operation,
                 StrategyAlignmentN1Service.upsert_process_profile(
@@ -221,18 +223,18 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
         company_id: int,
         item_id: int,
         decision: str,
-        user_id: Optional[int] = None,
         notes: Optional[str] = None,
     ) -> dict[str, Any]:
         operation = "maturation_item.review"
         try:
+            reviewer_user_id = require_session_user_id()
             return _success(
                 operation,
                 StrategyAlignmentN1Service.review_maturation_item(
                     company_id=company_id,
                     item_id=item_id,
                     decision=decision,
-                    reviewer_user_id=user_id,
+                    reviewer_user_id=reviewer_user_id,
                     notes=notes,
                 ),
                 company_id=company_id,
@@ -255,19 +257,17 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
     def upsert_strategy_identity_tool(
         company_id: int,
         payload: dict[str, Any],
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Cria ou atualiza a identidade organizacional estruturada do tenant."""
-        return _upsert_identity(company_id, payload, user_id=user_id)
+        return _upsert_identity(company_id, payload)
 
     @mcp.tool()
     def upsert_organizational_identity_tool(
         company_id: int,
         payload: dict[str, Any],
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Alias canônico consultivo: cria ou atualiza a identidade organizacional estruturada."""
-        return _upsert_identity(company_id, payload, user_id=user_id)
+        return _upsert_identity(company_id, payload)
 
     @mcp.tool()
     def get_process_strategy_profile_tool(
@@ -292,20 +292,18 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
         company_id: int,
         process_id: int,
         payload: dict[str, Any],
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Cria ou atualiza objetivo, dono, cliente, indicadores, criticidade, maturidade, SIPOC e políticas do processo."""
-        return _upsert_process_profile(company_id, process_id, payload, user_id=user_id)
+        return _upsert_process_profile(company_id, process_id, payload)
 
     @mcp.tool()
     def upsert_process_strategic_profile_tool(
         company_id: int,
         process_id: int,
         payload: dict[str, Any],
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Alias canônico consultivo: cria ou atualiza o perfil estratégico estruturado do processo."""
-        return _upsert_process_profile(company_id, process_id, payload, user_id=user_id)
+        return _upsert_process_profile(company_id, process_id, payload)
 
     @mcp.tool()
     def list_process_strategy_alignment_links_tool(
@@ -330,11 +328,11 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
     def upsert_process_strategy_alignment_link_tool(
         company_id: int,
         payload: dict[str, Any],
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Cria ou atualiza vínculo estratégico de processo para os cruzamentos de alinhamento N1."""
         operation = "alignment_links.upsert"
         try:
+            user_id = require_session_user_id()
             return _success(
                 operation,
                 StrategyAlignmentN1Service.upsert_alignment_link(
@@ -388,11 +386,11 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
     def upsert_indicator_line_of_sight_tool(
         company_id: int,
         payload: dict[str, Any],
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Cria ou atualiza a linha de visada entre indicador de processo e indicador corporativo."""
         operation = "indicator_line_of_sight.upsert"
         try:
+            user_id = require_session_user_id()
             return _success(
                 operation,
                 StrategyAlignmentN1Service.upsert_indicator_line_of_sight(
@@ -447,7 +445,6 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
         company_id: int,
         item_id: int,
         decision: str,
-        user_id: Optional[int] = None,
         notes: Optional[str] = None,
     ) -> dict[str, Any]:
         """Revisa item S1-S2 e aplica human-gate: confirm promove, reject rejeita, hold mantém pendente."""
@@ -455,7 +452,6 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
             company_id=company_id,
             item_id=item_id,
             decision=decision,
-            user_id=user_id,
             notes=notes,
         )
 

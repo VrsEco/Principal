@@ -17,6 +17,7 @@ class _FakeMCP:
 
 
 def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
+    monkeypatch.setattr("src.core.mcp_session_actor.get_http_request_context", lambda: {"user_id": 7})
     mcp = _FakeMCP()
     monkeypatch.setattr(
         "src.core.mcp_strategy_alignment_tools.StrategyAlignmentN1Service.get_identity",
@@ -82,7 +83,6 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
         company_id=1,
         item_id=10,
         decision="hold",
-        user_id=7,
     )
 
     assert read_response["success"] is True

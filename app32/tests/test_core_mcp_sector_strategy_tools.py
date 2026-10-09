@@ -17,8 +17,7 @@ class _FakeMCP:
 
 def test_sector_structure_tool_requires_human_confirmation(monkeypatch):
     monkeypatch.setattr(
-        sector_tools,
-        "get_http_request_context",
+        "src.core.mcp_session_actor.get_http_request_context",
         lambda: {"user_id": 44, "company_id": 13, "accessible_company_ids": [13]},
     )
     mcp = _FakeMCP()
@@ -28,7 +27,6 @@ def test_sector_structure_tool_requires_human_confirmation(monkeypatch):
         company_id=13,
         payload={"okrs": []},
         confirmed_mutation=False,
-        user_id=44,
     )
 
     assert result["success"] is False
@@ -39,8 +37,7 @@ def test_sector_structure_tool_requires_human_confirmation(monkeypatch):
 def test_sector_structure_tool_delegates_authenticated_tenant(monkeypatch):
     captured = {}
     monkeypatch.setattr(
-        sector_tools,
-        "get_http_request_context",
+        "src.core.mcp_session_actor.get_http_request_context",
         lambda: {"user_id": 44, "company_id": 13, "accessible_company_ids": [13]},
     )
 
@@ -56,7 +53,6 @@ def test_sector_structure_tool_delegates_authenticated_tenant(monkeypatch):
         company_id=13,
         payload={"okrs": [{"objective": "Teste"}]},
         confirmed_mutation=True,
-        user_id=44,
     )
 
     assert result["success"] is True
