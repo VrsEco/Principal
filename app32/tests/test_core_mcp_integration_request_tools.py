@@ -23,9 +23,11 @@ def test_integration_request_tools_register(monkeypatch):
         "src.core.mcp_integration_request_tools.IntegrationCatalogService.build_catalog",
         lambda: {"summary": {"total": 4}, "integrations": []},
     )
+    seen = {}
+    monkeypatch.setattr("src.core.mcp_session_actor.get_http_request_context", lambda: {"user_id": 9})
     monkeypatch.setattr(
         "src.core.mcp_integration_request_tools.IntegrationRequestService.create_request",
-        lambda payload, **kwargs: SimpleNamespace(to_dict=lambda: {"id": 1, "backlog_task_id": 456, **payload}),
+        lambda payload, **kwargs: seen.update(kwargs) or SimpleNamespace(to_dict=lambda: {"id": 1, "backlog_task_id": 456, **payload}),
     )
 
     register_integration_request_tools(mcp)
@@ -33,7 +35,6 @@ def test_integration_request_tools_register(monkeypatch):
     assert mcp.registered["list_app32_integrations_catalog"]()["summary"]["total"] == 4
     response = mcp.registered["request_new_app32_integration"](
         company_id=31,
-        requester_user_id=9,
         title="Open Finance",
         business_domain="Financeiro",
         integration_mode="consume",
@@ -44,3 +45,4 @@ def test_integration_request_tools_register(monkeypatch):
     )
     assert response["success"] is True
     assert response["request"]["backlog_task_id"] == 456
+    assert seen["requester_user_id"] == 9, "o solicitante é o usuário da sessão, não um parâmetro do cliente"
