@@ -211,6 +211,20 @@ def _resolve_mcp_permission_ceiling(grant_decision: Any) -> tuple[str, ...]:
     return tuple(ceiling)
 
 
+def _discovery_baseline_permissions() -> tuple[str, ...]:
+    """Permissões mínimas das ferramentas de descoberta, lidas do catálogo (fonte única)."""
+    from src.intelligence.tool_catalog import catalog
+
+    atoms: list[str] = []
+    for tool_name in sorted(COMPANY_DISCOVERY_TOOLS):
+        capability = catalog.get_tool_capability(tool_name)
+        for permission in getattr(capability, "permissions", ()) or ():
+            atom = str(permission).strip().lower()
+            if atom and atom not in atoms:
+                atoms.append(atom)
+    return tuple(atoms)
+
+
 def _intersect_mcp_permission_ceiling(
     app32_permissions: tuple[str, ...],
     grant_permissions: tuple[str, ...],
@@ -431,6 +445,13 @@ def resolve_mcp_execution_context(
         if not grant_decision.allowed:
             raise PermissionError(f"principal grant negado: {grant_decision.reason}")
         mcp_permission_ceiling = _resolve_mcp_permission_ceiling(grant_decision)
+        # Ferramentas de descoberta (listar as próprias empresas, contexto da sessão, minhas atividades) só
+        # devolvem o que o próprio principal já tem por grant. O teto do grant restringe os DADOS de negócio;
+        # não pode impedir o usuário de descobrir em quais empresas ele pode trabalhar.
+        discovery_baseline: tuple[str, ...] = ()
+        if allow_missing_company and mcp_permission_ceiling and "*" not in mcp_permission_ceiling:
+            discovery_baseline = _discovery_baseline_permissions()
+            mcp_permission_ceiling = tuple(dict.fromkeys((*mcp_permission_ceiling, *discovery_baseline)))
 
         # A identidade vem do principal persistido, não do token legado, env
         # do processo ou headers. SERVICE/AGENT continuam sem user sintético.
@@ -469,6 +490,8 @@ def resolve_mcp_execution_context(
             # grant explícito continua sendo a autoridade de permissões.
             role = str(grant_decision.role or "colaborador").strip().lower() or "colaborador"
             permissions = mcp_permission_ceiling
+        if discovery_baseline:
+            permissions = tuple(dict.fromkeys((*permissions, *discovery_baseline)))
         principal_grant_enforced = True
     else:
         if user_id:

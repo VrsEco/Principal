@@ -8,10 +8,11 @@ from services import principal_authorization_service as authorization
 from src.core import mcp_runtime as runtime
 
 
-def _grant(company_id, reason=None, principal_id=71):
+def _grant(company_id, reason=None, principal_id=71, mcp_permissions=()):
     return SimpleNamespace(
         company_id=company_id,
         principal_id=principal_id,
+        mcp_permissions=list(mcp_permissions),
         inactive_reason_at=lambda _now: reason,
     )
 
@@ -137,3 +138,77 @@ def test_every_exempt_tool_is_a_low_risk_read_without_human_gate():
         assert getattr(capability.risk, "value", capability.risk) == "low", name
         assert capability.human_gate is False, name
         assert name.split("_")[0] in {"list", "bootstrap", "get"}, f"{name}: isento de empresa só se for leitura"
+
+
+# ---- descoberta com teto de permissões no grant (caso Joseane, 2026-10-09) --------------------
+# Teto real encontrado em produção: vocabulário do RBAC do APP32, sem `identity.read`.
+CEILING = ("projects.view", "projects.create", "projects.edit", "processes.view", "financial.view", "financial.create", "financial.edit")
+
+
+def _policy(context, tool_name):
+    from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
+    from src.intelligence.tool_catalog import catalog
+    from src.intelligence.tooling.capabilities import infer_tool_action
+
+    capability = catalog.get_tool_capability(tool_name)
+    source = {
+        "principal_id": context.principal_id, "subject_type": "USER", "user_id": context.user_id,
+        "company_id": context.company_id, "employee_id": context.employee_id, "role": context.role,
+        "auth_method": "oauth_oidc_bearer", "token_scopes": ["mcp:access", "mcp:user"],
+        "issuer": "https://id.example/realms/app32", "subject": "s", "client_id": "c",
+        "permissions": context.permissions, "metadata": dict(context.metadata or {}),
+    }
+    request = ToolPolicyRequest(
+        tool_name=tool_name, surface="user", domain=capability.domain,
+        action=infer_tool_action(tool_name, capability.domain), risk="low",
+        requested_company_id=context.company_id, accessible_company_ids=tuple(context.accessible_company_ids or ()),
+        required_permissions=tuple(capability.permissions or ()), required_context=tuple(capability.required_context or ()),
+        metadata=dict(context.metadata or {}),
+    )
+    return evaluate_tool_policy(source, request)
+
+
+def test_discovery_tool_adds_its_baseline_permissions_when_the_grant_has_a_ceiling(oauth):
+    oauth([_grant(8, mcp_permissions=CEILING)])
+    context = runtime.resolve_mcp_execution_context({}, allow_missing_company=True)
+    baseline = runtime._discovery_baseline_permissions()
+    assert {"identity.read", "work.read_self"} <= set(baseline)
+    assert context.company_id == 8, "grant único é selecionado automaticamente (é por isso que o teto valia)"
+    assert set(baseline) <= set(context.permissions)
+    assert set(CEILING) <= set(context.permissions)
+    assert set(baseline) <= set(context.metadata["mcp_permission_ceiling"])
+
+
+def test_discovery_baseline_does_not_leak_into_regular_tools(oauth):
+    oauth([_grant(8, mcp_permissions=CEILING)])
+    context = runtime.resolve_mcp_execution_context({})
+    assert set(context.permissions) == set(CEILING), "ferramenta comum continua restrita exatamente ao teto"
+    assert "identity.read" not in context.permissions
+    assert "identity.read" not in context.metadata["mcp_permission_ceiling"]
+
+
+def test_grant_without_a_ceiling_is_untouched_by_the_baseline(oauth):
+    oauth([_grant(8)])
+    context = runtime.resolve_mcp_execution_context({}, allow_missing_company=True)
+    assert context.metadata["mcp_permission_ceiling"] == ()
+    assert "identity.read" not in context.permissions or "*" in context.permissions
+
+
+def test_policy_lets_a_ceilinged_user_discover_companies_but_still_blocks_business_data(oauth):
+    oauth([_grant(8, mcp_permissions=CEILING)])
+    discovery = runtime.resolve_mcp_execution_context({}, allow_missing_company=True)
+    for tool in ("list_my_companies", "bootstrap_session_context", "list_my_work_all_companies"):
+        decision = _policy(discovery, tool)
+        assert decision.allowed is True, (tool, decision.reason)
+
+    regular = runtime.resolve_mcp_execution_context({})
+    denied = _policy(regular, "list_my_companies")
+    assert denied.allowed is False and "teto MCP" in denied.reason, "sem a base de descoberta o teto bloqueia (regressão do caso)"
+    business = _policy(regular, "list_projects")
+    assert business.allowed is False and "teto MCP" in business.reason, "dados de negócio seguem limitados pelo teto"
+
+
+def test_wildcard_ceiling_is_not_changed(oauth):
+    oauth([_grant(8, mcp_permissions=("*",))])
+    context = runtime.resolve_mcp_execution_context({}, allow_missing_company=True)
+    assert tuple(context.metadata["mcp_permission_ceiling"]) == ("*",)
