@@ -149,3 +149,36 @@ Opção B aprovada pelo responsável. A regra agora é única e vive em `src/cor
 - Contrato de mutações: M4 mede o que o runtime realmente aplica; nova regra **M9** barra booleano de confirmação vindo do cliente (`confirm`, `confirmed_mutation`, `human_gate_confirmed`).
 - Removido o booleano do cliente nas ferramentas registradoras de plano (5), `publish_approved_process_modeling_package_tool` e `update_commercial_offer_contract`.
 - **Ficam como estão, por serem atestação e não autorização:** `strategic_tree_add_contribution` e `submit_process_improvement_analysis_tool` (o booleano atesta que um humano confirmou o conteúdo). Ficam na base do M9 as ferramentas LangChain compartilhadas com o chat (`delete_project`, `delete_project_task(_secure)`, `restore_project_task_secure`, `delete_meeting_secure`) e `request_agent_deployment`, para a sub-onda de cada domínio.
+
+## 9. Quadro da sub-onda 2A (projetos, reuniões e operações) — 2026-10-09
+
+Medido com o contrato de mutações (M1-M9) e a regra de aprovação (seção 8). "Livre" = sem aprovação pela regra D6.
+
+### 9.1 Já publicadas (17): sem pendência de contrato
+Reuniões (16): `create/update_meeting`, `create/update/delete_meeting_topic`, `..._decision`, `..._activity`, `start/finish/schedule_meeting`, `send_meeting_minutes`, `sync_meeting_activities_to_project`; projetos: `create_project_task_secure`. Aprovação aplicada pelo runtime nas 4 que a regra exige (3 exclusões e `send_meeting_minutes`).
+
+### 9.2 Prontas para publicar, sem correção de contrato (3)
+| Ferramenta | Risco | Aprovação | Observação |
+|---|---|---|---|
+| `create_project` | médio | livre | `company_id` explícito, permissão `project.create` |
+| `update_project` | médio | livre | `project_id` ou `project_code`; `changes` livre |
+| `update_project_task_secure` | médio | livre | `task_id` + `changes` |
+
+### 9.3 Publicáveis após correção pequena (3)
+| Ferramenta | Violação | Correção |
+|---|---|---|
+| `request_engineering_suggestion` | `requester_name` vem do cliente (rótulo do solicitante) | derivar o nome da sessão |
+| `log_meeting_discussion` | M3: escrita declarada como risco baixo | elevar para médio |
+| `request_new_app32_integration` | M7: sem escopo alcançável (`mcp_user` ausente) | incluir `mcp_user` nos escopos |
+
+### 9.4 Exigem adaptação antes (5 destrutivas/restauração, com aprovação do runtime)
+`delete_project`, `delete_project_task_secure`, `restore_project_task_secure`, `delete_meeting_secure`, mais a legada `delete_project_task`. Pendências: M9 (`confirm` do cliente; as ferramentas são compartilhadas com o chat, então a solução é um adaptador MCP que oculta o parâmetro e injeta a confirmação só depois da aprovação) e M7 (escopo só `mcp_admin`/`sapiens`; decidir se entram para `mcp:user`). Proposta: **ficam fora da 2A**, entram em 2A-bis.
+
+### 9.5 Não publicar (substituídas ou legadas do chat)
+`create_project_task` (usar a `_secure`), `delete_project_task` (usar a `_secure`), `request_deadline_extension` e `escalate_technical_issue` (sem `company_id`, escopos do chat; substituir por variantes `_secure` ou pelo pedido de sugestão à Engenharia).
+
+### 9.6 Mecanismo de publicação
+As mutações já publicadas são listas fixas no registro. Para as novas, proposta: coorte de escrita no mesmo molde das leituras, com `MCP_VERSUS_WRITE_DOMAINS` (desligada por padrão), registro condicionado à variável e o contrato de mutações como porta: só entra na coorte a ferramenta sem violação na linha de base.
+
+### 9.7 Resultado esperado da 2A
+Publicáveis: 3 prontas + 3 corrigidas = **6 mutações novas** (criar e editar projeto, editar tarefa, pedir sugestão à Engenharia, registrar discussão de reunião, pedir integração). Nenhuma exige aprovação nova. O uso diário que muda: passar a criar e editar projetos e tarefas pelo mcp-versus, além de registrar sugestões e integrações.
