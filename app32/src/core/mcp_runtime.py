@@ -570,11 +570,11 @@ def wrap_mcp_callable(
     """
     @wraps(callback)
     def _wrapped(*args: Any, **kwargs: Any) -> Any:
-        from app import create_app
+        from src.core.mcp_flask_app import get_mcp_flask_app
         from src.intelligence.tool_catalog import catalog
 
         payload = extract_mcp_payload(args, kwargs)
-        app = create_app()
+        app = get_mcp_flask_app()
         with app.app_context():
             tool_name = str(
                 getattr(callback, "__app32_tool_name__", None)

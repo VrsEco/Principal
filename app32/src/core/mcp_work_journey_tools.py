@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Optional
 
-from app import create_app
+from src.core.mcp_flask_app import get_mcp_flask_app
 from models import RoutineJourneyBinding, WorkJourneyAgendaItem, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
 from src.intelligence.mcp_contracts import (
     MCPErrorDetail,
@@ -66,7 +66,7 @@ from services.work_journey_mcp_access_service import ensure_employee_mutation_al
 
 
 def _run(callback, *args, **kwargs) -> Any:
-    app = create_app()
+    app = get_mcp_flask_app()
     with app.app_context():
         return callback(*args, **kwargs)
 

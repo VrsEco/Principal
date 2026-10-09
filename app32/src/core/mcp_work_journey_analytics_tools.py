@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from app import create_app
+from src.core.mcp_flask_app import get_mcp_flask_app
 from models import WorkCalendarEvent
 from schemas.work_journey import WorkCalendarEventCreateSchema, WorkCalendarEventUpdateSchema
 from services.efficiency_collaborators_service import get_efficiency_collaborators, parse_efficiency_period
@@ -24,7 +24,7 @@ from services.work_journey_report_service import build_work_journey_management_r
 
 
 def _run(callback, *args, **kwargs) -> Any:
-    app = create_app()
+    app = get_mcp_flask_app()
     with app.app_context():
         return callback(*args, **kwargs)
 

@@ -315,9 +315,9 @@ def _has_authenticated_mcp_permission(permission: str) -> bool:
 
         if has_app_context():
             return _load()
-        from app import create_app
+        from src.core.mcp_flask_app import get_mcp_flask_app
 
-        app = create_app()
+        app = get_mcp_flask_app()
         with app.app_context():
             return _load()
     except Exception as exc:
@@ -613,9 +613,9 @@ def _get_surface_manifest_in_app_context(
             public_scopes=public_scopes,
         )
 
-    from app import create_app
+    from src.core.mcp_flask_app import get_mcp_flask_app
 
-    app = create_app()
+    app = get_mcp_flask_app()
     with app.app_context():
         return get_surface_manifest(
             surface,
