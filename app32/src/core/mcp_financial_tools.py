@@ -278,12 +278,14 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         review_status: str,
         review_notes: Optional[str] = None,
         completion_status: Optional[str] = None,
-        reviewed_by_user_id: Optional[int] = None,
     ) -> dict:
         """
-        Registra revisão humana de um registro de ingestão financeira.
+        Registra revisão humana de um registro de ingestão financeira (o revisor é o usuário da sessão).
         """
         from services.financial_ingestion_service import FinancialIngestionService
+        from src.core.mcp_session_actor import require_session_user_id
+
+        reviewed_by_user_id = require_session_user_id()
 
         result, error = _run_financial_action(
             FinancialIngestionService.review_record,
