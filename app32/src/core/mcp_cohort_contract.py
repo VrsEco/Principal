@@ -99,6 +99,13 @@ def probe_registered_tools() -> dict[str, ToolProbe]:
                 schema = tool.args_schema.model_json_schema()
         except Exception:
             schema = {}
+        # O que o cliente MCP vê: sem os parâmetros ocultos pelo adaptador (mcp_param_hiding).
+        from src.core.mcp_param_hiding import HIDDEN_CLIENT_PARAMETERS
+
+        for hidden in HIDDEN_CLIENT_PARAMETERS.get(name, ()):
+            (schema.get("properties") or {}).pop(hidden, None)
+            if hidden in (schema.get("required") or []):
+                schema["required"].remove(hidden)
         probes[name] = ToolProbe(schema=schema, source=_source_of(getattr(tool, "func", None)), fn=getattr(tool, "func", None))
     return probes
 

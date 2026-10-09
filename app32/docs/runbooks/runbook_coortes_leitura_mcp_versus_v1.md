@@ -54,3 +54,23 @@ variantes `*_secure`, e as atividades pessoais por `list_my_work_secure`); a age
 (`force_regenerate`); `get_project_task_analytics_report` (`include_deleted`); as 18
 `describe_app32_*` de metadados internos; as ferramentas de deploy e **todas as mutações**
 (onda 2, com gate humano).
+
+## 6. Coortes de ESCRITA (sub-onda 2A)
+
+Mutações novas entram por coorte própria, desligada por padrão. Variável `MCP_VERSUS_WRITE_DOMAINS` no `.env` do servidor (`app32/.env`), lida ao iniciar o MCP:
+
+| Valor | Efeito |
+|---|---|
+| ausente, vazia ou `none` | nenhuma coorte de escrita (padrão) |
+| `projects,operations,meetings` | liga exatamente os assuntos listados |
+
+| Assunto | Ferramentas |
+|---|---|
+| `projects` | `create_project`, `update_project`, `update_project_task_secure` |
+| `operations` | `request_engineering_suggestion`, `request_new_app32_integration` |
+| `meetings` | `log_meeting_discussion` |
+
+- Assunto fora da lista não é listado nem registrado. Mudou o valor: reiniciar o MCP pelo fluxo oficial (deploy `quick` com `restart_mcp=true`).
+- Nenhuma delas exige aprovação (regra D6). Aprovação e identidade seguem o contrato de mutações: só entra na coorte a ferramenta sem violação na linha de base.
+- Reversão imediata: `MCP_VERSUS_WRITE_DOMAINS=none` e reinício.
+- Validação após ligar: reconectar, listar as capacidades e chamar cada ferramenta na empresa de teste. Para escritas, usar registros de teste e conferir o ator gravado (deve ser o usuário da sessão).

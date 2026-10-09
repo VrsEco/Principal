@@ -199,9 +199,6 @@
   "M5",
   "M8"
  ],
- "log_meeting_discussion": [
-  "M3"
- ],
  "log_work_hours": [
   "M1"
  ],
@@ -250,9 +247,6 @@
  ],
  "request_deadline_extension": [
   "M1"
- ],
- "request_new_app32_integration": [
-  "M7"
  ],
  "restore_project_task_secure": [
   "M7",

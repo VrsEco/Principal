@@ -18,7 +18,7 @@ BASELINE = {
     "tools_without_permissions": set(),
     "published_not_in_catalog": set(),
 }
-MAX_SCOPE_COMBINATIONS = 17
+MAX_SCOPE_COMBINATIONS = 16
 # Tools públicas por decisão (sem permissão) precisam ser revisadas ao entrar aqui.
 EXPLICITLY_PUBLIC = {"answer_product_help"}
 

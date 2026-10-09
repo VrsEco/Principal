@@ -12,7 +12,8 @@ from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_to
 from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
 from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES
 from src.core.mcp_payload_guard import guard_tool_callable, limit_mcp_payload
-from src.core import mcp_read_cohorts
+from src.core import mcp_read_cohorts, mcp_write_cohorts
+from src.core.mcp_param_hiding import adapt_for_mcp
 from src.core.mcp_gate_policy import requires_persisted_approval
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
@@ -366,6 +367,7 @@ def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
             or name in PILOT_MEETING_SENSITIVE_TOOL_NAMES
             or name in PILOT_PROJECT_TASK_MUTATION_TOOL_NAMES
             or name in UNIFIED_ROUTINE_READ_TOOL_NAMES
+            or name in mcp_write_cohorts.all_write_cohort_names()
         ):
             scope = "mcp:user"
         elif name in mcp_read_cohorts.all_read_cohort_names():
@@ -403,6 +405,7 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
                 *PILOT_AUDIT_READ_TOOL_NAMES,
                 *_routine_read_names(),
                 *mcp_read_cohorts.enabled_read_cohort_names(),
+                *mcp_write_cohorts.enabled_write_cohort_names(),
             ))
         )
     )
@@ -688,7 +691,7 @@ def _register_tool(mcp: Any, tool: Any, *, policy_surface: str | None = None, li
 
     if hasattr(tool, "func"):
         mcp.tool(name=tool.name, description=tool.description)(
-            _finish(wrap_mcp_callable(tool.func, policy_surface=policy_surface))
+            _finish(wrap_mcp_callable(adapt_for_mcp(tool.name, tool.func), policy_surface=policy_surface))
         )
         return
 
@@ -1087,6 +1090,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
         *PILOT_AUDIT_READ_TOOL_NAMES,
         *_routine_read_names(),
         *mcp_read_cohorts.enabled_read_cohort_names(),
+        *mcp_write_cohorts.enabled_write_cohort_names(),
     )
     mcp = _build_policy_fast_mcp(
         name,
@@ -1152,6 +1156,7 @@ def build_oauth_unified_mcp_server(name: str = "GestaoVersus OAuth MCP") -> Any:
             limit_response_size=True,
         )
     _register_read_cohorts(mcp)
+    _register_write_cohorts(mcp)
     return mcp
 
 
@@ -1179,6 +1184,27 @@ def _register_read_cohorts(mcp: Any) -> None:
             policy_surface=surface,
             limit_response_size=True,
         )
+
+
+def _register_write_cohorts(mcp: Any) -> None:
+    """Registra as coortes de escrita habilitadas em MCP_VERSUS_WRITE_DOMAINS (nada, se ausente)."""
+    names = mcp_write_cohorts.enabled_write_cohort_names()
+    if not names:
+        return
+    tools_by_name = _tool_map()
+    by_surface: dict[str, set[str]] = {}
+    for name in names:
+        capability = catalog.get_tool_capability(name)
+        if capability is None:
+            continue
+        surface = mcp_read_cohorts.policy_surface_for(capability)
+        tool = tools_by_name.get(name)
+        if tool is not None:
+            _register_tool(mcp, tool, policy_surface=surface)
+        else:
+            by_surface.setdefault(surface, set()).add(name)
+    for surface, surface_names in by_surface.items():
+        _register_shared_registrars(mcp, tool_names=surface_names, policy_surface=surface)
 
 
 def build_admin_mcp_server(name: str = "GestaoVersus Admin MCP") -> Any:
