@@ -44,7 +44,7 @@ GATED_VERBS = DESTRUCTIVE_VERBS | {"approve", "publish", "reject"}
 IDEMPOTENT_VERBS = frozenset({"create", "upsert", "generate", "import", "replace", "reconcile", "match"})
 
 IDENTITY_PARAM = re.compile(
-    r"^(user_id|request_id|trace_id|actor\w*|\w*_user_id|approver\w*|created_by\w*|requested_by\w*|reviewer\w*)$"
+    r"^(user_id|request_id|trace_id|actor\w*|\w*_user_id|approver\w*|created_by\w*|requested_by\w*|requester\w*|reviewer\w*)$"
 )
 _COMPANY_PARAMS = ("company_id", "company_ref")
 CONFIRM_PARAM = re.compile(r"^(confirm|confirmed|confirmed_mutation|human_gate_confirmed|confirm_\w+|\w+_confirmed)$")

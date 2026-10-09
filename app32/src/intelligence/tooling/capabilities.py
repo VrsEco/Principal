@@ -877,7 +877,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     "log_meeting_discussion": {
         "domain": "meetings",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
-        "risk": ToolRiskLevel.LOW,
+        "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("meeting.notes.write",),
         "tags": ("notes",),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
@@ -1651,7 +1651,7 @@ _register_mcp_support_capability(
     "request_new_app32_integration",
     domain="operations",
     action="create",
-    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_OPS.value, ToolScope.MCP_ADMIN.value),
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_OPS.value),
     risk=ToolRiskLevel.MEDIUM,
     permissions=("support.escalate",),
     tags=("integration", "backlog"),

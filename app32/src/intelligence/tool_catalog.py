@@ -34,6 +34,7 @@ from src.core.mcp_financial_tools import register_financial_mcp_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_internal_audit_tools import register_internal_audit_mcp_tools
 from src.core.mcp_my_work_tools import register_my_work_mcp_tools
+from src.core.mcp_param_hiding import adapt_for_mcp
 from src.core.mcp_self_service_tools import register_self_service_mcp_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
@@ -195,7 +196,7 @@ class ToolCatalog:
 
         for tool in self.langchain_tools:
             if hasattr(tool, "func"):
-                original_func = tool.func
+                original_func = adapt_for_mcp(tool.name, tool.func)
 
                 @mcp.tool(name=tool.name, description=tool.description)
                 @wraps(original_func)
