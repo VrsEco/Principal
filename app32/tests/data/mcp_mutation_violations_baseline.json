@@ -145,12 +145,6 @@
  "create_whatsapp_status_schedule": [
   "M7"
  ],
- "create_work_journey_absence_request_tool": [
-  "M2"
- ],
- "create_work_journey_transfer_request_tool": [
-  "M2"
- ],
  "delete_commercial_contract": [
   "M2",
   "M7",
@@ -217,9 +211,6 @@
  "import_financial_budget_matrix": [
   "M5",
   "M8"
- ],
- "lock_work_journey_agenda_tool": [
-  "M2"
  ],
  "log_meeting_discussion": [
   "M3"
