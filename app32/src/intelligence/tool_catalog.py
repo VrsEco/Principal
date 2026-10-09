@@ -34,6 +34,7 @@ from src.core.mcp_financial_tools import register_financial_mcp_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_internal_audit_tools import register_internal_audit_mcp_tools
 from src.core.mcp_my_work_tools import register_my_work_mcp_tools
+from src.core.mcp_self_service_tools import register_self_service_mcp_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
 from src.core.mcp_knowledge_tools import register_knowledge_tools
@@ -272,6 +273,7 @@ _supplemental_mcp_tools = (
       for name in STATUS_TOOL_NAMES),
     SimpleNamespace(name="search_organizational_knowledge_secure", description="Busca conhecimento autorizado de uma empresa (company_id explícito), somente leitura."),
     SimpleNamespace(name="answer_organizational_question_secure", description="Responde pergunta organizacional de uma empresa com citações (company_id explícito), somente leitura."),
+    SimpleNamespace(name="update_my_contacts_secure", description="Atualiza WhatsApp e/ou Telegram do próprio usuário autenticado (nunca de outra pessoa)."),
     SimpleNamespace(name="list_my_work_all_companies", description="Lista minhas atividades abertas em todas as empresas com grant ativo, validadas uma a uma; somente leitura."),
     SimpleNamespace(name="list_my_work_secure", description="Lista minhas atividades abertas (projetos e processos) em uma empresa, tenant-safe e somente leitura."),
     SimpleNamespace(name="get_internal_audit_summary", description="Retorna os totais tenant-safe da Auditoria Interna."),
@@ -765,6 +767,7 @@ catalog = ToolCatalog(
         register_incentive_tools,
         register_internal_audit_mcp_tools,
         register_my_work_mcp_tools,
+        register_self_service_mcp_tools,
         register_integration_request_tools,
         register_instruction_registry_tools,
         register_knowledge_tools,

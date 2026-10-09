@@ -427,9 +427,6 @@ def register_incentive_tools(mcp: Any) -> None:
         company_id: int,
         max_gaps: int = 10,
         anonymize: bool = True,
-        user_id: int | None = None,
-        request_id: str | None = None,
-        trace_id: str | None = None,
     ) -> dict[str, Any]:
         """Gera relatório analítico sucinto da Teia com gaps e recomendações baseadas em evidências."""
 
@@ -437,9 +434,7 @@ def register_incentive_tools(mcp: Any) -> None:
         context = _analytics_context(
             operation,
             company_id=company_id,
-            user_id=user_id,
-            request_id=request_id,
-            trace_id=trace_id,
+            user_id=_authenticated_user_id(),
         )
         if company_id <= 0:
             return _error("invalid_company_id", "company_id deve ser um inteiro positivo.", operation=operation, **context)

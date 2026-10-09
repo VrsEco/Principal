@@ -16,7 +16,6 @@ def register_integration_request_tools(mcp: Any) -> None:
     def request_new_app32_integration(
         *,
         company_id: int,
-        requester_user_id: int,
         title: str,
         business_domain: str,
         integration_mode: str,
@@ -31,8 +30,10 @@ def register_integration_request_tools(mcp: Any) -> None:
         provider_contact: str | None = None,
         provider_docs_url: str | None = None,
         notes: str | None = None,
-        requester_name: str | None = None,
     ) -> dict[str, Any]:
+        """Registra um pedido de nova integração; o solicitante é o usuário autenticado da sessão."""
+        from src.core.mcp_session_actor import require_session_user_id
+
         record = IntegrationRequestService.create_request(
             {
                 "title": title,
@@ -51,7 +52,7 @@ def register_integration_request_tools(mcp: Any) -> None:
                 "notes": notes,
             },
             company_id=company_id,
-            requester_user_id=requester_user_id,
-            requester_name=requester_name,
+            requester_user_id=require_session_user_id(),
+            requester_name=None,
         )
         return {"success": True, "request": record.to_dict()}

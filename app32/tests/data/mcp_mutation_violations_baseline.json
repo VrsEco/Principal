@@ -7,11 +7,9 @@
   "M7"
  ],
  "approve_work_journey_absence_request_tool": [
-  "M2",
   "M7"
  ],
  "approve_work_journey_transfer_request_tool": [
-  "M2",
   "M7"
  ],
  "assign_commercial_fiscal_batch": [
@@ -195,7 +193,6 @@
   "M5"
  ],
  "generate_strategic_connection_summary": [
-  "M2",
   "M3"
  ],
  "import_financial_budget_matrix": [
@@ -255,7 +252,6 @@
   "M1"
  ],
  "request_new_app32_integration": [
-  "M2",
   "M7"
  ],
  "restore_project_task_secure": [

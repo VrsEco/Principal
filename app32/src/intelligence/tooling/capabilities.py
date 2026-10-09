@@ -757,6 +757,14 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("finance", "mutation", "settlement", "tenant_safe", "human_gate"),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
+    "update_my_contacts_secure": {
+        "domain": "identity_self_service",
+        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM,
+        "permissions": ("user.contacts.update",),
+        "tags": ("crud", "personal", "tenant_safe", "self_service"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
     "update_user_contacts": {
         "domain": "identity_self_service",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

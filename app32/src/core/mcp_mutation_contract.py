@@ -52,7 +52,20 @@ _BROAD_EXCEPT = re.compile(r"except\s+(Exception|BaseException)\b")
 _PERMISSION_EXCEPT = re.compile(r"except\s+\(?[^:\n]*PermissionError")
 
 # tool -> {codigo: motivo}. Exceções só com revisão do código da tool.
-REVIEWED_MUTATION_EXCEPTIONS: dict[str, dict[str, str]] = {}
+REVIEWED_MUTATION_EXCEPTIONS: dict[str, dict[str, str]] = {
+    "approve_work_journey_absence_request_tool": {
+        "M2": (
+            "`request_id` é o id da solicitação de ausência (a entidade aprovada), não um id de rastreio; o aprovador "
+            "vem da sessão desde o #140 (teste em test_mcp_work_journey_session_actor)."
+        ),
+    },
+    "approve_work_journey_transfer_request_tool": {
+        "M2": (
+            "`request_id` é o id da solicitação de transferência (a entidade aprovada), não um id de rastreio; o aprovador "
+            "vem da sessão desde o #140 (teste em test_mcp_work_journey_session_actor)."
+        ),
+    },
+}
 
 
 def is_mutation(name: str) -> bool:
