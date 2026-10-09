@@ -49,6 +49,29 @@ def get_work_journey_agenda(
     return _serialize(agenda, employee)
 
 
+def read_work_journey_agenda(company_id: int, employee_id: int, anchor: date, scope: str = 'week') -> dict[str, Any]:
+    """Lê o snapshot JÁ materializado da agenda, sem reconstruir, sincronizar nem gravar.
+
+    A leitura de tela reconstrói o snapshot e faz commit a cada chamada (inclusive sem pedir
+    regeneração); esta é a leitura pura usada pelo MCP. Agenda inexistente devolve
+    ``generated=False`` em vez de criá-la.
+    """
+    employee = ensure_employee(company_id, employee_id)
+    agenda = WorkJourneyAgenda.query.filter_by(
+        company_id=company_id,
+        employee_id=employee.id,
+        anchor_date=anchor,
+        scope=_normalize_scope(scope),
+    ).first()
+    if agenda is None:
+        return {
+            'generated': False,
+            'agenda': None,
+            'hint': 'Agenda ainda não gerada para este período. Gere pela tela de Jornada ou pela ferramenta de geração (com aprovação).',
+        }
+    return {'generated': True, 'agenda': _serialize(agenda, employee)}
+
+
 def lock_work_journey_agenda(company_id: int, employee_id: int, anchor: date, scope: str, user_id: int | None = None) -> dict[str, Any]:
     employee = ensure_employee(company_id, employee_id)
     agenda = _get_or_build_agenda(company_id, employee.id, anchor, _normalize_scope(scope), False)
