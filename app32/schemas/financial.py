@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
@@ -1244,6 +1244,7 @@ class FinancialEntryCreateInput(BaseModel):
     created_by_employee_id: Optional[int] = None
     created_by_agent: Optional[str] = Field(None, max_length=50)
     approved_by_user_id: Optional[int] = None
+    approved_at: Optional[datetime] = None
     notes: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
