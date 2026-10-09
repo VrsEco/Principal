@@ -43,6 +43,13 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         except (TypeError, ValueError):
             return None
 
+    def _require_actor_user_id() -> int:
+        """Ator da escrita = usuário da sessão autenticada; nunca um id informado pelo cliente."""
+        user_id = _authenticated_actor_user_id()
+        if not isinstance(user_id, int) or user_id <= 0:
+            raise PermissionError("Usuário autenticado não identificado para a operação MCP.")
+        return user_id
+
     def _normalize_counterparty_update_payload(payload: dict | None) -> dict:
         normalized = dict(payload or {})
         normalized.pop("is_customer", None)
@@ -443,8 +450,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(**result)
 
     @mcp.tool()
-    def create_commercial_contract(company_id: int, payload: dict, user_id: Optional[int] = None) -> dict:
+    def create_commercial_contract(company_id: int, payload: dict) -> dict:
         """Cria um contrato comercial simplificado."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         try:
@@ -454,8 +462,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(item=contract.to_dict())
 
     @mcp.tool()
-    def update_commercial_contract_general(company_id: int, contract_id: int, payload: dict, user_id: Optional[int] = None) -> dict:
+    def update_commercial_contract_general(company_id: int, contract_id: int, payload: dict) -> dict:
         """Atualiza a aba Geral/Observações do contrato comercial."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         def _callback():
@@ -474,10 +483,10 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
     def suspend_commercial_contract(
         company_id: int,
         contract_id: int,
-        user_id: Optional[int] = None,
         reason: Optional[str] = None,
     ) -> dict:
         """Suspende um contrato comercial com trilha de motivo no lifecycle."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         def _callback():
@@ -496,11 +505,11 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
     def close_commercial_contract(
         company_id: int,
         contract_id: int,
-        user_id: Optional[int] = None,
         reason: Optional[str] = None,
         termination_date: Optional[str] = None,
     ) -> dict:
         """Encerra um contrato comercial e registra motivo/data de término."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         def _callback():
@@ -525,10 +534,10 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
     def delete_commercial_contract(
         company_id: int,
         contract_id: int,
-        user_id: Optional[int] = None,
         reason: Optional[str] = None,
     ) -> dict:
         """Exclui logicamente um contrato comercial com auditoria de lifecycle."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         def _callback():
@@ -544,8 +553,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(item=contract.to_dict())
 
     @mcp.tool()
-    def upsert_commercial_contract_financial_terms(company_id: int, contract_id: int, payload: dict, user_id: Optional[int] = None) -> dict:
+    def upsert_commercial_contract_financial_terms(company_id: int, contract_id: int, payload: dict) -> dict:
         """Atualiza as regras financeiras do contrato comercial."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         def _callback():
@@ -561,8 +571,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(item=record.to_dict())
 
     @mcp.tool()
-    def upsert_commercial_contract_fiscal_terms(company_id: int, contract_id: int, payload: dict, user_id: Optional[int] = None) -> dict:
+    def upsert_commercial_contract_fiscal_terms(company_id: int, contract_id: int, payload: dict) -> dict:
         """Atualiza os dados fiscais/NFS-e do contrato comercial."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         def _callback():
@@ -688,8 +699,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(items=preview_rows, count=len(preview_rows))
 
     @mcp.tool()
-    def generate_commercial_billing_batch(company_id: int, review_payloads: list[dict], user_id: Optional[int] = None) -> dict:
+    def generate_commercial_billing_batch(company_id: int, review_payloads: list[dict]) -> dict:
         """Gera um lote de faturamento comercial nativo."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         result = _run_action(
@@ -735,8 +747,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         )
 
     @mcp.tool()
-    def generate_commercial_financial_titles_for_billing(company_id: int, billing_id: int, user_id: Optional[int] = None) -> dict:
+    def generate_commercial_financial_titles_for_billing(company_id: int, billing_id: int) -> dict:
         """Gera os títulos financeiros satélites de um faturamento comercial já criado."""
+        user_id = _require_actor_user_id()
         from models.contracts import ContractNativeBilling
         from services.contract_financial_service import ContractFinancialService
 
@@ -764,8 +777,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(**(result or {}))
 
     @mcp.tool()
-    def cancel_commercial_billing(company_id: int, billing_id: int, user_id: Optional[int] = None, reason: Optional[str] = None) -> dict:
+    def cancel_commercial_billing(company_id: int, billing_id: int, reason: Optional[str] = None) -> dict:
         """Cancela um faturamento comercial gerado."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         try:
@@ -813,8 +827,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         )
 
     @mcp.tool()
-    def update_commercial_fiscal_entry(company_id: int, billing_id: int, payload: dict, user_id: Optional[int] = None) -> dict:
+    def update_commercial_fiscal_entry(company_id: int, billing_id: int, payload: dict) -> dict:
         """Atualiza os dados fiscais editáveis de um faturamento."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         try:
@@ -830,8 +845,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(item=billing.to_dict())
 
     @mcp.tool()
-    def assign_commercial_fiscal_batch(company_id: int, billing_ids: list[int], batch_code: Optional[str] = None, user_id: Optional[int] = None) -> dict:
+    def assign_commercial_fiscal_batch(company_id: int, billing_ids: list[int], batch_code: Optional[str] = None) -> dict:
         """Inclui registros fiscais em um lote sequencial ou existente."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         try:
@@ -847,8 +863,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(**result)
 
     @mcp.tool()
-    def remove_commercial_fiscal_batch(company_id: int, billing_ids: list[int], user_id: Optional[int] = None) -> dict:
+    def remove_commercial_fiscal_batch(company_id: int, billing_ids: list[int]) -> dict:
         """Remove registros fiscais do lote atual."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         try:
@@ -863,8 +880,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(**result)
 
     @mcp.tool()
-    def update_commercial_fiscal_status(company_id: int, billing_ids: list[int], status: str, payload: Optional[dict] = None, user_id: Optional[int] = None) -> dict:
+    def update_commercial_fiscal_status(company_id: int, billing_ids: list[int], status: str, payload: Optional[dict] = None) -> dict:
         """Marca notas fiscais como pendentes, emitidas, canceladas ou excluídas."""
+        user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
         try:
@@ -881,8 +899,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(**result)
 
     @mcp.tool()
-    def export_commercial_fiscal_integration_spreadsheet(company_id: int, billing_ids: list[int], user_id: Optional[int] = None) -> dict:
+    def export_commercial_fiscal_integration_spreadsheet(company_id: int, billing_ids: list[int]) -> dict:
         """Gera a planilha XLSX de integração de NFS-e da frente comercial."""
+        user_id = _require_actor_user_id()
         import base64
         from services.contracts_service import ContractService
 
