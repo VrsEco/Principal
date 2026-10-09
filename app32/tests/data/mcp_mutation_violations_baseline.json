@@ -36,11 +36,9 @@
   "M7"
  ],
  "correct_plan_global_okrs_tool": [
-  "M2",
   "M8"
  ],
  "create_and_link_plan_global_okrs_tool": [
-  "M2",
   "M8"
  ],
  "create_commercial_catalog_structure_item": [
@@ -135,11 +133,9 @@
   "M1"
  ],
  "create_sector_okr_structure_tool": [
-  "M2",
   "M8"
  ],
  "create_single_plan_driver_tool": [
-  "M2",
   "M8"
  ],
  "create_whatsapp_status_schedule": [
@@ -278,11 +274,7 @@
  "review_financial_ingestion_record": [
   "M2"
  ],
- "review_strategy_maturation_item_tool": [
-  "M2"
- ],
  "sync_plan_participants_tool": [
-  "M2",
   "M8"
  ],
  "toggle_commercial_catalog_structure_item": [
@@ -350,23 +342,9 @@
   "M5"
  ],
  "upsert_indicator_line_of_sight_tool": [
-  "M2",
   "M8"
- ],
- "upsert_organizational_identity_tool": [
-  "M2"
- ],
- "upsert_process_strategic_profile_tool": [
-  "M2"
  ],
  "upsert_process_strategy_alignment_link_tool": [
-  "M2",
   "M8"
- ],
- "upsert_process_strategy_profile_tool": [
-  "M2"
- ],
- "upsert_strategy_identity_tool": [
-  "M2"
  ]
 }

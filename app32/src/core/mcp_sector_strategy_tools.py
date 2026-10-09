@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from services.sector_strategy_structure_service import SectorStrategyStructureService
-from src.core.mcp_http_auth import get_http_actor_role, get_http_request_context
+from src.core.mcp_http_auth import get_http_actor_role
+from src.core.mcp_session_actor import session_user_id
 from src.intelligence.mcp_contracts import MCPErrorDetail, MCPErrorEnvelope, MCPResponseMeta, MCPSuccessEnvelope
 
 
@@ -28,19 +29,14 @@ def register_sector_strategy_tools(mcp: Any) -> None:
         company_id: int,
         payload: dict[str, Any],
         confirmed_mutation: bool = False,
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Cadastra atomicamente OKRs setoriais, KRs propostos e iniciativas vinculadas."""
-        context = dict(get_http_request_context() or {})
-        authenticated_user_id = context.get("user_id")
-        if authenticated_user_id not in (None, ""):
-            authenticated_user_id = int(authenticated_user_id)
-            if user_id not in (None, authenticated_user_id):
-                return MCPErrorEnvelope(
-                    error=MCPErrorDetail(code="sector_structure_forbidden", message="user_id diverge do usuário autenticado."),
-                    meta=_meta(company_id=company_id, user_id=authenticated_user_id),
-                ).model_dump(mode="json")
-            user_id = authenticated_user_id
+        user_id = session_user_id()
+        if user_id is None:
+            return MCPErrorEnvelope(
+                error=MCPErrorDetail(code="sector_structure_forbidden", message="Usuário autenticado não identificado."),
+                meta=_meta(company_id=company_id, user_id=None),
+            ).model_dump(mode="json")
         try:
             data = SectorStrategyStructureService.execute(
                 company_id=company_id,

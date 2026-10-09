@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from services.plan_global_okr_mcp_service import PlanGlobalOKRMCPService
-from src.core.mcp_http_auth import get_http_actor_role, get_http_request_context
+from src.core.mcp_http_auth import get_http_actor_role
+from src.core.mcp_session_actor import session_user_id
 from src.intelligence.mcp_contracts import MCPErrorDetail, MCPErrorEnvelope, MCPResponseMeta, MCPSuccessEnvelope
 
 
@@ -29,19 +30,14 @@ def register_plan_global_okr_tools(mcp: Any) -> None:
         plan_id: int,
         okrs: list[dict[str, Any]],
         confirmed_mutation: bool = False,
-        user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Cria dois OKRs Globais e os vincula aos OKRs de Área confirmados do tenant."""
-        context = dict(get_http_request_context() or {})
-        authenticated_user_id = context.get("user_id")
-        if authenticated_user_id not in (None, ""):
-            authenticated_user_id = int(authenticated_user_id)
-            if user_id not in (None, authenticated_user_id):
-                return MCPErrorEnvelope(
-                    error=MCPErrorDetail(code="plan_global_okrs_forbidden", message="user_id diverge do usuário autenticado."),
-                    meta=_meta(company_id, authenticated_user_id),
-                ).model_dump(mode="json")
-            user_id = authenticated_user_id
+        user_id = session_user_id()
+        if user_id is None:
+            return MCPErrorEnvelope(
+                error=MCPErrorDetail(code="plan_global_okrs_forbidden", message="Usuário autenticado não identificado."),
+                meta=_meta(company_id, None),
+            ).model_dump(mode="json")
         try:
             data = PlanGlobalOKRMCPService.create_and_link(
                 company_id=company_id,
