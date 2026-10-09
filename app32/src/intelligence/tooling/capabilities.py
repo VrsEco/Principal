@@ -801,6 +801,8 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     "delete_meeting_topic": {
         "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "human_gate": True,
+        "human_gate_reason": "Remover um tema apaga também as decisões ligadas a ele no registro da reunião; exige confirmação humana.",
         "tags": ("crud", "topic", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "create_meeting_decision": {
@@ -816,6 +818,8 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     "delete_meeting_decision": {
         "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "human_gate": True,
+        "human_gate_reason": "Remover uma decisão altera o registro oficial da reunião; exige confirmação humana.",
         "tags": ("crud", "decision", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "create_meeting_activity": {
@@ -831,6 +835,8 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     "delete_meeting_activity": {
         "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "human_gate": True,
+        "human_gate_reason": "Remover uma ação da reunião altera o plano de ação registrado; exige confirmação humana.",
         "tags": ("crud", "activity", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "sync_meeting_activities_to_project": {
@@ -2099,7 +2105,11 @@ for _status_name in _STATUS_TOOL_NAMES:
     _status_gated = _status_name.startswith(('publish_', 'resume_', 'confirm_', 'configure_', 'register_'))
     _PRESET_CAPABILITIES[_status_name] = {
         'domain': 'whatsapp_status', 'scopes': (ToolScope.MCP_ADMIN.value,),
-        'risk': ToolRiskLevel.HIGH if _status_gated else ToolRiskLevel.LOW,
+        # Só consulta/verificação é risco baixo; agendar, editar e pausar escrevem (create/update nascem
+        # desativadas ou pausadas e pausar é parada de emergência, por isso sem gate; retomar tem gate).
+        'risk': ToolRiskLevel.HIGH if _status_gated else (
+            ToolRiskLevel.LOW if _status_name.startswith(('list_', 'get_', 'verify_')) else ToolRiskLevel.MEDIUM
+        ),
         'permissions': (f'whatsapp_status.{_status_permission}',),
         'human_gate': _status_gated,
         'human_gate_reason': 'Publicação externa ou conferência humana persistida.' if _status_gated else None,

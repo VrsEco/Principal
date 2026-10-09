@@ -143,7 +143,6 @@
   "M8"
  ],
  "create_whatsapp_status_schedule": [
-  "M3",
   "M7"
  ],
  "create_work_journey_absence_request_tool": [
@@ -161,17 +160,8 @@
   "M7",
   "M8"
  ],
- "delete_meeting_activity": [
-  "M4"
- ],
- "delete_meeting_decision": [
-  "M4"
- ],
  "delete_meeting_secure": [
   "M7"
- ],
- "delete_meeting_topic": [
-  "M4"
  ],
  "delete_process_strategy_alignment_link_tool": [
   "M7",
@@ -241,7 +231,6 @@
   "M5"
  ],
  "pause_whatsapp_status_schedule": [
-  "M3",
   "M7"
  ],
  "process_financial_import_batch": [
@@ -349,7 +338,6 @@
   "M2"
  ],
  "update_whatsapp_status_schedule": [
-  "M3",
   "M7"
  ],
  "upsert_commercial_contract_financial_terms": [

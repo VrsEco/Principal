@@ -140,3 +140,28 @@ def test_baseline_only_shrinks(current, baseline):
 def test_every_published_mutation_is_known_to_the_report():
     report = survey_mutations(probe_registered_tools(), list(catalog.iter_capabilities()))
     assert len(report) >= 150, "o relatório deve cobrir as escritas do catálogo"
+
+
+# ---- ferramentas JÁ PUBLICADAS corrigidas (D7) -------------------------------------------------
+@pytest.mark.parametrize("name", ["delete_meeting_topic", "delete_meeting_decision", "delete_meeting_activity"])
+def test_meeting_deletions_require_a_human_gate(name):
+    capability = catalog.get_tool_capability(name)
+    assert capability.human_gate is True and capability.human_gate_reason
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["create_whatsapp_status_schedule", "update_whatsapp_status_schedule", "pause_whatsapp_status_schedule"],
+)
+def test_whatsapp_schedule_writes_are_not_declared_low_risk(name):
+    capability = catalog.get_tool_capability(name)
+    assert getattr(capability.risk, "value", capability.risk) == "medium"
+    # criar nasce desativada, editar pausa e pausar é parada de emergência: não levam gate; retomar leva.
+    assert capability.human_gate is False
+
+
+def test_resuming_a_whatsapp_schedule_keeps_its_gate_and_reads_stay_low():
+    resume = catalog.get_tool_capability("resume_whatsapp_status_schedule")
+    assert resume.human_gate is True and getattr(resume.risk, "value", resume.risk) == "high"
+    for name in ("list_whatsapp_status_schedules", "verify_whatsapp_status_account"):
+        assert getattr(catalog.get_tool_capability(name).risk, "value", None) == "low"
