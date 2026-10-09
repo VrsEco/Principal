@@ -97,7 +97,6 @@ READ_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "list_financial_classification_memories",
         "list_financial_classification_pending",
         "list_financial_classification_suggestions",
-        "list_financial_closings",
         "list_financial_domain_enablements",
         "list_financial_import_batches",
         "list_financial_ingestion_records",

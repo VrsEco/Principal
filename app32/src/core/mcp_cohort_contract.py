@@ -48,6 +48,7 @@ _COMPANY_PARAMS = ("company_id", "company_ref")
 _IDENTIFIER = re.compile(r'\b([A-Za-z_]\w+)\b')
 _FROM_IMPORT = re.compile(r'from\s+([\w.]+)\s+import\s+\(?([\w,\s]+)\)?')
 _SERVICE_PREFIXES = ("services", "src.core", "src.intelligence")
+_MODULE_ROOTS = ("services", "models", "src", "api", "utils")
 
 # Escritas INDIRETAS revisadas: tool -> {"modulo.funcao": motivo}. Uma leitura que chama um serviço
 # que grava só entra com revisão explícita (a varredura do código da própria tool não as vê).
@@ -156,6 +157,24 @@ def indirect_write_hits(fn: Any, *, depth: int = 2, prefixes: tuple[str, ...] | 
     return sorted(hits)
 
 
+def missing_imported_modules(source: str | None) -> list[str]:
+    """Módulos do próprio app importados pelo código da tool que não existem (falha só em runtime)."""
+    import importlib.util
+
+    missing: list[str] = []
+    for match in re.finditer(r"^\s*from\s+([\w.]+)\s+import\s", source or "", re.MULTILINE):
+        module = match.group(1)
+        if module.split(".")[0] not in _MODULE_ROOTS:
+            continue
+        try:
+            found = importlib.util.find_spec(module) is not None
+        except (ImportError, ValueError):
+            found = False
+        if not found and module not in missing:
+            missing.append(module)
+    return missing
+
+
 def audit_read_tool(name: str, *, capability: Any, probe: ToolProbe | None) -> list[str]:
     """Devolve as violações do contrato (lista vazia = pode entrar numa coorte de leitura)."""
     problems: list[str] = []
@@ -189,6 +208,9 @@ def audit_read_tool(name: str, *, capability: Any, probe: ToolProbe | None) -> l
     tags = set(getattr(capability, "tags", ()) or ())
     if not tuple(getattr(capability, "permissions", ()) or ()) and "no_permission_required" not in tags:
         problems.append(f"{name}: sem permissão declarada")
+
+    for module in missing_imported_modules(probe.source):
+        problems.append(f"{name}: importa módulo inexistente '{module}' (a ferramenta falharia em toda chamada)")
 
     if probe.source and _WRITE_IN_SOURCE.search(probe.source):
         problems.append(f"{name}: o código da tool contém operação de escrita")
