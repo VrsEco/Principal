@@ -146,23 +146,24 @@
   "M8"
  ],
  "delete_meeting_secure": [
-  "M7"
+  "M7",
+  "M9"
  ],
  "delete_process_strategy_alignment_link_tool": [
   "M7",
   "M8"
  ],
  "delete_project": [
-  "M7"
+  "M7",
+  "M9"
  ],
  "delete_project_task": [
-  "M7"
+  "M7",
+  "M9"
  ],
  "delete_project_task_secure": [
-  "M7"
- ],
- "delete_work_calendar_event_tool": [
-  "M4"
+  "M7",
+  "M9"
  ],
  "delete_work_journey_block_tool": [
   "M7"
@@ -239,7 +240,6 @@
   "M7"
  ],
  "remove_commercial_fiscal_batch": [
-  "M4",
   "M8"
  ],
  "replace_financial_allocations": [
@@ -248,7 +248,8 @@
  ],
  "request_agent_deployment": [
   "M1",
-  "M7"
+  "M7",
+  "M9"
  ],
  "request_deadline_extension": [
   "M1"
@@ -258,7 +259,8 @@
   "M7"
  ],
  "restore_project_task_secure": [
-  "M7"
+  "M7",
+  "M9"
  ],
  "resume_whatsapp_status_schedule": [
   "M7"

@@ -15,7 +15,8 @@ class _FakeMCP:
         return decorator
 
 
-def test_sector_structure_tool_requires_human_confirmation(monkeypatch):
+def test_sector_structure_tool_no_longer_trusts_a_client_confirmation(monkeypatch):
+    """D6: a aprovação, quando exigida, é do runtime. O cliente não pode afirmar nem negar confirmação."""
     monkeypatch.setattr(
         "src.core.mcp_session_actor.get_http_request_context",
         lambda: {"user_id": 44, "company_id": 13, "accessible_company_ids": [13]},
@@ -23,15 +24,9 @@ def test_sector_structure_tool_requires_human_confirmation(monkeypatch):
     mcp = _FakeMCP()
     sector_tools.register_sector_strategy_tools(mcp)
 
-    result = mcp.registered["create_sector_okr_structure_tool"](
-        company_id=13,
-        payload={"okrs": []},
-        confirmed_mutation=False,
-    )
+    import inspect
 
-    assert result["success"] is False
-    assert result["error"]["code"] == "sector_structure_forbidden"
-    assert result["meta"]["human_gate_required"] is True
+    assert "confirmed_mutation" not in inspect.signature(mcp.registered["create_sector_okr_structure_tool"]).parameters
 
 
 def test_sector_structure_tool_delegates_authenticated_tenant(monkeypatch):
@@ -52,7 +47,6 @@ def test_sector_structure_tool_delegates_authenticated_tenant(monkeypatch):
     result = mcp.registered["create_sector_okr_structure_tool"](
         company_id=13,
         payload={"okrs": [{"objective": "Teste"}]},
-        confirmed_mutation=True,
     )
 
     assert result["success"] is True

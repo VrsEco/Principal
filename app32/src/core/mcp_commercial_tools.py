@@ -318,14 +318,10 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         company_id: int,
         item_id: int,
         commercial_contract: dict,
-        human_gate_confirmed: bool,
         enforce_on_activation: bool = True,
     ) -> dict:
-        """Atualiza o contrato operacional versionado da oferta com gate humano explícito."""
+        """Atualiza o contrato operacional versionado da oferta (edição: RBAC por empresa e auditoria, sem aprovação)."""
         from services.contracts_catalog_service import ContractsCatalogService
-
-        if not human_gate_confirmed:
-            return _fail("Confirmação humana explícita é obrigatória para alterar o contrato operacional da oferta.")
 
         def _callback():
             item = ContractsCatalogService.get_item(company_id, item_id)

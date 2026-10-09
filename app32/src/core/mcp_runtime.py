@@ -16,6 +16,7 @@ from src.intelligence.tool_context import (
     set_sapiens_context,
 )
 from src.intelligence.tooling.capabilities import infer_tool_action
+from src.core.mcp_gate_policy import requires_persisted_approval
 from src.core.mcp_http_auth import get_http_request_context
 
 
@@ -630,7 +631,15 @@ def wrap_mcp_callable(
             if not initial_decision.allowed:
                 _emit_mcp_policy_audit(policy_source, policy_request, payload,
                                        allowed=False, reason=initial_decision.reason)
-            if _policy_requires_persisted_approval(initial_decision):
+            # Decisão D6: o flag do catálogo não basta. As classes de mutação definidas em
+            # mcp_gate_policy exigem aprovação humana persistida mesmo quando a política aprovaria.
+            rule_requires_approval = bool(initial_decision.allowed) and requires_persisted_approval(tool_name, capability)
+            approval_reason = (
+                "aprovação humana exigida para esta classe de mutação (destrutiva, aprovação, envio ou financeira)"
+                if rule_requires_approval
+                else initial_decision.reason
+            )
+            if rule_requires_approval or _policy_requires_persisted_approval(initial_decision):
                 from services.tool_approval_service import (
                     ToolApprovalBinding,
                     ToolApprovalBindingError,
@@ -657,7 +666,7 @@ def wrap_mcp_callable(
                     try:
                         approval_request = tool_approval_request_service.request(
                             approval_binding,
-                            reason=initial_decision.reason,
+                            reason=approval_reason,
                             channel=execution_context.channel,
                             thread_id=execution_context.thread_id,
                         )

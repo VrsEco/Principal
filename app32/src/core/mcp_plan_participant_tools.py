@@ -29,7 +29,6 @@ def register_plan_participant_tools(mcp: Any) -> None:
         company_id: int,
         plan_id: int,
         owner_name: str,
-        confirmed_mutation: bool = False,
     ) -> dict[str, Any]:
         """Inclui todos os colaboradores ativos do tenant no plano e define um owner oficial."""
         user_id = session_user_id()
@@ -43,7 +42,7 @@ def register_plan_participant_tools(mcp: Any) -> None:
                 company_id=company_id,
                 plan_id=plan_id,
                 owner_name=owner_name,
-                confirmed_mutation=confirmed_mutation,
+                confirmed_mutation=True,  # a aprovação, quando exigida, é do runtime (mcp_gate_policy), não do cliente
                 user_id=user_id,
             )
             return MCPSuccessEnvelope[Any](data=data, meta=_meta(company_id, user_id)).model_dump(mode="json")

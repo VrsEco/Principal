@@ -28,7 +28,6 @@ def register_sector_strategy_tools(mcp: Any) -> None:
     def create_sector_okr_structure_tool(
         company_id: int,
         payload: dict[str, Any],
-        confirmed_mutation: bool = False,
     ) -> dict[str, Any]:
         """Cadastra atomicamente OKRs setoriais, KRs propostos e iniciativas vinculadas."""
         user_id = session_user_id()
@@ -41,7 +40,7 @@ def register_sector_strategy_tools(mcp: Any) -> None:
             data = SectorStrategyStructureService.execute(
                 company_id=company_id,
                 payload=payload,
-                confirmed_mutation=confirmed_mutation,
+                confirmed_mutation=True,  # a aprovação, quando exigida, é do runtime (mcp_gate_policy), não do cliente
                 user_id=user_id,
             )
             return MCPSuccessEnvelope[Any](data=data, meta=_meta(company_id=company_id, user_id=user_id)).model_dump(mode="json")

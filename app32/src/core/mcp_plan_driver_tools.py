@@ -30,7 +30,6 @@ def register_plan_driver_tools(mcp: Any) -> None:
         plan_id: int,
         description: str,
         review_date: Optional[str] = None,
-        confirmed_mutation: bool = False,
     ) -> dict[str, Any]:
         """Cadastra o único direcionador confirmado de um planejamento growth."""
         user_id = session_user_id()
@@ -45,7 +44,7 @@ def register_plan_driver_tools(mcp: Any) -> None:
                 plan_id=plan_id,
                 description=description,
                 review_date=review_date,
-                confirmed_mutation=confirmed_mutation,
+                confirmed_mutation=True,  # a aprovação, quando exigida, é do runtime (mcp_gate_policy), não do cliente
                 user_id=user_id,
             )
             return MCPSuccessEnvelope[Any](data=data, meta=_meta(company_id, user_id)).model_dump(mode="json")

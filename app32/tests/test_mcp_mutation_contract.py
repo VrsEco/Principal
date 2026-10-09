@@ -64,13 +64,22 @@ def test_m3_write_verb_cannot_be_low_risk():
 
 
 @pytest.mark.parametrize("name", ["delete_thing", "remove_thing", "cancel_thing", "approve_thing", "publish_thing"])
-def test_m4_destructive_approval_and_publication_need_a_gate(name):
-    assert "M4" in _codes(name, _cap(name), _probe("company_id"))
+def test_m4_is_satisfied_when_the_runtime_enforces_approval_for_the_class(name):
+    """Decisão D6: o gate vale pelo que o runtime aplica (mcp_gate_policy), não pelo flag do catálogo."""
+    assert "M4" not in _codes(name, _cap(name), _probe("company_id"))
     assert "M4" not in _codes(name, _cap(name, gate=True), _probe("company_id"))
 
 
-def test_m4_high_risk_needs_a_gate():
+def test_m4_flags_high_risk_that_the_runtime_would_not_gate(monkeypatch):
+    monkeypatch.setattr("src.core.mcp_mutation_contract.requires_persisted_approval", lambda name, capability=None: False)
     assert "M4" in _codes("update_thing", _cap(risk="high"), _probe("company_id"))
+    assert "M4" in _codes("delete_thing", _cap("delete_thing"), _probe("company_id"))
+
+
+@pytest.mark.parametrize("param", ["confirm", "confirmed_mutation", "human_gate_confirmed"])
+def test_m9_client_supplied_confirmation_is_rejected(param):
+    assert "M9" in _codes("update_thing", _cap(), _probe("company_id", param))
+    assert "M9" not in _codes("update_thing", _cap(), _probe("company_id", "payload"))
 
 
 def test_m5_financial_creation_needs_idempotency():
