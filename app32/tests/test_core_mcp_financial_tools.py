@@ -379,3 +379,137 @@ def test_create_financial_settlement_requires_bank_account():
         "success": False,
         "error": "bank_account_id é obrigatório para registrar uma baixa bancária vinculada.",
     }
+
+
+def _install_create_entry_fakes(monkeypatch, *, gate_metadata, approval_action):
+    """Instala fakes para exercitar create_financial_entry sem banco."""
+    from datetime import datetime
+
+    captured = {}
+
+    class _FakeAppContext:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class _FakeApp:
+        def app_context(self):
+            return _FakeAppContext()
+
+    fake_app_module = types.ModuleType("app")
+    fake_app_module.create_app = lambda: _FakeApp()
+    monkeypatch.setitem(sys.modules, "app", fake_app_module)
+
+    class _FakeFinancialService:
+        @staticmethod
+        def create_entry(*, payload):
+            captured["payload"] = payload
+            return object(), None
+
+        @staticmethod
+        def serialize_entry(entry, *, include_children=True):
+            return {"id": 1}
+
+    fake_service_module = types.ModuleType("services.financial_service")
+    fake_service_module.FinancialService = _FakeFinancialService
+    monkeypatch.setitem(sys.modules, "services.financial_service", fake_service_module)
+
+    class _FakeQuery:
+        def filter_by(self, **kwargs):
+            captured["agent_action_filter"] = kwargs
+            return self
+
+        def first(self):
+            return approval_action
+
+    class _FakeAgentAction:
+        query = _FakeQuery()
+
+    fake_agent_action_module = types.ModuleType("models.agent_action")
+    fake_agent_action_module.AgentAction = _FakeAgentAction
+    monkeypatch.setitem(sys.modules, "models.agent_action", fake_agent_action_module)
+
+    fake_context = types.SimpleNamespace(
+        user_id=14, company_id=10, employee_id=None, channel="mcp_http", thread_id=None, metadata=gate_metadata
+    )
+    monkeypatch.setattr("src.intelligence.tool_context.get_sapiens_context", lambda: fake_context)
+    return captured, datetime
+
+
+def test_create_financial_entry_posts_entry_when_human_approval_was_consumed(monkeypatch):
+    from datetime import datetime
+
+    approved_at = datetime(2026, 10, 9, 14, 26, 49)
+    action = types.SimpleNamespace(
+        id=909,
+        status="executed",
+        resolved_at=approved_at,
+        payload={"approved_by_user_id": 14},
+    )
+    captured, _ = _install_create_entry_fakes(
+        monkeypatch,
+        gate_metadata={"approved_human_gate_request_id": 909},
+        approval_action=action,
+    )
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_entry"](
+        10,
+        {
+            "entry_code": "LCT-1",
+            # Tentativa de forjar aprovação pelo cliente deve ser ignorada.
+            "approved_by_user_id": 999,
+            "approved_at": "2000-01-01T00:00:00",
+        },
+    )
+
+    assert response["success"] is True
+    payload = captured["payload"]
+    assert payload["status"] == "posted"
+    assert payload["review_status"] == "approved"
+    assert payload["approved_by_user_id"] == 14
+    assert payload["approved_at"] == approved_at
+    assert payload["metadata_json"]["human_approval_request_id"] == 909
+    assert captured["agent_action_filter"]["company_id"] == 10
+
+
+def test_create_financial_entry_stays_draft_without_human_approval(monkeypatch):
+    captured, _ = _install_create_entry_fakes(
+        monkeypatch,
+        gate_metadata={},
+        approval_action=None,
+    )
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_entry"](
+        10,
+        {"entry_code": "LCT-2", "approved_by_user_id": 999},
+    )
+
+    assert response["success"] is True
+    payload = captured["payload"]
+    assert "status" not in payload
+    assert "review_status" not in payload
+    assert "approved_by_user_id" not in payload
+    assert "approved_at" not in payload
+    assert "agent_action_filter" not in captured
+
+
+def test_create_financial_entry_ignores_approval_from_other_company_or_unapproved_status(monkeypatch):
+    action = types.SimpleNamespace(id=5, status="pending", resolved_at=None, payload={"approved_by_user_id": 14})
+    captured, _ = _install_create_entry_fakes(
+        monkeypatch,
+        gate_metadata={"approved_human_gate_request_id": 5},
+        approval_action=action,
+    )
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    mcp.registered["create_financial_entry"](10, {"entry_code": "LCT-3"})
+
+    assert "status" not in captured["payload"]
+    assert "approved_by_user_id" not in captured["payload"]

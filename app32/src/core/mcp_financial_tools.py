@@ -72,6 +72,40 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         normalized["metadata_json"] = metadata
         return normalized
 
+    def _resolve_consumed_human_approval(company_id: int) -> dict | None:
+        """Lê a aprovação humana consumida pelo runtime para esta chamada.
+
+        O id vem de ``metadata`` confiável, preenchido só depois de
+        ``ToolApprovalService`` consumir um ``AgentAction`` aprovado e vinculado
+        a principal, tenant, tool e digest do payload. Nada vindo do cliente
+        é usado para decidir o aprovador ou a data.
+        """
+        from src.intelligence.tool_context import get_sapiens_context
+
+        metadata = get_sapiens_context().metadata or {}
+        raw_request_id = metadata.get("approved_human_gate_request_id") if isinstance(metadata, dict) else None
+        if isinstance(raw_request_id, bool) or not isinstance(raw_request_id, int) or raw_request_id <= 0:
+            return None
+
+        from models.agent_action import AgentAction
+
+        action = AgentAction.query.filter_by(
+            id=raw_request_id,
+            company_id=company_id,
+            type="workflow_approval_request",
+        ).first()
+        if action is None or action.status not in {"approved", "executed"}:
+            return None
+        approval_payload = dict(action.payload or {})
+        approver_user_id = approval_payload.get("approved_by_user_id")
+        if isinstance(approver_user_id, bool) or not isinstance(approver_user_id, int):
+            return None
+        return {
+            "request_id": int(action.id),
+            "approved_by_user_id": approver_user_id,
+            "approved_at": action.resolved_at,
+        }
+
     def _run_financial_action(callback, *args, **kwargs) -> Any:
         from flask import has_app_context
 
@@ -798,7 +832,26 @@ def register_financial_mcp_tools(mcp: Any) -> None:
                 ),
             }
 
+        # Aprovação e data nunca vêm do cliente: só da aprovação humana que o
+        # runtime consumiu para esta chamada.
+        normalized_payload.pop("approved_by_user_id", None)
+        normalized_payload.pop("approved_at", None)
+
         def _create_and_serialize_entry(*, payload: dict):
+            approval = _resolve_consumed_human_approval(company_id)
+            if approval is not None:
+                # Aprovado pela tela de approvals: nasce definitivo, não rascunho.
+                payload = {
+                    **payload,
+                    "status": "posted",
+                    "review_status": "approved",
+                    "approved_by_user_id": approval["approved_by_user_id"],
+                    "approved_at": approval["approved_at"],
+                    "metadata_json": {
+                        **dict(payload.get("metadata_json") or {}),
+                        "human_approval_request_id": approval["request_id"],
+                    },
+                }
             entry, error = FinancialService.create_entry(payload=payload)
             if error:
                 return None, error
