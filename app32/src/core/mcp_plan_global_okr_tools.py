@@ -29,7 +29,6 @@ def register_plan_global_okr_tools(mcp: Any) -> None:
         company_id: int,
         plan_id: int,
         okrs: list[dict[str, Any]],
-        confirmed_mutation: bool = False,
     ) -> dict[str, Any]:
         """Cria dois OKRs Globais e os vincula aos OKRs de Área confirmados do tenant."""
         user_id = session_user_id()
@@ -43,7 +42,7 @@ def register_plan_global_okr_tools(mcp: Any) -> None:
                 company_id=company_id,
                 plan_id=plan_id,
                 okrs=okrs,
-                confirmed_mutation=confirmed_mutation,
+                confirmed_mutation=True,  # a aprovação, quando exigida, é do runtime (mcp_gate_policy), não do cliente
                 user_id=user_id,
             )
             return MCPSuccessEnvelope[Any](data=data, meta=_meta(company_id, user_id)).model_dump(mode="json")

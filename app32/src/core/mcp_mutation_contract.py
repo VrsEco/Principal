@@ -14,7 +14,9 @@ Códigos de violação (SPEC onda2_mutacoes_mcp_versus_v1, seção 4):
 * M5 financeira sem ``idempotency_key``;
 * M6 importa módulo inexistente;
 * M7 sem escopo alcançável pelo token ou sem permissão declarada;
-* M8 captura ampla de exceção que pode engolir a negação de permissão.
+* M8 captura ampla de exceção que pode engolir a negação de permissão;
+* M9 booleano de confirmação vindo do cliente (``confirm``, ``confirmed_mutation``, ``human_gate_confirmed``):
+  a aprovação é do runtime (``mcp_gate_policy``), nunca uma afirmação do cliente.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.core import mcp_read_cohorts
+from src.core.mcp_gate_policy import requires_persisted_approval
 from src.core.mcp_cohort_contract import ToolProbe, missing_imported_modules
 
 WRITE_VERBS = frozenset(
@@ -44,6 +47,7 @@ IDENTITY_PARAM = re.compile(
     r"^(user_id|request_id|trace_id|actor\w*|\w*_user_id|approver\w*|created_by\w*|requested_by\w*|reviewer\w*)$"
 )
 _COMPANY_PARAMS = ("company_id", "company_ref")
+CONFIRM_PARAM = re.compile(r"^(confirm|confirmed|confirmed_mutation|human_gate_confirmed|confirm_\w+|\w+_confirmed)$")
 _BROAD_EXCEPT = re.compile(r"except\s+(Exception|BaseException)\b")
 _PERMISSION_EXCEPT = re.compile(r"except\s+\(?[^:\n]*PermissionError")
 
@@ -89,9 +93,15 @@ def audit_mutation_tool(name: str, *, capability: Any, probe: ToolProbe | None) 
     if risk == "low":
         found.append(Violation("M3", f"verbo de escrita '{verb}' declarado como risco baixo"))
 
-    if not gate and (verb in GATED_VERBS or risk in {"high", "critical"}):
+    # O gate vale quando o runtime o exige (mcp_gate_policy), não pelo flag declarativo do catálogo.
+    enforced = requires_persisted_approval(name, capability)
+    if not enforced and (verb in GATED_VERBS or risk in {"high", "critical"}):
         reason = "destrutiva/aprovação/publicação" if verb in GATED_VERBS else f"risco {risk}"
-        found.append(Violation("M4", f"exige gate humano ({reason}) e não tem"))
+        found.append(Violation("M4", f"exige aprovação humana ({reason}) e o runtime não a aplica"))
+
+    for param in params:
+        if CONFIRM_PARAM.match(param):
+            found.append(Violation("M9", f"booleano de confirmação vindo do cliente: {param}"))
 
     is_financial = getattr(capability, "domain", None) == "finance" or "financial" in name
     if is_financial and verb in IDEMPOTENT_VERBS and "idempotency_key" not in params:

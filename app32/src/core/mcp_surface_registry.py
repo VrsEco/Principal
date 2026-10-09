@@ -13,6 +13,7 @@ from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callabl
 from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES
 from src.core.mcp_payload_guard import guard_tool_callable, limit_mcp_payload
 from src.core import mcp_read_cohorts
+from src.core.mcp_gate_policy import requires_persisted_approval
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
     from mcp.server.fastmcp import FastMCP
@@ -415,7 +416,18 @@ def get_unified_manifest(domain: str | None = None, include_tools: bool = True) 
                    "analytics" if name in PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES
                    or name in PILOT_AUDIT_READ_TOOL_NAMES else
                    mcp_read_cohorts.policy_surface_for(capability) if name in mcp_read_cohorts.all_read_cohort_names() else "user")
-        capabilities.append(replace(capability, scopes=get_surface_scope_filter(surface)))
+        gated = requires_persisted_approval(name, capability)
+        capabilities.append(
+            replace(
+                capability,
+                scopes=get_surface_scope_filter(surface),
+                human_gate=gated,
+                human_gate_reason=(
+                    capability.human_gate_reason
+                    or "Mutação destrutiva, de aprovação, envio ou financeira: exige aprovação humana persistida no APP32."
+                ) if gated else None,
+            )
+        )
     manifest = build_capability_manifest(capabilities, domain=domain, include_tools=include_tools)
     manifest["discovery"] = {
         "connector": "mcp-versus", "surface": "unified",

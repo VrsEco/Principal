@@ -37,21 +37,14 @@ def test_commercial_mcp_registrar_exposes_new_billing_and_dashboard_tools():
     }.issubset(mcp.registered)
 
 
-def test_commercial_offer_contract_write_requires_explicit_human_gate():
+def test_commercial_offer_contract_write_has_no_client_supplied_confirmation():
+    import inspect
+
     mcp = _FakeMCP()
     register_commercial_mcp_tools(mcp)
 
-    result = mcp.registered["update_commercial_offer_contract"](
-        company_id=9,
-        item_id=3,
-        commercial_contract={},
-        human_gate_confirmed=False,
-    )
-
-    assert result == {
-        "success": False,
-        "error": "Confirmação humana explícita é obrigatória para alterar o contrato operacional da oferta.",
-    }
+    parameters = inspect.signature(mcp.registered["update_commercial_offer_contract"]).parameters
+    assert "human_gate_confirmed" not in parameters, "a aprovação, quando exigida, é do runtime (D6)"
 
 
 def test_tool_first_catalog_maps_commercial_finance_work_journey_and_mcp_governance():

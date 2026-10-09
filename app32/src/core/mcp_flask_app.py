@@ -12,7 +12,7 @@ import threading
 from typing import Any
 
 _lock = threading.Lock()
-_apps: dict[Any, Any] = {}
+_apps: dict[Any, tuple[Any, Any]] = {}
 
 
 def get_mcp_flask_app(config_name: str | None = None) -> Any:
@@ -24,12 +24,15 @@ def get_mcp_flask_app(config_name: str | None = None) -> Any:
 
     from app import create_app
 
-    key = (id(create_app), config_name)
-    app = _apps.get(key)
-    if app is None:
-        with _lock:
-            app = _apps.get(key)
-            if app is None:
-                app = create_app(config_name) if config_name else create_app()
-                _apps[key] = app
-    return app
+    # O cache guarda a própria fábrica e compara por identidade: um ``id()`` pode ser reaproveitado
+    # depois que uma fábrica de teste é coletada e serviria um app velho.
+    entry = _apps.get(config_name)
+    if entry is not None and entry[0] is create_app:
+        return entry[1]
+    with _lock:
+        entry = _apps.get(config_name)
+        if entry is None or entry[0] is not create_app:
+            app = create_app(config_name) if config_name else create_app()
+            entry = (create_app, app)
+            _apps[config_name] = entry
+    return entry[1]

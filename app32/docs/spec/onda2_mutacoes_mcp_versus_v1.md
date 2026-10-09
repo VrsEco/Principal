@@ -129,3 +129,23 @@ Critério: valor diário, menor raio de dano, menos correções prévias.
 4. Só então a sub-onda 2A, em coorte com variável de ambiente, no mesmo molde da onda 1.
 
 Não altera autorização, identidade nem dados persistidos.
+
+## 8. Decisão D6 aplicada (2026-10-09): aprovação aplicada pelo runtime
+
+Medição de 2026-10-09: o flag `human_gate` do catálogo era só declarativo no mcp-versus. Das 66 capacidades com `human_gate=True`, 39 passavam pela política sem aprovação persistida (confirmado ao vivo com `finish_meeting`). O runtime só pedia aprovação quando a política negava (risco alto ou crítico, ação destrutiva, matriz do overlay).
+
+Opção B aprovada pelo responsável. A regra agora é única e vive em `src/core/mcp_gate_policy.py`:
+
+| Exige aprovação humana persistida | Não exige |
+|---|---|
+| Destrutivas (`delete`, `remove`, `cancel`, `reset`, `archive`) | Criar e editar de risco médio (RBAC por empresa e auditoria) |
+| Aprovações e rejeições (`approve`, `reject`) | Iniciar, encerrar e agendar reunião |
+| Publicação e envio a terceiros (`publish`, `resume`, `send`) | Pausar agenda do WhatsApp Status (parada de emergência) |
+| Financeiras que lançam ou baixam valor, e fim de vida de contrato (lista `APPROVAL_TOOLS`) | Leituras |
+| Risco alto ou crítico com gate declarado | |
+
+- O runtime aplica a regra mesmo quando a política aprovaria; a aprovação é um registro persistido, vinculado a principal, empresa, ferramenta e payload exato, consumido uma vez.
+- O manifesto do mcp-versus (`list_user_app32_capabilities`) passa a informar `human_gate` conforme a regra, não conforme o flag.
+- Contrato de mutações: M4 mede o que o runtime realmente aplica; nova regra **M9** barra booleano de confirmação vindo do cliente (`confirm`, `confirmed_mutation`, `human_gate_confirmed`).
+- Removido o booleano do cliente nas ferramentas registradoras de plano (5), `publish_approved_process_modeling_package_tool` e `update_commercial_offer_contract`.
+- **Ficam como estão, por serem atestação e não autorização:** `strategic_tree_add_contribution` e `submit_process_improvement_analysis_tool` (o booleano atesta que um humano confirmou o conteúdo). Ficam na base do M9 as ferramentas LangChain compartilhadas com o chat (`delete_project`, `delete_project_task(_secure)`, `restore_project_task_secure`, `delete_meeting_secure`) e `request_agent_deployment`, para a sub-onda de cada domínio.

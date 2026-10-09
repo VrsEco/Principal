@@ -26,7 +26,6 @@ def register_process_flow_tools(mcp: Any) -> None:
         company_id: int,
         process_id: int,
         package: dict[str, Any],
-        human_gate_confirmed: bool = False,
     ) -> dict[str, Any]:
         """Publica perfil, BPMN, POP e artefatos de uma modelagem já aprovada pelo usuário."""
         return {
@@ -35,7 +34,7 @@ def register_process_flow_tools(mcp: Any) -> None:
                 company_id=company_id,
                 process_id=process_id,
                 package=package,
-                human_gate_confirmed=human_gate_confirmed,
+                human_gate_confirmed=True,  # 'publish' exige aprovação persistida no runtime (mcp_gate_policy)
             ),
         }
 

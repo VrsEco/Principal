@@ -31,7 +31,6 @@ def register_plan_global_okr_correction_tools(mcp: Any) -> None:
         revenue_objective: str,
         profit_objective: str,
         derived_area_okr_ids: list[int],
-        confirmed_mutation: bool = False,
     ) -> dict[str, Any]:
         """Corrige os dois OKRs Globais e aponta os OKRs de Área para o objetivo de faturamento."""
         user_id = session_user_id()
@@ -47,7 +46,7 @@ def register_plan_global_okr_correction_tools(mcp: Any) -> None:
                 revenue_objective=revenue_objective,
                 profit_objective=profit_objective,
                 derived_area_okr_ids=derived_area_okr_ids,
-                confirmed_mutation=confirmed_mutation,
+                confirmed_mutation=True,  # a aprovação, quando exigida, é do runtime (mcp_gate_policy), não do cliente
                 user_id=user_id,
             )
             return MCPSuccessEnvelope[Any](data=data, meta=_meta(company_id, user_id)).model_dump(mode="json")
