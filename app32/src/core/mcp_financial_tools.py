@@ -80,9 +80,9 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         if has_app_context():
             return callback(*args, **kwargs)
 
-        from app import create_app
+        from src.core.mcp_flask_app import get_mcp_flask_app
 
-        app = create_app()
+        app = get_mcp_flask_app()
         with app.app_context():
             return callback(*args, **kwargs)
 

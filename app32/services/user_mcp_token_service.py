@@ -124,10 +124,10 @@ class UserMcpTokenService:
             yield
             return
 
-        from app import create_app
+        from src.core.mcp_flask_app import get_mcp_flask_app
 
         with UserMcpTokenService._mcp_app_context_bootstrap_disabled():
-            app = create_app("production")
+            app = get_mcp_flask_app("production")
         with app.app_context():
             yield
 

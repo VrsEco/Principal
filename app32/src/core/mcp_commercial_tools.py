@@ -47,9 +47,9 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
     """Registra tools MCP da frente comercial/contratos."""
 
     def _run_action(callback, *args, **kwargs):
-        from app import create_app
+        from src.core.mcp_flask_app import get_mcp_flask_app
 
-        app = create_app()
+        app = get_mcp_flask_app()
         with app.app_context():
             return callback(*args, **kwargs)
 
