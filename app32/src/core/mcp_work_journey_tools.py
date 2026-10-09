@@ -58,6 +58,7 @@ from services.work_journey_service import (
 )
 from services.work_journey_agenda_service import (
     get_work_journey_agenda,
+    read_work_journey_agenda,
     lock_work_journey_agenda,
     move_work_journey_agenda_item,
     unlock_work_journey_agenda,
@@ -370,6 +371,22 @@ def register_work_journey_tools(mcp) -> None:
         )
         anchor = date.fromisoformat(anchor_date)
         return {'data': _run(get_work_journey_agenda, actor_scope.company_id, actor_scope.employee_ids[0], anchor, scope, force_regenerate)}
+
+    @mcp.tool()
+    def get_work_journey_agenda_snapshot_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week') -> dict:
+        """Lê a agenda da jornada JÁ gerada (somente leitura: não reconstrói nem grava).
+
+        Se o período ainda não tem agenda, devolve generated=false. Para gerar ou regenerar use a
+        ferramenta de geração, que exige aprovação.
+        """
+        actor_scope = _run(
+            resolve_actor_scope,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
+        anchor = date.fromisoformat(anchor_date)
+        return {'data': _run(read_work_journey_agenda, actor_scope.company_id, actor_scope.employee_ids[0], anchor, scope)}
 
     @mcp.tool()
     def generate_work_journey_agenda_tool(company_id: int, payload: dict) -> dict:

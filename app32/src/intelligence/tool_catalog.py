@@ -461,6 +461,10 @@ _supplemental_mcp_tools = (
         description="Retorna a agenda materializada da jornada operacional.",
     ),
     SimpleNamespace(
+        name="get_work_journey_agenda_snapshot_tool",
+        description="Lê a agenda da jornada já gerada, sem reconstruir nem gravar.",
+    ),
+    SimpleNamespace(
         name="move_work_journey_agenda_item_tool",
         description="Move item da agenda materializada dentro da jornada operacional.",
     ),

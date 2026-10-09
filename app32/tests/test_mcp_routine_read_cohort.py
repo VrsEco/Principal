@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 import src.core.mcp_surface_registry as registry
 
 EXPECTED = {
+    "get_work_journey_agenda_snapshot_tool",
     "get_work_journey_board_tool",
     "get_work_journey_capacity_report_tool",
     "get_efficiency_collaborators_analysis_tool",
@@ -44,8 +45,8 @@ def _list_tools(monkeypatch, *, flag, permission=True, identity=USER_TOKEN):
     return server, {tool.name for tool in asyncio.run(server.list_tools())}
 
 
-def test_cohort_is_exactly_the_approved_fifteen_reads():
-    assert len(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == len(set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES)) == 15
+def test_cohort_is_exactly_the_approved_sixteen_reads():
+    assert len(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == len(set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES)) == 16
     assert set(registry.UNIFIED_ROUTINE_READ_TOOL_NAMES) == EXPECTED
 
 

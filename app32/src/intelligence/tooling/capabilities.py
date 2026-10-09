@@ -1131,6 +1131,14 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("work_journey", "agenda", "read", "tenant_safe"),
         "required_context": (TOOL_CONTEXT_COMPANY,),
     },
+    "get_work_journey_agenda_snapshot_tool": {
+        "domain": "routine",
+        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("work_journey.agenda.read",),
+        "tags": ("work_journey", "agenda", "read", "snapshot", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
     "generate_work_journey_agenda_tool": {
         "domain": "routine",
         "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

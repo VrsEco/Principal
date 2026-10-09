@@ -356,6 +356,7 @@ class ToolFirstCatalogService:
             ],
             "tool_names": (
                 "get_work_journey_board_tool",
+                "get_work_journey_agenda_snapshot_tool",
                 "list_work_journey_blocks_tool",
                 "save_work_journey_block_tool",
                 "delete_work_journey_block_tool",
