@@ -1,0 +1,393 @@
+{
+ "add_commercial_contract_item": [
+  "M8"
+ ],
+ "approve_agent_deployment": [
+  "M1",
+  "M7"
+ ],
+ "approve_work_journey_absence_request_tool": [
+  "M2",
+  "M7"
+ ],
+ "approve_work_journey_transfer_request_tool": [
+  "M2",
+  "M7"
+ ],
+ "assign_commercial_fiscal_batch": [
+  "M2",
+  "M8"
+ ],
+ "cancel_commercial_billing": [
+  "M2",
+  "M8"
+ ],
+ "close_commercial_contract": [
+  "M2",
+  "M8"
+ ],
+ "complete_task": [
+  "M1"
+ ],
+ "configure_whatsapp_status_account": [
+  "M7"
+ ],
+ "confirm_whatsapp_status_mobile": [
+  "M7"
+ ],
+ "correct_plan_global_okrs_tool": [
+  "M2",
+  "M8"
+ ],
+ "create_and_link_plan_global_okrs_tool": [
+  "M2",
+  "M8"
+ ],
+ "create_commercial_catalog_structure_item": [
+  "M1",
+  "M8"
+ ],
+ "create_commercial_contract": [
+  "M2",
+  "M8"
+ ],
+ "create_commercial_customer_portfolio": [
+  "M1"
+ ],
+ "create_commercial_issuer": [
+  "M8"
+ ],
+ "create_commercial_product_service": [
+  "M1",
+  "M8"
+ ],
+ "create_financial_automation_rule": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_bordero": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_bordero_settlement": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_budget_contract": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_budget_document": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_budget_document_schedules": [
+  "M5"
+ ],
+ "create_financial_budget_line": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_budget_version": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_catalog_item": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_classification_rule": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_closing": [
+  "M1",
+  "M5",
+  "M6"
+ ],
+ "create_financial_direct_entry": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_entry": [
+  "M5"
+ ],
+ "create_financial_entry_from_bank_reconciliation_row": [
+  "M5"
+ ],
+ "create_financial_import_batch": [
+  "M1",
+  "M5",
+  "M8"
+ ],
+ "create_financial_ingestion_record": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_schedule": [
+  "M1",
+  "M5"
+ ],
+ "create_financial_settlement": [
+  "M5"
+ ],
+ "create_project_task": [
+  "M1"
+ ],
+ "create_sector_okr_structure_tool": [
+  "M2",
+  "M8"
+ ],
+ "create_single_plan_driver_tool": [
+  "M2",
+  "M8"
+ ],
+ "create_whatsapp_status_schedule": [
+  "M3",
+  "M7"
+ ],
+ "create_work_journey_absence_request_tool": [
+  "M2"
+ ],
+ "create_work_journey_transfer_request_tool": [
+  "M2"
+ ],
+ "delete_commercial_contract": [
+  "M2",
+  "M7",
+  "M8"
+ ],
+ "delete_indicator_line_of_sight_tool": [
+  "M7",
+  "M8"
+ ],
+ "delete_meeting_activity": [
+  "M4"
+ ],
+ "delete_meeting_decision": [
+  "M4"
+ ],
+ "delete_meeting_secure": [
+  "M7"
+ ],
+ "delete_meeting_topic": [
+  "M4"
+ ],
+ "delete_process_strategy_alignment_link_tool": [
+  "M7",
+  "M8"
+ ],
+ "delete_project": [
+  "M7"
+ ],
+ "delete_project_task": [
+  "M7"
+ ],
+ "delete_project_task_secure": [
+  "M7"
+ ],
+ "delete_work_calendar_event_tool": [
+  "M4"
+ ],
+ "delete_work_journey_block_tool": [
+  "M7"
+ ],
+ "delete_work_journey_manual_task_tool": [
+  "M7"
+ ],
+ "delete_work_journey_rule_tool": [
+  "M7"
+ ],
+ "dispatch_financial_process_trigger": [
+  "M3"
+ ],
+ "escalate_technical_issue": [
+  "M1",
+  "M7"
+ ],
+ "generate_commercial_billing_batch": [
+  "M2",
+  "M5"
+ ],
+ "generate_commercial_financial_titles_for_billing": [
+  "M2",
+  "M5",
+  "M8"
+ ],
+ "generate_due_financial_schedules": [
+  "M5"
+ ],
+ "generate_financial_report": [
+  "M5"
+ ],
+ "generate_strategic_connection_summary": [
+  "M2",
+  "M3"
+ ],
+ "import_financial_budget_matrix": [
+  "M5",
+  "M8"
+ ],
+ "lock_work_journey_agenda_tool": [
+  "M2"
+ ],
+ "log_meeting_discussion": [
+  "M3"
+ ],
+ "log_work_hours": [
+  "M1"
+ ],
+ "match_financial_bank_reconciliation_row": [
+  "M5"
+ ],
+ "pause_whatsapp_status_schedule": [
+  "M3",
+  "M7"
+ ],
+ "process_financial_import_batch": [
+  "M3"
+ ],
+ "publish_approved_process_modeling_package_tool": [
+  "M7"
+ ],
+ "publish_whatsapp_status_art": [
+  "M7"
+ ],
+ "publish_whatsapp_status_kit": [
+  "M7"
+ ],
+ "publish_whatsapp_status_test": [
+  "M7"
+ ],
+ "reconcile_financial_import_batch": [
+  "M5"
+ ],
+ "register_system_user": [
+  "M1",
+  "M7"
+ ],
+ "register_whatsapp_status_approved_bundle": [
+  "M7"
+ ],
+ "remove_commercial_fiscal_batch": [
+  "M2",
+  "M4",
+  "M8"
+ ],
+ "replace_financial_allocations": [
+  "M1",
+  "M5"
+ ],
+ "request_agent_deployment": [
+  "M1",
+  "M7"
+ ],
+ "request_deadline_extension": [
+  "M1"
+ ],
+ "request_new_app32_integration": [
+  "M2",
+  "M7"
+ ],
+ "restore_project_task_secure": [
+  "M7"
+ ],
+ "resume_whatsapp_status_schedule": [
+  "M7"
+ ],
+ "review_financial_ingestion_record": [
+  "M2"
+ ],
+ "review_strategy_maturation_item_tool": [
+  "M2"
+ ],
+ "sync_plan_participants_tool": [
+  "M2",
+  "M8"
+ ],
+ "toggle_commercial_catalog_structure_item": [
+  "M8"
+ ],
+ "toggle_commercial_product_service": [
+  "M8"
+ ],
+ "toggle_financial_catalog_item": [
+  "M3"
+ ],
+ "update_commercial_catalog_structure_item": [
+  "M8"
+ ],
+ "update_commercial_contract_general": [
+  "M2",
+  "M8"
+ ],
+ "update_commercial_contract_item": [
+  "M8"
+ ],
+ "update_commercial_fiscal_entry": [
+  "M2",
+  "M8"
+ ],
+ "update_commercial_fiscal_status": [
+  "M2",
+  "M8"
+ ],
+ "update_commercial_issuer": [
+  "M8"
+ ],
+ "update_commercial_offer_contract": [
+  "M8"
+ ],
+ "update_commercial_product_service": [
+  "M8"
+ ],
+ "update_company_status": [
+  "M7"
+ ],
+ "update_user_contacts": [
+  "M1",
+  "M2"
+ ],
+ "update_whatsapp_status_schedule": [
+  "M3",
+  "M7"
+ ],
+ "upsert_commercial_contract_financial_terms": [
+  "M2",
+  "M5",
+  "M8"
+ ],
+ "upsert_commercial_contract_fiscal_terms": [
+  "M2",
+  "M5",
+  "M8"
+ ],
+ "upsert_financial_budget_matrix": [
+  "M1",
+  "M5"
+ ],
+ "upsert_financial_domain_enablement": [
+  "M1",
+  "M5"
+ ],
+ "upsert_indicator_line_of_sight_tool": [
+  "M2",
+  "M8"
+ ],
+ "upsert_organizational_identity_tool": [
+  "M2"
+ ],
+ "upsert_process_strategic_profile_tool": [
+  "M2"
+ ],
+ "upsert_process_strategy_alignment_link_tool": [
+  "M2",
+  "M8"
+ ],
+ "upsert_process_strategy_profile_tool": [
+  "M2"
+ ],
+ "upsert_strategy_identity_tool": [
+  "M2"
+ ]
+}
