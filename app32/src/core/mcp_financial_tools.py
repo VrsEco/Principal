@@ -14,6 +14,17 @@ from typing import Any, Optional
 from pydantic import StrictInt
 
 
+
+from src.core.mcp_pagination import PAGE_DEFAULT, page_of, validated_page
+
+
+def _paged(items: list, limit: int, offset: int) -> dict:
+    """Resposta paginada padrão das listagens financeiras (items + total/has_more/next_offset)."""
+    window = page_of(list(items or []), limit, offset)
+    items_window = window.pop("window")
+    return {"success": True, "items": items_window, "count": window["total"], **window}
+
+
 def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = False) -> None:
     """Registra as tools MCP financeiras no servidor informado."""
 
@@ -155,11 +166,12 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "item": result}
 
     @mcp.tool()
-    def list_financial_domain_enablements(company_id: int, domain_type: Optional[str] = None) -> dict:
+    def list_financial_domain_enablements(company_id: int, domain_type: Optional[str] = None, limit: int = PAGE_DEFAULT, offset: int = 0) -> dict:
         """
         Lista projetos/processos habilitados para uso no Financeiro.
         domain_type pode ser 'project' ou 'process'.
         """
+        limit, offset = validated_page(limit, offset)
         from services.financial_domain_enablement_service import FinancialDomainEnablementService
 
         result, error = _run_financial_action(
@@ -169,7 +181,17 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, **(result or {})}
+        result = dict(result or {})
+        if "items" in result:
+            return {**_paged(result.pop("items"), limit, offset), **result}
+        by_type = result.pop("items_by_type", {}) or {}
+        pages = {kind: page_of(list(rows or []), limit, offset) for kind, rows in by_type.items()}
+        return {
+            "success": True,
+            "items_by_type": {kind: page.pop("window") for kind, page in pages.items()},
+            "pagination_by_type": pages,
+            **result,
+        }
 
     @mcp.tool()
     def upsert_financial_domain_enablement(payload: dict) -> dict:
@@ -214,10 +236,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         origin_type: Optional[str] = None,
         completion_status: Optional[str] = None,
         review_status: Optional[str] = None,
+        limit: int = PAGE_DEFAULT,
+        offset: int = 0,
     ) -> dict:
         """
         Lista registros de ingestão financeira vindos de integrações, importações e Sapiens.
         """
+        limit, offset = validated_page(limit, offset)
         from services.financial_ingestion_service import FinancialIngestionService
 
         result, error = _run_financial_action(
@@ -229,7 +254,7 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "items": result, "count": len(result)}
+        return _paged(result, limit, offset)
 
     @mcp.tool()
     def create_financial_ingestion_record(payload: dict) -> dict:
@@ -291,10 +316,11 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **result}
 
     @mcp.tool()
-    def list_financial_schedules(company_id: int, status: Optional[str] = None) -> dict:
+    def list_financial_schedules(company_id: int, status: Optional[str] = None, limit: int = PAGE_DEFAULT, offset: int = 0) -> dict:
         """
         Lista previsões e agendamentos financeiros da empresa.
         """
+        limit, offset = validated_page(limit, offset)
         from services.financial_schedule_service import FinancialScheduleService
 
         result, error = _run_financial_action(
@@ -304,7 +330,7 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "items": result, "count": len(result)}
+        return _paged(result, limit, offset)
 
     @mcp.tool()
     def get_financial_payables_due_summary(
@@ -449,10 +475,11 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
 
 
     @mcp.tool()
-    def list_financial_borderos(company_id: int, bordero_type: Optional[str] = None, status: Optional[str] = None) -> dict:
+    def list_financial_borderos(company_id: int, bordero_type: Optional[str] = None, status: Optional[str] = None, limit: int = PAGE_DEFAULT, offset: int = 0) -> dict:
         """
         Lista borderôs financeiros da empresa por tipo e status.
         """
+        limit, offset = validated_page(limit, offset)
         from services.financial_bordero_service import FinancialBorderoService
 
         result, error = _run_financial_action(
@@ -463,7 +490,7 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "items": result, "count": len(result)}
+        return _paged(result, limit, offset)
 
     @mcp.tool()
     def get_financial_bordero(company_id: int, bordero_id: int) -> dict:
@@ -932,10 +959,11 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
             return {"success": False, "error": error} if error else {"success": True, **result}
 
     @mcp.tool()
-    def list_financial_import_batches(company_id: int) -> dict:
+    def list_financial_import_batches(company_id: int, limit: int = PAGE_DEFAULT, offset: int = 0) -> dict:
         """
         Lista lotes do staging de importação financeira por empresa.
         """
+        limit, offset = validated_page(limit, offset)
         from services.financial_import_service import FinancialImportService
 
         batches, error = _run_financial_action(
@@ -944,7 +972,7 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "items": batches, "count": len(batches)}
+        return _paged(batches, limit, offset)
 
     @mcp.tool()
     def get_financial_import_batch(company_id: int, batch_id: int) -> dict:
@@ -1097,7 +1125,8 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, **result}
+        candidates = list(result or [])
+        return {"success": True, "row_id": row_id, "items": candidates, "count": len(candidates)}
 
     @mcp.tool()
     def match_financial_bank_reconciliation_row(
@@ -1224,10 +1253,11 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **result}
 
     @mcp.tool()
-    def list_financial_classification_memories(company_id: int) -> dict:
+    def list_financial_classification_memories(company_id: int, limit: int = PAGE_DEFAULT, offset: int = 0) -> dict:
         """
         Lista memórias históricas de classificação por cliente.
         """
+        limit, offset = validated_page(limit, offset)
         from services.financial_classification_hybrid_service import FinancialClassificationHybridService
 
         result, error = _run_financial_action(
@@ -1236,7 +1266,7 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "items": result, "count": len(result)}
+        return _paged(result, limit, offset)
 
     @mcp.tool()
     def update_financial_classification_memory(company_id: int, memory_id: int, payload: dict) -> dict:
@@ -1289,10 +1319,11 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **result}
 
     @mcp.tool()
-    def list_financial_classification_suggestions(company_id: int, batch_id: Optional[int] = None) -> dict:
+    def list_financial_classification_suggestions(company_id: int, batch_id: Optional[int] = None, limit: int = PAGE_DEFAULT, offset: int = 0) -> dict:
         """
         Lista sugestões persistidas de classificação financeira.
         """
+        limit, offset = validated_page(limit, offset)
         from services.financial_classification_hybrid_service import FinancialClassificationHybridService
 
         result, error = _run_financial_action(
@@ -1302,7 +1333,7 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "items": result, "count": len(result)}
+        return _paged(result, limit, offset)
 
     @mcp.tool()
     def review_financial_classification_suggestion(company_id: int, suggestion_id: int, decision: str) -> dict:
@@ -1338,10 +1369,11 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **result}
 
     @mcp.tool()
-    def list_financial_classification_pending(company_id: int, batch_id: Optional[int] = None) -> dict:
+    def list_financial_classification_pending(company_id: int, batch_id: Optional[int] = None, limit: int = PAGE_DEFAULT, offset: int = 0) -> dict:
         """
         Lista a fila de pendências de classificação financeira com pergunta sugerida ao usuário.
         """
+        limit, offset = validated_page(limit, offset)
         from services.financial_classification_hybrid_service import FinancialClassificationHybridService
 
         result, error = _run_financial_action(
@@ -1351,7 +1383,7 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "items": result, "count": len(result)}
+        return _paged(result, limit, offset)
 
     @mcp.tool()
     def get_financial_classification_dashboard(company_id: int) -> dict:

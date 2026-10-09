@@ -18,7 +18,7 @@ permissão declarada e sem escrita no código da tool. Todas passam pelo limitad
 | `platform` | 3 | **ligado** |
 | `knowledge` | 2 | **ligado** (variantes `*_secure`, `company_id` validado pelo grant; SPEC RAG 16.10) |
 | `commercial` | 14 | desligado (dados sensíveis) |
-| `finance` | 25 | desligado (dados sensíveis) |
+| `finance` | 24 | desligado (dados sensíveis); `list_financial_closings` fica fora até existir `services.financial_closing_service` |
 | `routine` | 14 | flag própria `MCP_VERSUS_ROUTINE_READ_ENABLED` |
 
 ## 2. Como ligar e desligar

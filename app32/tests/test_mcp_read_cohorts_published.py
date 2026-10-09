@@ -1,4 +1,4 @@
-"""Coortes de leitura por assunto publicadas no mcp-versus (61 ferramentas)."""
+"""Coortes de leitura por assunto publicadas no mcp-versus (60 ferramentas)."""
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +11,7 @@ import src.core.mcp_read_cohorts as cohorts
 import src.core.mcp_surface_registry as registry
 from src.intelligence.tool_catalog import catalog
 
-EXPECTED_COUNTS = {"strategy": 13, "processes": 4, "platform": 3, "knowledge": 2, "commercial": 14, "finance": 25}
+EXPECTED_COUNTS = {"strategy": 13, "processes": 4, "platform": 3, "knowledge": 2, "commercial": 14, "finance": 24}
 ALL_SUBJECTS = ",".join(EXPECTED_COUNTS)
 IDENTITY = SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:analytics", "mcp:finance"))
 
@@ -32,7 +32,7 @@ def _build(monkeypatch, env, *, permission=True, identity=IDENTITY):
 
 def test_subjects_and_sizes_are_exactly_the_approved_ones():
     assert {k: len(v) for k, v in cohorts.READ_COHORT_TOOL_NAMES.items()} == EXPECTED_COUNTS
-    assert len(cohorts.all_read_cohort_names()) == 61
+    assert len(cohorts.all_read_cohort_names()) == 60
 
 
 def test_no_tool_is_in_two_cohorts_or_already_published():
@@ -71,7 +71,7 @@ def test_each_subject_is_off_with_none_and_only_its_own_flag_enables_it(monkeypa
     assert not (others & (listed | registered)), "ligar um assunto não pode expor outro"
 
 
-def test_all_subjects_on_lists_all_61(monkeypatch):
+def test_all_subjects_on_lists_all_60(monkeypatch):
     _, off, _ = _build(monkeypatch, "none")
     _, on, registered = _build(monkeypatch, ALL_SUBJECTS)
     assert on - off == set(cohorts.all_read_cohort_names())

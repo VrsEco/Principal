@@ -5,35 +5,10 @@ from typing import Any, Optional
 from src.core.mcp_http_auth import get_http_request_context
 
 
-_PAGE_DEFAULT = 20
-_PAGE_MAX = 100
+from src.core.mcp_pagination import PAGE_DEFAULT as _PAGE_DEFAULT, page_of, validated_page  # noqa: E402,F401
+
 # Texto livre das leituras MCP: pode carregar e-mail pessoal, nomes e valores de contratação.
 _FREE_TEXT_KEYS = ("notes",)
-
-
-def validated_page(limit: Any, offset: Any) -> tuple[int, int]:
-    """Valida a paginação das listagens pesadas (sem isso a resposta estoura o limite do cliente)."""
-    for value in (limit, offset):
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise ValueError("limit e offset devem ser inteiros.")
-    if limit < 1 or limit > _PAGE_MAX:
-        raise ValueError(f"limit deve estar entre 1 e {_PAGE_MAX}.")
-    if offset < 0:
-        raise ValueError("offset deve ser maior ou igual a 0.")
-    return limit, offset
-
-
-def page_of(rows: list, limit: int, offset: int) -> dict:
-    window = rows[offset : offset + limit]
-    return {
-        "total": len(rows),
-        "limit": limit,
-        "offset": offset,
-        "returned": len(window),
-        "has_more": offset + len(window) < len(rows),
-        "next_offset": offset + len(window) if offset + len(window) < len(rows) else None,
-        "window": window,
-    }
 
 
 def without_free_text(record: Any) -> Any:
