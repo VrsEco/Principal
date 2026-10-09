@@ -512,10 +512,13 @@ def test_oauth_unified_server_exposes_meeting_read_and_mutation_cohorts_only(mon
         assert capability is not None
         assert capability.human_gate is True, f"{tool_name} deve manter human_gate=True"
 
+    # D6/D7 (2026-10-09): criar e editar seguem sem gate; as exclusões de tema, decisão e ação exigem aprovação.
+    destructive = {"delete_meeting_topic", "delete_meeting_decision", "delete_meeting_activity"}
     for tool_name in registry.PILOT_MEETING_MUTATION_TOOL_NAMES:
         capability = registry.catalog.get_tool_capability(tool_name)
         assert capability is not None
-        assert capability.human_gate is False, f"{tool_name} não deve ter gate novo"
+        expected = tool_name in destructive
+        assert capability.human_gate is expected, f"{tool_name}: human_gate deveria ser {expected}"
 
     other_meeting_tool_names = (
         {capability.name for capability in registry.catalog.iter_capabilities(domain="meetings")}
