@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -38,7 +38,8 @@ def test_complete_and_reopen(task_context):
     result, error = service.update_task(company_id=9, task_id=1, changes={"status": "completed"})
     assert not error
     assert task.stage == task.status == "completed"
-    assert task.completion_date == date.today()
+    # O serviço grava a data de conclusão em UTC; comparar com o relógio local falhava depois das 21h em Brasília.
+    assert task.completion_date == datetime.utcnow().date()
     result, error = service.update_task(company_id=9, task_id=1, changes={"stage": "executing"})
     assert not error
     assert task.status == "in_progress" and task.completion_date is None

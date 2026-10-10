@@ -13,7 +13,7 @@ from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callabl
 from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES
 from src.core.mcp_payload_guard import guard_tool_callable, limit_mcp_payload
 from src.core import mcp_read_cohorts, mcp_write_cohorts
-from src.core.mcp_param_hiding import adapt_for_mcp
+from src.core.mcp_param_hiding import adapt_for_mcp, description_for_mcp
 from src.core.mcp_gate_policy import requires_persisted_approval
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
@@ -690,7 +690,7 @@ def _register_tool(mcp: Any, tool: Any, *, policy_surface: str | None = None, li
         return guard_tool_callable(callable_, limit_mcp_payload) if limit_response_size else callable_
 
     if hasattr(tool, "func"):
-        mcp.tool(name=tool.name, description=tool.description)(
+        mcp.tool(name=tool.name, description=description_for_mcp(tool.name, tool.description))(
             _finish(wrap_mcp_callable(adapt_for_mcp(tool.name, tool.func), policy_surface=policy_surface))
         )
         return
