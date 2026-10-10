@@ -21,6 +21,19 @@ HIDDEN_CLIENT_PARAMETERS: dict[str, dict[str, Any]] = {
 }
 
 
+def description_for_mcp(tool_name: str, description: str | None) -> str | None:
+    """Descrição da ferramenta sem as linhas ``:param <oculto>:`` dos parâmetros que o MCP não expõe."""
+    hidden = HIDDEN_CLIENT_PARAMETERS.get(str(tool_name))
+    if not hidden or not description:
+        return description
+    kept = [
+        line
+        for line in description.splitlines()
+        if not any(line.strip().startswith(f":param {name}:") for name in hidden)
+    ]
+    return "\n".join(kept)
+
+
 def adapt_for_mcp(tool_name: str, func: Callable[..., Any]) -> Callable[..., Any]:
     """Devolve ``func`` sem os parâmetros ocultos no esquema e com os valores fixos injetados."""
     hidden = HIDDEN_CLIENT_PARAMETERS.get(str(tool_name))

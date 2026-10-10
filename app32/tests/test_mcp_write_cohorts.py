@@ -131,3 +131,27 @@ def test_hidden_parameter_adapter_injects_the_fixed_value_and_drops_the_schema_e
     finally:
         HIDDEN_CLIENT_PARAMETERS.pop("__probe__", None)
     assert adapt_for_mcp("outra", original) is original
+
+
+def test_hidden_parameter_is_also_removed_from_the_mcp_description():
+    from src.core.mcp_param_hiding import description_for_mcp
+
+    description = "Registra uma sugestão.\n:param title: Título.\n:param requester_name: Opcional.\n:param urgency: low, medium."
+    cleaned = description_for_mcp("request_engineering_suggestion", description)
+    assert "requester_name" not in cleaned and ":param title:" in cleaned and ":param urgency:" in cleaned
+    assert description_for_mcp("outra", description) == description
+
+
+def test_registered_engineering_suggestion_description_does_not_mention_the_hidden_parameter(monkeypatch):
+    server, _, _ = _server(monkeypatch, "operations")
+    tool = server._tool_manager.get_tool("request_engineering_suggestion")
+    assert "requester_name" not in (tool.description or "")
+
+
+def test_integration_request_declares_its_accepted_values_in_the_schema(monkeypatch):
+    server, _, _ = _server(monkeypatch, "operations")
+    props = server._tool_manager.get_tool("request_new_app32_integration").parameters["properties"]
+    assert set(props["integration_mode"]["enum"]) == {"consume", "provide", "bidirectional"}
+    assert set(props["technical_channel"]["enum"]) == {"api", "mcp", "api_mcp"}
+    assert set(props["urgency"]["enum"]) == {"low", "medium", "high", "critical"}
+    assert set(props["compliance_level"]["enum"]) == {"internal", "restricted", "sensitive"}

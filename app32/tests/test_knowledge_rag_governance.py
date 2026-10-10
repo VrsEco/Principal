@@ -310,6 +310,7 @@ def test_legacy_chroma_importers_are_frozen_to_the_known_set():
         "test_rag_init.py",
         "tools_PROD.py",
         "scripts/run_engineering_baseline.py",  # stub em sys.modules, não importa
+        "scripts/qa/run_mcp_reconciliation_read_harness.py",  # stub em sys.modules, não importa
         "scripts/deploy/surgical_push_configr.py",  # lista de arquivos, não importa
     }
     importers = set()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from services.integration_catalog_service import IntegrationCatalogService
 from services.integration_request_service import IntegrationRequestService
@@ -18,20 +18,24 @@ def register_integration_request_tools(mcp: Any) -> None:
         company_id: int,
         title: str,
         business_domain: str,
-        integration_mode: str,
-        technical_channel: str,
+        integration_mode: Literal["consume", "provide", "bidirectional"],
+        technical_channel: Literal["api", "mcp", "api_mcp"],
         external_system: str,
         objective: str,
         data_summary: str,
         source_channel: str = "mcp",
         frequency: str | None = None,
-        urgency: str = "medium",
-        compliance_level: str = "internal",
+        urgency: Literal["low", "medium", "high", "critical"] = "medium",
+        compliance_level: Literal["internal", "restricted", "sensitive"] = "internal",
         provider_contact: str | None = None,
         provider_docs_url: str | None = None,
         notes: str | None = None,
     ) -> dict[str, Any]:
-        """Registra um pedido de nova integração; o solicitante é o usuário autenticado da sessão."""
+        """Registra um pedido de nova integração; o solicitante é o usuário autenticado da sessão.
+
+        integration_mode: consume, provide ou bidirectional. technical_channel: api, mcp ou api_mcp.
+        urgency: low, medium, high ou critical. compliance_level: internal, restricted ou sensitive.
+        """
         from src.core.mcp_session_actor import require_session_user_id
 
         record = IntegrationRequestService.create_request(
