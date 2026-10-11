@@ -28,51 +28,40 @@
   "M1"
  ],
  "create_financial_automation_rule": [
-  "M1",
   "M5"
  ],
  "create_financial_bordero": [
-  "M1",
   "M5"
  ],
  "create_financial_bordero_settlement": [
-  "M1",
   "M5"
  ],
  "create_financial_budget_contract": [
-  "M1",
   "M5"
  ],
  "create_financial_budget_document": [
-  "M1",
   "M5"
  ],
  "create_financial_budget_document_schedules": [
   "M5"
  ],
  "create_financial_budget_line": [
-  "M1",
   "M5"
  ],
  "create_financial_budget_version": [
-  "M1",
   "M5"
  ],
  "create_financial_catalog_item": [
-  "M1",
   "M5"
  ],
  "create_financial_classification_rule": [
-  "M1",
   "M5"
  ],
  "create_financial_closing": [
-  "M1",
   "M5",
   "M6"
  ],
  "create_financial_direct_entry": [
-  "M1",
   "M5"
  ],
  "create_financial_entry": [
@@ -82,15 +71,12 @@
   "M5"
  ],
  "create_financial_import_batch": [
-  "M1",
   "M5"
  ],
  "create_financial_ingestion_record": [
-  "M1",
   "M5"
  ],
  "create_financial_schedule": [
-  "M1",
   "M5"
  ],
  "create_financial_settlement": [
@@ -196,7 +182,6 @@
   "M7"
  ],
  "replace_financial_allocations": [
-  "M1",
   "M5"
  ],
  "request_agent_deployment": [
@@ -234,11 +219,9 @@
   "M5"
  ],
  "upsert_financial_budget_matrix": [
-  "M1",
   "M5"
  ],
  "upsert_financial_domain_enablement": [
-  "M1",
   "M5"
  ]
 }
