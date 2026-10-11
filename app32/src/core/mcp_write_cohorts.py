@@ -96,7 +96,6 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
     "admin_ops": (
         "approve_work_journey_absence_request_tool",
         "approve_work_journey_transfer_request_tool",
-        "delete_commercial_contract",
         "delete_indicator_line_of_sight_tool",
         "delete_process_strategy_alignment_link_tool",
         "delete_work_journey_block_tool",

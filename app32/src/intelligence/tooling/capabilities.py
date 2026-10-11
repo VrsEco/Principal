@@ -1390,13 +1390,6 @@ for _tool_name, _action in (
         _tool_name,
         domain="strategy" if _tool_name == "get_commercial_dashboard" else "governance",
         action=_action,
-        # Exclusão de contrato: exige aprovação humana persistida (regra D6) e permissão governance.delete; por isso
-        # fica alcançável pelo conector comum, só para quem tem a permissão (coorte de escrita admin_ops).
-        scopes=(
-            (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value)
-            if _tool_name == "delete_commercial_contract"
-            else None
-        ),
         human_gate=_tool_name in {
             "update_commercial_offer_contract",
             "suspend_commercial_contract",

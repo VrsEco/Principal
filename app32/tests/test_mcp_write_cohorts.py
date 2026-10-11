@@ -84,7 +84,6 @@ EXPECTED = {
     "admin_ops": {
         "approve_work_journey_absence_request_tool",
         "approve_work_journey_transfer_request_tool",
-        "delete_commercial_contract",
         "delete_indicator_line_of_sight_tool",
         "delete_process_strategy_alignment_link_tool",
         "delete_work_journey_block_tool",
@@ -110,7 +109,7 @@ def _server(monkeypatch, env):
 
 def test_cohort_content_is_exactly_the_approved_set():
     assert {k: set(v) for k, v in cohorts.WRITE_COHORT_TOOL_NAMES.items()} == EXPECTED
-    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 64
+    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 63
 
 
 @pytest.mark.parametrize("value", [None, "", "none", "NONE", "  "])

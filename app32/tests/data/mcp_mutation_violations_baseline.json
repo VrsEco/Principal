@@ -30,6 +30,9 @@
  "create_whatsapp_status_schedule": [
   "M7"
  ],
+ "delete_commercial_contract": [
+  "M7"
+ ],
  "delete_meeting_secure": [
   "M7",
   "M9"
