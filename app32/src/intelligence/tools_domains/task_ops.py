@@ -381,6 +381,7 @@ def update_project_task_secure(
         company_id=int(decision.resolved_company_id),
         task_id=int(task_id),
         changes=dict(changes or {}),
+        actor_user_id=int(principal["user_id"]) if principal.get("user_id") else None,
     )
     if error:
         return {"success": False, "error": error}

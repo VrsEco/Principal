@@ -1097,6 +1097,10 @@ def create_project_task_secure(task_name: str, idempotency_key: str, project_id:
 def update_project_task_secure(task_id: int, changes: dict, company_id: int = None):
     """
     Atualiza atividade de projeto via MCP com whitelist de campos e limite de alterações.
+
+    Campos de ``changes``: task_name, responsible_name, due_date, description, priority, status, stage;
+    notes (SUBSTITUI o texto inteiro das notas); append_notes (ACRESCENTA um registro com data e autor, preservando
+    o histórico; não combina com notes); estimated_hours e worked_hours (horas, de 0 a 10000).
     """
     return task_ops_domain.update_project_task_secure(
         task_id=task_id,
