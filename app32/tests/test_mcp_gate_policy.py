@@ -141,3 +141,31 @@ def test_ordinary_edit_runs_without_approval_even_if_the_catalog_flag_is_set(mon
     calls = []
     out = wrap_mcp_callable(_tool("update_meeting", calls))(company_id=9, meeting_id=1)
     assert out == {"ok": True} and len(calls) == 1 and seen["requested"] is None and seen["final_confirmed"] is False
+
+
+def _context_probe(name, seen):
+    from src.intelligence.tool_context import get_sapiens_context
+
+    def tool(**kwargs):
+        seen.append((get_sapiens_context().metadata or {}).get("approved_human_gate_request_id"))
+        return {"ok": True}
+
+    tool.__name__ = name
+    tool.__app32_tool_name__ = name
+    return tool
+
+
+def test_the_tool_sees_the_consumed_approval_in_its_context(monkeypatch):
+    capability = SimpleNamespace(domain="meetings", risk=SimpleNamespace(value="medium"), human_gate=True, permissions=(), required_context=())
+    _runtime(monkeypatch, capability=capability, approval_allowed=True)
+    seen = []
+    wrap_mcp_callable(_context_probe("delete_meeting_topic", seen))(company_id=9, meeting_id=1, topic_id="t")
+    assert seen == [91], "o id da aprovação consumida deve chegar ao contexto da ferramenta"
+
+
+def test_the_tool_sees_no_approval_when_none_was_consumed(monkeypatch):
+    capability = SimpleNamespace(domain="meetings", risk=SimpleNamespace(value="medium"), human_gate=True, permissions=(), required_context=())
+    _runtime(monkeypatch, capability=capability, approval_allowed=False)
+    seen = []
+    wrap_mcp_callable(_context_probe("update_meeting", seen))(company_id=9, meeting_id=1)
+    assert seen == [None]

@@ -757,6 +757,7 @@ def wrap_mcp_callable(
             if not initial_decision.allowed:
                 _emit_mcp_policy_audit(policy_source, policy_request, payload,
                                        allowed=False, reason=initial_decision.reason)
+            approved_gate_request_id = None
             idempotency = _idempotency_precheck(tool_name, payload, execution_context, initial_decision)
             if idempotency.envelope is not None:
                 return idempotency.envelope
@@ -819,6 +820,7 @@ def wrap_mcp_callable(
                         f"#{approval_request.approval_request_id}. "
                         "Após aprová-la, repita exatamente a mesma chamada."
                     )
+                approved_gate_request_id = approval_decision.approval_request_id
                 policy_request = ToolPolicyRequest(
                     **{
                         **policy_request.__dict__,
@@ -840,7 +842,13 @@ def wrap_mcp_callable(
                 employee_id=execution_context.employee_id,
                 channel=execution_context.channel,
                 thread_id=execution_context.thread_id,
-                metadata=execution_context.metadata,
+                # A ferramenta lê a aprovação consumida daqui (ex.: create_financial_entry grava aprovador e data);
+                # o valor só nasce depois que o runtime consumiu a aprovação persistida.
+                metadata=(
+                    {**dict(execution_context.metadata or {}), "approved_human_gate_request_id": approved_gate_request_id}
+                    if approved_gate_request_id is not None
+                    else execution_context.metadata
+                ),
             )
             legacy_tokens = set_legacy_tool_context(
                 user_id=execution_context.user_id,
