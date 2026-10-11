@@ -90,3 +90,19 @@ Mutações novas entram por coorte própria, desligada por padrão. Variável `M
 Códigos de saída: 0 saudável, 1 degradado (lento ou sintomas no log), 2 falha. Opções: `--json` para um monitor externo e, no servidor, `--log logs/mcp_http_stderr.log --minutes 60` para contar `permission discovery failed`, `OperationalError` e `Traceback`.
 
 Limites: não valida a lista de ferramentas (exige token). Para isso, chamar `list_user_app32_capabilities` autenticado e conferir a contagem esperada. Sintoma "0 ferramentas": olhar primeiro `permission discovery failed` no log.
+
+## 8. Conector administrativo curado (`/mcp/pilot/admin`, escopo `mcp:admin`)
+
+Segundo conector, só para administradores da plataforma. O conector comum (`/mcp/pilot`) **não muda** e nunca recebe `mcp:admin`.
+
+**O que expõe (lista fechada, `src/core/mcp_admin_cohort.py`, 8 ferramentas):** aprovações de ausência e de transferência da jornada; exclusão de bloco, tarefa manual e regra da jornada; exclusão de linha de visada de indicador, de vínculo de alinhamento estratégico e de contrato comercial. Todas exigem aprovação humana persistida (regra D6) e permissão por empresa.
+
+**O que não expõe:** diagnósticos do sistema (`get_database_schema`, `get_system_health`), cadastro de usuários, status de empresa, implantação de agentes, WhatsApp Status e as exclusões de projeto e reunião (dependem do adaptador do parâmetro de confirmação, M9).
+
+**Ativação (por ordem):**
+1. Keycloak, realm `app32`: criar o client scope `mcp:admin` como **opcional** (nunca padrão) e restringi-lo por papel (Scope → desligar "Full scope allowed" e mapear só o papel de administrador da plataforma).
+2. `.env` do servidor: `APP32_MCP_OIDC_ADMIN_ROUTE_ENABLED=1` e `bash scripts/manage_mcp_http.sh restart`.
+3. Conferir: `/.well-known/oauth-protected-resource/mcp/pilot/admin` responde 200 com `scopes_supported` = `mcp:access`, `mcp:admin`.
+4. Cadastrar o conector no cliente com `https://app.gestaoversus.com.br/mcp/pilot/admin` e autorizar com a conta de administrador.
+
+**Desfazer:** remover a flag do `.env` e reiniciar (a rota some e a descoberta volta a 404).

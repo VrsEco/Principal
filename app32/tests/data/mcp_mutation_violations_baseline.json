@@ -3,12 +3,6 @@
   "M1",
   "M7"
  ],
- "approve_work_journey_absence_request_tool": [
-  "M7"
- ],
- "approve_work_journey_transfer_request_tool": [
-  "M7"
- ],
  "complete_task": [
   "M1"
  ],
@@ -36,18 +30,9 @@
  "create_whatsapp_status_schedule": [
   "M7"
  ],
- "delete_commercial_contract": [
-  "M7"
- ],
- "delete_indicator_line_of_sight_tool": [
-  "M7"
- ],
  "delete_meeting_secure": [
   "M7",
   "M9"
- ],
- "delete_process_strategy_alignment_link_tool": [
-  "M7"
  ],
  "delete_project": [
   "M7",
@@ -60,15 +45,6 @@
  "delete_project_task_secure": [
   "M7",
   "M9"
- ],
- "delete_work_journey_block_tool": [
-  "M7"
- ],
- "delete_work_journey_manual_task_tool": [
-  "M7"
- ],
- "delete_work_journey_rule_tool": [
-  "M7"
  ],
  "dispatch_financial_process_trigger": [
   "M3"

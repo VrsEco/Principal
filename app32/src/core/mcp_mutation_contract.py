@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.core import mcp_read_cohorts
+from src.core.mcp_admin_cohort import ADMIN_CONNECTOR_TOOL_NAMES
 from src.core.mcp_gate_policy import requires_persisted_approval
 from src.core.mcp_cohort_contract import ToolProbe, missing_imported_modules
 
@@ -173,7 +174,8 @@ def audit_mutation_tool(name: str, *, capability: Any, probe: ToolProbe | None) 
     for module in missing_imported_modules(probe.source):
         found.append(Violation("M6", f"importa módulo inexistente '{module}'"))
 
-    if mcp_read_cohorts.token_scope_for(capability) is None:
+    # As ferramentas do conector administrativo curado (``/mcp/pilot/admin``) são alcançáveis com ``mcp:admin``.
+    if mcp_read_cohorts.token_scope_for(capability) is None and name not in ADMIN_CONNECTOR_TOOL_NAMES:
         found.append(Violation("M7", "sem escopo alcançável pelo token (mcp_user, mcp_analytics ou mcp_finance)"))
     if not tuple(getattr(capability, "permissions", ()) or ()):
         found.append(Violation("M7", "sem permissão declarada"))
