@@ -40,6 +40,22 @@ def _paged(items: list, limit: int, offset: int) -> dict:
     return {"success": True, "items": items_window, "count": window["total"], **window}
 
 
+def _bound_payload(company_id: Any, payload: Any) -> tuple[dict, dict | None]:
+    """Amarra o payload ao tenant explícito: ``company_id`` de primeiro nível é a fonte e o payload não pode divergir."""
+    if isinstance(company_id, bool) or not isinstance(company_id, int) or company_id <= 0:
+        return {}, {"success": False, "error": "company_id válido é obrigatório"}
+    bound = dict(payload or {})
+    inner = bound.get("company_id")
+    if inner not in (None, ""):
+        try:
+            if int(inner) != company_id:
+                return {}, {"success": False, "error": "company_id do payload diverge do tenant da requisição"}
+        except (TypeError, ValueError):
+            return {}, {"success": False, "error": "company_id do payload é inválido"}
+    bound["company_id"] = company_id
+    return bound, None
+
+
 def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = False) -> None:
     """Registra as tools MCP financeiras no servidor informado."""
 
@@ -163,10 +179,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "items": result, "count": len(result)}
 
     @mcp.tool()
-    def create_financial_catalog_item(catalog_type: str, payload: dict) -> dict:
+    def create_financial_catalog_item(company_id: int, catalog_type: str, payload: dict) -> dict:
         """
         Cria item de cadastro-base do financeiro.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_catalog_service import FinancialCatalogService
 
         result, error = _run_financial_action(
@@ -243,11 +262,14 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         }
 
     @mcp.tool()
-    def upsert_financial_domain_enablement(payload: dict) -> dict:
+    def upsert_financial_domain_enablement(company_id: int, payload: dict) -> dict:
         """
         Cria ou atualiza a habilitação financeira de um projeto/processo.
         Espera company_id, domain_type, source_id e opcionalmente is_enabled/notes.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_domain_enablement_service import FinancialDomainEnablementService
 
         result, error = _run_financial_action(
@@ -306,10 +328,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return _paged(result, limit, offset)
 
     @mcp.tool()
-    def create_financial_ingestion_record(payload: dict) -> dict:
+    def create_financial_ingestion_record(company_id: int, payload: dict) -> dict:
         """
         Cria um registro transversal de ingestão financeira para integração, importação ou Sapiens.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_ingestion_service import FinancialIngestionService
 
         result, error = _run_financial_action(
@@ -455,10 +480,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         }
 
     @mcp.tool()
-    def create_financial_schedule(payload: dict) -> dict:
+    def create_financial_schedule(company_id: int, payload: dict) -> dict:
         """
         Cria previsão/agendamento financeiro recorrente ou pontual.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_schedule_service import FinancialScheduleService
 
         result, error = _run_financial_action(
@@ -564,10 +592,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "item": result}
 
     @mcp.tool()
-    def create_financial_bordero(payload: dict) -> dict:
+    def create_financial_bordero(company_id: int, payload: dict) -> dict:
         """
         Cria um borderô financeiro de pagamento ou recebimento a partir de agendamentos.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_bordero_service import FinancialBorderoService
 
         result, error = _run_financial_action(
@@ -579,10 +610,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "item": result}
 
     @mcp.tool()
-    def create_financial_bordero_settlement(bordero_id: int, payload: dict) -> dict:
+    def create_financial_bordero_settlement(company_id: int, bordero_id: int, payload: dict) -> dict:
         """
         Registra uma baixa total ou parcial em um borderô financeiro.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_bordero_service import FinancialBorderoService
 
         result, error = _run_financial_action(
@@ -637,10 +671,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **(result or {})}
 
     @mcp.tool()
-    def create_financial_budget_line(payload: dict) -> dict:
+    def create_financial_budget_line(company_id: int, payload: dict) -> dict:
         """
         Cria uma verba orçamentária dentro de um orçamento matricial.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
 
         result, error = _run_financial_action(
@@ -652,10 +689,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "item": result}
 
     @mcp.tool()
-    def create_financial_budget_contract(payload: dict) -> dict:
+    def create_financial_budget_contract(company_id: int, payload: dict) -> dict:
         """
         Cria um contrato vinculado a uma verba orçamentária.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
 
         result, error = _run_financial_action(
@@ -667,10 +707,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "item": result}
 
     @mcp.tool()
-    def create_financial_budget_document(payload: dict) -> dict:
+    def create_financial_budget_document(company_id: int, payload: dict) -> dict:
         """
         Cria uma NF/equivalente vinculada a um contrato do orçamento matricial.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
 
         result, error = _run_financial_action(
@@ -714,10 +757,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "items": result, "count": len(result)}
 
     @mcp.tool()
-    def create_financial_automation_rule(payload: dict) -> dict:
+    def create_financial_automation_rule(company_id: int, payload: dict) -> dict:
         """
         Cria uma regra que gera agendamentos financeiros a partir de processos/instâncias.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_automation_service import FinancialAutomationService
 
         result, error = _run_financial_action(
@@ -916,10 +962,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "item": entry}
 
     @mcp.tool()
-    def create_financial_direct_entry(payload: dict) -> dict:
+    def create_financial_direct_entry(company_id: int, payload: dict) -> dict:
         """
         Cria um lançamento direto operacional com geração concomitante do agendamento.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_direct_entry_service import FinancialDirectEntryService
 
         result, error = _run_financial_action(
@@ -931,11 +980,14 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **result}
 
     @mcp.tool()
-    def replace_financial_allocations(payload: dict) -> dict:
+    def replace_financial_allocations(company_id: int, payload: dict) -> dict:
         """
         Substitui integralmente o rateio de um lançamento financeiro.
         Espera payload compatível com FinancialAllocationBatchInput.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_service import FinancialService
 
         allocations, error = _run_financial_action(
@@ -1065,11 +1117,14 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **result}
 
     @mcp.tool()
-    def create_financial_import_batch(payload: dict, file_base64: str) -> dict:
+    def create_financial_import_batch(company_id: int, payload: dict, file_base64: str) -> dict:
         """
         Cria um lote de importação financeira no staging.
         payload deve seguir FinancialImportBatchInput; file_base64 contém o arquivo codificado.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_import_service import FinancialImportService
 
         try:
@@ -1262,10 +1317,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "items": result, "count": len(result)}
 
     @mcp.tool()
-    def create_financial_classification_rule(payload: dict) -> dict:
+    def create_financial_classification_rule(company_id: int, payload: dict) -> dict:
         """
         Cria regra determinística de classificação para o hub de importação financeira.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_classification_service import FinancialClassificationService
 
         result, error = _run_financial_action(
@@ -1490,10 +1548,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "items": result, "count": len(result)}
 
     @mcp.tool()
-    def create_financial_closing(payload: dict) -> dict:
+    def create_financial_closing(company_id: int, payload: dict) -> dict:
         """
         Registra fechamento financeiro do período com snapshot de conferência.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_closing_service import FinancialClosingService
 
         result, error = _run_financial_action(
@@ -1574,10 +1635,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "items": result, "count": len(result)}
 
     @mcp.tool()
-    def create_financial_budget_version(payload: dict) -> dict:
+    def create_financial_budget_version(company_id: int, payload: dict) -> dict:
         """
         Cria uma nova versão de orçamento matricial financeiro.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_budget_service import FinancialBudgetService
 
         result, error = _run_financial_action(
@@ -1622,10 +1686,13 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **result}
 
     @mcp.tool()
-    def upsert_financial_budget_matrix(payload: dict) -> dict:
+    def upsert_financial_budget_matrix(company_id: int, payload: dict) -> dict:
         """
         Atualiza ou cria linhas e valores da matriz orçamentária financeira.
         """
+        payload, company_error = _bound_payload(company_id, payload)
+        if company_error:
+            return company_error
         from services.financial_budget_service import FinancialBudgetService
 
         result, error = _run_financial_action(
