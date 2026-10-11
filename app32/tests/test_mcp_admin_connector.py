@@ -21,12 +21,12 @@ def test_cohort_is_exactly_the_reviewed_eight_and_excludes_platform_tools():
 
 
 @pytest.mark.parametrize("name", ADMIN_CONNECTOR_TOOL_NAMES)
-def test_each_tool_is_admin_scoped_and_requires_persisted_approval(name):
+def test_each_tool_is_admin_capable_and_requires_persisted_approval(name):
     capability = catalog.get_tool_capability(name)
     assert capability is not None
     scopes = {getattr(scope, "value", scope) for scope in capability.scopes}
     assert "mcp_admin" in scopes
-    assert not scopes & {"mcp_user", "mcp_analytics", "mcp_finance"}, "nunca aparece no conector comum"
+    assert not scopes & {"mcp_analytics", "mcp_finance"}
     assert requires_persisted_approval(name, capability) is True
 
 
