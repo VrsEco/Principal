@@ -43,7 +43,10 @@ def test_mcp_user_admin_runtime_manifests_match_runbook_boundaries():
     assert "mcp_admin" in admin_manifest["summary"]["scopes"]
     assert user_playbook is not None
     assert admin_playbook is not None
-    assert "finance" in user_playbook.allowed_domains
+    # Governança vigente: o domínio financeiro NÃO é do playbook user (mutação só pela surface finance). As leituras
+    # da coorte finance servidas pela user são uma exceção documentada no checklist do playbook, não um domínio.
+    assert "finance" not in user_playbook.allowed_domains
+    assert any("Leituras financeiras" in item for item in user_playbook.startup_checklist)
     assert "finance" in admin_playbook.allowed_domains
     assert admin_playbook.default_scope == "explicit_company_id"
 

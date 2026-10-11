@@ -15,17 +15,21 @@ def test_list_features_filters_by_surface_and_domain():
     assert "processos_acompanhamento" in user_feature_ids
     assert "financeiro_fluxo_caixa" not in user_feature_ids
 
+    # O catálogo financeiro cresceu (conciliação, borderô, orçamento...): o contrato é que o domínio
+    # finance só aparece na surface admin e traz o fluxo de caixa, não que tenha uma única funcionalidade.
     finance_features = service.list_features("admin", domain="finance")
-    assert [feature["id"] for feature in finance_features] == ["financeiro_fluxo_caixa"]
+    finance_ids = [feature["id"] for feature in finance_features]
+    assert "financeiro_fluxo_caixa" in finance_ids
+    assert all(feature_id.startswith("financeiro_") for feature_id in finance_ids)
 
 
-def test_bootstrap_requires_company_context():
+def test_bootstrap_requires_company_context_outside_the_user_surface():
     service = MCPFeatureCatalogService()
     context = MCPDocumentationContext(
         company_id=None,
         user_id=10,
-        role="colaborador",
-        surface="user",
+        role="administrador",
+        surface="admin",
         client="claude_code",
         transport="stdio",
     )
@@ -36,6 +40,24 @@ def test_bootstrap_requires_company_context():
         assert "company_id é obrigatório" in str(exc)
     else:  # pragma: no cover - proteção defensiva
         raise AssertionError("Era esperado erro por ausência de company_id.")
+
+
+def test_bootstrap_on_the_user_surface_does_not_require_a_company():
+    """Sessões multiempresa descobrem a empresa depois (list_my_companies); o bootstrap do user não a exige."""
+    service = MCPFeatureCatalogService()
+    context = MCPDocumentationContext(
+        company_id=None,
+        user_id=10,
+        role="colaborador",
+        surface="user",
+        client="claude_code",
+        transport="stdio",
+    )
+
+    payload = service.bootstrap_context(context)
+
+    assert payload["current_context"]["required"] == []
+    assert payload["current_context"]["resolved"]["company_id"] is None
 
 
 def test_guide_and_constraints_follow_surface_rules():
@@ -62,8 +84,8 @@ def test_bootstrap_context_exposes_current_context_and_required_context_summary(
     context = MCPDocumentationContext(
         company_id=31,
         user_id=10,
-        role="colaborador",
-        surface="user",
+        role="administrador",
+        surface="admin",
         client="claude_code",
         transport="stdio",
         thread_id="thread-1",

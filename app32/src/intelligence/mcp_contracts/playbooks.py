@@ -105,7 +105,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 startup_checklist=[
                     "Confirmar company_id ativo antes de qualquer leitura ou mutação.",
                     "Consultar as capabilities da surface user e o contrato CRUD do domínio alvo.",
-                    "Encaminhar domínio financeiro para a surface finance, que exige company_id explícito e aprovação persistida quando houver mutação.",
+                    "Leituras financeiras (coorte finance) são servidas pela surface user, sempre com company_id explícito; qualquer mutação financeira vai para a surface finance, que exige company_id explícito e aprovação persistida.",
                     "Se houver ambiguidade de escopo, pedir confirmação ao usuário antes de agir.",
                 ],
                 interaction_rules=[
@@ -319,7 +319,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 surface="finance",
                 title="Playbook MCP Finance",
                 objective="Executar operações financeiras do próprio usuário com tenant explícito, autorização APP32 viva, idempotência e confirmação humana persistida.",
-                actor_roles=["cliente", "administrador"],
+                actor_roles=["colaborador", "cliente", "administrador"],
                 allowed_domains=["finance"],
                 default_scope="explicit_company_id",
                 discovery_tools=["list_finance_app32_capabilities"],
