@@ -22,6 +22,13 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
     """Registra tools MCP da frente comercial/contratos."""
 
     def _run_action(callback, *args, **kwargs):
+        from flask import has_app_context
+
+        # O runtime MCP já abre o contexto da chamada. Um contexto aninhado descartaria a sessão ao sair e deixaria
+        # desligado o objeto criado: a escrita seria gravada, mas a resposta falharia e o cliente repetiria a chamada.
+        if has_app_context():
+            return callback(*args, **kwargs)
+
         from src.core.mcp_flask_app import get_mcp_flask_app
 
         app = get_mcp_flask_app()
