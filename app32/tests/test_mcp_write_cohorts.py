@@ -161,3 +161,18 @@ def test_integration_request_declares_its_accepted_values_in_the_schema(monkeypa
     assert set(props["technical_channel"]["enum"]) == {"api", "mcp", "api_mcp"}
     assert set(props["urgency"]["enum"]) == {"low", "medium", "high", "critical"}
     assert set(props["compliance_level"]["enum"]) == {"internal", "restricted", "sensitive"}
+
+
+LEGACY_CHAT_TOOLS = {
+    "update_user_contacts", "create_project_task", "delete_project_task", "complete_task", "log_work_hours",
+    "request_deadline_extension", "escalate_technical_issue", "search_organizational_knowledge",
+    "describe_app32_domain_playbooks_tool", "describe_app32_surface_playbooks_tool",
+}
+
+
+def test_legacy_chat_tools_never_enter_a_write_or_read_cohort():
+    """As legadas do chat (sem company_id de primeiro nível, com identidade do cliente ou sem variante segura) não se publicam."""
+    import src.core.mcp_read_cohorts as read_cohorts
+
+    cohort_names = set(cohorts.all_write_cohort_names()) | set(read_cohorts.all_read_cohort_names())
+    assert LEGACY_CHAT_TOOLS.isdisjoint(cohort_names), sorted(LEGACY_CHAT_TOOLS & cohort_names)

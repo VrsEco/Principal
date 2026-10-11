@@ -92,3 +92,30 @@ def test_domain_enablements_paginates_each_type(tools, monkeypatch):
 def test_invalid_pagination_is_rejected(tools, limit, offset):
     with pytest.raises(ValueError):
         tools.get_tool("list_financial_schedules").fn(company_id=9, limit=limit, offset=offset)
+
+
+def test_schedules_compact_mode_drops_the_heavy_fields(tools, monkeypatch):
+    heavy = {
+        "id": 1, "schedule_code": "AG-1", "name": "Aluguel", "entry_type": "payable", "status": "active",
+        "frequency": "monthly", "next_due_date": "2026-11-01", "template_amount": 500.0,
+        "signed_template_amount": -500.0, "currency_code": "BRL", "counterparty_name": "Fulano",
+        "financial_title_status": "partial",
+        "allocations": [{"x": "y"}] * 20, "metadata_json": {"allocations": [{"x": "y"}] * 20}, "attachments": [],
+        "summary": {"total_open": 250.0, "settlement_state": "partial", "enters_transactional_views": True},
+    }
+    monkeypatch.setattr(
+        "services.financial_schedule_service.FinancialScheduleService.list_schedules",
+        staticmethod(lambda **kw: ([dict(heavy, id=i) for i in range(30)], None)),
+    )
+    tool = tools.get_tool("list_financial_schedules")
+    assert "compact" in tool.parameters["properties"]
+
+    full = tool.fn(company_id=9, limit=5)
+    compact = tool.fn(company_id=9, limit=5, compact=True)
+
+    assert "allocations" in full["items"][0]
+    row = compact["items"][0]
+    assert "allocations" not in row and "metadata_json" not in row and "summary" not in row
+    assert row["open_total"] == 250.0 and row["settlement_state"] == "partial" and row["schedule_code"] == "AG-1"
+    assert len(str(compact["items"])) * 2 < len(str(full["items"]))
+    assert compact["total"] == 30 and compact["has_more"] is True, "a paginação continua valendo no modo compacto"

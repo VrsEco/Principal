@@ -18,6 +18,21 @@ from pydantic import StrictInt
 from src.core.mcp_pagination import PAGE_DEFAULT, page_of, validated_page
 
 
+_SCHEDULE_COMPACT_KEYS = (
+    "id", "schedule_code", "name", "entry_type", "status", "frequency", "next_due_date", "template_amount",
+    "signed_template_amount", "currency_code", "counterparty_name", "financial_title_status",
+)
+
+
+def _compact_schedule(item: dict) -> dict:
+    """Identificação, valor e situação de um agendamento, sem alocações, metadados e títulos repetidos."""
+    compact = {key: item.get(key) for key in _SCHEDULE_COMPACT_KEYS if key in item}
+    summary = item.get("summary") or {}
+    compact["open_total"] = summary.get("total_open")
+    compact["settlement_state"] = summary.get("settlement_state")
+    return compact
+
+
 def _paged(items: list, limit: int, offset: int) -> dict:
     """Resposta paginada padrão das listagens financeiras (items + total/has_more/next_offset)."""
     window = page_of(list(items or []), limit, offset)
@@ -352,9 +367,12 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, **result}
 
     @mcp.tool()
-    def list_financial_schedules(company_id: int, status: Optional[str] = None, limit: int = PAGE_DEFAULT, offset: int = 0) -> dict:
+    def list_financial_schedules(
+        company_id: int, status: Optional[str] = None, limit: int = PAGE_DEFAULT, offset: int = 0, compact: bool = False
+    ) -> dict:
         """
         Lista previsões e agendamentos financeiros da empresa.
+        compact=true devolve só identificação, valor e situação (sem alocações nem metadados), ~10x menor.
         """
         limit, offset = validated_page(limit, offset)
         from services.financial_schedule_service import FinancialScheduleService
@@ -366,7 +384,8 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         )
         if error:
             return {"success": False, "error": error}
-        return _paged(result, limit, offset)
+        rows = [_compact_schedule(item) for item in result] if compact else result
+        return _paged(rows, limit, offset)
 
     @mcp.tool()
     def get_financial_payables_due_summary(

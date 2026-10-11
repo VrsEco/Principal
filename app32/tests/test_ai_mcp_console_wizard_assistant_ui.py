@@ -26,6 +26,13 @@ def _build_app():
     def _load_user(user_id):
         return None
 
+    # O app real injeta a versão dos assets por context processor; o app mínimo do teste precisa do mesmo contrato.
+    app.context_processor(lambda: {"static_asset_version": lambda filename: "test"})
+    # Este teste valida etapas, CTAs e ajuda contextual do assistente, não cada dado do console: chaves que o
+    # template passou a ler e que o estado falso não traz renderizam vazias em vez de derrubar o teste.
+    from jinja2 import ChainableUndefined
+
+    app.jinja_env.undefined = ChainableUndefined
     app.register_blueprint(configs_route.configs_bp)
     return app
 
@@ -50,6 +57,11 @@ def _fake_console_state():
             "onboarding_steps": 5,
             "readiness_gates": 5,
             "dashboard_panels": 6,
+        },
+        "runtime_context": {
+            "required_contract_dimensions": ["user", "company"],
+            "resolved": {"company_id": 31, "company_name": "Empresa MCP", "company_code": "MCP"},
+            "resolution": {"company": "active_company"},
         },
         "profiles": [],
         "surfaces": [],
