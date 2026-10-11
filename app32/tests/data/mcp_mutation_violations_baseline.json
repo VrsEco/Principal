@@ -27,60 +27,8 @@
  "create_commercial_product_service": [
   "M1"
  ],
- "create_financial_automation_rule": [
-  "M5"
- ],
- "create_financial_bordero": [
-  "M5"
- ],
- "create_financial_bordero_settlement": [
-  "M5"
- ],
- "create_financial_budget_contract": [
-  "M5"
- ],
- "create_financial_budget_document": [
-  "M5"
- ],
- "create_financial_budget_document_schedules": [
-  "M5"
- ],
- "create_financial_budget_line": [
-  "M5"
- ],
- "create_financial_budget_version": [
-  "M5"
- ],
- "create_financial_catalog_item": [
-  "M5"
- ],
- "create_financial_classification_rule": [
-  "M5"
- ],
  "create_financial_closing": [
-  "M5",
   "M6"
- ],
- "create_financial_direct_entry": [
-  "M5"
- ],
- "create_financial_entry": [
-  "M5"
- ],
- "create_financial_entry_from_bank_reconciliation_row": [
-  "M5"
- ],
- "create_financial_import_batch": [
-  "M5"
- ],
- "create_financial_ingestion_record": [
-  "M5"
- ],
- "create_financial_schedule": [
-  "M5"
- ],
- "create_financial_settlement": [
-  "M5"
  ],
  "create_project_task": [
   "M1"
@@ -129,29 +77,11 @@
   "M1",
   "M7"
  ],
- "generate_commercial_billing_batch": [
-  "M5"
- ],
- "generate_commercial_financial_titles_for_billing": [
-  "M5"
- ],
- "generate_due_financial_schedules": [
-  "M5"
- ],
- "generate_financial_report": [
-  "M5"
- ],
  "generate_strategic_connection_summary": [
   "M3"
  ],
- "import_financial_budget_matrix": [
-  "M5"
- ],
  "log_work_hours": [
   "M1"
- ],
- "match_financial_bank_reconciliation_row": [
-  "M5"
  ],
  "pause_whatsapp_status_schedule": [
   "M7"
@@ -171,18 +101,12 @@
  "publish_whatsapp_status_test": [
   "M7"
  ],
- "reconcile_financial_import_batch": [
-  "M5"
- ],
  "register_system_user": [
   "M1",
   "M7"
  ],
  "register_whatsapp_status_approved_bundle": [
   "M7"
- ],
- "replace_financial_allocations": [
-  "M5"
  ],
  "request_agent_deployment": [
   "M1",
@@ -211,17 +135,5 @@
  ],
  "update_whatsapp_status_schedule": [
   "M7"
- ],
- "upsert_commercial_contract_financial_terms": [
-  "M5"
- ],
- "upsert_commercial_contract_fiscal_terms": [
-  "M5"
- ],
- "upsert_financial_budget_matrix": [
-  "M5"
- ],
- "upsert_financial_domain_enablement": [
-  "M5"
  ]
 }
