@@ -74,3 +74,15 @@ Mutações novas entram por coorte própria, desligada por padrão. Variável `M
 - Nenhuma delas exige aprovação (regra D6). Aprovação e identidade seguem o contrato de mutações: só entra na coorte a ferramenta sem violação na linha de base.
 - Reversão imediata: `MCP_VERSUS_WRITE_DOMAINS=none` e reinício.
 - Validação após ligar: reconectar, listar as capacidades e chamar cada ferramenta na empresa de teste. Para escritas, usar registros de teste e conferir o ator gravado (deve ser o usuário da sessão).
+
+## 7. Sonda de saúde do mcp-versus
+
+`app32/scripts/qa/mcp_health_probe.py` checa, sem credenciais e só com leitura:
+1. `/mcp/healthz` (200 e tempo);
+2. descoberta OAuth em `/.well-known/oauth-protected-resource/mcp/pilot` (servidor de autorização e escopos base `mcp:access` e `mcp:user`);
+3. descoberta do Keycloak (`token_endpoint`);
+4. o endpoint MCP sem token deve responder 401.
+
+Códigos de saída: 0 saudável, 1 degradado (lento ou sintomas no log), 2 falha. Opções: `--json` para um monitor externo e, no servidor, `--log logs/mcp_http_stderr.log --minutes 60` para contar `permission discovery failed`, `OperationalError` e `Traceback`.
+
+Limites: não valida a lista de ferramentas (exige token). Para isso, chamar `list_user_app32_capabilities` autenticado e conferir a contagem esperada. Sintoma "0 ferramentas": olhar primeiro `permission discovery failed` no log.
