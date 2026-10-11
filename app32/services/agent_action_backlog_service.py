@@ -8,7 +8,7 @@ from models import db
 from models.agent_action_backlog_link import AgentActionBacklogLink
 from models.project import ProjectTask
 from services.agent_backlog_service import (
-    DEFAULT_AGENT_BACKLOG_PROJECT_CODE,
+    current_agent_backlog_project_code,
     create_backlog_task,
 )
 from services.project_task_service import ProjectTaskService
@@ -203,14 +203,17 @@ def _ensure_payload_backlog_card(action: Any, task: Any, link: Any) -> None:
         "task_id": getattr(task, "id", None),
         "task_code": getattr(task, "code", None),
         "project_code": getattr(link, "backlog_project_code", None)
-        or DEFAULT_AGENT_BACKLOG_PROJECT_CODE,
+        or current_agent_backlog_project_code(),
         "link_type": getattr(link, "link_type", None),
     }
     action.payload = payload
 
 
 def _recover_orphan_backlog_task_for_action(action: Any) -> Optional[ProjectTask]:
-    project_id = ProjectTaskService.extract_id_from_code(DEFAULT_AGENT_BACKLOG_PROJECT_CODE)
+    project, _error = ProjectTaskService.resolve_project_by_code(
+        current_agent_backlog_project_code(), allowed_company_ids=None
+    )
+    project_id = getattr(project, "id", None)
     action_id = getattr(action, "id", None)
     if not project_id or not action_id:
         return None
@@ -237,7 +240,7 @@ def _create_link_for_task(action: Any, task: Any) -> AgentActionBacklogLink:
         agent_action_id=int(getattr(action, "id", None)),
         project_task_id=int(getattr(task, "id", None)),
         link_type=_normalize_text(getattr(action, "type", None)) or "agent_action",
-        backlog_project_code=DEFAULT_AGENT_BACKLOG_PROJECT_CODE,
+        backlog_project_code=current_agent_backlog_project_code(),
     )
 
 

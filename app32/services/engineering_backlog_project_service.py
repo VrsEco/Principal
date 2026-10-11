@@ -9,6 +9,7 @@ deduz o projeto de códigos históricos. Os serviços de backlog usavam ``AA.J.1
 from __future__ import annotations
 
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -41,3 +42,11 @@ def current_engineering_project_code(fallback: str) -> str:
         return fallback
     code = getattr(project, "code", None) if project is not None else None
     return str(code) if code else fallback
+
+
+def backlog_project_code(fallback: str, env_key: str | None = None) -> str:
+    """Projeto que recebe os cards de backlog: env explícita, senão o projeto operacional vigente, senão ``fallback``."""
+    explicit = os.environ.get(env_key) if env_key else None
+    if explicit:
+        return explicit
+    return current_engineering_project_code(fallback)

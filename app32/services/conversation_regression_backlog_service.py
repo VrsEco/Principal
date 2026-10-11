@@ -171,7 +171,12 @@ class ConversationRegressionBacklogService:
         allowed_company_ids: Optional[Sequence[int]] = None,
         persist: bool = True,
     ) -> Dict[str, Any]:
-        project_code = str(payload.get("project_code") or ConversationRegressionBacklogService.DEFAULT_PROJECT_CODE).strip()
+        from services.engineering_backlog_project_service import backlog_project_code
+
+        project_code = str(
+            payload.get("project_code")
+            or backlog_project_code(ConversationRegressionBacklogService.DEFAULT_PROJECT_CODE)
+        ).strip()
         items = list(payload.get("items") or [])
         results: List[Dict[str, Any]] = []
         for item in items:
