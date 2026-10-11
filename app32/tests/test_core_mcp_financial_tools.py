@@ -179,7 +179,7 @@ def test_create_financial_schedule_attaches_agent_audit_context(monkeypatch):
     monkeypatch.delenv("APP32_MCP_CLIENT", raising=False)
     monkeypatch.delenv("APP32_MCP_THREAD_ID", raising=False)
 
-    response = mcp.registered["create_financial_schedule"]({"company_id": 10, "schedule_code": "SCH-001"})
+    response = mcp.registered["create_financial_schedule"](10, {"company_id": 10, "schedule_code": "SCH-001"})
 
     assert response == {"success": True, "item": {"id": 63, "company_id": 10}}
     assert captured["created_by_agent"] == "claude_code"
@@ -239,7 +239,7 @@ def test_create_financial_schedule_resolves_employee_by_user_and_company(monkeyp
     monkeypatch.delenv("APP32_MCP_THREAD_ID", raising=False)
     monkeypatch.delenv("APP32_MCP_CLIENT", raising=False)
 
-    response = mcp.registered["create_financial_schedule"]({"company_id": 10, "schedule_code": "SCH-EMP-001"})
+    response = mcp.registered["create_financial_schedule"](10, {"company_id": 10, "schedule_code": "SCH-EMP-001"})
 
     assert response == {"success": True, "item": {"id": 68, "company_id": 10}}
     assert captured["created_by_user_id"] == 3
