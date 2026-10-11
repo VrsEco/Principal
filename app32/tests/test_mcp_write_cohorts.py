@@ -28,6 +28,7 @@ EXPECTED = {
         "create_process_pop_step_for_bpmn_tool",
         "draft_process_pop_step_description_tool",
         "attach_process_pop_step_static_image_tool",
+        "update_process_instance",
     },
     "routine": {
         "create_work_calendar_event_tool",
@@ -109,7 +110,7 @@ def _server(monkeypatch, env):
 
 def test_cohort_content_is_exactly_the_approved_set():
     assert {k: set(v) for k, v in cohorts.WRITE_COHORT_TOOL_NAMES.items()} == EXPECTED
-    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 63
+    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 64
 
 
 @pytest.mark.parametrize("value", [None, "", "none", "NONE", "  "])

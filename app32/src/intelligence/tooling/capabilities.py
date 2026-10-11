@@ -291,6 +291,14 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("crud", "mutation"),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
+    "update_process_instance": {
+        "domain": "processes",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM,
+        "permissions": ("process.instance.update",),
+        "tags": ("crud", "mutation", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
     "analyze_process_flow_copilot_tool": {
         "domain": "processes",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

@@ -322,3 +322,49 @@ def test_meeting_mcp_sync_failure_does_not_break_the_write(monkeypatch):
 
     assert error is None
     assert payload["meeting"] == {"id": 7}
+
+
+# ---- append_meeting_notes e invite_notes ----------------------------------------------------------
+def _notes_meeting(monkeypatch, notes="Pauta inicial"):
+    session = _Session()
+    monkeypatch.setattr("services.meeting_mcp_service.db", SimpleNamespace(session=session))
+    monkeypatch.setattr("services.work_journey_sync.sync_meeting_item", lambda *a, **k: None)
+    meeting = SimpleNamespace(id=7, company_id=13, project_id=None, title="Reunião", meeting_notes=notes,
+                              invite_notes=None, to_dict=lambda: {})
+    monkeypatch.setattr(MeetingMCPService, "get_meeting", staticmethod(lambda **kwargs: (meeting, None)))
+    from services.project_task_mcp_service import ProjectTaskMCPService
+
+    monkeypatch.setattr(ProjectTaskMCPService, "_actor_label", staticmethod(lambda user_id: "Fabiano Diretor"))
+    return meeting, session
+
+
+def test_append_meeting_notes_keeps_history_with_date_and_author(monkeypatch):
+    meeting, session = _notes_meeting(monkeypatch)
+    _, error = MeetingMCPService.update_meeting(
+        company_id=13, meeting_id=7, changes={"append_meeting_notes": "Ata revisada."}, actor_user_id=3
+    )
+    assert not error
+    assert meeting.meeting_notes.startswith("Pauta inicial\n\n[")
+    assert meeting.meeting_notes.endswith("· Fabiano Diretor] Ata revisada.")
+    assert session.commits >= 1
+
+
+def test_invite_notes_can_be_edited_and_cleared(monkeypatch):
+    meeting, _session = _notes_meeting(monkeypatch)
+    assert not MeetingMCPService.update_meeting(company_id=13, meeting_id=7, changes={"invite_notes": " Trazer o balanço "})[1]
+    assert meeting.invite_notes == "Trazer o balanço"
+    assert not MeetingMCPService.update_meeting(company_id=13, meeting_id=7, changes={"invite_notes": ""})[1]
+    assert meeting.invite_notes is None
+
+
+def test_rejected_append_never_touches_the_meeting(monkeypatch):
+    meeting, session = _notes_meeting(monkeypatch, notes="x" * (MeetingMCPService.MAX_NOTES_CHARS - 3))
+    for changes in (
+        {"append_meeting_notes": " "}, {"append_meeting_notes": 3}, {"append_meeting_notes": "x" * 4001},
+        {"append_meeting_notes": "a", "meeting_notes": "b"},
+        {"title": "Outro título", "append_meeting_notes": "estoura o limite"},
+    ):
+        result, error = MeetingMCPService.update_meeting(company_id=13, meeting_id=7, changes=changes)
+        assert result is None and error, changes
+    assert meeting.title == "Reunião", "recusa não pode deixar a reunião parcialmente alterada"
+    assert session.commits == 0

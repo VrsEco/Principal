@@ -35,6 +35,7 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "create_process_pop_step_for_bpmn_tool",
         "draft_process_pop_step_description_tool",
         "attach_process_pop_step_static_image_tool",
+        "update_process_instance",
     ),
     # Sub-onda 2C: jornada de trabalho. Fora: aprovações (escopo ainda inalcançável por token comum), exclusões de alto risco e as legadas do chat (complete_task, log_work_hours).
     "routine": (

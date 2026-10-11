@@ -35,8 +35,13 @@ class MeetingMCPService:
             "actual_time",
             "actual_duration_minutes",
             "status",
+            # Texto do convite e acréscimo datado às notas (meeting_notes continua substituindo o texto inteiro).
+            "invite_notes",
+            "append_meeting_notes",
         }
     )
+    MAX_APPEND_NOTES_CHARS = 4000
+    MAX_NOTES_CHARS = 50000
     TOPIC_UPDATE_FIELDS = frozenset({"title", "notes", "discussion", "status"})
     DECISION_UPDATE_FIELDS = frozenset({"text", "rationale", "owner"})
     ACTIVITY_UPDATE_FIELDS = frozenset(
@@ -212,14 +217,37 @@ class MeetingMCPService:
         return {"meeting": meeting.to_dict()}, None
 
     @staticmethod
-    def update_meeting(*, company_id: int, meeting_id: int, changes: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    def update_meeting(
+        *, company_id: int, meeting_id: int, changes: dict[str, Any], actor_user_id: int | None = None
+    ) -> tuple[dict[str, Any] | None, str | None]:
         normalized = dict(changes or {})
         error = MeetingMCPService._validate_fields(normalized, MeetingMCPService.MEETING_UPDATE_FIELDS)
         if error:
             return None, error
+        if "append_meeting_notes" in normalized:
+            text = normalized["append_meeting_notes"]
+            if "meeting_notes" in normalized:
+                return None, "Use meeting_notes (substitui o texto) ou append_meeting_notes (acrescenta), não os dois."
+            if not isinstance(text, str) or not text.strip():
+                return None, "append_meeting_notes não pode ser vazio."
+            if len(text.strip()) > MeetingMCPService.MAX_APPEND_NOTES_CHARS:
+                return None, f"append_meeting_notes excede {MeetingMCPService.MAX_APPEND_NOTES_CHARS} caracteres."
         meeting, error = MeetingMCPService.get_meeting(company_id=company_id, meeting_id=meeting_id)
         if error or meeting is None:
             return None, error
+
+        # Calculado antes de qualquer atribuição: uma recusa não pode deixar a reunião parcialmente alterada.
+        appended_notes = None
+        if "append_meeting_notes" in normalized:
+            from services.project_task_mcp_service import ProjectTaskMCPService
+
+            appended_notes = ProjectTaskMCPService._append_note_entry(
+                getattr(meeting, "meeting_notes", None),
+                normalized["append_meeting_notes"],
+                ProjectTaskMCPService._actor_label(actor_user_id),
+            )
+            if len(appended_notes) > MeetingMCPService.MAX_NOTES_CHARS:
+                return None, "As notas da reunião excederiam o limite; resuma o histórico antes de acrescentar."
 
         if "title" in normalized:
             title = str(normalized["title"] or "").strip()
@@ -235,6 +263,10 @@ class MeetingMCPService:
             meeting.project_id = project.id if project else None
         if "meeting_notes" in normalized:
             meeting.meeting_notes = str(normalized.get("meeting_notes") or "").strip() or None
+        if appended_notes is not None:
+            meeting.meeting_notes = appended_notes
+        if "invite_notes" in normalized:
+            meeting.invite_notes = str(normalized.get("invite_notes") or "").strip() or None
         if "participants" in normalized:
             participants = normalized.get("participants")
             if not isinstance(participants, (list, dict)):
