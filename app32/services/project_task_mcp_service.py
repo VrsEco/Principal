@@ -38,8 +38,56 @@ class ProjectTaskMCPService:
             "notes",
             "status",
             "stage",
+            # Acrescenta um registro datado às notas, sem apagar o histórico (``notes`` substitui o texto inteiro).
+            "append_notes",
+            "estimated_hours",
+            "worked_hours",
         }
     )
+    MAX_APPEND_NOTES_CHARS = 4000
+    MAX_NOTES_CHARS = 50000
+    MAX_HOURS = 10000
+
+    @staticmethod
+    def _parse_hours(value: Any, field: str) -> tuple[Any, str | None]:
+        from decimal import Decimal, InvalidOperation
+
+        if isinstance(value, bool) or value is None:
+            return None, f"{field} deve ser um número de horas."
+        try:
+            hours = Decimal(str(value).strip().replace(",", "."))
+        except (InvalidOperation, ValueError):
+            return None, f"{field} deve ser um número de horas."
+        if not hours.is_finite() or hours < 0 or hours > ProjectTaskMCPService.MAX_HOURS:
+            return None, f"{field} deve estar entre 0 e {ProjectTaskMCPService.MAX_HOURS} horas."
+        return hours.quantize(Decimal("0.01")), None
+
+    @staticmethod
+    def _actor_label(actor_user_id: int | None) -> str:
+        if not actor_user_id:
+            return "MCP"
+        try:
+            from models.user import User
+
+            user = db.session.get(User, int(actor_user_id))
+            name = str(getattr(user, "name", "") or "").strip()
+            if name:
+                return name
+        except Exception:  # rótulo é cosmético; nunca derruba a atualização
+            pass
+        return f"usuário #{int(actor_user_id)}"
+
+    @staticmethod
+    def _append_note_entry(current: str | None, text: str, actor_label: str) -> str:
+        try:
+            from zoneinfo import ZoneInfo
+
+            now = datetime.now(ZoneInfo("America/Sao_Paulo"))
+        except Exception:
+            now = datetime.utcnow()
+        entry = f"[{now.strftime('%d/%m/%Y %H:%M')} · {actor_label}] {text.strip()}"
+        base = str(current or "").rstrip()
+        return f"{base}\n\n{entry}" if base else entry
 
     @staticmethod
     def _serialize_task(task: ProjectTask) -> dict[str, Any]:
@@ -359,6 +407,7 @@ class ProjectTaskMCPService:
         company_id: int,
         task_id: int,
         changes: dict[str, Any],
+        actor_user_id: int | None = None,
     ) -> tuple[dict[str, Any] | None, str | None]:
         if not isinstance(changes, dict) or not changes:
             return None, "Atualização exige um objeto não vazio."
@@ -385,6 +434,21 @@ class ProjectTaskMCPService:
             value = normalized_changes["task_name"]
             if not isinstance(value, str) or not value.strip():
                 return None, "Nome da atividade não pode ser vazio."
+        if "append_notes" in normalized_changes:
+            value = normalized_changes["append_notes"]
+            if "notes" in normalized_changes:
+                return None, "Use notes (substitui o texto) ou append_notes (acrescenta), não os dois."
+            if not isinstance(value, str) or not value.strip():
+                return None, "append_notes não pode ser vazio."
+            if len(value.strip()) > ProjectTaskMCPService.MAX_APPEND_NOTES_CHARS:
+                return None, f"append_notes excede {ProjectTaskMCPService.MAX_APPEND_NOTES_CHARS} caracteres."
+        parsed_hours: dict[str, Any] = {}
+        for hours_field in ("estimated_hours", "worked_hours"):
+            if hours_field in normalized_changes:
+                parsed_value, hours_error = ProjectTaskMCPService._parse_hours(normalized_changes[hours_field], hours_field)
+                if hours_error:
+                    return None, hours_error
+                parsed_hours[hours_field] = parsed_value
         if "status" in normalized_changes and "stage" in normalized_changes:
             if (normalized_changes["status"] == "completed") != (normalized_changes["stage"] == "completed"):
                 return None, "Status e etapa de conclusão incompatíveis."
@@ -404,6 +468,17 @@ class ProjectTaskMCPService:
         if task.is_deleted:
             return None, "Não é permitido alterar atividade já soft-deletada."
 
+        # Calculado antes de qualquer atribuição: uma recusa não pode deixar o objeto parcialmente alterado.
+        appended_notes = None
+        if "append_notes" in normalized_changes:
+            appended_notes = ProjectTaskMCPService._append_note_entry(
+                getattr(task, "notes", None),
+                normalized_changes["append_notes"],
+                ProjectTaskMCPService._actor_label(actor_user_id),
+            )
+            if len(appended_notes) > ProjectTaskMCPService.MAX_NOTES_CHARS:
+                return None, "As notas da atividade excederiam o limite; resuma o histórico antes de acrescentar."
+
         if "task_name" in normalized_changes:
             task.what = str(normalized_changes["task_name"]).strip()
         if "responsible_name" in normalized_changes:
@@ -416,6 +491,10 @@ class ProjectTaskMCPService:
             task.priority = str(normalized_changes["priority"]).strip() or "normal"
         if "notes" in normalized_changes:
             task.notes = str(normalized_changes["notes"]).strip() or None
+        if appended_notes is not None:
+            task.notes = appended_notes
+        for hours_field, hours_value in parsed_hours.items():
+            setattr(task, hours_field, hours_value)
         if "status" in normalized_changes:
             task.status = str(normalized_changes["status"]).strip() or task.status
         if "stage" in normalized_changes:
