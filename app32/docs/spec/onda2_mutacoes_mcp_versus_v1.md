@@ -182,3 +182,58 @@ As mutações já publicadas são listas fixas no registro. Para as novas, propo
 
 ### 9.7 Resultado esperado da 2A
 Publicáveis: 3 prontas + 3 corrigidas = **6 mutações novas** (criar e editar projeto, editar tarefa, pedir sugestão à Engenharia, registrar discussão de reunião, pedir integração). Nenhuma exige aprovação nova. O uso diário que muda: passar a criar e editar projetos e tarefas pelo mcp-versus, além de registrar sugestões e integrações.
+
+## 10. Sub-onda 2F (financeiro): desenho da idempotência — 2026-10-11
+
+Documento de desenho, sem código. Pede decisão antes de implementar (seção 10.7).
+
+### 10.1 Problema
+- 30 ferramentas financeiras de escrita têm M5 (sem `idempotency_key`) e 17 delas têm M1 (sem `company_id` de primeiro nível).
+- Não existe idempotência financeira genérica. O que há é local: faturamento de contratos (`contract_native_billings`), execuções de automação (`financial_automation_executions`), tarefas de projeto e árvore estratégica. Nenhuma cobre lançamento, baixa, borderô, importação ou conciliação.
+- Risco concreto: o cliente MCP repete a chamada (tempo esgotado, nova tentativa automática) e o lançamento ou a baixa é gravado duas vezes. No financeiro isso é valor duplicado no caixa.
+
+### 10.2 Princípio: uma camada única no runtime, não 30 correções
+A idempotência vive em `mcp_runtime`, ao lado da aprovação persistida, e vale para toda ferramenta que a declarar. As ferramentas não mudam de corpo; ganham só o parâmetro opcional `idempotency_key` (injetado pelo adaptador `mcp_param_hiding`, sem editar as 30 assinaturas).
+
+### 10.3 Tabela nova `mcp_idempotency_keys`
+| Coluna | Uso |
+|---|---|
+| `id` | chave primária |
+| `company_id` | empresa (isolamento) |
+| `principal_id` | quem chamou (a chave de um usuário não vale para outro) |
+| `tool_name` | ferramenta |
+| `idempotency_key` | texto do cliente, até 128 caracteres |
+| `payload_digest` | resumo canônico do payload (o mesmo `canonical_payload_digest` da aprovação) |
+| `status` | `in_progress`, `succeeded`, `failed` |
+| `result` | JSON do envelope devolvido (limitado; só o necessário para repetir a resposta) |
+| `created_at`, `expires_at` | validade de 24 horas |
+
+Restrição única: `(company_id, principal_id, tool_name, idempotency_key)`.
+
+### 10.4 Comportamento
+1. Sem chave: a chamada segue como hoje, mas a ferramenta financeira **de criação** passa a exigir a chave quando a coorte finance de escrita estiver ligada (decisão D10 abaixo).
+2. Primeira chamada: grava a linha `in_progress` **antes** de executar, em transação própria (a restrição única barra a corrida entre duas chamadas simultâneas).
+3. Mesma chave e mesmo `payload_digest`: devolve o resultado guardado, sem executar de novo (`replayed: true`).
+4. Mesma chave e payload diferente: erro `idempotency_key_reuse`, sem executar.
+5. Chamada anterior ainda `in_progress`: erro `request_in_progress` (o cliente tenta de novo depois).
+6. Falha na execução: a linha vira `failed` e a chave pode ser reutilizada com o mesmo payload.
+7. Combinação com aprovação (financeiras que lançam ou baixam valor): a aprovação é consumida **uma vez**; a repetição com a mesma chave devolve o resultado guardado sem pedir nova aprovação.
+
+### 10.5 `company_id` de primeiro nível (M1)
+17 ferramentas recebem `company_id` explícito na assinatura, no molde de `create_financial_entry` (que já confere o payload contra o tenant). É mudança mecânica, com teste por ferramenta, e pode sair antes da idempotência em PR próprio.
+
+### 10.6 Migração e implantação
+- A tabela exige migração Alembic: o deploy `quick` não a roda; o 2F pede **deploy completo** (`deployment_id` informado) e é o motivo de despachar o lote atual antes.
+- A migração só cria tabela nova (sem alterar dados existentes). Rollback: remover a tabela; o runtime sem a tabela ignora a camada (fail-open **somente** para ferramentas sem a flag de exigência; nas financeiras exigidas, fail-closed).
+- Limpeza: tarefa agendada apaga linhas expiradas.
+
+### 10.7 Decisões necessárias
+| # | Pergunta | Recomendação |
+|---|---|---|
+| D10 | A chave passa a ser **obrigatória** nas ferramentas financeiras de criação? | Sim em `create_*`, `generate_*`, `import_*`, `reconcile_*`, `match_*`; opcional em `upsert_*` e `replace_*`, que já são idempotentes por natureza. |
+| D11 | Validade da chave | 24 horas. |
+| D12 | Ordem | 1) M1 financeiro (PR pequeno, sem migração); 2) camada de idempotência + migração (deploy completo); 3) ligar a coorte `finance` de escrita em duas etapas: cadastros (catálogo, regras, orçamento) e depois lançamento/baixa/conciliação. |
+| D13 | Quem pode ligar | Só `MCP_VERSUS_WRITE_DOMAINS=...,finance` após validação em empresa de teste da AA. |
+
+### 10.8 Fora desta sub-onda
+Fiscal (`list_commercial_fiscal_workspace` e emissão), exclusões financeiras e qualquer ferramenta que mova dinheiro fora do ledger (transferências bancárias, PIX). Seguem sem publicação.
