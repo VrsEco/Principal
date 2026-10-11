@@ -1,7 +1,4 @@
 {
- "add_commercial_contract_item": [
-  "M8"
- ],
  "approve_agent_deployment": [
   "M1",
   "M7"
@@ -12,15 +9,6 @@
  "approve_work_journey_transfer_request_tool": [
   "M7"
  ],
- "assign_commercial_fiscal_batch": [
-  "M8"
- ],
- "cancel_commercial_billing": [
-  "M8"
- ],
- "close_commercial_contract": [
-  "M8"
- ],
  "complete_task": [
   "M1"
  ],
@@ -30,28 +18,14 @@
  "confirm_whatsapp_status_mobile": [
   "M7"
  ],
- "correct_plan_global_okrs_tool": [
-  "M8"
- ],
- "create_and_link_plan_global_okrs_tool": [
-  "M8"
- ],
  "create_commercial_catalog_structure_item": [
-  "M1",
-  "M8"
- ],
- "create_commercial_contract": [
-  "M8"
+  "M1"
  ],
  "create_commercial_customer_portfolio": [
   "M1"
  ],
- "create_commercial_issuer": [
-  "M8"
- ],
  "create_commercial_product_service": [
-  "M1",
-  "M8"
+  "M1"
  ],
  "create_financial_automation_rule": [
   "M1",
@@ -109,8 +83,7 @@
  ],
  "create_financial_import_batch": [
   "M1",
-  "M5",
-  "M8"
+  "M5"
  ],
  "create_financial_ingestion_record": [
   "M1",
@@ -126,30 +99,21 @@
  "create_project_task": [
   "M1"
  ],
- "create_sector_okr_structure_tool": [
-  "M8"
- ],
- "create_single_plan_driver_tool": [
-  "M8"
- ],
  "create_whatsapp_status_schedule": [
   "M7"
  ],
  "delete_commercial_contract": [
-  "M7",
-  "M8"
+  "M7"
  ],
  "delete_indicator_line_of_sight_tool": [
-  "M7",
-  "M8"
+  "M7"
  ],
  "delete_meeting_secure": [
   "M7",
   "M9"
  ],
  "delete_process_strategy_alignment_link_tool": [
-  "M7",
-  "M8"
+  "M7"
  ],
  "delete_project": [
   "M7",
@@ -183,8 +147,7 @@
   "M5"
  ],
  "generate_commercial_financial_titles_for_billing": [
-  "M5",
-  "M8"
+  "M5"
  ],
  "generate_due_financial_schedules": [
   "M5"
@@ -196,8 +159,7 @@
   "M3"
  ],
  "import_financial_budget_matrix": [
-  "M5",
-  "M8"
+  "M5"
  ],
  "log_work_hours": [
   "M1"
@@ -233,9 +195,6 @@
  "register_whatsapp_status_approved_bundle": [
   "M7"
  ],
- "remove_commercial_fiscal_batch": [
-  "M8"
- ],
  "replace_financial_allocations": [
   "M1",
   "M5"
@@ -255,41 +214,8 @@
  "resume_whatsapp_status_schedule": [
   "M7"
  ],
- "sync_plan_participants_tool": [
-  "M8"
- ],
- "toggle_commercial_catalog_structure_item": [
-  "M8"
- ],
- "toggle_commercial_product_service": [
-  "M8"
- ],
  "toggle_financial_catalog_item": [
   "M3"
- ],
- "update_commercial_catalog_structure_item": [
-  "M8"
- ],
- "update_commercial_contract_general": [
-  "M8"
- ],
- "update_commercial_contract_item": [
-  "M8"
- ],
- "update_commercial_fiscal_entry": [
-  "M8"
- ],
- "update_commercial_fiscal_status": [
-  "M8"
- ],
- "update_commercial_issuer": [
-  "M8"
- ],
- "update_commercial_offer_contract": [
-  "M8"
- ],
- "update_commercial_product_service": [
-  "M8"
  ],
  "update_company_status": [
   "M7"
@@ -302,12 +228,10 @@
   "M7"
  ],
  "upsert_commercial_contract_financial_terms": [
-  "M5",
-  "M8"
+  "M5"
  ],
  "upsert_commercial_contract_fiscal_terms": [
-  "M5",
-  "M8"
+  "M5"
  ],
  "upsert_financial_budget_matrix": [
   "M1",
@@ -316,11 +240,5 @@
  "upsert_financial_domain_enablement": [
   "M1",
   "M5"
- ],
- "upsert_indicator_line_of_sight_tool": [
-  "M8"
- ],
- "upsert_process_strategy_alignment_link_tool": [
-  "M8"
  ]
 }

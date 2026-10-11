@@ -14,7 +14,7 @@ Códigos de violação (SPEC onda2_mutacoes_mcp_versus_v1, seção 4):
 * M5 financeira sem ``idempotency_key``;
 * M6 importa módulo inexistente;
 * M7 sem escopo alcançável pelo token ou sem permissão declarada;
-* M8 captura ampla de exceção que pode engolir a negação de permissão;
+* M8 captura ampla de exceção que não repassa nem sinaliza a falha (pode engolir a negação de permissão e seguir);
 * M9 booleano de confirmação vindo do cliente (``confirm``, ``confirmed_mutation``, ``human_gate_confirmed``):
   a aprovação é do runtime (``mcp_gate_policy``), nunca uma afirmação do cliente.
 """
@@ -48,8 +48,58 @@ IDENTITY_PARAM = re.compile(
 )
 _COMPANY_PARAMS = ("company_id", "company_ref")
 CONFIRM_PARAM = re.compile(r"^(confirm|confirmed|confirmed_mutation|human_gate_confirmed|confirm_\w+|\w+_confirmed)$")
-_BROAD_EXCEPT = re.compile(r"except\s+(Exception|BaseException)\b")
-_PERMISSION_EXCEPT = re.compile(r"except\s+\(?[^:\n]*PermissionError")
+_FAILURE_CALLEES = ("_fail", "_error", "_deny", "_forbidden", "error_envelope")
+
+
+def swallows_broad_exceptions(source: str | None) -> bool:
+    """True se há ``except`` amplo cujo corpo não repassa (raise), não trata PermissionError nem devolve falha.
+
+    Aceitos: ``raise``; menção a ``PermissionError``; retorno de envelope de falha (chamada ``_fail``/``_error``...,
+    ou dicionário com ``success: False``/``error``). Qualquer outro corpo pode transformar uma negação de
+    permissão em sucesso silencioso.
+    """
+    import ast
+    import textwrap
+
+    try:
+        tree = ast.parse(textwrap.dedent(source or ""))
+    except SyntaxError:
+        return False
+    def _type_names(handler: "ast.ExceptHandler") -> set:
+        if handler.type is None:
+            return {"BaseException"}
+        if isinstance(handler.type, ast.Tuple):
+            return {getattr(item, "id", None) for item in handler.type.elts}
+        return {getattr(handler.type, "id", None)}
+
+    for try_node in (node for node in ast.walk(tree) if isinstance(node, ast.Try)):
+        permission_handled = False
+        for handler in try_node.handlers:
+            names = _type_names(handler)
+            if "PermissionError" in names:
+                permission_handled = True  # a negação de permissão já foi tratada antes do except amplo
+                continue
+            if not names & {"Exception", "BaseException"} or permission_handled:
+                continue
+            body = ast.Module(body=handler.body, type_ignores=[])
+            if any(isinstance(node, ast.Raise) for node in ast.walk(body)):
+                continue
+            if any(isinstance(node, ast.Name) and node.id == "PermissionError" for node in ast.walk(body)):
+                continue
+            signals_failure = False
+            for node in ast.walk(body):
+                if isinstance(node, ast.Call):
+                    callee = str(getattr(node.func, "id", None) or getattr(node.func, "attr", ""))
+                    if any(prefix in callee for prefix in _FAILURE_CALLEES):
+                        signals_failure = True
+                if isinstance(node, ast.Dict):
+                    keys = {getattr(key, "value", None) for key in node.keys}
+                    values = {getattr(value, "value", None) for value in node.values if isinstance(value, ast.Constant)}
+                    if "error" in keys or ("success" in keys and False in values):
+                        signals_failure = True
+            if not signals_failure:
+                return True
+    return False
 
 # tool -> {codigo: motivo}. Exceções só com revisão do código da tool.
 REVIEWED_MUTATION_EXCEPTIONS: dict[str, dict[str, str]] = {
@@ -129,8 +179,8 @@ def audit_mutation_tool(name: str, *, capability: Any, probe: ToolProbe | None) 
         found.append(Violation("M7", "sem permissão declarada"))
 
     source = probe.source or ""
-    if _BROAD_EXCEPT.search(source) and not _PERMISSION_EXCEPT.search(source):
-        found.append(Violation("M8", "captura exceção ampla sem repassar PermissionError"))
+    if swallows_broad_exceptions(source):
+        found.append(Violation("M8", "captura exceção ampla sem repassar nem sinalizar a falha"))
 
     excused = REVIEWED_MUTATION_EXCEPTIONS.get(name, {})
     return [v for v in found if v.code not in excused]

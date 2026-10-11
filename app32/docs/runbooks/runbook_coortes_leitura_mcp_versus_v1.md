@@ -62,7 +62,7 @@ Mutações novas entram por coorte própria, desligada por padrão. Variável `M
 | Valor | Efeito |
 |---|---|
 | ausente, vazia ou `none` | nenhuma coorte de escrita (padrão) |
-| `projects,operations,meetings,processes` | liga exatamente os assuntos listados |
+| `projects,operations,meetings,processes,routine,strategy,commercial` | liga exatamente os assuntos listados |
 
 | Assunto | Ferramentas |
 |---|---|
@@ -70,9 +70,12 @@ Mutações novas entram por coorte própria, desligada por padrão. Variável `M
 | `operations` | `request_engineering_suggestion`, `request_new_app32_integration` |
 | `meetings` | `log_meeting_discussion` |
 | `processes` | `create_process_bpmn_activity_tool`, `create_process_pop_step_for_bpmn_tool`, `draft_process_pop_step_description_tool`, `attach_process_pop_step_static_image_tool` (sub-onda 2B) |
+| `routine` | 14 da jornada (sub-onda 2C): eventos de calendário, tarefa avulsa, solicitações de ausência e transferência, agenda (gerar, travar, destravar, mover), vínculos de rotina, blocos e regras. `delete_work_calendar_event_tool` exige aprovação |
+| `strategy` | 17 de estratégia (sub-onda 2D): identidade e perfis estratégicos, vínculos de alinhamento, linha de visada, OKRs globais e de área, direcionador, participantes, seção do plano e revisão de maturação |
+| `commercial` | 15 comerciais (sub-onda 2E): contratos (criar, editar, itens, encerrar), emissores, clientes, carteiras, catálogo, produtos e serviços e contrato da oferta. `close_commercial_contract` exige aprovação |
 
 - Assunto fora da lista não é listado nem registrado. Mudou o valor: reiniciar o MCP pelo fluxo oficial (deploy `quick` com `restart_mcp=true`).
-- Nenhuma delas exige aprovação (regra D6). Aprovação e identidade seguem o contrato de mutações: só entra na coorte a ferramenta sem violação na linha de base.
+- Criar e editar não exigem aprovação (regra D6); excluir e encerrar exigem (2 ferramentas nas coortes `routine` e `commercial`). Aprovação e identidade seguem o contrato de mutações: só entra na coorte a ferramenta sem violação na linha de base.
 - Reversão imediata: `MCP_VERSUS_WRITE_DOMAINS=none` e reinício.
 - Validação após ligar: reconectar, listar as capacidades e chamar cada ferramenta na empresa de teste. Para escritas, usar registros de teste e conferir o ator gravado (deve ser o usuário da sessão).
 
