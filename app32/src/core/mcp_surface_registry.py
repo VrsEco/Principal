@@ -13,6 +13,7 @@ from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callabl
 from src.core.mcp_whatsapp_status_tools import STATUS_TOOL_NAMES
 from src.core.mcp_payload_guard import guard_tool_callable, limit_mcp_payload
 from src.core import mcp_read_cohorts, mcp_write_cohorts
+from src.core.mcp_admin_cohort import ADMIN_CONNECTOR_TOOL_NAMES
 from src.core.mcp_param_hiding import adapt_for_mcp, description_for_mcp
 from src.core.mcp_gate_policy import requires_persisted_approval
 
@@ -1032,6 +1033,22 @@ def build_oauth_analytics_finance_mcp_server(
         include_admin_diagnostics=False,
         tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
         shared_registrar_tool_names=PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES,
+    )
+    return mcp
+
+
+def build_oauth_admin_mcp_server(name: str = "GestaoVersus OAuth Admin MCP") -> Any:
+    """Conector administrativo curado: surface ``admin`` (exige ``mcp:admin``), lista fechada, sem diagnósticos."""
+    if FastMCP is None:  # pragma: no cover
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    mcp = _build_policy_fast_mcp(name, "admin", exposed_tool_names=ADMIN_CONNECTOR_TOOL_NAMES)
+    register_mcp_surface_tools(
+        mcp,
+        "admin",
+        include_shared_registrars=True,
+        include_admin_diagnostics=False,
+        tool_names=ADMIN_CONNECTOR_TOOL_NAMES,
+        shared_registrar_tool_names=ADMIN_CONNECTOR_TOOL_NAMES,
     )
     return mcp
 
