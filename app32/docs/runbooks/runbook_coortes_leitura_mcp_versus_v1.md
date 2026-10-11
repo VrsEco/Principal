@@ -106,3 +106,8 @@ Segundo conector, só para administradores da plataforma. O conector comum (`/mc
 4. Cadastrar o conector no cliente com `https://app.gestaoversus.com.br/mcp/pilot/admin` e autorizar com a conta de administrador.
 
 **Desfazer:** remover a flag do `.env` e reiniciar (a rota some e a descoberta volta a 404).
+
+### 8.1 Decisão (2026-10-11): as 8 ferramentas vão pelo conector comum (coorte `admin_ops`)
+O desenho original prevalece: um único conector (`mcp-versus`), com a visibilidade filtrada pelo perfil do usuário. As 8 ferramentas da seção 8 ganharam o escopo `mcp_user` e formam o assunto `admin_ops` das coortes de escrita (`MCP_VERSUS_WRITE_DOMAINS`, desligado por padrão). Cada uma exige permissão por empresa (`work_journey.approve`, `work_journey.delete`, `governance.delete`, `strategy.alignment.update`) e aprovação humana persistida (regra D6); quem não tem a permissão não as vê.
+
+O conector `/mcp/pilot/admin` da seção 8 permanece no código, **desligado** (`APP32_MCP_OIDC_ADMIN_ROUTE_ENABLED` ausente), para o dia em que existir um caso de plataforma (usuários, empresas, agentes). Motivo da mudança: o Claude registra o cliente por cadastro dinâmico e pede a lista antiga de escopos, o que impedia obter `mcp:admin` sem alterar o provisionador de clientes do Keycloak (provedor próprio, sem código no repositório).

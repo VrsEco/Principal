@@ -81,6 +81,16 @@ EXPECTED = {
         "update_commercial_offer_contract",
         "update_commercial_product_service",
     },
+    "admin_ops": {
+        "approve_work_journey_absence_request_tool",
+        "approve_work_journey_transfer_request_tool",
+        "delete_commercial_contract",
+        "delete_indicator_line_of_sight_tool",
+        "delete_process_strategy_alignment_link_tool",
+        "delete_work_journey_block_tool",
+        "delete_work_journey_manual_task_tool",
+        "delete_work_journey_rule_tool",
+    },
 }
 ALL = set().union(*EXPECTED.values())
 
@@ -100,7 +110,7 @@ def _server(monkeypatch, env):
 
 def test_cohort_content_is_exactly_the_approved_set():
     assert {k: set(v) for k, v in cohorts.WRITE_COHORT_TOOL_NAMES.items()} == EXPECTED
-    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 56
+    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 64
 
 
 @pytest.mark.parametrize("value", [None, "", "none", "NONE", "  "])
@@ -119,12 +129,12 @@ def test_each_subject_turns_on_alone(monkeypatch, subject):
 
 def test_all_subjects_on_lists_everything_and_changes_nothing_else(monkeypatch):
     _, off, _ = _server(monkeypatch, None)
-    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial")
+    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops")
     assert on - off == ALL and off - on == set()
 
 
 def test_still_requires_user_scope_and_per_tool_permission(monkeypatch):
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops")
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=("mcp:access",)))
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda _p: True)
     server = registry.build_oauth_unified_mcp_server()
@@ -140,7 +150,7 @@ def test_manifest_follows_the_flag_and_reports_the_enforced_gate(monkeypatch):
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: USER)
     monkeypatch.delenv("MCP_VERSUS_WRITE_DOMAINS", raising=False)
     off = {t["name"] for t in registry.get_unified_manifest()["tools"]}
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops")
     manifest = registry.get_unified_manifest()
     on = {t["name"]: t for t in manifest["tools"]}
     assert ALL.isdisjoint(off) and ALL <= set(on)
@@ -157,7 +167,7 @@ def test_every_cohort_tool_passes_the_mutation_contract_and_is_not_in_the_baseli
         assert name not in baseline, f"{name} está na linha de base de violações"
 
 
-APPROVAL_IN_COHORTS = {"delete_work_calendar_event_tool", "close_commercial_contract"}
+APPROVAL_IN_COHORTS = {"delete_work_calendar_event_tool", "close_commercial_contract", *EXPECTED["admin_ops"]}
 
 
 def test_only_the_expected_cohort_tools_need_approval_under_d6():

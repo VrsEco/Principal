@@ -14,7 +14,7 @@ import os
 
 ENV_DOMAINS = "MCP_VERSUS_WRITE_DOMAINS"
 
-# Sub-ondas 2A a 2E (SPEC onda2_mutacoes_mcp_versus_v1, seção 9).
+# Sub-ondas 2A a 2E e admin_ops (SPEC onda2_mutacoes_mcp_versus_v1, seção 9).
 WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
     "projects": (
         "create_project",
@@ -90,6 +90,18 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "update_commercial_issuer",
         "update_commercial_offer_contract",
         "update_commercial_product_service",
+    ),
+    # Sub-onda admin_ops: aprovações e exclusões que já exigem aprovação humana persistida (regra D6) e permissão por
+    # empresa; só aparecem para quem tem a permissão. Fora: usuários, status de empresa, agentes, WhatsApp, diagnósticos.
+    "admin_ops": (
+        "approve_work_journey_absence_request_tool",
+        "approve_work_journey_transfer_request_tool",
+        "delete_commercial_contract",
+        "delete_indicator_line_of_sight_tool",
+        "delete_process_strategy_alignment_link_tool",
+        "delete_work_journey_block_tool",
+        "delete_work_journey_manual_task_tool",
+        "delete_work_journey_rule_tool",
     ),
 }
 
