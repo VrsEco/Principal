@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import unicodedata
 from typing import Any
@@ -97,6 +98,16 @@ class IntegrationRequestService:
         return "\n".join(lines).strip()
 
     @classmethod
+    def backlog_project_code(cls) -> str:
+        """Projeto que recebe os cards: env explícita, senão o projeto operacional vigente, senão o legado."""
+        explicit = os.environ.get("INTEGRATION_REQUEST_PROJECT_CODE")
+        if explicit:
+            return explicit
+        from services.engineering_backlog_project_service import current_engineering_project_code
+
+        return current_engineering_project_code(cls.BACKLOG_PROJECT_CODE)
+
+    @classmethod
     def create_request(
         cls,
         raw_payload: dict[str, Any],
@@ -134,7 +145,7 @@ class IntegrationRequestService:
         db.session.flush()
 
         result, error = ProjectTaskService.create_project_task(
-            project_code=cls.BACKLOG_PROJECT_CODE,
+            project_code=cls.backlog_project_code(),
             task_name=f"[Nova Integração] {payload.title} - {payload.external_system}",
             user_id=int(requester_user_id),
             allowed_company_ids=None,
@@ -259,7 +270,7 @@ class IntegrationRequestService:
 
     @classmethod
     def _find_catalog_backlog_task(cls, catalog_key: str) -> ProjectTask | None:
-        project, error = ProjectTaskService.resolve_project_by_code(cls.BACKLOG_PROJECT_CODE, allowed_company_ids=None)
+        project, error = ProjectTaskService.resolve_project_by_code(cls.backlog_project_code(), allowed_company_ids=None)
         if error or project is None:
             return None
         marker = f"integration_catalog_key={catalog_key}"
@@ -294,7 +305,7 @@ class IntegrationRequestService:
                 seed_payload = cls._build_catalog_seed_payload(item)
                 stage = cls.CATALOG_STATUS_TO_STAGE.get(str(item.get("status") or "").strip().lower(), "inbox")
                 result, error = ProjectTaskService.create_project_task(
-                    project_code=cls.BACKLOG_PROJECT_CODE,
+                    project_code=cls.backlog_project_code(),
                     task_name=f"[Integração Catálogo] {seed_payload['title']}",
                     user_id=int(requester_user_id),
                     allowed_company_ids=None,
