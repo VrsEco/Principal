@@ -15,6 +15,13 @@ from services.project_task_service import ProjectTaskService
 logger = logging.getLogger(__name__)
 
 DEFAULT_WORKFLOW_GAP_PROJECT_CODE = os.environ.get("WORKFLOW_GAP_PROJECT_CODE", "AA.J.31")
+
+
+def _workflow_gap_project_code() -> str:
+    """Env explícita, senão o projeto operacional vigente de engenharia, senão o padrão histórico."""
+    from services.engineering_backlog_project_service import backlog_project_code
+
+    return backlog_project_code("AA.J.31", "WORKFLOW_GAP_PROJECT_CODE")
 DEFAULT_WORKFLOW_GAP_TASK_STAGE = os.environ.get("WORKFLOW_GAP_TASK_STAGE", "inbox")
 DEFAULT_WORKFLOW_GAP_TASK_STATUS = os.environ.get("WORKFLOW_GAP_TASK_STATUS", "planned")
 DEFAULT_WORKFLOW_GAP_TASK_PRIORITY = os.environ.get("WORKFLOW_GAP_TASK_PRIORITY", "normal")
@@ -443,7 +450,7 @@ class WorkflowGapService:
         response_text: Optional[str],
     ) -> Optional[ProjectTask]:
         result, error = ProjectTaskService.create_project_task(
-            project_code=DEFAULT_WORKFLOW_GAP_PROJECT_CODE,
+            project_code=_workflow_gap_project_code(),
             task_name=gap.title,
             user_id=int(gap.user_id or 0),
             responsible_name=None,

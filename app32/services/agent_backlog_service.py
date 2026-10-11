@@ -28,13 +28,20 @@ def _append_block(parts: list[str], label: str, value: Any) -> None:
         parts.append(f"{label}: {normalized}")
 
 
+def current_agent_backlog_project_code() -> str:
+    """Projeto dos cards de agentes: env explícita, senão o projeto operacional vigente, senão o padrão histórico."""
+    from services.engineering_backlog_project_service import backlog_project_code
+
+    return backlog_project_code("AA.J.31", "AGENT_BACKLOG_PROJECT_CODE")
+
+
 def _resolve_project_code(source_type: str, metadata: Optional[dict[str, Any]]) -> str:
     metadata_project_code = _normalize_text((metadata or {}).get("project_code"))
     if metadata_project_code:
         return metadata_project_code
     if _normalize_text(source_type) == "e2e_failure":
         return DEFAULT_ROBOT_FAILURE_PROJECT_CODE
-    return DEFAULT_AGENT_BACKLOG_PROJECT_CODE
+    return current_agent_backlog_project_code()
 
 
 def _build_robot_failure_prompt(*, title: str, description: str, metadata: Optional[dict[str, Any]]) -> str:

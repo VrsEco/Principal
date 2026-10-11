@@ -25,6 +25,13 @@ class MonitoringAuditRequestPayload(BaseModel):
 
 class MonitoringAuditRequestService:
     BACKLOG_PROJECT_CODE = "AA.J.31"
+
+    @classmethod
+    def backlog_project_code(cls) -> str:
+        """Projeto operacional vigente de engenharia (pelo marcador); ``BACKLOG_PROJECT_CODE`` é só o último recurso."""
+        from services.engineering_backlog_project_service import backlog_project_code
+
+        return backlog_project_code(cls.BACKLOG_PROJECT_CODE)
     SOURCE_MARKER = "source_channel=ai_monitoring_request_ui"
     BACKLOG_STAGE_LABELS = {
         "inbox": "Caixa de Entrada",
@@ -47,7 +54,7 @@ class MonitoringAuditRequestService:
     @classmethod
     def _project_id(cls) -> int | None:
         project, error = ProjectTaskService.resolve_project_by_code(
-            cls.BACKLOG_PROJECT_CODE,
+            cls.backlog_project_code(),
             allowed_company_ids=None,
         )
         if error or project is None:
@@ -153,7 +160,7 @@ class MonitoringAuditRequestService:
             description_lines.extend(["", "Observações adicionais:", payload.notes])
 
         result, error = ProjectTaskService.create_project_task(
-            project_code=cls.BACKLOG_PROJECT_CODE,
+            project_code=cls.backlog_project_code(),
             task_name=f"[Monitoramento IA] {payload.title}",
             user_id=int(requester_user_id),
             allowed_company_ids=None,

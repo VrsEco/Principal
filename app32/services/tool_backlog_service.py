@@ -28,6 +28,13 @@ class ToolRequestPayload(BaseModel):
 
 class ToolBacklogService:
     BACKLOG_PROJECT_CODE = "AA.J.31"
+
+    @classmethod
+    def backlog_project_code(cls) -> str:
+        """Projeto operacional vigente de engenharia (pelo marcador); ``BACKLOG_PROJECT_CODE`` é só o último recurso."""
+        from services.engineering_backlog_project_service import backlog_project_code
+
+        return backlog_project_code(cls.BACKLOG_PROJECT_CODE)
     BACKLOG_STAGE_LABELS = {
         "inbox": "Caixa de Entrada",
         "waiting": "Aguardando",
@@ -46,7 +53,7 @@ class ToolBacklogService:
 
     @classmethod
     def _find_backlog_task(cls, domain_key: str, tool_name: str) -> ProjectTask | None:
-        project, error = ProjectTaskService.resolve_project_by_code(cls.BACKLOG_PROJECT_CODE, allowed_company_ids=None)
+        project, error = ProjectTaskService.resolve_project_by_code(cls.backlog_project_code(), allowed_company_ids=None)
         if error or project is None:
             return None
 
@@ -63,7 +70,7 @@ class ToolBacklogService:
 
     @classmethod
     def _list_manual_request_tasks(cls) -> list[ProjectTask]:
-        project, error = ProjectTaskService.resolve_project_by_code(cls.BACKLOG_PROJECT_CODE, allowed_company_ids=None)
+        project, error = ProjectTaskService.resolve_project_by_code(cls.backlog_project_code(), allowed_company_ids=None)
         if error or project is None:
             return []
 
@@ -178,7 +185,7 @@ class ToolBacklogService:
             description_lines.extend(["", "Observações:", payload.notes])
 
         result, error = ProjectTaskService.create_project_task(
-            project_code=cls.BACKLOG_PROJECT_CODE,
+            project_code=cls.backlog_project_code(),
             task_name=f"[Nova Tool] {payload.title}",
             user_id=int(requester_user_id),
             allowed_company_ids=None,
@@ -222,7 +229,7 @@ class ToolBacklogService:
                 task = cls._find_backlog_task(str(domain.get("key") or ""), tool_name)
                 if task is None:
                     result, error = ProjectTaskService.create_project_task(
-                        project_code=cls.BACKLOG_PROJECT_CODE,
+                        project_code=cls.backlog_project_code(),
                         task_name=f"[Tool Catálogo] {tool_name} - {domain.get('title')}",
                         user_id=int(requester_user_id),
                         allowed_company_ids=None,

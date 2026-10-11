@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping
 
+from services.engineering_backlog_project_service import backlog_project_code
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 FIXTURES_PATH = BASE_DIR / "data" / "conversation_regression" / "cases.json"
@@ -239,7 +241,7 @@ def build_real_case_backlog_sync_payload(cases_by_chapter: Dict[str, List[Dict[s
                 }
             )
     return {
-        "project_code": "AA.J.31",
+        "project_code": backlog_project_code("AA.J.31"),
         "integration": "conversation_regression_v4",
         "items": items,
     }
