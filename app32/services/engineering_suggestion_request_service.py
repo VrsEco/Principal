@@ -42,14 +42,37 @@ class EngineeringSuggestionRequestService:
     }
 
     @classmethod
+    def backlog_project_code(cls) -> str:
+        """Projeto que recebe os cards: env explícita, senão o projeto operacional vigente, senão o legado."""
+        if os.environ.get("ENGINEERING_REQUEST_PROJECT_CODE"):
+            return cls.BACKLOG_PROJECT_CODE
+        from services.engineering_backlog_project_service import current_engineering_project_code
+
+        return current_engineering_project_code(cls.BACKLOG_PROJECT_CODE)
+
+    @classmethod
     def _project_id(cls) -> int | None:
         project, error = ProjectTaskService.resolve_project_by_code(
-            cls.BACKLOG_PROJECT_CODE,
+            cls.backlog_project_code(),
             allowed_company_ids=None,
         )
         if error or project is None:
             return None
         return int(project.id)
+
+    @classmethod
+    def _legacy_project_id(cls) -> int | None:
+        """Projeto legado (onde cards antigos continuam), só quando difere do vigente."""
+        try:
+            if cls.backlog_project_code() == cls.BACKLOG_PROJECT_CODE:
+                return None
+            project, error = ProjectTaskService.resolve_project_by_code(
+                cls.BACKLOG_PROJECT_CODE,
+                allowed_company_ids=None,
+            )
+            return None if error or project is None else int(project.id)
+        except Exception:
+            return None
 
     @classmethod
     def _extract_note_value(cls, notes: str, marker: str) -> str | None:
@@ -93,12 +116,14 @@ class EngineeringSuggestionRequestService:
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         project_id = cls._project_id()
-        if project_id is None:
+        legacy_project_id = cls._legacy_project_id()
+        if project_id is None and legacy_project_id is None:
             return []
+        project_ids = sorted({pid for pid in (project_id, legacy_project_id) if pid is not None})
 
         normalized_limit = max(1, min(int(limit or 10), 50))
         filters = [
-            ProjectTask.project_id == project_id,
+            ProjectTask.project_id == project_ids[0] if len(project_ids) == 1 else ProjectTask.project_id.in_(project_ids),
             ProjectTask.notes.isnot(None),
             ProjectTask.notes.contains(cls.SOURCE_MARKER),
             ProjectTask.notes.contains(f"requester_user_id={int(requester_user_id)}"),
@@ -149,7 +174,7 @@ class EngineeringSuggestionRequestService:
             description_lines.extend(["", "Observações adicionais:", payload.notes])
 
         result, error = ProjectTaskService.create_project_task(
-            project_code=cls.BACKLOG_PROJECT_CODE,
+            project_code=cls.backlog_project_code(),
             task_name=f"{cls.TITLE_PREFIX}{payload.title}",
             user_id=int(requester_user_id),
             allowed_company_ids=None,
@@ -173,5 +198,5 @@ class EngineeringSuggestionRequestService:
 
         task = (result or {}).get("task")
         if task is None:
-            raise ValueError(f"Não foi possível criar o card no backlog {cls.BACKLOG_PROJECT_CODE}.")
+            raise ValueError(f"Não foi possível criar o card no backlog {cls.backlog_project_code()}.")
         return cls._serialize_task(task)
