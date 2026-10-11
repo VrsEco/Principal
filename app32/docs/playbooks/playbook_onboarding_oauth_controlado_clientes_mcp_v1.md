@@ -88,6 +88,30 @@ eleva nada; lista preenchida reduz por interseção. Esse mecanismo não promove
 tools financeiras para `user` e não substitui o contrato de uma surface
 privilegiada.
 
+## Provisionamento de colaborador: deixe o teto vazio (lição de 2026-10-09)
+
+Padrão recomendado ao criar o `PrincipalCompanyGrant` de um colaborador: **`mcp_permissions` vazio**. O acesso
+fica limitado pelo usuário no APP32 (papel, empresa vinculada e regras de aprovação), que já é a autoridade.
+
+Por que não preencher o teto sem necessidade:
+- **Vocabulários diferentes.** O teto compara nomes literais com as permissões que cada ferramenta declara
+  (`meeting.write`, `project.read`, `strategy.alignment.read`, `identity.read` ...). Nomes do RBAC do APP32
+  (`projects.view`, `processes.view`, `financial.view` ...) quase não coincidem, e o teto passa a bloquear a
+  maioria das ferramentas. Caso real: colaboradora com teto de 7 itens do RBAC só conseguia ferramentas
+  financeiras.
+- **Quem tem um único grant** tem a empresa selecionada automaticamente e, até o PR #145, não conseguia nem
+  listar as próprias empresas (`permissões requeridas fora da interseção APP32/teto MCP do grant`). As ferramentas
+  de descoberta agora recebem as permissões mínimas, mas os dados de negócio continuam sujeitos ao teto.
+- O teto não substitui o gate humano: aprovação de destrutivas, envios e financeiras é aplicada pelo runtime.
+
+Se for preciso limitar alguém, use os nomes **das ferramentas** (catálogo de capacidades) e valide com
+`app32/scripts/qa/mcp_diagnose_user.py <nome>`, que mostra o grant, o teto e a decisão da política.
+Para descobrir quantos grants têm teto: consulta de leitura em `principal_company_grants` (`mcp_permissions`
+diferente de lista vazia); em 2026-10-09 havia 1 de 19.
+
+Diagnóstico de "bloqueada por falta de permissão": procurar no log do MCP (`AI_MCP_AUDIT`) o `policy_reason` do
+principal; ele diz qual regra negou. Saúde geral: `app32/scripts/qa/mcp_health_probe.py`.
+
 ## Conector Codex no APP32
 
 O APP32 expõe, para usuário autenticado, a configuração pública do conector em
