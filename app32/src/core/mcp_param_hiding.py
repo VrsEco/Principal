@@ -35,7 +35,13 @@ def description_for_mcp(tool_name: str, description: str | None) -> str | None:
 
 
 def adapt_for_mcp(tool_name: str, func: Callable[..., Any]) -> Callable[..., Any]:
-    """Devolve ``func`` sem os parâmetros ocultos no esquema e com os valores fixos injetados."""
+    """Devolve ``func`` sem os parâmetros ocultos no esquema e com os valores fixos injetados.
+
+    Nas mutações financeiras com idempotência (``mcp_idempotency_policy``) acrescenta ``idempotency_key``.
+    """
+    from src.core.mcp_idempotency_policy import with_idempotency_param
+
+    func = with_idempotency_param(str(tool_name), func)
     hidden = HIDDEN_CLIENT_PARAMETERS.get(str(tool_name))
     if not hidden:
         return func

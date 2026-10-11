@@ -87,8 +87,14 @@ def probe_registered_tools() -> dict[str, ToolProbe]:
             registrar(server)
         except Exception:  # um registrador quebrado não pode esconder os demais
             continue
+    from src.core.mcp_idempotency_policy import IDEMPOTENCY_PARAM, idempotency_mode
+
     for tool in server._tool_manager.list_tools():
-        probes[tool.name] = ToolProbe(schema=dict(tool.parameters or {}), source=_source_of(tool.fn), fn=tool.fn)
+        schema = dict(tool.parameters or {})
+        if idempotency_mode(tool.name):
+            # O cliente MCP vê ``idempotency_key`` (acrescentado por adapt_for_mcp no registro real).
+            schema["properties"] = {**dict(schema.get("properties") or {}), IDEMPOTENCY_PARAM: {}}
+        probes[tool.name] = ToolProbe(schema=schema, source=_source_of(tool.fn), fn=tool.fn)
     for tool in catalog.get_langchain_tools():
         name = getattr(tool, "name", None)
         if not name or name in probes:

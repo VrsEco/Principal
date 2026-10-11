@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import inspect
 import re
@@ -18,6 +19,8 @@ from src.intelligence.tool_context import (
 from src.intelligence.tooling.capabilities import infer_tool_action
 from src.core.mcp_gate_policy import requires_persisted_approval
 from src.core.mcp_http_auth import get_http_request_context
+
+logger = logging.getLogger(__name__)
 
 
 def _coerce_optional_int(value: Any) -> int | None:
@@ -581,6 +584,104 @@ def resolve_mcp_execution_context(
     )
 
 
+@dataclass(frozen=True)
+class _IdempotencyState:
+    key: str | None = None
+    digest: str | None = None
+    envelope: dict | None = None
+
+
+def _idempotency_precheck(tool_name: str, payload: Mapping[str, Any], execution_context: Any, decision: Any) -> _IdempotencyState:
+    """Valida a chave e repete o resultado guardado ANTES da aprovação (repetir não pede nova aprovação)."""
+    from src.core.mcp_idempotency_policy import (
+        IDEMPOTENCY_KEY_MAX_LENGTH,
+        IDEMPOTENCY_PARAM,
+        idempotency_mode,
+    )
+
+    mode = idempotency_mode(tool_name)
+    if not mode or not getattr(decision, "allowed", False):
+        return _IdempotencyState()
+    key = str(payload.get(IDEMPOTENCY_PARAM) or "").strip()
+    if not key:
+        if mode == "required":
+            return _IdempotencyState(
+                envelope={
+                    "success": False,
+                    "error": (
+                        f"idempotency_key obrigatória em {tool_name}: envie um texto único por operação "
+                        "(até 128 caracteres); repetir a chamada com a mesma chave e o mesmo conteúdo não duplica."
+                    ),
+                }
+            )
+        return _IdempotencyState()
+    if len(key) > IDEMPOTENCY_KEY_MAX_LENGTH:
+        return _IdempotencyState(envelope={"success": False, "error": "idempotency_key excede 128 caracteres"})
+    from services import mcp_idempotency_service
+    from services.tool_approval_service import canonical_payload_digest
+
+    digest = canonical_payload_digest({k: v for k, v in payload.items() if k != IDEMPOTENCY_PARAM})
+    try:
+        found = mcp_idempotency_service.lookup(
+            company_id=execution_context.company_id,
+            principal_id=getattr(execution_context, "principal_id", None) or execution_context.user_id,
+            tool_name=tool_name,
+            key=key,
+            payload_digest=digest,
+        )
+    except Exception as exc:  # fail-closed: sem a camada de idempotência não se executa a mutação
+        raise PermissionError("idempotência indisponível; a operação não foi executada") from exc
+    envelope = _idempotency_envelope(found)
+    return _IdempotencyState(key=key, digest=digest, envelope=envelope)
+
+
+def _idempotency_envelope(found: Any) -> dict | None:
+    if found.action == "replay":
+        return {**dict(found.result or {}), "replayed": True}
+    if found.action == "conflict":
+        return {
+            "success": False,
+            "error": "idempotency_key_reuse: esta chave já foi usada com outro conteúdo; use uma chave nova.",
+        }
+    if found.action == "in_progress":
+        return {"success": False, "error": "request_in_progress: a chamada anterior com esta chave ainda está em andamento."}
+    return None
+
+
+def _idempotency_claim(state: _IdempotencyState, tool_name: str, execution_context: Any) -> tuple[int | None, dict | None]:
+    """Reserva a chave depois da autorização e da aprovação; devolve (id da reserva, envelope de recusa)."""
+    if not state.key:
+        return None, None
+    from services import mcp_idempotency_service
+
+    try:
+        claimed = mcp_idempotency_service.claim(
+            company_id=execution_context.company_id,
+            principal_id=getattr(execution_context, "principal_id", None) or execution_context.user_id,
+            tool_name=tool_name,
+            key=state.key,
+            payload_digest=state.digest,
+        )
+    except Exception as exc:
+        raise PermissionError("idempotência indisponível; a operação não foi executada") from exc
+    envelope = _idempotency_envelope(claimed)
+    if envelope is not None:
+        return None, envelope
+    return claimed.row_id, None
+
+
+def _idempotency_finish(row_id: int, result: Any, *, failed: bool) -> None:
+    from services import mcp_idempotency_service
+
+    try:
+        if failed:
+            mcp_idempotency_service.fail(row_id)
+        else:
+            mcp_idempotency_service.complete(row_id, result)
+    except Exception:
+        logger.exception("falha ao registrar o resultado da chave de idempotência %s", row_id)
+
+
 def wrap_mcp_callable(
     callback: Callable[..., Any],
     *,
@@ -654,6 +755,9 @@ def wrap_mcp_callable(
             if not initial_decision.allowed:
                 _emit_mcp_policy_audit(policy_source, policy_request, payload,
                                        allowed=False, reason=initial_decision.reason)
+            idempotency = _idempotency_precheck(tool_name, payload, execution_context, initial_decision)
+            if idempotency.envelope is not None:
+                return idempotency.envelope
             # Decisão D6: o flag do catálogo não basta. As classes de mutação definidas em
             # mcp_gate_policy exigem aprovação humana persistida mesmo quando a política aprovaria.
             rule_requires_approval = bool(initial_decision.allowed) and requires_persisted_approval(tool_name, capability)
@@ -725,6 +829,9 @@ def wrap_mcp_callable(
                 )
             require_tool_policy(policy_source, policy_request)
             _emit_mcp_policy_audit(policy_source, policy_request, payload, allowed=True, reason="ok")
+            idempotency_row_id, idempotency_envelope = _idempotency_claim(idempotency, tool_name, execution_context)
+            if idempotency_envelope is not None:
+                return idempotency_envelope
             sapiens_token = set_sapiens_context(
                 user_id=execution_context.user_id,
                 company_id=execution_context.company_id,
@@ -738,10 +845,17 @@ def wrap_mcp_callable(
                 company_id=execution_context.company_id,
             )
             try:
-                return callback(*args, **kwargs)
+                result = callback(*args, **kwargs)
+            except BaseException:
+                if idempotency_row_id is not None:
+                    _idempotency_finish(idempotency_row_id, None, failed=True)
+                raise
             finally:
                 reset_legacy_tool_context(legacy_tokens)
                 reset_sapiens_context(sapiens_token)
+            if idempotency_row_id is not None:
+                _idempotency_finish(idempotency_row_id, result, failed=False)
+            return result
 
     try:
         original_signature = inspect.signature(callback)

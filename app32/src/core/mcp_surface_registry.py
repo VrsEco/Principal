@@ -755,7 +755,7 @@ def _register_shared_registrars(
                     return func
                 if not _control_plane_tool_allowed_on_surface(tool_name, policy_surface):
                     return func
-                wrapped = wrap_mcp_callable(func, policy_surface=policy_surface)
+                wrapped = wrap_mcp_callable(adapt_for_mcp(tool_name, func), policy_surface=policy_surface)
                 if limit_response_size:
                     wrapped = guard_tool_callable(wrapped, limit_mcp_payload)
                 setattr(wrapped, "__app32_tool_name__", tool_name)
