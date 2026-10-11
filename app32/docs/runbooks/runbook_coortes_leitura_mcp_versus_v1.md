@@ -62,13 +62,14 @@ Mutações novas entram por coorte própria, desligada por padrão. Variável `M
 | Valor | Efeito |
 |---|---|
 | ausente, vazia ou `none` | nenhuma coorte de escrita (padrão) |
-| `projects,operations,meetings` | liga exatamente os assuntos listados |
+| `projects,operations,meetings,processes` | liga exatamente os assuntos listados |
 
 | Assunto | Ferramentas |
 |---|---|
 | `projects` | `create_project`, `update_project`, `update_project_task_secure` |
 | `operations` | `request_engineering_suggestion`, `request_new_app32_integration` |
 | `meetings` | `log_meeting_discussion` |
+| `processes` | `create_process_bpmn_activity_tool`, `create_process_pop_step_for_bpmn_tool`, `draft_process_pop_step_description_tool`, `attach_process_pop_step_static_image_tool` (sub-onda 2B) |
 
 - Assunto fora da lista não é listado nem registrado. Mudou o valor: reiniciar o MCP pelo fluxo oficial (deploy `quick` com `restart_mcp=true`).
 - Nenhuma delas exige aprovação (regra D6). Aprovação e identidade seguem o contrato de mutações: só entra na coorte a ferramenta sem violação na linha de base.
