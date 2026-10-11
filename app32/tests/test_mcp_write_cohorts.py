@@ -29,6 +29,58 @@ EXPECTED = {
         "draft_process_pop_step_description_tool",
         "attach_process_pop_step_static_image_tool",
     },
+    "routine": {
+        "create_work_calendar_event_tool",
+        "create_work_journey_absence_request_tool",
+        "create_work_journey_manual_task_tool",
+        "create_work_journey_transfer_request_tool",
+        "delete_work_calendar_event_tool",
+        "generate_work_journey_agenda_tool",
+        "lock_work_journey_agenda_tool",
+        "move_work_journey_agenda_item_tool",
+        "save_routine_journey_binding_tool",
+        "save_work_journey_block_tool",
+        "save_work_journey_rule_tool",
+        "unlock_work_journey_agenda_tool",
+        "update_work_calendar_event_tool",
+        "update_work_journey_item_tool",
+    },
+    "strategy": {
+        "correct_plan_global_okrs_tool",
+        "create_and_link_plan_global_okrs_tool",
+        "create_area_key_result",
+        "create_area_okr",
+        "create_global_key_result",
+        "create_global_okr",
+        "create_sector_okr_structure_tool",
+        "create_single_plan_driver_tool",
+        "review_strategy_maturation_item_tool",
+        "sync_plan_participants_tool",
+        "update_plan_section",
+        "upsert_indicator_line_of_sight_tool",
+        "upsert_organizational_identity_tool",
+        "upsert_process_strategic_profile_tool",
+        "upsert_process_strategy_alignment_link_tool",
+        "upsert_process_strategy_profile_tool",
+        "upsert_strategy_identity_tool",
+    },
+    "commercial": {
+        "add_commercial_contract_item",
+        "close_commercial_contract",
+        "create_commercial_contract",
+        "create_commercial_issuer",
+        "toggle_commercial_catalog_structure_item",
+        "toggle_commercial_customer_portfolio",
+        "toggle_commercial_product_service",
+        "update_commercial_catalog_structure_item",
+        "update_commercial_contract_general",
+        "update_commercial_contract_item",
+        "update_commercial_customer",
+        "update_commercial_customer_portfolio",
+        "update_commercial_issuer",
+        "update_commercial_offer_contract",
+        "update_commercial_product_service",
+    },
 }
 ALL = set().union(*EXPECTED.values())
 
@@ -46,9 +98,9 @@ def _server(monkeypatch, env):
     return server, listed, registered
 
 
-def test_cohort_content_is_exactly_the_approved_ten():
+def test_cohort_content_is_exactly_the_approved_set():
     assert {k: set(v) for k, v in cohorts.WRITE_COHORT_TOOL_NAMES.items()} == EXPECTED
-    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 10
+    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 56
 
 
 @pytest.mark.parametrize("value", [None, "", "none", "NONE", "  "])
@@ -65,14 +117,14 @@ def test_each_subject_turns_on_alone(monkeypatch, subject):
     assert other.isdisjoint(listed) and other.isdisjoint(registered)
 
 
-def test_all_subjects_on_lists_all_ten_and_changes_nothing_else(monkeypatch):
+def test_all_subjects_on_lists_everything_and_changes_nothing_else(monkeypatch):
     _, off, _ = _server(monkeypatch, None)
-    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes")
+    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial")
     assert on - off == ALL and off - on == set()
 
 
 def test_still_requires_user_scope_and_per_tool_permission(monkeypatch):
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial")
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=("mcp:access",)))
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda _p: True)
     server = registry.build_oauth_unified_mcp_server()
@@ -88,11 +140,11 @@ def test_manifest_follows_the_flag_and_reports_the_enforced_gate(monkeypatch):
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: USER)
     monkeypatch.delenv("MCP_VERSUS_WRITE_DOMAINS", raising=False)
     off = {t["name"] for t in registry.get_unified_manifest()["tools"]}
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial")
     manifest = registry.get_unified_manifest()
     on = {t["name"]: t for t in manifest["tools"]}
     assert ALL.isdisjoint(off) and ALL <= set(on)
-    assert all(on[name].get("human_gate") is False for name in ALL), "criar e editar não exigem aprovação (D6)"
+    assert all(on[name].get("human_gate") is (name in APPROVAL_IN_COHORTS) for name in ALL), "só excluir/encerrar exigem aprovação (D6)"
 
 
 # ---- o contrato de mutações é a porta de entrada ------------------------------------------------
@@ -105,9 +157,12 @@ def test_every_cohort_tool_passes_the_mutation_contract_and_is_not_in_the_baseli
         assert name not in baseline, f"{name} está na linha de base de violações"
 
 
-def test_no_cohort_tool_needs_approval_under_d6():
-    for name in sorted(ALL):
-        assert requires_persisted_approval(name, catalog.get_tool_capability(name)) is False, name
+APPROVAL_IN_COHORTS = {"delete_work_calendar_event_tool", "close_commercial_contract"}
+
+
+def test_only_the_expected_cohort_tools_need_approval_under_d6():
+    needing = {name for name in ALL if requires_persisted_approval(name, catalog.get_tool_capability(name))}
+    assert needing == APPROVAL_IN_COHORTS, "criar e editar não exigem aprovação; excluir/encerrar exigem (D6)"
 
 
 # ---- parâmetro do cliente oculto só no MCP ------------------------------------------------------

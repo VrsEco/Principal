@@ -14,7 +14,7 @@ import os
 
 ENV_DOMAINS = "MCP_VERSUS_WRITE_DOMAINS"
 
-# Sub-onda 2A (SPEC onda2_mutacoes_mcp_versus_v1, seção 9) e 2B (processos).
+# Sub-ondas 2A a 2E (SPEC onda2_mutacoes_mcp_versus_v1, seção 9).
 WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
     "projects": (
         "create_project",
@@ -35,6 +35,61 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "create_process_pop_step_for_bpmn_tool",
         "draft_process_pop_step_description_tool",
         "attach_process_pop_step_static_image_tool",
+    ),
+    # Sub-onda 2C: jornada de trabalho. Fora: aprovações (escopo ainda inalcançável por token comum), exclusões de alto risco e as legadas do chat (complete_task, log_work_hours).
+    "routine": (
+        "create_work_calendar_event_tool",
+        "create_work_journey_absence_request_tool",
+        "create_work_journey_manual_task_tool",
+        "create_work_journey_transfer_request_tool",
+        "delete_work_calendar_event_tool",
+        "generate_work_journey_agenda_tool",
+        "lock_work_journey_agenda_tool",
+        "move_work_journey_agenda_item_tool",
+        "save_routine_journey_binding_tool",
+        "save_work_journey_block_tool",
+        "save_work_journey_rule_tool",
+        "unlock_work_journey_agenda_tool",
+        "update_work_calendar_event_tool",
+        "update_work_journey_item_tool",
+    ),
+    # Sub-onda 2D: estratégia. Fora: exclusões de vínculo e de linha de visada (alto risco, escopo só admin).
+    "strategy": (
+        "correct_plan_global_okrs_tool",
+        "create_and_link_plan_global_okrs_tool",
+        "create_area_key_result",
+        "create_area_okr",
+        "create_global_key_result",
+        "create_global_okr",
+        "create_sector_okr_structure_tool",
+        "create_single_plan_driver_tool",
+        "review_strategy_maturation_item_tool",
+        "sync_plan_participants_tool",
+        "update_plan_section",
+        "upsert_indicator_line_of_sight_tool",
+        "upsert_organizational_identity_tool",
+        "upsert_process_strategic_profile_tool",
+        "upsert_process_strategy_alignment_link_tool",
+        "upsert_process_strategy_profile_tool",
+        "upsert_strategy_identity_tool",
+    ),
+    # Sub-onda 2E: contratos, catálogo e cadastros comerciais. Encerrar contrato exige aprovação pela regra D6. Fora: excluir contrato, financeiras do faturamento e fiscal (2F), deploy de agentes.
+    "commercial": (
+        "add_commercial_contract_item",
+        "close_commercial_contract",
+        "create_commercial_contract",
+        "create_commercial_issuer",
+        "toggle_commercial_catalog_structure_item",
+        "toggle_commercial_customer_portfolio",
+        "toggle_commercial_product_service",
+        "update_commercial_catalog_structure_item",
+        "update_commercial_contract_general",
+        "update_commercial_contract_item",
+        "update_commercial_customer",
+        "update_commercial_customer_portfolio",
+        "update_commercial_issuer",
+        "update_commercial_offer_contract",
+        "update_commercial_product_service",
     ),
 }
 
