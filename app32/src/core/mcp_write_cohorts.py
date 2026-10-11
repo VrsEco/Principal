@@ -14,7 +14,7 @@ import os
 
 ENV_DOMAINS = "MCP_VERSUS_WRITE_DOMAINS"
 
-# Sub-onda 2A (SPEC onda2_mutacoes_mcp_versus_v1, seção 9).
+# Sub-onda 2A (SPEC onda2_mutacoes_mcp_versus_v1, seção 9) e 2B (processos).
 WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
     "projects": (
         "create_project",
@@ -27,6 +27,14 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
     ),
     "meetings": (
         "log_meeting_discussion",
+    ),
+    # Sub-onda 2B: modelagem de processos (BPMN e POP). Ficam fora: publicação do pacote de modelagem
+    # (escopo ainda inalcançável por token comum) e as duas financeiras (sub-onda 2F).
+    "processes": (
+        "create_process_bpmn_activity_tool",
+        "create_process_pop_step_for_bpmn_tool",
+        "draft_process_pop_step_description_tool",
+        "attach_process_pop_step_static_image_tool",
     ),
 }
 

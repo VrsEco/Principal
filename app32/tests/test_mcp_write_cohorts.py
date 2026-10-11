@@ -23,6 +23,12 @@ EXPECTED = {
     "projects": {"create_project", "update_project", "update_project_task_secure"},
     "operations": {"request_engineering_suggestion", "request_new_app32_integration"},
     "meetings": {"log_meeting_discussion"},
+    "processes": {
+        "create_process_bpmn_activity_tool",
+        "create_process_pop_step_for_bpmn_tool",
+        "draft_process_pop_step_description_tool",
+        "attach_process_pop_step_static_image_tool",
+    },
 }
 ALL = set().union(*EXPECTED.values())
 
@@ -40,9 +46,9 @@ def _server(monkeypatch, env):
     return server, listed, registered
 
 
-def test_cohort_content_is_exactly_the_approved_six():
+def test_cohort_content_is_exactly_the_approved_ten():
     assert {k: set(v) for k, v in cohorts.WRITE_COHORT_TOOL_NAMES.items()} == EXPECTED
-    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 6
+    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 10
 
 
 @pytest.mark.parametrize("value", [None, "", "none", "NONE", "  "])
@@ -59,14 +65,14 @@ def test_each_subject_turns_on_alone(monkeypatch, subject):
     assert other.isdisjoint(listed) and other.isdisjoint(registered)
 
 
-def test_all_subjects_on_lists_all_six_and_changes_nothing_else(monkeypatch):
+def test_all_subjects_on_lists_all_ten_and_changes_nothing_else(monkeypatch):
     _, off, _ = _server(monkeypatch, None)
-    _, on, _ = _server(monkeypatch, "projects,operations,meetings")
+    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes")
     assert on - off == ALL and off - on == set()
 
 
 def test_still_requires_user_scope_and_per_tool_permission(monkeypatch):
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes")
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=("mcp:access",)))
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda _p: True)
     server = registry.build_oauth_unified_mcp_server()
@@ -82,7 +88,7 @@ def test_manifest_follows_the_flag_and_reports_the_enforced_gate(monkeypatch):
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: USER)
     monkeypatch.delenv("MCP_VERSUS_WRITE_DOMAINS", raising=False)
     off = {t["name"] for t in registry.get_unified_manifest()["tools"]}
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes")
     manifest = registry.get_unified_manifest()
     on = {t["name"]: t for t in manifest["tools"]}
     assert ALL.isdisjoint(off) and ALL <= set(on)
