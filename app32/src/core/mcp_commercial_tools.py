@@ -454,15 +454,33 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
 
     @mcp.tool()
     def create_commercial_contract(company_id: int, payload: dict) -> dict:
-        """Cria um contrato comercial simplificado."""
+        """Cria um contrato comercial simplificado.
+
+        Informe ``title`` e o cliente por ``party_id`` (id da parte contratual, como em ``list_commercial_contracts``)
+        ou por ``counterparty_id`` (id do cliente em ``list_commercial_customers``); o segundo é traduzido para a parte.
+        """
         user_id = _require_actor_user_id()
         from services.contracts_service import ContractService
 
+        def _create():
+            data = dict(payload or {})
+            counterparty_id = data.pop("counterparty_id", None)
+            if counterparty_id not in (None, "") and not data.get("party_id"):
+                try:
+                    counterparty_id = int(counterparty_id)
+                except (TypeError, ValueError):
+                    raise ValueError("counterparty_id inválido.")
+                party = ContractService.get_party_by_counterparty_id(company_id, counterparty_id)
+                if not party:
+                    raise ValueError("Cliente (counterparty_id) não encontrado para a empresa ativa.")
+                data["party_id"] = party.id
+            return ContractService.create_contract(company_id=company_id, payload=data, user_id=user_id).to_dict()
+
         try:
-            contract = _run_action(ContractService.create_contract, company_id=company_id, payload=payload, user_id=user_id)
+            item = _run_action(_create)
         except Exception as exc:  # noqa: BLE001
             return _fail(str(exc))
-        return _ok(item=contract.to_dict())
+        return _ok(item=item)
 
     @mcp.tool()
     def update_commercial_contract_general(company_id: int, contract_id: int, payload: dict) -> dict:
