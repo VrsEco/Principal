@@ -773,6 +773,7 @@ def update_meeting(meeting_id: int, changes: dict, company_id: int | None = None
         tool_name="update_meeting", company_id=company_id,
         service_method=MeetingMCPService.update_meeting,
         metadata={"meeting_id": int(meeting_id)}, meeting_id=int(meeting_id), changes=changes,
+        actor_user_id=get_active_user_id(),
     )
 
 

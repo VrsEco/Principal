@@ -548,6 +548,26 @@ def close_process_instance(
 
 
 @tool
+def update_process_instance(instance_id: int, changes: dict, company_id: int = None):
+    """
+    Edita uma instância de processo (card): título, descrição, prioridade, prazo, notas, horas e status.
+    Campos de ``changes``: title, description, priority (low/normal/high/urgent), due_date (YYYY-MM-DD; vazio limpa),
+    notes (SUBSTITUI o texto das notas), append_notes (ACRESCENTA um registro com data e autor, preservando o
+    histórico; não combina com notes), status (pending, in_progress, paused, waiting_external ou cancelled),
+    pause_reason, estimated_hours e worked_hours. Cancelar não exige aprovação. Concluir ou falhar a instância NÃO é
+    feito aqui: exige evidência e usa close_process_instance. Instância já encerrada só aceita append_notes.
+    :param instance_id: ID da instância de processo, na empresa ativa.
+    :param changes: Objeto com os campos a alterar (até 8 por chamada).
+    :param company_id: Obrigatório quando o canal não tiver contexto tenant autenticado.
+    """
+    return process_instance_ops_domain.update_process_instance(
+        company_id=company_id,
+        instance_id=instance_id,
+        changes=changes,
+    )
+
+
+@tool
 def list_my_companies(search_term: str = None):
     """
     Lista as empresas às quais o usuário tem acesso, incluindo o Prefixo (client_code) e o ID.
@@ -607,7 +627,13 @@ def get_meeting(meeting_id: int, company_id: int = None):
 
 @tool
 def update_meeting(meeting_id: int, changes: dict, company_id: int = None):
-    """Atualiza reunião via whitelist tenant-safe, sem depender de agendamento."""
+    """
+    Atualiza reunião via whitelist tenant-safe, sem depender de agendamento.
+    Campos de ``changes``: title, project_id, participants, scheduled_date, scheduled_time, planned_duration_minutes,
+    actual_date, actual_time, actual_duration_minutes, status, invite_notes (texto do convite),
+    meeting_notes (SUBSTITUI o texto inteiro das notas) e append_meeting_notes (ACRESCENTA um registro com data e
+    autor, preservando o histórico; não combina com meeting_notes).
+    """
     return meeting_ops_domain.update_meeting(meeting_id=meeting_id, changes=changes, company_id=company_id)
 
 
@@ -1359,6 +1385,7 @@ tools = [
     list_process_hierarchy,
     list_open_process_instances,
     close_process_instance,
+    update_process_instance,
     # Fase 1 — Planning
     list_plans,
     get_plan_diagnostics,

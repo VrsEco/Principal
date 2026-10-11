@@ -285,3 +285,209 @@ def close_process_instance(
             "Falha ao encerrar instância de processo (company_id=%s, instance_id=%s)", company_id, instance_id
         )
         return {"success": False, "error": f"Erro ao encerrar instância de processo: {str(exc)}"}
+
+
+# Campos editáveis por ``update_process_instance`` e status que a edição pode atribuir. Concluir ou falhar a instância
+# exige evidência e continua só em ``close_process_instance``; cancelar é permitido sem aprovação (decisão 2026-10-11).
+_UPDATE_ALLOWED_FIELDS = frozenset(
+    {
+        "title", "description", "priority", "due_date", "notes", "append_notes", "status", "pause_reason",
+        "estimated_hours", "worked_hours",
+    }
+)
+_UPDATE_ALLOWED_STATUSES = ("pending", "in_progress", "paused", "waiting_external", "cancelled")
+_CLOSED_STATUSES = ("completed", "failed", "cancelled")
+_PRIORITIES = ("low", "normal", "high", "urgent")
+_MAX_UPDATE_FIELDS = 8
+_MAX_APPEND_NOTES_CHARS = 4000
+_MAX_NOTES_CHARS = 50000
+_MAX_HOURS = 10000
+
+
+def _parse_hours(value, field: str):
+    from decimal import Decimal, InvalidOperation
+
+    if isinstance(value, bool) or value is None:
+        return None, f"Erro: {field} deve ser um número de horas."
+    try:
+        hours = Decimal(str(value).strip().replace(",", "."))
+    except (InvalidOperation, ValueError):
+        return None, f"Erro: {field} deve ser um número de horas."
+    if not hours.is_finite() or hours < 0 or hours > _MAX_HOURS:
+        return None, f"Erro: {field} deve estar entre 0 e {_MAX_HOURS} horas."
+    return hours.quantize(Decimal("0.01")), None
+
+
+def _serialize_edited_instance(instance) -> dict:
+    """Resposta enxuta da edição (sem carregar relacionamentos)."""
+
+    def _iso(value):
+        return value.isoformat() if hasattr(value, "isoformat") else value
+
+    return {
+        "id": instance.id,
+        "process_id": instance.process_id,
+        "title": instance.title,
+        "description": instance.description,
+        "status": instance.status,
+        "priority": instance.priority,
+        "due_date": _iso(instance.due_date),
+        "actual_end_date": _iso(instance.actual_end_date),
+        "paused_at": _iso(instance.paused_at),
+        "pause_reason": instance.pause_reason,
+        "estimated_hours": float(instance.estimated_hours) if instance.estimated_hours is not None else 0.0,
+        "worked_hours": float(instance.worked_hours) if instance.worked_hours is not None else 0.0,
+        "notes": instance.notes,
+    }
+
+
+def update_process_instance(company_id: int | None, instance_id: int, changes: dict):
+    """
+    Edita os dados de uma instância de processo (card): título, descrição, prioridade, prazo, notas, horas e status.
+
+    Mutação de risco médio, tenant-safe (company_id + id juntos). Campos de ``changes``: title, description,
+    priority (low/normal/high/urgent), due_date (YYYY-MM-DD; vazio limpa), notes (SUBSTITUI o texto), append_notes
+    (ACRESCENTA registro com data e autor, preserva o histórico), status (pending, in_progress, paused,
+    waiting_external, cancelled), pause_reason, estimated_hours, worked_hours. Concluir ou falhar a instância NÃO
+    é feito aqui: exige evidência e usa ``close_process_instance``. Instância já encerrada só aceita append_notes.
+
+    :param company_id: Obrigatório quando o canal não tiver contexto tenant autenticado.
+    :param instance_id: ID da instância de processo, na empresa ativa.
+    :param changes: Objeto com os campos a alterar (até 8 por chamada).
+    """
+    from models.process import ProcessInstance
+
+    company_id, error = _resolve_effective_company_id(company_id)
+    if error:
+        return {"success": False, "error": error}
+    try:
+        instance_id = int(instance_id)
+    except (TypeError, ValueError):
+        return {"success": False, "error": "Erro: instance_id é inválido."}
+    if not isinstance(changes, dict) or not changes:
+        return {"success": False, "error": "Erro: informe um objeto não vazio em changes."}
+    invalid = sorted(set(changes) - _UPDATE_ALLOWED_FIELDS)
+    if invalid:
+        return {"success": False, "error": f"Erro: campos não permitidos na atualização: {', '.join(invalid)}."}
+    if len(changes) > _MAX_UPDATE_FIELDS:
+        return {"success": False, "error": f"Erro: atualização excede o limite de {_MAX_UPDATE_FIELDS} campos por chamada."}
+
+    normalized: dict = {}
+    if "title" in changes:
+        title = str(changes["title"] or "").strip()
+        if not title or len(title) > 255:
+            return {"success": False, "error": "Erro: title deve ter de 1 a 255 caracteres."}
+        normalized["title"] = title
+    if "description" in changes:
+        normalized["description"] = str(changes["description"] or "").strip() or None
+    if "priority" in changes:
+        priority = str(changes["priority"] or "").strip().lower()
+        if priority not in _PRIORITIES:
+            return {"success": False, "error": f"Erro: priority inválida. Use {', '.join(_PRIORITIES)}."}
+        normalized["priority"] = priority
+    if "due_date" in changes:
+        raw_due = changes["due_date"]
+        if raw_due in (None, ""):
+            normalized["due_date"] = None
+        else:
+            try:
+                normalized["due_date"] = datetime.strptime(str(raw_due).strip()[:10], "%Y-%m-%d").date()
+            except ValueError:
+                return {"success": False, "error": "Erro: due_date deve estar no formato YYYY-MM-DD."}
+    if "notes" in changes and "append_notes" in changes:
+        return {"success": False, "error": "Erro: use notes (substitui o texto) ou append_notes (acrescenta), não os dois."}
+    if "notes" in changes:
+        normalized["notes"] = str(changes["notes"] or "").strip() or None
+    if "append_notes" in changes:
+        text = changes["append_notes"]
+        if not isinstance(text, str) or not text.strip():
+            return {"success": False, "error": "Erro: append_notes não pode ser vazio."}
+        if len(text.strip()) > _MAX_APPEND_NOTES_CHARS:
+            return {"success": False, "error": f"Erro: append_notes excede {_MAX_APPEND_NOTES_CHARS} caracteres."}
+        normalized["append_notes"] = text.strip()
+    if "status" in changes:
+        status = str(changes["status"] or "").strip().lower()
+        if status in ("completed", "failed"):
+            return {
+                "success": False,
+                "error": "Erro: concluir ou falhar a instância exige evidência; use close_process_instance.",
+            }
+        if status not in _UPDATE_ALLOWED_STATUSES:
+            return {"success": False, "error": f"Erro: status inválido. Use {', '.join(_UPDATE_ALLOWED_STATUSES)}."}
+        normalized["status"] = status
+    if "pause_reason" in changes:
+        normalized["pause_reason"] = str(changes["pause_reason"] or "").strip() or None
+    for hours_field in ("estimated_hours", "worked_hours"):
+        if hours_field in changes:
+            value, hours_error = _parse_hours(changes[hours_field], hours_field)
+            if hours_error:
+                return {"success": False, "error": hours_error}
+            normalized[hours_field] = value
+
+    try:
+        instance = ProcessInstance.query.filter_by(id=instance_id, company_id=company_id).first()
+        if instance is None:
+            return {"success": False, "error": "Erro: instância de processo não encontrada nesta empresa."}
+
+        previous_status = instance.status
+        if previous_status in _CLOSED_STATUSES and set(normalized) - {"append_notes"}:
+            return {
+                "success": False,
+                "error": f"Erro: instância já encerrada ({previous_status}); só é possível acrescentar notas (append_notes).",
+            }
+
+        # Tudo que pode recusar é calculado antes de qualquer atribuição.
+        actor_user_id = get_active_user_id()
+        new_notes = instance.notes
+        if "notes" in normalized:
+            new_notes = normalized["notes"]
+        if "append_notes" in normalized:
+            from services.project_task_mcp_service import ProjectTaskMCPService
+
+            new_notes = ProjectTaskMCPService._append_note_entry(
+                new_notes, normalized["append_notes"], ProjectTaskMCPService._actor_label(actor_user_id)
+            )
+        edited_fields = sorted(set(normalized) - {"append_notes"})
+        if edited_fields:
+            audit_note = (
+                f"[MCP update_process_instance] campos: {', '.join(edited_fields)}; "
+                f"actor_user_id={actor_user_id or 'desconhecido'}"
+            )
+            if "status" in normalized and normalized["status"] != previous_status:
+                audit_note += f"; status {previous_status!r} -> {normalized['status']!r}"
+            audit_note += "."
+            new_notes = f"{new_notes}\n{audit_note}" if new_notes else audit_note
+        if new_notes and len(new_notes) > _MAX_NOTES_CHARS:
+            return {"success": False, "error": "Erro: as notas excederiam o limite; resuma o histórico antes de acrescentar."}
+
+        for field in ("title", "description", "priority", "due_date", "pause_reason", "estimated_hours", "worked_hours"):
+            if field in normalized:
+                setattr(instance, field, normalized[field])
+        if "notes" in normalized or "append_notes" in normalized or edited_fields:
+            instance.notes = new_notes
+        if "status" in normalized:
+            new_status = normalized["status"]
+            instance.status = new_status
+            now = datetime.utcnow()
+            if new_status == "paused":
+                instance.paused_at = now
+            elif previous_status == "paused":
+                instance.paused_at = None
+            if new_status == "in_progress" and instance.started_at is None:
+                instance.started_at = now
+            if new_status == "cancelled":
+                instance.actual_end_date = date.today()
+                instance.completed_at = now
+
+        db.session.commit()
+        persisted = ProcessInstance.query.filter_by(id=instance_id, company_id=company_id).first()
+        if persisted is None:
+            db.session.rollback()
+            return {"success": False, "error": "Erro: falha na validação pós-escrita da atualização no tenant informado."}
+        return {"success": True, "company_id": company_id, "instance": _serialize_edited_instance(persisted)}
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception(
+            "Falha ao atualizar instância de processo (company_id=%s, instance_id=%s)", company_id, instance_id
+        )
+        return {"success": False, "error": f"Erro ao atualizar instância de processo: {str(exc)}"}
