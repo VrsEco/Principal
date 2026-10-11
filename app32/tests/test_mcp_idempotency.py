@@ -126,8 +126,11 @@ def test_runtime_requires_the_key_on_creation_tools_and_not_on_optional_ones(app
     assert state.envelope["success"] is False and "idempotency_key obrigatória" in state.envelope["error"]
     assert _idempotency_precheck("upsert_financial_budget_matrix", {"company_id": 1}, CONTEXT, ALLOWED).envelope is None
     assert _idempotency_precheck("list_financial_entries", {"company_id": 1}, CONTEXT, ALLOWED).envelope is None
-    denied = _idempotency_precheck("create_financial_entry", {}, CONTEXT, SimpleNamespace(allowed=False))
+    denied = _idempotency_precheck("create_financial_entry", {}, CONTEXT, SimpleNamespace(allowed=False, reason="sem permissão"))
     assert denied.envelope is None  # a recusa de permissão segue o fluxo normal
+    pending = SimpleNamespace(allowed=False, reason="Mutação exige human gate e confirmação explícita")
+    gated = _idempotency_precheck("create_financial_entry", {"company_id": 1}, CONTEXT, pending)
+    assert "idempotency_key obrigatória" in gated.envelope["error"], "a chave vem antes de pedir aprovação"
     too_long = _idempotency_precheck("create_financial_entry", {"idempotency_key": "x" * 129}, CONTEXT, ALLOWED)
     assert "128" in too_long.envelope["error"]
 

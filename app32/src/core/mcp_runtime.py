@@ -600,7 +600,9 @@ def _idempotency_precheck(tool_name: str, payload: Mapping[str, Any], execution_
     )
 
     mode = idempotency_mode(tool_name)
-    if not mode or not getattr(decision, "allowed", False):
+    # Vale quando a política autoriza OU só pede aprovação humana (as financeiras caem aqui): a chave é exigida e
+    # o resultado repetido ANTES de pedir ou consumir aprovação. Outras negativas seguem o fluxo normal de recusa.
+    if not mode or not (getattr(decision, "allowed", False) or _policy_requires_persisted_approval(decision)):
         return _IdempotencyState()
     key = str(payload.get(IDEMPOTENCY_PARAM) or "").strip()
     if not key:
