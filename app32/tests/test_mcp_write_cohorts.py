@@ -18,7 +18,7 @@ from src.core.mcp_mutation_contract import audit_mutation_tool
 from src.intelligence.tool_catalog import catalog
 
 BASELINE = Path(__file__).parent / "data" / "mcp_mutation_violations_baseline.json"
-USER = SimpleNamespace(scopes=("mcp:access", "mcp:user"))
+USER = SimpleNamespace(scopes=("mcp:access", "mcp:user", "mcp:finance"))
 EXPECTED = {
     "projects": {"create_project", "update_project", "update_project_task_secure"},
     "operations": {"request_engineering_suggestion", "request_new_app32_integration"},
@@ -91,6 +91,33 @@ EXPECTED = {
         "delete_work_journey_manual_task_tool",
         "delete_work_journey_rule_tool",
     },
+    "finance_setup": {
+        "create_financial_catalog_item",
+        "create_financial_classification_rule",
+        "create_financial_automation_rule",
+        "create_financial_budget_version",
+        "create_financial_budget_line",
+        "create_financial_budget_contract",
+        "create_financial_budget_document",
+        "create_financial_budget_document_schedules",
+        "import_financial_budget_matrix",
+        "upsert_financial_budget_matrix",
+        "upsert_financial_domain_enablement",
+        "generate_financial_report",
+    },
+    "finance_ledger": {
+        "create_financial_direct_entry",
+        "create_financial_bordero",
+        "create_financial_bordero_settlement",
+        "create_financial_entry_from_bank_reconciliation_row",
+        "match_financial_bank_reconciliation_row",
+        "reconcile_financial_import_batch",
+        "create_financial_import_batch",
+        "create_financial_ingestion_record",
+        "replace_financial_allocations",
+        "create_financial_schedule",
+        "generate_due_financial_schedules",
+    },
 }
 ALL = set().union(*EXPECTED.values())
 
@@ -110,7 +137,7 @@ def _server(monkeypatch, env):
 
 def test_cohort_content_is_exactly_the_approved_set():
     assert {k: set(v) for k, v in cohorts.WRITE_COHORT_TOOL_NAMES.items()} == EXPECTED
-    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 64
+    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 87
 
 
 @pytest.mark.parametrize("value", [None, "", "none", "NONE", "  "])
@@ -129,12 +156,12 @@ def test_each_subject_turns_on_alone(monkeypatch, subject):
 
 def test_all_subjects_on_lists_everything_and_changes_nothing_else(monkeypatch):
     _, off, _ = _server(monkeypatch, None)
-    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops")
+    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,finance_setup,finance_ledger")
     assert on - off == ALL and off - on == set()
 
 
 def test_still_requires_user_scope_and_per_tool_permission(monkeypatch):
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,finance_setup,finance_ledger")
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=("mcp:access",)))
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda _p: True)
     server = registry.build_oauth_unified_mcp_server()
@@ -150,7 +177,7 @@ def test_manifest_follows_the_flag_and_reports_the_enforced_gate(monkeypatch):
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: USER)
     monkeypatch.delenv("MCP_VERSUS_WRITE_DOMAINS", raising=False)
     off = {t["name"] for t in registry.get_unified_manifest()["tools"]}
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,finance_setup,finance_ledger")
     manifest = registry.get_unified_manifest()
     on = {t["name"]: t for t in manifest["tools"]}
     assert ALL.isdisjoint(off) and ALL <= set(on)
@@ -167,7 +194,13 @@ def test_every_cohort_tool_passes_the_mutation_contract_and_is_not_in_the_baseli
         assert name not in baseline, f"{name} está na linha de base de violações"
 
 
-APPROVAL_IN_COHORTS = {"delete_work_calendar_event_tool", "close_commercial_contract", *EXPECTED["admin_ops"]}
+APPROVAL_IN_COHORTS = {
+    "delete_work_calendar_event_tool", "close_commercial_contract", *EXPECTED["admin_ops"],
+    # financeiras que lançam ou baixam valor (APPROVAL_TOOLS)
+    "create_financial_direct_entry", "create_financial_bordero_settlement",
+    "create_financial_entry_from_bank_reconciliation_row", "match_financial_bank_reconciliation_row",
+    "reconcile_financial_import_batch", "replace_financial_allocations", "generate_due_financial_schedules",
+}
 
 
 def test_only_the_expected_cohort_tools_need_approval_under_d6():
@@ -241,3 +274,51 @@ def test_legacy_chat_tools_never_enter_a_write_or_read_cohort():
 
     cohort_names = set(cohorts.all_write_cohort_names()) | set(read_cohorts.all_read_cohort_names())
     assert LEGACY_CHAT_TOOLS.isdisjoint(cohort_names), sorted(LEGACY_CHAT_TOOLS & cohort_names)
+
+
+# ---- coortes financeiras: escopo mcp:finance e surface finance -------------------------------------
+FINANCE_TOOLS = EXPECTED["finance_setup"] | EXPECTED["finance_ledger"]
+
+
+def test_finance_cohorts_need_the_finance_scope_and_never_appear_for_user_only(monkeypatch):
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "finance_setup,finance_ledger")
+    monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda _p: True)
+    monkeypatch.setattr(
+        "src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=("mcp:access", "mcp:user"))
+    )
+    listed = {t.name for t in asyncio.run(registry.build_oauth_unified_mcp_server().list_tools())}
+    assert FINANCE_TOOLS.isdisjoint(listed), "mutação financeira não vai pela surface user"
+    monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: USER)
+    listed = {t.name for t in asyncio.run(registry.build_oauth_unified_mcp_server().list_tools())}
+    assert FINANCE_TOOLS <= listed
+
+
+def test_finance_cohort_tools_run_under_the_finance_policy_surface(monkeypatch):
+    seen = {}
+    real = registry._register_tool
+
+    def spy(mcp, tool, *, policy_surface=None, **kwargs):
+        seen[tool.name] = policy_surface
+        return real(mcp, tool, policy_surface=policy_surface, **kwargs)
+
+    monkeypatch.setattr(registry, "_register_tool", spy)
+    shared = {}
+    real_shared = registry._register_shared_registrars
+
+    def spy_shared(mcp, *, tool_names=None, policy_surface=None, **kwargs):
+        for name in tool_names or ():
+            shared[name] = policy_surface
+        return real_shared(mcp, tool_names=tool_names, policy_surface=policy_surface, **kwargs)
+
+    monkeypatch.setattr(registry, "_register_shared_registrars", spy_shared)
+    _server(monkeypatch, "finance_setup,finance_ledger")
+    placed = {**seen, **shared}
+    assert FINANCE_TOOLS <= set(placed)
+    assert {placed[name] for name in FINANCE_TOOLS} == {"finance"}
+
+
+def test_finance_subjects_are_a_subset_of_the_cohorts_and_leave_out_the_known_gaps():
+    assert set(cohorts.finance_cohort_names()) == FINANCE_TOOLS
+    for excluded in ("create_financial_closing", "create_financial_entry", "create_financial_settlement",
+                     "generate_commercial_billing_batch", "upsert_commercial_contract_fiscal_terms"):
+        assert excluded not in FINANCE_TOOLS

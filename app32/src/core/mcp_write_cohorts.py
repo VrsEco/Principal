@@ -103,7 +103,48 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "delete_work_journey_manual_task_tool",
         "delete_work_journey_rule_tool",
     ),
+    # Sub-onda 2F, etapa 1: cadastros e configuração do financeiro (nenhuma lança nem baixa valor). Idempotência
+    # obrigatória (create_*/import_*) ou opcional (upsert_*, relatório). Visível só com o escopo ``mcp:finance``.
+    "finance_setup": (
+        "create_financial_catalog_item",
+        "create_financial_classification_rule",
+        "create_financial_automation_rule",
+        "create_financial_budget_version",
+        "create_financial_budget_line",
+        "create_financial_budget_contract",
+        "create_financial_budget_document",
+        "create_financial_budget_document_schedules",
+        "import_financial_budget_matrix",
+        "upsert_financial_budget_matrix",
+        "upsert_financial_domain_enablement",
+        "generate_financial_report",
+    ),
+    # Sub-onda 2F, etapa 2: lançamentos, baixas, conciliação, borderô e importações. As que lançam ou baixam valor
+    # exigem aprovação humana persistida (regra D6). ``create_financial_entry`` e ``create_financial_settlement``
+    # já estão publicadas à parte. Fora, de propósito: ``create_financial_closing`` (o módulo
+    # ``financial_closing_service`` não existe) e o faturamento/fiscal comercial.
+    "finance_ledger": (
+        "create_financial_direct_entry",
+        "create_financial_bordero",
+        "create_financial_bordero_settlement",
+        "create_financial_entry_from_bank_reconciliation_row",
+        "match_financial_bank_reconciliation_row",
+        "reconcile_financial_import_batch",
+        "create_financial_import_batch",
+        "create_financial_ingestion_record",
+        "replace_financial_allocations",
+        "create_financial_schedule",
+        "generate_due_financial_schedules",
+    ),
 }
+
+# Assuntos financeiros: a mutação financeira nunca vai pela surface ``user``. Visibilidade pelo escopo ``mcp:finance``
+# e execução pela surface ``finance`` (governança vigente, como create_financial_entry).
+FINANCE_SUBJECTS = ("finance_setup", "finance_ledger")
+
+
+def finance_cohort_names() -> tuple[str, ...]:
+    return tuple(name for subject in FINANCE_SUBJECTS for name in WRITE_COHORT_TOOL_NAMES[subject])
 
 
 def enabled_write_domains() -> frozenset[str]:

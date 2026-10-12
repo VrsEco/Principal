@@ -113,3 +113,18 @@ O desenho original prevalece: um único conector (`mcp-versus`), com a visibilid
 O conector `/mcp/pilot/admin` da seção 8 permanece no código, **desligado** (`APP32_MCP_OIDC_ADMIN_ROUTE_ENABLED` ausente), para o dia em que existir um caso de plataforma (usuários, empresas, agentes). Motivo da mudança: o Claude registra o cliente por cadastro dinâmico e pede a lista antiga de escopos, o que impedia obter `mcp:admin` sem alterar o provisionador de clientes do Keycloak (provedor próprio, sem código no repositório).
 
 `delete_commercial_contract` **fica só no conector administrativo**: a governança vigente (teste de catálogo) mantém a exclusão de contrato fora do escopo `mcp_user` (suspender e encerrar contrato ficam no usuário). Mudar isso é decisão própria.
+
+## 9. Coortes de escrita financeiras (sub-onda 2F): `finance_setup` e `finance_ledger`
+
+Duas etapas, ligadas separadamente em `MCP_VERSUS_WRITE_DOMAINS`. A mutação financeira **nunca vai pela surface `user`**: as ferramentas só aparecem para token com o escopo `mcp:finance` e executam pela surface `finance`, como `create_financial_entry` e `create_financial_settlement` (já publicadas à parte).
+
+| Assunto | Ferramentas | Observação |
+|---|---|---|
+| `finance_setup` (12) | catálogo, regra de classificação, regra de automação, orçamento (versão, linha, contrato, documento, agendamentos, matriz), habilitação de domínio, relatório | Cadastros e configuração; nenhuma lança nem baixa valor |
+| `finance_ledger` (11) | lançamento direto, borderô e baixa de borderô, lançamento e casamento por conciliação, conciliação de lote, lote e registro de importação, rateio, agendamento, geração de agendamentos vencidos | As que lançam ou baixam valor exigem aprovação humana persistida (regra D6) |
+
+Toda criação, geração, importação e conciliação exige `idempotency_key` (seção 10 do SPEC da onda 2); repetir a chamada com a mesma chave devolve o resultado guardado.
+
+**Fora, de propósito:** `create_financial_closing` (o módulo `services.financial_closing_service` não existe: a ferramenta falharia sempre; precisa do serviço antes de entrar), faturamento e termos fiscais comerciais (`generate_commercial_billing_batch`, `generate_commercial_financial_titles_for_billing`, `upsert_commercial_contract_financial_terms`, `upsert_commercial_contract_fiscal_terms`), exclusões financeiras e qualquer movimentação fora do livro-razão (transferências, PIX).
+
+**Ativação, em duas etapas:** primeiro `finance_setup`; só depois de validar numa empresa de teste, `finance_ledger`. Acrescente o assunto à linha existente e reinicie o MCP (`bash scripts/manage_mcp_http.sh restart`). Depois de ligar, reconecte o conector para a lista de ferramentas ser renovada.
