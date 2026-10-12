@@ -178,11 +178,12 @@ class FinancialDirectEntryService:
         }, None
 
     @staticmethod
-    def create_direct_entry(
+    def validate_direct_entry(
         *,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
-    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    ) -> Tuple[Optional[FinancialDirectEntryCreateInput], Optional[str]]:
+        """Valida o lançamento direto sem gravar nada (usada antes de pedir aprovação humana e antes de criar)."""
         try:
             data = FinancialDirectEntryCreateInput.model_validate(payload or {})
         except Exception as exc:
@@ -244,6 +245,21 @@ class FinancialDirectEntryService:
         )
         if domain_error:
             return None, domain_error
+
+        return data, None
+
+    @staticmethod
+    def create_direct_entry(
+        *,
+        payload: Dict[str, Any],
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        data, error = FinancialDirectEntryService.validate_direct_entry(
+            payload=payload,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if error:
+            return None, error
 
         schedule_payload = FinancialDirectEntryService._build_schedule_payload(data)
         schedule_result, error = FinancialScheduleService.create_schedule(
@@ -547,7 +563,27 @@ class FinancialDirectEntryService:
             "created_by_agent": data.created_by_agent,
             "notes": data.notes,
             "metadata_json": metadata_json,
+            **FinancialDirectEntryService._approval_fields(metadata_json),
         }
+
+    @staticmethod
+    def _approval_fields(metadata_json: Dict[str, Any]) -> Dict[str, Any]:
+        """Aprovador e data da aprovação humana consumida pelo runtime MCP (vem de ``metadata_json.human_approval``,
+        preenchido só pela ferramenta MCP a partir da aprovação persistida; nunca do cliente)."""
+        approval = (metadata_json or {}).get("human_approval")
+        if not isinstance(approval, dict):
+            return {}
+        approver = approval.get("approved_by_user_id")
+        if isinstance(approver, bool) or not isinstance(approver, int):
+            return {}
+        fields: Dict[str, Any] = {"approved_by_user_id": approver}
+        approved_at = approval.get("approved_at")
+        if isinstance(approved_at, str) and approved_at.strip():
+            try:
+                fields["approved_at"] = datetime.fromisoformat(approved_at.strip())
+            except ValueError:
+                pass
+        return fields
 
     @staticmethod
     def _build_settlement_payload(

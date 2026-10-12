@@ -56,6 +56,31 @@ def _bound_payload(company_id: Any, payload: Any) -> tuple[dict, dict | None]:
     return bound, None
 
 
+def _compact_direct_entry_result(result: dict | None) -> dict:
+    """Identificação e situação do que o lançamento direto criou (agendamento, lançamento e baixa), sem os filhos."""
+
+    def _pick(item: dict | None, keys: tuple[str, ...]) -> dict:
+        return {key: item.get(key) for key in keys if isinstance(item, dict) and key in item}
+
+    result = result or {}
+    return {
+        "schedule": _pick(result.get("schedule"), ("id", "schedule_code", "status")),
+        "entry": _pick(
+            result.get("entry"),
+            (
+                "id", "entry_code", "entry_type", "status", "review_status", "description", "due_date", "occurred_on",
+                "original_amount", "bank_account_id", "counterparty_id", "chart_account_id", "cost_center_id",
+                "created_by_user_id", "approved_by_user_id", "approved_at",
+            ),
+        ),
+        "settlement": _pick(
+            result.get("settlement"),
+            ("id", "settlement_code", "settlement_status", "settlement_date", "net_amount", "reconciliation_status"),
+        ),
+        "detail": "Use get_financial_entry para o detalhe completo (rateio, baixas e anexos).",
+    }
+
+
 def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = False) -> None:
     """Registra as tools MCP financeiras no servidor informado."""
 
@@ -971,13 +996,33 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
             return company_error
         from services.financial_direct_entry_service import FinancialDirectEntryService
 
-        result, error = _run_financial_action(
-            FinancialDirectEntryService.create_direct_entry,
-            payload=payload,
-        )
+        # Autor e aprovação nunca vêm do cliente: saem da sessão e da aprovação humana consumida pelo runtime.
+        for forged in ("created_by_user_id", "created_by_employee_id", "created_by_agent"):
+            payload.pop(forged, None)
+        metadata = dict(payload.get("metadata_json") or {})
+        metadata.pop("human_approval", None)
+        metadata.pop("audit", None)
+        payload["metadata_json"] = metadata
+
+        def _create_with_actor(*, payload: dict):
+            audited = _attach_mcp_audit_payload(payload)
+            approval = _resolve_consumed_human_approval(company_id)
+            if approval is not None:
+                approved_at = approval.get("approved_at")
+                audited["metadata_json"] = {
+                    **dict(audited.get("metadata_json") or {}),
+                    "human_approval": {
+                        "request_id": approval["request_id"],
+                        "approved_by_user_id": approval["approved_by_user_id"],
+                        "approved_at": approved_at.isoformat() if hasattr(approved_at, "isoformat") else None,
+                    },
+                }
+            return FinancialDirectEntryService.create_direct_entry(payload=audited)
+
+        result, error = _run_financial_action(_create_with_actor, payload=payload)
         if error:
             return {"success": False, "error": error}
-        return {"success": True, **result}
+        return {"success": True, **_compact_direct_entry_result(result)}
 
     @mcp.tool()
     def replace_financial_allocations(company_id: int, payload: dict) -> dict:
