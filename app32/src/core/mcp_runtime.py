@@ -769,6 +769,13 @@ def wrap_mcp_callable(
                 if rule_requires_approval
                 else initial_decision.reason
             )
+            if (rule_requires_approval or _policy_requires_persisted_approval(initial_decision)) and idempotency.envelope is None:
+                # Regras de negócio antes da aprovação: o erro aparece na primeira chamada e a aprovação não se perde.
+                from src.core.mcp_prevalidation import prevalidate
+
+                prevalidation_error = prevalidate(tool_name, payload)
+                if prevalidation_error:
+                    return {"success": False, "error": prevalidation_error, "prevalidated": True}
             if rule_requires_approval or _policy_requires_persisted_approval(initial_decision):
                 from services.tool_approval_service import (
                     ToolApprovalBinding,
