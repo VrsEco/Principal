@@ -359,7 +359,7 @@ def _visible_privileged_tool_names(requested_names: frozenset[str]) -> set[str]:
         capability = catalog.get_tool_capability(name)
         if name in STATUS_TOOL_NAMES:
             scope = "mcp:admin"
-        elif name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES:
+        elif name in PILOT_FINANCE_OPERATIONAL_TOOL_NAMES or name in mcp_write_cohorts.finance_cohort_names():
             scope = "mcp:finance"
         elif (
             name in PILOT_PROCESS_MUTATION_TOOL_NAMES
@@ -1209,12 +1209,13 @@ def _register_write_cohorts(mcp: Any) -> None:
     if not names:
         return
     tools_by_name = _tool_map()
+    finance_names = set(mcp_write_cohorts.finance_cohort_names())
     by_surface: dict[str, set[str]] = {}
     for name in names:
         capability = catalog.get_tool_capability(name)
         if capability is None:
             continue
-        surface = mcp_read_cohorts.policy_surface_for(capability)
+        surface = "finance" if name in finance_names else mcp_read_cohorts.policy_surface_for(capability)
         tool = tools_by_name.get(name)
         if tool is not None:
             _register_tool(mcp, tool, policy_surface=surface)
