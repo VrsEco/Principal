@@ -177,3 +177,12 @@ As verificações são somente leitura, sem bloqueio de linhas. São consultivas
 - **Visibilidade:** só aparecem para quem tem a permissão na empresa (e o perfil comum de colaborador não tem `delete` no domínio). Matriz de papéis: administrador tem exclusão; colaborador e cliente não.
 - **Pré-validação** (antes de pedir a aprovação): o alvo existe na empresa e está no estado certo (não removido, para excluir; removido, para restaurar).
 - **Ativar:** acrescentar `deletions` a `MCP_VERSUS_WRITE_DOMAINS`, reiniciar o MCP e reconectar o conector. Desfazer: tirar o assunto da linha e reiniciar.
+
+## 11. Diagnóstico: por que uma ferramenta não aparece para um usuário
+Depois de ligar uma coorte, a ferramenta só aparece para o cliente se **quatro** condições valerem. Na ordem:
+1. A flag do assunto está em `MCP_VERSUS_WRITE_DOMAINS` no `.env`.
+2. O processo do MCP foi **reiniciado** depois da edição (`bash scripts/manage_mcp_http.sh restart`); ele só lê o `.env` ao iniciar.
+3. O perfil do usuário no APP32 tem a **permissão** da ferramenta na empresa (ou permissão total), e o grant não tem teto que a exclua.
+4. O **conector foi reconectado**: o cliente guarda a lista de ferramentas da conexão.
+
+`python scripts/qa/mcp_tool_visibility.py "Nome" --cohort deletions` (no servidor, com o Python do ambiente virtual 3.12, somente leitura) imprime a flag e, por empresa, o teto do grant e se o perfil tem a permissão, para cada ferramenta da coorte. Caso real de 13/10/2026: a flag estava no `.env` e o perfil era administrador, mas o MCP não tinha sido reiniciado.
