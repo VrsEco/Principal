@@ -13,8 +13,10 @@ def test_project_crud_tools_are_scoped_per_surface():
     analytics_tools = {tool["name"] for tool in analytics_manifest["tools"]}
 
     assert {"create_project", "list_projects", "update_project"} <= user_tools
-    assert "delete_project" not in user_tools
-    assert "delete_project_task" not in user_tools
+    # Decisão de 13/10/2026 (responsável): exclusões de projeto, atividade e reunião passam a ser alcançáveis pelo conector
+    # comum, só com aprovação humana persistida (regra D6) e permissão por empresa; o parâmetro confirm sai do esquema.
+    assert "delete_project" in user_tools
+    assert "delete_project_task" not in user_tools, "o alias legado do chat continua só na superfície administrativa"
 
     assert {"delete_project", "delete_project_task", "delete_project_task_secure"} <= admin_tools
     assert "get_project_task_analytics_report" in analytics_tools
