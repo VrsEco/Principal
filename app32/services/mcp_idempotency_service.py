@@ -150,9 +150,15 @@ def fail(row_id: int) -> None:
     db.session.commit()
 
 
-def purge_expired(limit: int = 1000) -> int:
-    """Remove linhas vencidas (para tarefa agendada)."""
-    ids = [r.id for r in McpIdempotencyKey.query.filter(McpIdempotencyKey.expires_at <= _now()).limit(limit)]
+def count_expired(older_than: timedelta = timedelta(0)) -> int:
+    """Quantas linhas venceram há mais de ``older_than`` (leitura; usada no modo de simulação)."""
+    return McpIdempotencyKey.query.filter(McpIdempotencyKey.expires_at <= _now() - older_than).count()
+
+
+def purge_expired(limit: int = 1000, older_than: timedelta = timedelta(0)) -> int:
+    """Remove linhas vencidas há mais de ``older_than`` (tarefa agendada; em lotes de ``limit``)."""
+    cutoff = _now() - older_than
+    ids = [r.id for r in McpIdempotencyKey.query.filter(McpIdempotencyKey.expires_at <= cutoff).limit(limit)]
     if not ids:
         return 0
     McpIdempotencyKey.query.filter(McpIdempotencyKey.id.in_(ids)).delete(synchronize_session=False)
