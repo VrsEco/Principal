@@ -14,7 +14,7 @@ import src.core.mcp_surface_registry as registry
 import src.core.mcp_write_cohorts as cohorts
 from src.core.mcp_cohort_contract import probe_registered_tools
 from src.core.mcp_gate_policy import requires_persisted_approval
-from src.core.mcp_mutation_contract import audit_mutation_tool
+from src.core.mcp_mutation_contract import audit_mutation_tool, is_mutation
 from src.intelligence.tool_catalog import catalog
 
 BASELINE = Path(__file__).parent / "data" / "mcp_mutation_violations_baseline.json"
@@ -211,7 +211,7 @@ def test_manifest_follows_the_flag_and_reports_the_enforced_gate(monkeypatch):
 def test_every_cohort_tool_passes_the_mutation_contract_and_is_not_in_the_baseline():
     probes = probe_registered_tools()
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
-    for name in sorted(ALL):
+    for name in sorted(n for n in ALL if is_mutation(n)):  # leituras da coorte (get_/list_/verify_) não são mutações
         problems = audit_mutation_tool(name, capability=catalog.get_tool_capability(name), probe=probes.get(name))
         assert not problems, f"{name}: {[(v.code, v.detail) for v in problems]}"
         assert name not in baseline, f"{name} está na linha de base de violações"
