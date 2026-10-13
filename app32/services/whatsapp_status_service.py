@@ -43,7 +43,10 @@ def authorize(company_id, user_id, principal_id, permission):
     runtime = resolve_runtime_identity(user_id=user_id, company_id=company_id)
     permissions = runtime.get('permissions') or {}
     resource, action = permission.split('.')
-    if (runtime.get('role') not in ('administrador', 'admin_tecnico', 'administrador_tecnico') or
+    from src.intelligence.security.tenant_rbac import ADMIN_ROLES, ROLE_ALIASES
+    # O perfil chega como 'administrator' (inglês) ou 'administrador'; só administradores passam, sem escalar por papel.
+    role = ROLE_ALIASES.get(str(runtime.get('role') or '').strip().lower())
+    if (role not in ADMIN_ROLES or
         company_id not in runtime.get('accessible_company_ids', ()) or permission not in ceiling or
         not (runtime.get('has_full_app32_permissions') or action in permissions.get(resource, []))):
         raise PermissionError('status_permission_denied')
