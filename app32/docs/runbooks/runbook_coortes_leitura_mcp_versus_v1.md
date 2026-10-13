@@ -97,7 +97,7 @@ Segundo conector, só para administradores da plataforma. O conector comum (`/mc
 
 **O que expõe (lista fechada, `src/core/mcp_admin_cohort.py`, 8 ferramentas):** aprovações de ausência e de transferência da jornada; exclusão de bloco, tarefa manual e regra da jornada; exclusão de linha de visada de indicador, de vínculo de alinhamento estratégico e de contrato comercial. Todas exigem aprovação humana persistida (regra D6) e permissão por empresa.
 
-**O que não expõe:** diagnósticos do sistema (`get_database_schema`, `get_system_health`), cadastro de usuários, status de empresa, implantação de agentes, WhatsApp Status e as exclusões de projeto e reunião (dependem do adaptador do parâmetro de confirmação, M9).
+**O que não expõe:** diagnósticos do sistema (`get_database_schema`, `get_system_health`), cadastro de usuários, status de empresa, implantação de agentes e as exclusões de projeto e reunião (dependem do adaptador do parâmetro de confirmação, M9).
 
 **Ativação (por ordem):**
 1. Keycloak, realm `app32`: criar o client scope `mcp:admin` como **opcional** (nunca padrão) e restringi-lo por papel (Scope → desligar "Full scope allowed" e mapear só o papel de administrador da plataforma).
@@ -201,3 +201,11 @@ O workflow `.github/workflows/mcp-health-probe.yml` roda a sonda `scripts/qa/mcp
 - **Não abre issue:** o repositório é público e uma issue revelaria a indisponibilidade.
 - **Rodar na hora:** Actions > MCP Health Probe > Run workflow (campo opcional para outra URL base).
 - **Limite conhecido:** o GitHub pode atrasar execuções agendadas e as desativa se o repositório ficar 60 dias sem atividade. A sonda **não valida a lista de ferramentas** (isso exige token): "0 ferramentas" continua sendo conferido com `list_user_app32_capabilities` autenticado ou com `scripts/qa/mcp_tool_visibility.py`.
+
+## 14. WhatsApp Status (coorte `whatsapp_status`, 13/10/2026)
+As 15 ferramentas do módulo (`src/core/mcp_whatsapp_status_tools.py`) passaram a ter os escopos `mcp_user` e `mcp_admin` e formam o assunto `whatsapp_status` das coortes de escrita. **Desligado por padrão**; antes disso elas estavam registradas, mas inalcançáveis (exigiam `mcp:admin`, que nenhum token recebe) e respondiam por 10 das 31 violações M7 do contrato (baseline: 31 para 21).
+- **O que entra:** consultas (`get_whatsapp_status_setup`, `list_*`, `verify_*`), agendas (`create`/`update`/`pause`, sem gate: nascem desativadas, editar pausa, pausar é parada de emergência) e as que exigem **aprovação humana persistida** (regra D6): `publish_whatsapp_status_art|kit|test`, `resume_whatsapp_status_schedule`, `confirm_whatsapp_status_mobile`, `configure_whatsapp_status_account` e `register_whatsapp_status_approved_bundle`. As publicações seguem com `command_key` (idempotência própria), arte por ID aprovado (nunca URL livre) e parada na primeira falha.
+- **Quem vê:** só quem tem a permissão `whatsapp_status.*` da ferramenta, e a execução é mais estrita que a descoberta: o teto do grant (`mcp_permissions`) precisa listar a permissão exata (`whatsapp_status.publish`, `.schedule`, `.read`, `.review`); teto vazio ou curinga nega na execução. O perfil precisa ser administrador (ou administrador técnico); papel nunca amplia permissão.
+- **Ativar:** acrescentar `whatsapp_status` a `MCP_VERSUS_WRITE_DOMAINS`, reiniciar o MCP e reconectar o conector. **Desfazer:** tirar o assunto da linha e reiniciar.
+- **Validação sugerida na empresa de teste (sem publicar para contatos reais):** `get_whatsapp_status_setup` e `list_whatsapp_status_arts`; criar uma agenda (nasce desativada) e listar; só depois, com aprovação, `publish_whatsapp_status_test` de uma arte de teste para o número de homologação.
+

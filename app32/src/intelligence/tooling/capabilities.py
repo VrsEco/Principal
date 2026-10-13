@@ -2120,7 +2120,7 @@ for _status_name in _STATUS_TOOL_NAMES:
     )
     _status_gated = _status_name.startswith(('publish_', 'resume_', 'confirm_', 'configure_', 'register_'))
     _PRESET_CAPABILITIES[_status_name] = {
-        'domain': 'whatsapp_status', 'scopes': (ToolScope.MCP_ADMIN.value,),
+        'domain': 'whatsapp_status', 'scopes': (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         # Só consulta/verificação é risco baixo; agendar, editar e pausar escrevem (create/update nascem
         # desativadas ou pausadas e pausar é parada de emergência, por isso sem gate; retomar tem gate).
         'risk': ToolRiskLevel.HIGH if _status_gated else (

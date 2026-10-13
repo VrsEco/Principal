@@ -67,7 +67,7 @@ O glossário exige `company_id` explícito em mutação, para o grant ser valida
 
 | Ferramenta | Situação |
 |---|---|
-| `create_whatsapp_status_schedule`, `update_whatsapp_status_schedule`, `pause_whatsapp_status_schedule` | **Publicadas.** Mudam a agenda de publicação externa; deveriam ter gate (retomar já tem). |
+| `create_whatsapp_status_schedule`, `update_whatsapp_status_schedule`, `pause_whatsapp_status_schedule` | **Coorte `whatsapp_status` (13/10/2026), desligada por padrão.** Mudam a agenda de publicação externa; criar/editar/pausar sem gate de propósito (nascem desativadas, editar pausa, pausar é emergência), retomar tem gate. Ver runbook de coortes, seção 14. |
 | `dispatch_financial_process_trigger`, `process_financial_import_batch`, `toggle_financial_catalog_item`, `log_meeting_discussion`, `generate_strategic_connection_summary` | A publicar. Escrevem e estão como risco baixo. |
 
 ### B5. Duplicatas legadas: não publicar, substituir
