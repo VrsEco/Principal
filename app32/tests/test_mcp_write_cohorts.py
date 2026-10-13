@@ -91,6 +91,12 @@ EXPECTED = {
         "delete_work_journey_manual_task_tool",
         "delete_work_journey_rule_tool",
     },
+    "deletions": {
+        "delete_project",
+        "delete_project_task_secure",
+        "restore_project_task_secure",
+        "delete_meeting_secure",
+    },
     "finance_setup": {
         "create_financial_catalog_item",
         "create_financial_classification_rule",
@@ -137,7 +143,7 @@ def _server(monkeypatch, env):
 
 def test_cohort_content_is_exactly_the_approved_set():
     assert {k: set(v) for k, v in cohorts.WRITE_COHORT_TOOL_NAMES.items()} == EXPECTED
-    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 87
+    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 91
 
 
 @pytest.mark.parametrize("value", [None, "", "none", "NONE", "  "])
@@ -156,12 +162,12 @@ def test_each_subject_turns_on_alone(monkeypatch, subject):
 
 def test_all_subjects_on_lists_everything_and_changes_nothing_else(monkeypatch):
     _, off, _ = _server(monkeypatch, None)
-    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,finance_setup,finance_ledger")
+    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,finance_setup,finance_ledger")
     assert on - off == ALL and off - on == set()
 
 
 def test_still_requires_user_scope_and_per_tool_permission(monkeypatch):
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,finance_setup,finance_ledger")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,finance_setup,finance_ledger")
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=("mcp:access",)))
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda _p: True)
     server = registry.build_oauth_unified_mcp_server()
@@ -177,7 +183,7 @@ def test_manifest_follows_the_flag_and_reports_the_enforced_gate(monkeypatch):
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: USER)
     monkeypatch.delenv("MCP_VERSUS_WRITE_DOMAINS", raising=False)
     off = {t["name"] for t in registry.get_unified_manifest()["tools"]}
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,finance_setup,finance_ledger")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,finance_setup,finance_ledger")
     manifest = registry.get_unified_manifest()
     on = {t["name"]: t for t in manifest["tools"]}
     assert ALL.isdisjoint(off) and ALL <= set(on)
@@ -200,6 +206,8 @@ APPROVAL_IN_COHORTS = {
     "create_financial_direct_entry", "create_financial_bordero_settlement",
     "create_financial_entry_from_bank_reconciliation_row", "match_financial_bank_reconciliation_row",
     "reconcile_financial_import_batch", "replace_financial_allocations", "generate_due_financial_schedules",
+    # exclusões e restauração (verbo delete ou risco alto com gate)
+    *EXPECTED["deletions"],
 }
 
 

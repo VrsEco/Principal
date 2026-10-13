@@ -161,3 +161,19 @@ Cobertura de `src/core/mcp_prevalidation.py`, rodando antes de pedir ou consumir
 | `generate_due_financial_schedules` | Data `run_until` válida e agendamento (se informado) existe |
 
 As verificações são somente leitura, sem bloqueio de linhas. São consultivas: o serviço real valida de novo e decide. Um teste (`test_every_published_financial_tool_that_needs_approval_has_a_prevalidator`) falha se uma financeira nova com aprovação for publicada sem pré-validador. As regras vivem em `services/financial_prevalidation_rules.py`.
+
+## 10. Exclusões de projeto, atividade e reunião (coorte `deletions`, 13/10/2026)
+
+**Decisão do responsável:** as exclusões passam a ser alcançáveis pelo conector comum. Isso **reverte** a decisão anterior de manter `delete_project`, `delete_project_task_secure`, `restore_project_task_secure` e `delete_meeting_secure` só na superfície administrativa (os testes de governança correspondentes foram atualizados). `delete_commercial_contract` e o alias legado `delete_project_task` continuam só na superfície administrativa.
+
+| Ferramenta | Permissão exigida | Aprovação humana |
+|---|---|---|
+| `delete_project` | `project.delete` | sim |
+| `delete_project_task_secure` | `project.task.delete` | sim |
+| `restore_project_task_secure` | `project.task.restore` | sim |
+| `delete_meeting_secure` | `meeting.delete` | sim |
+
+- **O parâmetro `confirm` não existe para o cliente** (`mcp_param_hiding`): a confirmação é a **aprovação humana persistida** (regra D6), vinculada a principal, empresa, ferramenta e conteúdo exato. O valor fixo só satisfaz a confirmação interna da ferramenta, que é compartilhada com o chat. Um teste-guarda falha se alguma ferramenta com confirmação injetada não exigir aprovação persistida.
+- **Visibilidade:** só aparecem para quem tem a permissão na empresa (e o perfil comum de colaborador não tem `delete` no domínio). Matriz de papéis: administrador tem exclusão; colaborador e cliente não.
+- **Pré-validação** (antes de pedir a aprovação): o alvo existe na empresa e está no estado certo (não removido, para excluir; removido, para restaurar).
+- **Ativar:** acrescentar `deletions` a `MCP_VERSUS_WRITE_DOMAINS`, reiniciar o MCP e reconectar o conector. Desfazer: tirar o assunto da linha e reiniciar.

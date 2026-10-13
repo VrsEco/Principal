@@ -103,6 +103,15 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "delete_work_journey_manual_task_tool",
         "delete_work_journey_rule_tool",
     ),
+    # Exclusões de projeto, atividade e reunião, e restauração de atividade. Todas exigem aprovação humana persistida
+    # (regra D6) e permissão por empresa (project.delete, project.task.delete, project.task.restore, meeting.delete);
+    # o parâmetro de confirmação não existe para o cliente (mcp_param_hiding). Visíveis só para quem tem a permissão.
+    "deletions": (
+        "delete_project",
+        "delete_project_task_secure",
+        "restore_project_task_secure",
+        "delete_meeting_secure",
+    ),
     # Sub-onda 2F, etapa 1: cadastros e configuração do financeiro (nenhuma lança nem baixa valor). Idempotência
     # obrigatória (create_*/import_*) ou opcional (upsert_*, relatório). Visível só com o escopo ``mcp:finance``.
     "finance_setup": (

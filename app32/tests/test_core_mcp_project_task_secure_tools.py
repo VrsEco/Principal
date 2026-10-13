@@ -13,8 +13,9 @@ def test_project_task_secure_tools_are_scoped_per_surface():
     analytics_tools = {tool["name"] for tool in analytics_manifest["tools"]}
 
     assert {"list_project_tasks_secure", "create_project_task_secure", "update_project_task_secure"} <= user_tools
-    assert "delete_project_task_secure" not in user_tools
-    assert "restore_project_task_secure" not in user_tools
+    # Decisão de 13/10/2026 (responsável): exclusões de projeto, atividade e reunião passam a ser alcançáveis pelo conector
+    # comum, só com aprovação humana persistida (regra D6) e permissão por empresa; o parâmetro confirm sai do esquema.
+    assert {"delete_project_task_secure", "restore_project_task_secure"} <= user_tools
 
     assert {"delete_project_task_secure", "restore_project_task_secure", "get_project_task_analytics_report"} <= admin_tools
     assert "get_project_task_analytics_report" in analytics_tools

@@ -912,7 +912,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "delete_meeting_secure": {
         "domain": "meetings",
-        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("meeting.delete",),
         "human_gate": True,
@@ -968,7 +968,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "delete_project": {
         "domain": "projects",
-        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("project.delete",),
         "human_gate": True,
@@ -1002,7 +1002,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "delete_project_task_secure": {
         "domain": "projects",
-        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("project.task.delete",),
         "human_gate": True,
@@ -1021,7 +1021,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "restore_project_task_secure": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_ADMIN.value,),
+        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("project.task.restore",),
         "human_gate": True,

@@ -73,7 +73,8 @@ def test_catalog_exposes_known_capability_metadata():
     assert delete_meeting_capability is not None
     assert delete_meeting_capability.domain == "meetings"
     assert ToolScope.MCP_ADMIN.value in delete_meeting_capability.scopes
-    assert ToolScope.MCP_USER.value not in delete_meeting_capability.scopes
+    # Decisão de 13/10/2026: a exclusão de reunião é alcançável pelo conector comum, sempre com aprovação persistida.
+    assert ToolScope.MCP_USER.value in delete_meeting_capability.scopes
     assert delete_meeting_capability.human_gate is True
     assert pop_media_capability is not None
     assert pop_media_capability.domain == "processes"
@@ -159,7 +160,7 @@ def test_catalog_manifest_filters_by_scope():
     assert "delete_commercial_contract" not in user_tool_names
     assert "list_commercial_billing_queue" in analytics_tool_names
     assert "delete_meeting_secure" in admin_tool_names
-    assert "delete_meeting_secure" not in user_tool_names
+    assert "delete_meeting_secure" in user_tool_names
 
 
 def test_catalog_manifest_supports_legacy_identity_domain_alias():

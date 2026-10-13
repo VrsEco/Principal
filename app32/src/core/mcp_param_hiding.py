@@ -18,6 +18,13 @@ from typing import Any, Callable
 HIDDEN_CLIENT_PARAMETERS: dict[str, dict[str, Any]] = {
     # O nome do solicitante vem do usuário autenticado (a ferramenta já usa o nome da sessão quando None).
     "request_engineering_suggestion": {"requester_name": None},
+    # Exclusões e restauração: a confirmação NÃO é uma afirmação do cliente. O runtime exige aprovação humana persistida
+    # (mcp_gate_policy: verbo delete, ou risco alto com gate) e só então a ferramenta roda; o valor fixo satisfaz a
+    # confirmação interna da ferramenta compartilhada com o chat.
+    "delete_project": {"confirm": True},
+    "delete_project_task_secure": {"confirm": True},
+    "restore_project_task_secure": {"confirm": True},
+    "delete_meeting_secure": {"confirm": True},
 }
 
 

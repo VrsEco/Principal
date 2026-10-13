@@ -28,6 +28,10 @@ PREVALIDATORS: dict[str, str] = {
     "match_financial_bank_reconciliation_row": "src.core.mcp_prevalidation:reconciliation_match",
     "create_financial_entry_from_bank_reconciliation_row": "src.core.mcp_prevalidation:reconciliation_new_entry",
     "generate_due_financial_schedules": "src.core.mcp_prevalidation:due_schedules",
+    "delete_project": "src.core.mcp_prevalidation:project_delete",
+    "delete_project_task_secure": "src.core.mcp_prevalidation:task_delete",
+    "restore_project_task_secure": "src.core.mcp_prevalidation:task_restore",
+    "delete_meeting_secure": "src.core.mcp_prevalidation:meeting_delete",
 }
 
 
@@ -134,3 +138,78 @@ def due_schedules(arguments: Mapping[str, Any]) -> str | None:
         return error
     schedule_id = arguments.get("schedule_id")
     return rules.schedule_exists(arguments["company_id"], schedule_id) if schedule_id else None
+
+
+def _company(arguments: Mapping[str, Any]) -> int | None:
+    try:
+        value = int(arguments.get("company_id"))
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
+def project_delete(arguments: Mapping[str, Any]) -> str | None:
+    """O projeto existe no tenant e ainda não foi removido."""
+    from services.project_mcp_service import ProjectMCPService
+
+    company_id = _company(arguments)
+    if company_id is None:
+        return None
+    project, error = ProjectMCPService.get_project(
+        company_id=company_id,
+        project_id=arguments.get("project_id"),
+        project_code=arguments.get("project_code"),
+        include_deleted=True,
+    )
+    if error:
+        return error
+    if project is not None and project.is_deleted:
+        return "Projeto já está removido logicamente."
+    return None
+
+
+def task_delete(arguments: Mapping[str, Any]) -> str | None:
+    from services.project_task_mcp_service import ProjectTaskMCPService
+
+    company_id = _company(arguments)
+    if company_id is None:
+        return None
+    task, error = ProjectTaskMCPService.get_task(
+        company_id=company_id, task_id=arguments.get("task_id"), include_deleted=True
+    )
+    if error:
+        return error
+    if task is not None and task.is_deleted:
+        return "Atividade já está removida logicamente."
+    return None
+
+
+def task_restore(arguments: Mapping[str, Any]) -> str | None:
+    from services.project_task_mcp_service import ProjectTaskMCPService
+
+    company_id = _company(arguments)
+    if company_id is None:
+        return None
+    task, error = ProjectTaskMCPService.get_task(
+        company_id=company_id, task_id=arguments.get("task_id"), include_deleted=True
+    )
+    if error:
+        return error
+    if task is not None and not task.is_deleted:
+        return "Atividade não está soft-deletada."
+    return None
+
+
+def meeting_delete(arguments: Mapping[str, Any]) -> str | None:
+    from models.meeting import Meeting
+
+    company_id = _company(arguments)
+    if company_id is None:
+        return None
+    try:
+        meeting_id = int(arguments.get("meeting_id"))
+    except (TypeError, ValueError):
+        return "meeting_id inválido."
+    if Meeting.query.filter_by(id=meeting_id, company_id=company_id).first() is None:
+        return f"Reunião ID {meeting_id} não encontrada na empresa selecionada."
+    return None

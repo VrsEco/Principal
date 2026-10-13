@@ -33,19 +33,7 @@
  "delete_commercial_contract": [
   "M7"
  ],
- "delete_meeting_secure": [
-  "M7",
-  "M9"
- ],
- "delete_project": [
-  "M7",
-  "M9"
- ],
  "delete_project_task": [
-  "M7",
-  "M9"
- ],
- "delete_project_task_secure": [
   "M7",
   "M9"
  ],
@@ -94,10 +82,6 @@
  ],
  "request_deadline_extension": [
   "M1"
- ],
- "restore_project_task_secure": [
-  "M7",
-  "M9"
  ],
  "resume_whatsapp_status_schedule": [
   "M7"
