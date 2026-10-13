@@ -1,0 +1,92 @@
+name: MCP Health Probe
+
+# Sonda externa e somente leitura do mcp-versus em producao: healthz, descoberta OAuth, provedor de identidade e o
+# 401 sem token. Nao usa credenciais nem segredos. Roda a cada 30 minutos; se a primeira tentativa falhar, espera 60 s
+# e tenta de novo para nao alertar por oscilacao momentanea. Execucao com FALHA reprova o job e o GitHub avisa por
+# e-mail quem alterou o agendamento. O repositorio e publico, entao nao se abre issue (revelaria a indisponibilidade).
+# Degradado (resposta lenta) vira aviso na execucao, sem reprovar.
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'URL base a sondar (padrao: producao)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-health-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Sonda de saude do mcp-versus
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout (somente a sonda)
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            app32/scripts/qa/mcp_health_probe.py
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Sonda (com uma nova tentativa em caso de falha)
+        id: probe
+        shell: bash
+        env:
+          PROBE_BASE: ${{ github.event.inputs.base }}
+        run: |
+          set +e
+          ARGS=(--json)
+          if [ -n "$PROBE_BASE" ]; then ARGS+=(--base "$PROBE_BASE"); fi
+          python app32/scripts/qa/mcp_health_probe.py "${ARGS[@]}" > probe.json
+          code=$?
+          if [ "$code" -ge 2 ]; then
+            echo "Primeira tentativa com falha (codigo $code); nova tentativa em 60 s."
+            cp probe.json probe_primeira_tentativa.json
+            sleep 60
+            python app32/scripts/qa/mcp_health_probe.py "${ARGS[@]}" > probe.json
+            code=$?
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          cat probe.json
+
+      - name: Resumo da execucao
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          rows, status = [], "sem resultado"
+          try:
+              data = json.load(open("probe.json", encoding="utf-8"))
+              status = {0: "saudavel", 1: "degradado", 2: "FALHA"}.get(data.get("exit_code"), "desconhecido")
+              for check in data.get("checks", []):
+                  seconds = check.get("seconds")
+                  rows.append(f"| {check['name']} | {check['status']} | {check['detail']} | {'' if seconds is None else f'{seconds:.2f} s'} |")
+          except Exception as exc:
+              rows.append(f"| leitura da sonda | fail | {type(exc).__name__} | |")
+          out = [f"## Sonda de saude do mcp-versus: {status}", "", "| Verificacao | Estado | Detalhe | Tempo |", "|---|---|---|---|", *rows]
+          open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8").write("\n".join(out) + "\n")
+          PY
+
+      - name: Aviso de degradacao (nao reprova)
+        if: steps.probe.outputs.code == '1'
+        run: echo "::warning title=mcp-versus degradado::resposta lenta em alguma verificacao; veja o resumo da execucao."
+
+      - name: Reprovar quando a sonda indica falha
+        if: steps.probe.outputs.code == '2'
+        run: |
+          echo "::error title=mcp-versus com FALHA::a sonda falhou nas duas tentativas; veja o resumo da execucao."
+          exit 1
