@@ -920,18 +920,16 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
     @mcp.tool()
     def create_financial_entry(company_id: int, payload: dict) -> dict:
         """
-        Cria um lançamento financeiro no ledger.
+        Cria um lançamento financeiro (conta a pagar ou a receber) no ledger. Exige idempotency_key e aprovação humana.
 
-        ``company_id`` é deliberadamente explícito na assinatura MCP para que
-        a policy OAuth valide o tenant antes da service. Se o payload também
-        o informar, ambos devem coincidir; o cliente nunca escolhe um tenant
-        diferente do contexto autorizado.
+        RATEIO OBRIGATÓRIO para ``entry_type`` payable ou receivable: informe ``allocations`` na mesma chamada, com soma
+        de 100% (ou valores somando o valor do título) e plano de contas e centro de resultado analíticos em cada linha.
+        Exemplo: ``[{"allocation_type": "percentage", "percentage": 100, "chart_account_id": 217, "cost_center_id": 24}]``.
+        Lançamento e rateio são gravados juntos. Conta bancária é opcional (só o lançamento direto a exige).
 
-        Para contas a pagar e a receber (``entry_type`` payable ou receivable) o rateio é OBRIGATÓRIO e vai no
-        próprio payload, em ``allocations``: soma de 100% (ou valores somando o valor do título), com plano de contas
-        e centro de resultado analíticos em cada linha. Exemplo:
-        ``[{"allocation_type": "percentage", "percentage": 100, "chart_account_id": 217, "cost_center_id": 24}]``.
-        Lançamento e rateio são gravados juntos.
+        ``company_id`` é deliberadamente explícito na assinatura MCP para que a policy OAuth valide o tenant antes da
+        service. Se o payload também o informar, ambos devem coincidir; o cliente nunca escolhe um tenant diferente do
+        contexto autorizado.
         """
         from services.financial_service import FinancialService
         from services.financial_title_rules import (
@@ -1079,34 +1077,12 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         gate humano persistido. O ``company_id`` explícito é obrigatório para
         que o wrapper OAuth revalide tenant, grant e RBAC antes do serviço.
         """
+        from services.financial_prevalidation_rules import settlement_request_rules
         from services.financial_service import FinancialService
 
-        if isinstance(company_id, bool) or not isinstance(company_id, int) or company_id <= 0:
-            return {"success": False, "error": "company_id válido é obrigatório"}
-        normalized_payload = dict(payload or {})
-        payload_company_id = normalized_payload.get("company_id")
-        if payload_company_id not in (None, ""):
-            try:
-                if int(payload_company_id) != company_id:
-                    return {
-                        "success": False,
-                        "error": "company_id do payload diverge do tenant da requisição",
-                    }
-            except (TypeError, ValueError):
-                return {"success": False, "error": "company_id do payload é inválido"}
-        normalized_payload["company_id"] = company_id
-        if not normalized_payload.get("financial_entry_id"):
-            return {"success": False, "error": "financial_entry_id é obrigatório para a baixa."}
-        if not normalized_payload.get("bank_account_id"):
-            return {
-                "success": False,
-                "error": "bank_account_id é obrigatório para registrar uma baixa bancária vinculada.",
-            }
-        if str(normalized_payload.get("settlement_status") or "posted").strip().lower() != "posted":
-            return {
-                "success": False,
-                "error": "A baixa MCP deve ser registrada com settlement_status=posted.",
-            }
+        normalized_payload, request_error = settlement_request_rules(company_id, payload)
+        if request_error:
+            return {"success": False, "error": request_error}
 
         settlement, error = _run_financial_action(
             FinancialService.create_settlement,

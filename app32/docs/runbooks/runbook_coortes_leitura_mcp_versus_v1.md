@@ -144,3 +144,20 @@ Todo título a pagar ou a receber criado via MCP exige rateio: a soma fecha em 1
 | Lançamento já pago ou recebido | `create_financial_direct_entry` | obrigatória | obrigatório, em `allocations` | sim |
 
 `create_financial_entry` grava lançamento e rateio **juntos** (se o rateio falhar, o lançamento recém-criado é desfeito) e o erro de rateio aparece antes de pedir a aprovação (pré-validação). Exemplo de `allocations`: `[{"allocation_type": "percentage", "percentage": 100, "chart_account_id": 217, "cost_center_id": 24}]`. Tipos diferentes de `payable` e `receivable` (por exemplo `bank_movement`) não exigem rateio.
+
+### 9.3 Pré-validação em todas as financeiras com aprovação (13/10/2026)
+Cobertura de `src/core/mcp_prevalidation.py`, rodando antes de pedir ou consumir a aprovação humana:
+
+| Ferramenta | O que é conferido antes da aprovação |
+|---|---|
+| `create_financial_entry` | Formato do lançamento, referências, código duplicado e rateio obrigatório de 100% |
+| `create_financial_direct_entry` | Conta bancária, rateio, referências e domínios habilitados |
+| `replace_financial_allocations` | Lançamento da empresa, bloqueio de borderô, tipos do rateio e soma (100% ou valor) |
+| `create_financial_settlement` | Campos obrigatórios, lançamento da empresa, bloqueio de borderô, banco e saldo (baixa não excede o principal) |
+| `create_financial_bordero_settlement` | Borderô existe na empresa |
+| `reconcile_financial_import_batch` | Lote de importação existe na empresa |
+| `match_financial_bank_reconciliation_row` | Linha do extrato e lançamento existem na empresa |
+| `create_financial_entry_from_bank_reconciliation_row` | Linha do extrato existe na empresa |
+| `generate_due_financial_schedules` | Data `run_until` válida e agendamento (se informado) existe |
+
+As verificações são somente leitura, sem bloqueio de linhas. São consultivas: o serviço real valida de novo e decide. Um teste (`test_every_published_financial_tool_that_needs_approval_has_a_prevalidator`) falha se uma financeira nova com aprovação for publicada sem pré-validador. As regras vivem em `services/financial_prevalidation_rules.py`.
