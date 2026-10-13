@@ -1790,20 +1790,21 @@ class FinancialService:
         }
 
     @staticmethod
-    def replace_allocations(
+    def validate_allocation_batch(
         *,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
         ignore_bordero_lock: bool = False,
-    ) -> Tuple[Optional[List[FinancialEntryAllocation]], Optional[str]]:
+    ) -> Tuple[Optional[Any], Optional[FinancialEntry], Optional[List[FinancialAllocationInput]], Optional[str]]:
+        """Valida a substituição do rateio sem gravar nada (usada antes da aprovação humana e por replace_allocations)."""
         try:
             data = FinancialAllocationBatchInput(**payload)
         except Exception as exc:
-            return None, f"Payload inválido para rateio: {str(exc)}"
+            return None, None, None, f"Payload inválido para rateio: {str(exc)}"
 
         scope_error = FinancialService._ensure_company_scope(data.company_id, allowed_company_ids)
         if scope_error:
-            return None, scope_error
+            return None, None, None, scope_error
 
         entry = FinancialEntry.query.filter(
             FinancialEntry.id == data.financial_entry_id,
@@ -1811,21 +1812,21 @@ class FinancialService:
             FinancialEntry.deleted_at.is_(None),
         ).first()
         if not entry:
-            return None, "Lançamento financeiro não encontrado para rateio."
+            return None, None, None, "Lançamento financeiro não encontrado para rateio."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_entry(company_id=data.company_id, entry=entry)
         if active_bordero and not ignore_bordero_lock:
-            return None, f"Lançamento bloqueado pelo borderô {active_bordero.bordero_code}."
+            return None, None, None, f"Lançamento bloqueado pelo borderô {active_bordero.bordero_code}."
         if active_bordero and ignore_bordero_lock:
             external_reference = str(getattr(entry, "external_reference", "") or "").strip()
             if not (getattr(entry, "financial_schedule_id", None) or external_reference.startswith("financial_schedule:")):
-                return None, "Bypass do bloqueio de borderô em rateio exige lançamento vinculado a Título Financeiro."
+                return None, None, None, "Bypass do bloqueio de borderô em rateio exige lançamento vinculado a Título Financeiro."
 
         normalized_allocations: List[FinancialAllocationInput] = []
         for item in data.allocations:
             if item.company_id != data.company_id or item.financial_entry_id != data.financial_entry_id:
-                return None, "Todos os rateios devem pertencer ao mesmo lançamento e empresa."
+                return None, None, None, "Todos os rateios devem pertencer ao mesmo lançamento e empresa."
             link_error = FinancialService._validate_operational_links(
                 company_id=data.company_id,
                 activity_id=item.activity_id,
@@ -1833,7 +1834,7 @@ class FinancialService:
                 routine_id=item.routine_id,
             )
             if link_error:
-                return None, link_error
+                return None, None, None, link_error
             normalized_allocations.append(item)
 
         percentage_total = Decimal("0")
@@ -1844,28 +1845,45 @@ class FinancialService:
             if allocation_mode is None:
                 allocation_mode = item.allocation_type
             elif allocation_mode != item.allocation_type:
-                return None, "Não é permitido misturar rateio por percentual e por valor no mesmo lançamento."
+                return None, None, None, "Não é permitido misturar rateio por percentual e por valor no mesmo lançamento."
 
             if item.allocation_type == "percentage":
                 percentage_total += item.percentage or Decimal("0")
             else:
                 adjustment_kind = str((item.metadata_json or {}).get("adjustment_kind") or "").strip().lower()
                 if adjustment_kind == "discount" and (item.allocated_amount or Decimal("0")) > 0:
-                    return None, "Rateio de desconto deve possuir valor negativo."
+                    return None, None, None, "Rateio de desconto deve possuir valor negativo."
                 if adjustment_kind != "discount" and (item.allocated_amount or Decimal("0")) < 0:
-                    return None, "Somente rateios de desconto podem possuir valor negativo."
+                    return None, None, None, "Somente rateios de desconto podem possuir valor negativo."
                 amount_total += item.allocated_amount or Decimal("0")
 
         if allocation_mode == "percentage" and percentage_total != Decimal("100"):
-            return None, f"Rateio percentual inválido. Soma atual: {percentage_total}."
+            return None, None, None, f"Rateio percentual inválido. Soma atual: {percentage_total}."
 
         principal_basis_amount = FinancialService._resolve_entry_principal_basis_amount(entry)
         if allocation_mode == "amount" and amount_total != (entry.original_amount or Decimal("0")) and amount_total != principal_basis_amount:
-            return None, (
+            return None, None, None, (
                 "Rateio por valor inválido. "
                 f"Soma atual: {amount_total}. Valor do lançamento: {entry.original_amount}. "
                 f"Valor principal permitido: {principal_basis_amount}."
             )
+
+        return data, entry, normalized_allocations, None
+
+    @staticmethod
+    def replace_allocations(
+        *,
+        payload: Dict[str, Any],
+        allowed_company_ids: Optional[Sequence[int]] = None,
+        ignore_bordero_lock: bool = False,
+    ) -> Tuple[Optional[List[FinancialEntryAllocation]], Optional[str]]:
+        data, entry, normalized_allocations, validation_error = FinancialService.validate_allocation_batch(
+            payload=payload,
+            allowed_company_ids=allowed_company_ids,
+            ignore_bordero_lock=ignore_bordero_lock,
+        )
+        if validation_error:
+            return None, validation_error
 
         try:
             FinancialEntryAllocation.query.filter(
