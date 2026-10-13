@@ -44,6 +44,21 @@ class AIAutomationRegistryService:
             "governance": ["opt-in por canal", "auditoria de envio", "policy por empresa"],
         },
         {
+            "key": "mcp_idempotency_purge",
+            "title": "Limpeza das chaves de idempotência do MCP",
+            "kind": "maintenance",
+            "trigger": "cron:03:30",
+            "surface": "scheduler",
+            "status": "ready",
+            "description": "Remove as chaves de idempotência do mcp-versus vencidas há mais de 7 dias (retenção curta para diagnóstico).",
+            "governance": [
+                "somente linhas já vencidas (24 h de validade) mais a retenção",
+                "execução idempotente em lotes, com teto por execução",
+                "não toca em dados de negócio",
+                "desligável por MCP_IDEMPOTENCY_PURGE_ENABLED",
+            ],
+        },
+        {
             "key": "knowledge_product_help_sync",
             "title": "Atualização do Manual Interativo",
             "kind": "knowledge_sync",

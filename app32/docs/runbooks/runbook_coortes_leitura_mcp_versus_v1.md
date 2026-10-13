@@ -186,3 +186,10 @@ Depois de ligar uma coorte, a ferramenta só aparece para o cliente se **quatro*
 4. O **conector foi reconectado**: o cliente guarda a lista de ferramentas da conexão.
 
 `python scripts/qa/mcp_tool_visibility.py "Nome" --cohort deletions` (no servidor, com o Python do ambiente virtual 3.12, somente leitura) imprime a flag e, por empresa, o teto do grant e se o perfil tem a permissão, para cada ferramenta da coorte. Caso real de 13/10/2026: a flag estava no `.env` e o perfil era administrador, mas o MCP não tinha sido reiniciado.
+
+## 12. Limpeza das chaves de idempotência (tabela `mcp_idempotency_keys`)
+- **Automática:** tarefa diária `mcp_idempotency_purge` no agendador do APP32, às **03:30** (horário de São Paulo). Remove as chaves vencidas há mais de **7 dias** (a chave vale 24 h; os 7 dias extras ficam só como rastro de diagnóstico). Roda em lotes de 1000, com teto de 50 lotes por execução, e é idempotente. Aparece no console de automações (`kind: maintenance`).
+- **Configuração:** `MCP_IDEMPOTENCY_PURGE_ENABLED` (padrão ligado) e `MCP_IDEMPOTENCY_RETENTION_DAYS` (padrão 7).
+- **Manual:** `python scripts/purge_mcp_idempotency_keys.py` (por padrão só **conta**; `--apply` remove; `--days N` muda a retenção), com o Python do ambiente virtual 3.12 do servidor.
+- **O que nunca é removido:** chave ainda válida (não vencida) e qualquer dado de negócio.
+- **Como confirmar que rodou:** o log da aplicação registra "Chaves de idempotência do MCP removidas: N".

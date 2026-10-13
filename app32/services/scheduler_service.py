@@ -226,6 +226,45 @@ def setup_knowledge_jobs(app):
     )
 
 
+def purge_mcp_idempotency_keys(app):
+    """Remove as chaves de idempotência do MCP vencidas há mais de N dias (retenção curta, só para diagnóstico)."""
+    from datetime import timedelta
+
+    with app.app_context():
+        from models import db
+        from services import mcp_idempotency_service
+
+        retention = timedelta(days=max(0, int(app.config.get("MCP_IDEMPOTENCY_RETENTION_DAYS", 7))))
+        batch = 1000
+        total = 0
+        try:
+            for _ in range(50):  # teto por execução; o restante sai na próxima
+                removed = mcp_idempotency_service.purge_expired(limit=batch, older_than=retention)
+                total += removed
+                if removed < batch:
+                    break
+        except Exception:
+            db.session.rollback()
+            logger.exception("Falha ao limpar chaves de idempotência do MCP")
+            return {"error": "purge_failed", "purged": total}
+        logger.info("Chaves de idempotência do MCP removidas: %s (retenção %s dias)", total, retention.days)
+        return {"purged": total, "retention_days": retention.days}
+
+
+def setup_mcp_idempotency_cleanup_job(app):
+    """Limpeza diária (03:30, horário de São Paulo) das chaves de idempotência vencidas do mcp-versus."""
+    if not app.config.get("MCP_IDEMPOTENCY_PURGE_ENABLED", True):
+        return
+    scheduler_service.add_job(
+        func=lambda: purge_mcp_idempotency_keys(app),
+        trigger="cron",
+        job_id="mcp_idempotency_purge",
+        hour=3,
+        minute=30,
+        name="Limpeza das chaves de idempotência do MCP",
+    )
+
+
 def process_identity_provisioning_outbox(app):
     """Retenta eventos APP32 -> Keycloak sem bloquear requests de cadastro."""
     if not app.config.get("IDENTITY_PROVISIONING_ENABLED", True):
@@ -336,6 +375,9 @@ def initialize_scheduler(app):
 
         # Retentativa idempotente do provisionamento APP32 -> Keycloak.
         setup_identity_provisioning_job(app)
+
+        # Limpeza diária das chaves de idempotência vencidas do mcp-versus.
+        setup_mcp_idempotency_cleanup_job(app)
 
         # Configurar monitor de chat
         setup_chat_timeout_job(app)
