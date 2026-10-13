@@ -926,8 +926,19 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         a policy OAuth valide o tenant antes da service. Se o payload também
         o informar, ambos devem coincidir; o cliente nunca escolhe um tenant
         diferente do contexto autorizado.
+
+        Para contas a pagar e a receber (``entry_type`` payable ou receivable) o rateio é OBRIGATÓRIO e vai no
+        próprio payload, em ``allocations``: soma de 100% (ou valores somando o valor do título), com plano de contas
+        e centro de resultado analíticos em cada linha. Exemplo:
+        ``[{"allocation_type": "percentage", "percentage": 100, "chart_account_id": 217, "cost_center_id": 24}]``.
+        Lançamento e rateio são gravados juntos.
         """
         from services.financial_service import FinancialService
+        from services.financial_title_rules import (
+            create_title_with_allocations,
+            requires_allocations,
+            validate_title_creation,
+        )
 
         if isinstance(company_id, bool) or not isinstance(company_id, int) or company_id <= 0:
             return {"success": False, "error": "company_id válido é obrigatório"}
@@ -957,8 +968,17 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         # runtime consumiu para esta chamada.
         normalized_payload.pop("approved_by_user_id", None)
         normalized_payload.pop("approved_at", None)
+        raw_allocations = normalized_payload.pop("allocations", None)
+        needs_allocations = requires_allocations(normalized_payload.get("entry_type")) or bool(raw_allocations)
 
         def _create_and_serialize_entry(*, payload: dict):
+            allocations = None
+            if needs_allocations:
+                payload, allocations, rule_error = validate_title_creation(
+                    company_id=company_id, payload={**payload, "allocations": raw_allocations}
+                )
+                if rule_error:
+                    return None, rule_error
             approval = _resolve_consumed_human_approval(company_id)
             if approval is not None:
                 # Aprovado pela tela de approvals: nasce definitivo, não rascunho.
@@ -973,7 +993,10 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
                         "human_approval_request_id": approval["request_id"],
                     },
                 }
-            entry, error = FinancialService.create_entry(payload=payload)
+            if allocations:
+                entry, error = create_title_with_allocations(payload=payload, allocations=allocations)
+            else:
+                entry, error = FinancialService.create_entry(payload=payload)
             if error:
                 return None, error
             return FinancialService.serialize_entry(entry), None

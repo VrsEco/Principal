@@ -133,3 +133,14 @@ Toda criação, geração, importação e conciliação exige `idempotency_key` 
 - **Pré-validação (`src/core/mcp_prevalidation.py`):** a aprovação vale só para o conteúdo exato da chamada. Antes, se o serviço recusava o conteúdo depois (conta bancária ou rateio ausentes), a aprovação já tinha sido consumida e se perdia (duas aprovações gastas na validação do lançamento direto). Agora o runtime roda o pré-validador da ferramenta, sem gravar nada, **antes de abrir ou consumir a aprovação** e devolve o erro de negócio na primeira chamada. Hoje cobre `create_financial_direct_entry`; novas ferramentas entram acrescentando uma linha em `PREVALIDATORS`. O pré-validador é consultivo: se ele falhar por exceção, a chamada segue o fluxo normal.
 - **Autor e aprovação no lançamento direto:** `created_by_*` vêm da sessão (valores enviados pelo cliente são descartados) e a aprovação humana consumida grava `approved_by_user_id` e `approved_at` no lançamento, com o número da solicitação em `metadata_json.human_approval`.
 - **Resposta compacta:** `create_financial_direct_entry` devolve só identificação e situação do agendamento, do lançamento e da baixa (antes eram cerca de 15 mil tokens); o detalhe sai de `get_financial_entry`.
+
+### 9.2 Rateio obrigatório nos títulos a pagar e a receber (regra de negócio, 13/10/2026)
+Todo título a pagar ou a receber criado via MCP exige rateio: a soma fecha em 100% (ou, se por valor, no valor do título) e cada linha traz **plano de contas e centro de resultado analíticos**. A regra é a mesma do agendamento e do lançamento direto e vive em `services/financial_title_rules.py`.
+
+| Para inserir... | Ferramenta | Conta bancária | Rateio | Aprovação |
+|---|---|---|---|---|
+| Conta a pagar ou a receber em aberto | `create_financial_entry` | opcional | **obrigatório**, em `allocations` na mesma chamada | sim |
+| Título como agendamento | `create_financial_schedule` | opcional | obrigatório, em `metadata_json.allocations` | não |
+| Lançamento já pago ou recebido | `create_financial_direct_entry` | obrigatória | obrigatório, em `allocations` | sim |
+
+`create_financial_entry` grava lançamento e rateio **juntos** (se o rateio falhar, o lançamento recém-criado é desfeito) e o erro de rateio aparece antes de pedir a aprovação (pré-validação). Exemplo de `allocations`: `[{"allocation_type": "percentage", "percentage": 100, "chart_account_id": 217, "cost_center_id": 24}]`. Tipos diferentes de `payable` e `receivable` (por exemplo `bank_movement`) não exigem rateio.

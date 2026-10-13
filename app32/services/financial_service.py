@@ -1333,19 +1333,20 @@ class FinancialService:
         }, None
 
     @staticmethod
-    def create_entry(
+    def validate_entry_creation(
         *,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
-    ) -> Tuple[Optional[FinancialEntry], Optional[str]]:
+    ) -> Tuple[Optional[FinancialEntryCreateInput], Optional[Dict[str, Any]], Optional[str]]:
+        """Valida a criação do lançamento sem gravar nada (usada antes da aprovação humana e pelo próprio create_entry)."""
         try:
             data = FinancialEntryCreateInput(**payload)
         except Exception as exc:
-            return None, f"Payload inválido para lançamento financeiro: {str(exc)}"
+            return None, None, f"Payload inválido para lançamento financeiro: {str(exc)}"
 
         scope_error = FinancialService._ensure_company_scope(data.company_id, allowed_company_ids)
         if scope_error:
-            return None, scope_error
+            return None, None, scope_error
 
         link_error = FinancialService._validate_operational_links(
             company_id=data.company_id,
@@ -1354,7 +1355,7 @@ class FinancialService:
             routine_id=data.routine_id,
         )
         if link_error:
-            return None, link_error
+            return None, None, link_error
 
         reference_error = FinancialCatalogService.validate_reference_ids(
             company_id=data.company_id,
@@ -1364,7 +1365,7 @@ class FinancialService:
             counterparty_id=data.counterparty_id,
         )
         if reference_error:
-            return None, reference_error
+            return None, None, reference_error
 
         budget_links, budget_error = FinancialService._resolve_budget_links(
             company_id=data.company_id,
@@ -1373,14 +1374,29 @@ class FinancialService:
             budget_document_id=getattr(data, "budget_document_id", None),
         )
         if budget_error:
-            return None, budget_error
+            return None, None, budget_error
 
         existing = FinancialEntry.query.filter(
             FinancialEntry.company_id == data.company_id,
             FinancialEntry.entry_code == data.entry_code,
         ).first()
         if existing:
-            return None, f"Já existe lançamento com código {data.entry_code} para esta empresa."
+            return None, None, f"Já existe lançamento com código {data.entry_code} para esta empresa."
+
+        return data, budget_links, None
+
+    @staticmethod
+    def create_entry(
+        *,
+        payload: Dict[str, Any],
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[FinancialEntry], Optional[str]]:
+        data, budget_links, validation_error = FinancialService.validate_entry_creation(
+            payload=payload,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if validation_error:
+            return None, validation_error
 
         try:
             normalized = data.model_dump()

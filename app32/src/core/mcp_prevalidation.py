@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # ferramenta -> "modulo:funcao"; a função recebe os argumentos da chamada e devolve o erro (texto) ou None.
 PREVALIDATORS: dict[str, str] = {
     "create_financial_direct_entry": "src.core.mcp_prevalidation:direct_entry",
+    "create_financial_entry": "src.core.mcp_prevalidation:financial_entry",
 }
 
 
@@ -48,4 +49,20 @@ def direct_entry(arguments: Mapping[str, Any]) -> str | None:
     if company_error:
         return company_error.get("error")
     _data, error = FinancialDirectEntryService.validate_direct_entry(payload=payload)
+    return error
+
+
+def financial_entry(arguments: Mapping[str, Any]) -> str | None:
+    """Título a pagar ou a receber: valida o lançamento e o rateio obrigatório sem gravar nada."""
+    from src.core.mcp_financial_tools import _bound_payload
+    from services.financial_title_rules import requires_allocations, validate_title_creation
+
+    payload, company_error = _bound_payload(arguments.get("company_id"), arguments.get("payload"))
+    if company_error:
+        return company_error.get("error")
+    for forged in ("approved_by_user_id", "approved_at"):
+        payload.pop(forged, None)
+    if not (requires_allocations(payload.get("entry_type")) or payload.get("allocations")):
+        return None
+    _clean, _allocations, error = validate_title_creation(company_id=payload["company_id"], payload=payload)
     return error
