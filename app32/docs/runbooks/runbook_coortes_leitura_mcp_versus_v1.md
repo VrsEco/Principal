@@ -193,3 +193,11 @@ Depois de ligar uma coorte, a ferramenta só aparece para o cliente se **quatro*
 - **Manual:** `python scripts/purge_mcp_idempotency_keys.py` (por padrão só **conta**; `--apply` remove; `--days N` muda a retenção), com o Python do ambiente virtual 3.12 do servidor.
 - **O que nunca é removido:** chave ainda válida (não vencida) e qualquer dado de negócio.
 - **Como confirmar que rodou:** o log da aplicação registra "Chaves de idempotência do MCP removidas: N".
+
+## 13. Alerta da sonda de saúde (GitHub Actions)
+O workflow `.github/workflows/mcp-health-probe.yml` roda a sonda `scripts/qa/mcp_health_probe.py` **a cada 30 minutos** (minutos 7 e 37) na nuvem do GitHub, contra a produção, sem credenciais nem segredos: `healthz`, descoberta OAuth, provedor de identidade (Keycloak) e o 401 sem token.
+- **Falha** (código 2): se a primeira tentativa falhar, espera 60 s e tenta de novo; falhando nas duas, o job reprova e o GitHub avisa por e-mail quem alterou o agendamento (ajuste em Perfil > Notificações > Actions: "Send notifications for failed workflows only"). O resumo da execução traz a tabela das verificações.
+- **Degradado** (código 1, resposta lenta): vira aviso na execução, sem reprovar.
+- **Não abre issue:** o repositório é público e uma issue revelaria a indisponibilidade.
+- **Rodar na hora:** Actions > MCP Health Probe > Run workflow (campo opcional para outra URL base).
+- **Limite conhecido:** o GitHub pode atrasar execuções agendadas e as desativa se o repositório ficar 60 dias sem atividade. A sonda **não valida a lista de ferramentas** (isso exige token): "0 ferramentas" continua sendo conferido com `list_user_app32_capabilities` autenticado ou com `scripts/qa/mcp_tool_visibility.py`.
