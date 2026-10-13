@@ -6,12 +6,6 @@
  "complete_task": [
   "M1"
  ],
- "configure_whatsapp_status_account": [
-  "M7"
- ],
- "confirm_whatsapp_status_mobile": [
-  "M7"
- ],
  "create_commercial_catalog_structure_item": [
   "M1"
  ],
@@ -26,9 +20,6 @@
  ],
  "create_project_task": [
   "M1"
- ],
- "create_whatsapp_status_schedule": [
-  "M7"
  ],
  "delete_commercial_contract": [
   "M7"
@@ -50,29 +41,14 @@
  "log_work_hours": [
   "M1"
  ],
- "pause_whatsapp_status_schedule": [
-  "M7"
- ],
  "process_financial_import_batch": [
   "M3"
  ],
  "publish_approved_process_modeling_package_tool": [
   "M7"
  ],
- "publish_whatsapp_status_art": [
-  "M7"
- ],
- "publish_whatsapp_status_kit": [
-  "M7"
- ],
- "publish_whatsapp_status_test": [
-  "M7"
- ],
  "register_system_user": [
   "M1",
-  "M7"
- ],
- "register_whatsapp_status_approved_bundle": [
   "M7"
  ],
  "request_agent_deployment": [
@@ -83,9 +59,6 @@
  "request_deadline_extension": [
   "M1"
  ],
- "resume_whatsapp_status_schedule": [
-  "M7"
- ],
  "toggle_financial_catalog_item": [
   "M3"
  ],
@@ -95,8 +68,5 @@
  "update_user_contacts": [
   "M1",
   "M2"
- ],
- "update_whatsapp_status_schedule": [
-  "M7"
  ]
 }

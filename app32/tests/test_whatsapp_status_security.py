@@ -61,7 +61,7 @@ def test_identity_never_comes_from_payload(monkeypatch):
 def test_all_capabilities_are_status_only_and_mutation_classified():
     for name in STATUS_TOOL_NAMES:
         cap=infer_tool_capability(SimpleNamespace(name=name,description='Status'))
-        assert cap.domain=='whatsapp_status' and cap.scopes==('mcp_admin',)
+        assert cap.domain=='whatsapp_status' and set(cap.scopes)=={'mcp_user','mcp_admin'}
         assert len(cap.permissions)==1 and cap.permissions[0].startswith('whatsapp_status.')
         if name.startswith(('publish_','resume_','confirm_','register_','configure_')):
             assert cap.human_gate and cap.risk.value=='high'
@@ -79,15 +79,25 @@ def test_publication_requires_persisted_gate_and_rejects_other_surfaces():
     assert not evaluate_tool_policy(principal,replace(req,surface='analytics',confirmed_mutation=True)).allowed
 
 
-def test_status_discovery_requires_admin_scope_and_exact_permission(monkeypatch):
+def test_status_discovery_requires_the_cohort_flag_user_scope_and_exact_permission(monkeypatch):
     import src.core.mcp_surface_registry as registry
     monkeypatch.setattr(registry,'_has_authenticated_mcp_permission',lambda p:p.startswith('whatsapp_status.'))
-    monkeypatch.setattr('src.core.mcp_http_auth.get_http_request_identity',lambda:SimpleNamespace(scopes=('mcp:access','mcp:user','mcp:analytics','mcp:finance')))
-    assert not set(STATUS_TOOL_NAMES).intersection(registry._visible_privileged_tool_names(frozenset(STATUS_TOOL_NAMES)))
-    monkeypatch.setattr('src.core.mcp_http_auth.get_http_request_identity',lambda:SimpleNamespace(scopes=('mcp:access','mcp:admin')))
-    server=registry.build_oauth_unified_mcp_server()
-    tools=_run_async(server.list_tools())
-    assert set(STATUS_TOOL_NAMES).issubset({t.name for t in tools})
+    monkeypatch.setattr('src.core.mcp_http_auth.get_http_request_identity',lambda:SimpleNamespace(scopes=('mcp:access','mcp:user')))
+    names=frozenset(STATUS_TOOL_NAMES)
+    # Desligada por padrão: nem listada nem registrada.
+    monkeypatch.delenv('MCP_VERSUS_WRITE_DOMAINS',raising=False)
+    assert not names.intersection({t.name for t in _run_async(registry.build_oauth_unified_mcp_server().list_tools())})
+    monkeypatch.setenv('MCP_VERSUS_WRITE_DOMAINS','whatsapp_status')
+    # Sem o escopo mcp:user do token, fica oculta mesmo com a flag e a permissão.
+    monkeypatch.setattr('src.core.mcp_http_auth.get_http_request_identity',lambda:SimpleNamespace(scopes=('mcp:access','mcp:analytics')))
+    assert not names.intersection(registry._visible_privileged_tool_names(names))
+    # Com a flag, o escopo e a permissão exata de cada ferramenta, todas aparecem.
+    monkeypatch.setattr('src.core.mcp_http_auth.get_http_request_identity',lambda:SimpleNamespace(scopes=('mcp:access','mcp:user')))
+    tools=_run_async(registry.build_oauth_unified_mcp_server().list_tools())
+    assert names.issubset({t.name for t in tools})
+    # Sem a permissão whatsapp_status.*, ficam ocultas.
+    monkeypatch.setattr(registry,'_has_authenticated_mcp_permission',lambda p:False)
+    assert not names.intersection(registry._visible_privileged_tool_names(names))
     # No MCP tool can accept an arbitrary media URL/path, token or instance ID.
     for tool in tools:
         if tool.name in STATUS_TOOL_NAMES:
@@ -95,8 +105,9 @@ def test_status_discovery_requires_admin_scope_and_exact_permission(monkeypatch)
 
 
 @pytest.mark.parametrize('field,value',[('company_id',True),('company_id','1'),('art_id',True),('command_key',123)])
-def test_actual_mcp_input_model_rejects_scalar_coercion(field,value):
+def test_actual_mcp_input_model_rejects_scalar_coercion(field,value,monkeypatch):
     import src.core.mcp_surface_registry as registry
+    monkeypatch.setenv('MCP_VERSUS_WRITE_DOMAINS','whatsapp_status')
     server=registry.build_oauth_unified_mcp_server()
     tool=server._tool_manager.get_tool('publish_whatsapp_status_art')
     data={'company_id':1,'art_id':1,'command_key':'command:one'}; data[field]=value

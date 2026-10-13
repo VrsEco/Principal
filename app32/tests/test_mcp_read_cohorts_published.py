@@ -41,7 +41,7 @@ def test_no_tool_is_in_two_cohorts_or_already_published():
     already = {
         n
         for attr in dir(registry)
-        if (attr.startswith(("PILOT_", "UNIFIED_")) or attr == "STATUS_TOOL_NAMES") and attr.endswith("TOOL_NAMES")
+        if attr.startswith(("PILOT_", "UNIFIED_")) and attr.endswith("TOOL_NAMES")
         for n in getattr(registry, attr)
     }
     assert not (set(names) & already)

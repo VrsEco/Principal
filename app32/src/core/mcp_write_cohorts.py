@@ -93,7 +93,7 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "update_commercial_product_service",
     ),
     # Sub-onda admin_ops: aprovações e exclusões que já exigem aprovação humana persistida (regra D6) e permissão por
-    # empresa; só aparecem para quem tem a permissão. Fora: usuários, status de empresa, agentes, WhatsApp, diagnósticos.
+    # empresa; só aparecem para quem tem a permissão. Fora: usuários, status de empresa, agentes, diagnósticos.
     "admin_ops": (
         "approve_work_journey_absence_request_tool",
         "approve_work_journey_transfer_request_tool",
@@ -111,6 +111,26 @@ WRITE_COHORT_TOOL_NAMES: dict[str, tuple[str, ...]] = {
         "delete_project_task_secure",
         "restore_project_task_secure",
         "delete_meeting_secure",
+    ),
+    # WhatsApp Status: acervo aprovado, agendas e publicações (publicar, retomar, conferir e vincular conta exigem
+    # aprovação humana persistida). Desligada por padrão; só aparece com a permissão ``whatsapp_status.*`` explícita no
+    # teto do grant (a autorização do serviço é mais estrita que a descoberta). Leituras e escritas na mesma chave.
+    "whatsapp_status": (
+        "get_whatsapp_status_setup",
+        "configure_whatsapp_status_account",
+        "register_whatsapp_status_approved_bundle",
+        "list_whatsapp_status_arts",
+        "verify_whatsapp_status_account",
+        "publish_whatsapp_status_art",
+        "publish_whatsapp_status_kit",
+        "publish_whatsapp_status_test",
+        "create_whatsapp_status_schedule",
+        "update_whatsapp_status_schedule",
+        "list_whatsapp_status_schedules",
+        "pause_whatsapp_status_schedule",
+        "resume_whatsapp_status_schedule",
+        "list_whatsapp_status_results",
+        "confirm_whatsapp_status_mobile",
     ),
     # Sub-onda 2F, etapa 1: cadastros e configuração do financeiro (nenhuma lança nem baixa valor). Idempotência
     # obrigatória (create_*/import_*) ou opcional (upsert_*, relatório). Visível só com o escopo ``mcp:finance``.

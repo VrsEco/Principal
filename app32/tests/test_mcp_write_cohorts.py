@@ -14,7 +14,7 @@ import src.core.mcp_surface_registry as registry
 import src.core.mcp_write_cohorts as cohorts
 from src.core.mcp_cohort_contract import probe_registered_tools
 from src.core.mcp_gate_policy import requires_persisted_approval
-from src.core.mcp_mutation_contract import audit_mutation_tool
+from src.core.mcp_mutation_contract import audit_mutation_tool, is_mutation
 from src.intelligence.tool_catalog import catalog
 
 BASELINE = Path(__file__).parent / "data" / "mcp_mutation_violations_baseline.json"
@@ -97,6 +97,23 @@ EXPECTED = {
         "restore_project_task_secure",
         "delete_meeting_secure",
     },
+    "whatsapp_status": {
+        "get_whatsapp_status_setup",
+        "configure_whatsapp_status_account",
+        "register_whatsapp_status_approved_bundle",
+        "list_whatsapp_status_arts",
+        "verify_whatsapp_status_account",
+        "publish_whatsapp_status_art",
+        "publish_whatsapp_status_kit",
+        "publish_whatsapp_status_test",
+        "create_whatsapp_status_schedule",
+        "update_whatsapp_status_schedule",
+        "list_whatsapp_status_schedules",
+        "pause_whatsapp_status_schedule",
+        "resume_whatsapp_status_schedule",
+        "list_whatsapp_status_results",
+        "confirm_whatsapp_status_mobile",
+    },
     "finance_setup": {
         "create_financial_catalog_item",
         "create_financial_classification_rule",
@@ -143,7 +160,7 @@ def _server(monkeypatch, env):
 
 def test_cohort_content_is_exactly_the_approved_set():
     assert {k: set(v) for k, v in cohorts.WRITE_COHORT_TOOL_NAMES.items()} == EXPECTED
-    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 91
+    assert len(cohorts.all_write_cohort_names()) == len(ALL) == 106
 
 
 @pytest.mark.parametrize("value", [None, "", "none", "NONE", "  "])
@@ -162,12 +179,12 @@ def test_each_subject_turns_on_alone(monkeypatch, subject):
 
 def test_all_subjects_on_lists_everything_and_changes_nothing_else(monkeypatch):
     _, off, _ = _server(monkeypatch, None)
-    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,finance_setup,finance_ledger")
+    _, on, _ = _server(monkeypatch, "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,whatsapp_status,finance_setup,finance_ledger")
     assert on - off == ALL and off - on == set()
 
 
 def test_still_requires_user_scope_and_per_tool_permission(monkeypatch):
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,finance_setup,finance_ledger")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,whatsapp_status,finance_setup,finance_ledger")
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: SimpleNamespace(scopes=("mcp:access",)))
     monkeypatch.setattr(registry, "_has_authenticated_mcp_permission", lambda _p: True)
     server = registry.build_oauth_unified_mcp_server()
@@ -183,7 +200,7 @@ def test_manifest_follows_the_flag_and_reports_the_enforced_gate(monkeypatch):
     monkeypatch.setattr("src.core.mcp_http_auth.get_http_request_identity", lambda: USER)
     monkeypatch.delenv("MCP_VERSUS_WRITE_DOMAINS", raising=False)
     off = {t["name"] for t in registry.get_unified_manifest()["tools"]}
-    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,finance_setup,finance_ledger")
+    monkeypatch.setenv("MCP_VERSUS_WRITE_DOMAINS", "projects,operations,meetings,processes,routine,strategy,commercial,admin_ops,deletions,whatsapp_status,finance_setup,finance_ledger")
     manifest = registry.get_unified_manifest()
     on = {t["name"]: t for t in manifest["tools"]}
     assert ALL.isdisjoint(off) and ALL <= set(on)
@@ -194,7 +211,7 @@ def test_manifest_follows_the_flag_and_reports_the_enforced_gate(monkeypatch):
 def test_every_cohort_tool_passes_the_mutation_contract_and_is_not_in_the_baseline():
     probes = probe_registered_tools()
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
-    for name in sorted(ALL):
+    for name in sorted(n for n in ALL if is_mutation(n)):  # leituras da coorte (get_/list_/verify_) não são mutações
         problems = audit_mutation_tool(name, capability=catalog.get_tool_capability(name), probe=probes.get(name))
         assert not problems, f"{name}: {[(v.code, v.detail) for v in problems]}"
         assert name not in baseline, f"{name} está na linha de base de violações"
@@ -208,6 +225,10 @@ APPROVAL_IN_COHORTS = {
     "reconcile_financial_import_batch", "replace_financial_allocations", "generate_due_financial_schedules",
     # exclusões e restauração (verbo delete ou risco alto com gate)
     *EXPECTED["deletions"],
+    # publicar, retomar agenda, conferir no celular e vincular conta/acervo (risco alto com gate declarado)
+    "publish_whatsapp_status_art", "publish_whatsapp_status_kit", "publish_whatsapp_status_test",
+    "resume_whatsapp_status_schedule", "confirm_whatsapp_status_mobile",
+    "configure_whatsapp_status_account", "register_whatsapp_status_approved_bundle",
 }
 
 
