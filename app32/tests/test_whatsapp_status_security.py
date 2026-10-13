@@ -39,6 +39,18 @@ def test_current_permission_and_tenant_intersection(auth):
     with pytest.raises(PermissionError): authorize(1,1,1,'whatsapp_status.publish')
 
 
+@pytest.mark.parametrize('role',['administrator','administrador','admin','Administrator','admin_tecnico','technical_admin'])
+def test_administrator_role_names_in_either_language_are_accepted(auth,role):
+    auth.runtime['role']=role
+    authorize(1,1,1,'whatsapp_status.publish')
+
+
+@pytest.mark.parametrize('role',['collaborator','colaborador','client','cliente','','desconhecido',None])
+def test_non_administrator_roles_stay_denied(auth,role):
+    auth.runtime['role']=role
+    with pytest.raises(PermissionError): authorize(1,1,1,'whatsapp_status.publish')
+
+
 @pytest.mark.parametrize('ceiling',[[],['*'],['whatsapp_status'],['whatsapp_status.publish','contacts.read'],True,{},[False],['whatsapp_status.*']])
 def test_no_broad_or_malformed_grant(auth,ceiling):
     auth.grant.mcp_permissions=ceiling
