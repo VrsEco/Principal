@@ -110,6 +110,21 @@ def test_parse_csv_bytes_maps_extra_columns_to_string_key():
     ]
 
 
+def test_parse_source_rows_csv_autodetects_semicolon_with_decimal_comma():
+    rows = FinancialImportService._parse_source_rows(
+        "csv", b"Data;Descricao;Valor\n01/10/2026;PIX Fornecedor;-1.234,56\n"
+    )
+
+    assert rows == [{"Data": "01/10/2026", "Descricao": "PIX Fornecedor", "Valor": "-1.234,56"}]
+    assert FinancialImportService._parse_decimal("-1.234,56") == Decimal("-1234.56")
+
+
+def test_parse_source_rows_csv_keeps_comma_default():
+    rows = FinancialImportService._parse_source_rows("csv", b"historico,valor\nA,10\n")
+
+    assert rows == [{"historico": "A", "valor": "10"}]
+
+
 def test_resolve_bank_account_by_code_accepts_numeric_code_without_leading_zeroes(monkeypatch):
     class _Column:
         def __eq__(self, other):
