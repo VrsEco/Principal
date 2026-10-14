@@ -336,6 +336,7 @@ class FinancialReconciliationService:
             return False
         restored_amount = FinancialReconciliationService._decimal(previous_amount).quantize(Decimal("0.01"))
         entry.original_amount = restored_amount
+        FinancialReconciliationService._sync_entry_schedule_template_amount(entry, restored_amount)
         if entry.financial_schedule_id:
             schedule = FinancialSchedule.query.filter(
                 FinancialSchedule.id == entry.financial_schedule_id,
@@ -376,6 +377,15 @@ class FinancialReconciliationService:
         entry.metadata_json = metadata
 
     @staticmethod
+    def _sync_entry_schedule_template_amount(entry: FinancialEntry, amount: Decimal) -> None:
+        # A base do principal da baixa dá prioridade a este metadado; sem sincronizá-lo,
+        # o novo valor original seria ignorado na validação da baixa.
+        metadata = dict(entry.metadata_json or {})
+        if metadata.get("schedule_template_amount") is not None:
+            metadata["schedule_template_amount"] = float(amount)
+            entry.metadata_json = metadata
+
+    @staticmethod
     def _adjust_open_title_original_amount(
         *,
         entry: FinancialEntry,
@@ -391,6 +401,7 @@ class FinancialReconciliationService:
 
         previous_amount = FinancialReconciliationService._decimal(entry.original_amount or 0).quantize(Decimal("0.01"))
         entry.original_amount = target_amount
+        FinancialReconciliationService._sync_entry_schedule_template_amount(entry, target_amount)
         if entry.financial_schedule_id:
             schedule = FinancialSchedule.query.filter(
                 FinancialSchedule.id == entry.financial_schedule_id,
