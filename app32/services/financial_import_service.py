@@ -523,8 +523,17 @@ class FinancialImportService:
             row.processing_status = "validated"
 
     @staticmethod
-    def _parse_csv_bytes(file_bytes: bytes, delimiter: str = ",") -> List[Dict[str, Any]]:
+    def _detect_csv_delimiter(text: str) -> str:
+        header = next((line for line in text.splitlines() if line.strip()), "")
+        counts = {candidate: header.count(candidate) for candidate in (";", ",", "\t")}
+        best = max(counts, key=counts.get)
+        return best if counts[best] else ","
+
+    @staticmethod
+    def _parse_csv_bytes(file_bytes: bytes, delimiter: Optional[str] = None) -> List[Dict[str, Any]]:
         text = file_bytes.decode("utf-8-sig", errors="ignore")
+        if delimiter is None:
+            delimiter = FinancialImportService._detect_csv_delimiter(text)
         reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
         return [FinancialImportService._sanitize_raw_payload(dict(row)) for row in reader]
 
@@ -832,7 +841,7 @@ class FinancialImportService:
     def _parse_source_rows(source_type: str, file_bytes: bytes) -> List[Dict[str, Any]]:
         source = (source_type or "").lower()
         if source == "csv":
-            return FinancialImportService._parse_csv_bytes(file_bytes, delimiter=",")
+            return FinancialImportService._parse_csv_bytes(file_bytes)
         if source == "csc":
             return FinancialImportService._parse_csv_bytes(file_bytes, delimiter=";")
         if source == "xlsx":
