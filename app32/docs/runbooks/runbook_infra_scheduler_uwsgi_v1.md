@@ -47,7 +47,33 @@ Quando uma requisição passar de 20 s, o app registra no log do uwsgi uma linha
 ## 4. Fases seguintes (só com evidência das anteriores)
 
 - **Fase 3, workers do uwsgi:** medir memória com 2 workers por alguns dias; descobrir o que reescreve o `uwsgi.ini` no boot; só então tornar o valor persistente, com backup do `.ini`. Não mexer no HARAKIRI antes de achar a causa.
-- **Fase 4, log do scheduler:** `logs/scheduler_stderr.log` chegou a 188 MB; rotação com cópia, compactação e truncamento (o processo grava em modo append).
+- **Fase 4, rotação dos logs próprios:** ver a seção 4.1 (implementada em `scripts/rotate_app_logs.sh`).
+
+### 4.1 Fase 4 — rotação dos logs do scheduler, do MCP e dos monitores
+
+`logs/scheduler_stderr.log` chegou a 188 MB. O script `scripts/rotate_app_logs.sh` rotaciona **uma lista fixa** de arquivos de `logs/` (`scheduler_stderr.log`, `scheduler_stdout.log`, `mcp_http_stderr.log`, `mcp_http_stdout.log`, `mcp_http_monitor.log`, `scheduler_monitor.log`). Nunca toca em uwsgi, nginx, banco ou `.env`, e não reinicia nada.
+
+- Só rotaciona arquivo acima de 50 MB (`APP32_LOG_ROTATE_MAX_BYTES`).
+- Método copiar e truncar: o scheduler e o MCP gravam com `>>` (append), então continuam no fim do arquivo, sem buraco. A janela de perda é de milissegundos entre a cópia e o truncamento.
+- Confere espaço livre (precisa de 2x o tamanho), compacta com `nice` e mantém só os 3 `.gz` mais recentes por log (`APP32_LOG_ROTATE_KEEP`).
+- Lock próprio; `--dry-run` mostra o que faria sem alterar nada.
+
+**Primeira vez, à mão, em horário calmo** (fora de 08:25 a 08:40 e dos backups das 03, 07, 12, 18 e 22 h):
+
+```bash
+cd /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32
+bash scripts/rotate_app_logs.sh --dry-run        # só mostra o plano
+nice -n 19 bash scripts/rotate_app_logs.sh       # rotaciona de verdade
+ls -la logs/scheduler_stderr.log*                # o original zerado e o .gz
+```
+
+**Cron diário (depois da primeira execução bem-sucedida):**
+
+```cron
+10 4 * * * cd /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32 && bash scripts/rotate_app_logs.sh >> logs/rotate_app_logs.log 2>&1
+```
+
+**Reversão:** remover a linha do cron. Os `.gz` já gerados são só cópias e podem ser apagados quando quiser. Observação: os logs do nginx e do uwsgi pertencem ao host (root) e não são tratados aqui; a rotação do nginx sem reabrir o arquivo (o `access.log` fica vazio e o nginx grava em `access.log.1`) é um achado separado para o suporte do host.
 
 ## 5. Verificações rápidas
 
