@@ -18,3 +18,4 @@ Ver: `C:\GestaoVersus\app32\app32\docs\governance\governanca_documental_oficial_
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\harnesses_oficiais_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\matriz_autonomia_agentes_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\spec\auditoria_interna_fase_01_spec_v1.md`
+- `docs/spec/captacao_leads_site_publico_v1.md`

@@ -68,6 +68,16 @@ class Config:
     SLOW_REQUEST_THRESHOLD_MS = int(os.environ.get("SLOW_REQUEST_THRESHOLD_MS") or 1000)
     SLOW_REQUEST_STACK_ENABLED = env_flag("SLOW_REQUEST_STACK_ENABLED", default=False)
     SLOW_REQUEST_STACK_SECONDS = float(os.environ.get("SLOW_REQUEST_STACK_SECONDS") or 5)
+    # Captação pública de leads (sites da Versus). Sem valores, o endpoint responde 503.
+    LEADS_ALLOWED_ORIGINS = env_csv("LEADS_ALLOWED_ORIGINS")
+    LEADS_PRIVACY_POLICY_VERSION = os.environ.get("LEADS_PRIVACY_POLICY_VERSION") or ""
+    # JSON: {"site-performance-hub": {"company_id": 9, "project_code": "AA.J.187", "task_user_id": 1, "assuntos": [...]}}
+    LEADS_SOURCES_JSON = os.environ.get("LEADS_SOURCES_JSON") or ""
+    LEADS_IP_HASH_SALT = os.environ.get("LEADS_IP_HASH_SALT") or ""
+    LEADS_REQUIRE_HTTPS = env_flag("LEADS_REQUIRE_HTTPS", default=True)
+    LEADS_RATE_LIMIT_IP = int(os.environ.get("LEADS_RATE_LIMIT_IP") or 10)
+    LEADS_RATE_LIMIT_SOURCE = int(os.environ.get("LEADS_RATE_LIMIT_SOURCE") or 120)
+    LEADS_DEDUPE_WINDOW_SECONDS = int(os.environ.get("LEADS_DEDUPE_WINDOW_SECONDS") or 600)
     WEBHOOK_SHARED_SECRET = os.environ.get("WEBHOOK_SHARED_SECRET")
     WHATSAPP_WEBHOOK_SECRET = os.environ.get("WHATSAPP_WEBHOOK_SECRET")
     TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET")

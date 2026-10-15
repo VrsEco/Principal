@@ -33,6 +33,7 @@ from .okr_area import OKRArea, KeyResultArea
 # Execution
 from .portfolio import Portfolio
 from .project import Project, ProjectTask, ProjectTaskDependency, ProjectActivityCollaborator
+from .site_lead import SiteLead
 from .process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessBpmsAnalysis, ProcessSipocSnapshot, ProcessSipocItem, ProcessSipocRegulatoryItem, MacroProcessSipocSnapshot, MacroProcessSipocItem, MacroProcessSipocRegulatoryItem, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator, ProcessInstanceExecution, ProcessActivityExecutionContract
 from .process_resource import (
     CapabilityDimension,
@@ -229,7 +230,7 @@ __all__ = [
     'RoleCostProfile',
     'EmployeeRoleOccupancy',
     'db', 'Company', 'User', 'PasswordResetToken', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
-    'InstructionRegistryEntry', 'InstructionRegistryAuditLog',
+    'SiteLead', 'InstructionRegistryEntry', 'InstructionRegistryAuditLog',
     'KnowledgeSource', 'KnowledgeSourceGrant', 'KnowledgeChunk', 'KnowledgeIndexRun', 'KnowledgeInteraction', 'KnowledgeFeedback', 'KnowledgeTrainingProposal', 'KnowledgeEmbeddingUsageEvent',
     'StrategicTree', 'StrategicTreeNode', 'StrategicTreeContribution', 'StrategicTreeAuditEvent',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
