@@ -1,7 +1,7 @@
 """create site_leads for public lead capture
 
 Revision ID: 20261015_1000
-Revises: 20260606_1600
+Revises: 20261011_1000
 Create Date: 2026-10-15 10:00:00
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "20261015_1000"
-down_revision = "20260606_1600"
+down_revision = "20261011_1000"
 branch_labels = None
 depends_on = None
 

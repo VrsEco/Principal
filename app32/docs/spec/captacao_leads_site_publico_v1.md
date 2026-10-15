@@ -70,4 +70,4 @@ Logs `site_lead event=<created|duplicate|redacted|rejected_*|failed_persist>` se
 
 - O rate limit reutiliza `utils.security.consume_rate_limit`, que é em memória por processo: com vários workers o limite efetivo é por worker.
 - Não há tela do dono além da tarefa no projeto; relatório por canal é consulta SQL por ora.
-- Migração `20261015_1000` cria `site_leads` (revisão anterior `20260606_1600`); não aplicada em nenhum ambiente.
+- Migração `20261015_1000` cria `site_leads` (revisão anterior `20261011_1000`); não aplicada em nenhum ambiente.
