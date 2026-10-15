@@ -581,6 +581,7 @@ def create_app(config_name=None):
         ]
         public_endpoints.extend(['healthz', 'oauth_pilot_protected_resource_metadata'])
         public_endpoints.extend(PUBLIC_PAGE_ENDPOINTS)
+        public_endpoints.append('public_leads.submit_lead')
         if app.config.get("DEV_ROUTES_ENABLED"):
             public_endpoints.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
         
@@ -1278,6 +1279,10 @@ def register_blueprints(app):
 
     from api.routes.incentives import incentives_bp
     app.register_blueprint(incentives_bp)
+
+    # Captação pública de leads dos sites (sem login; CORS/rate limit próprios)
+    from api.routes.public_leads import public_leads_bp
+    app.register_blueprint(public_leads_bp)
 
     # Webhook Telegram (Sapiens Fase 3)
     from api.webhooks.telegram_webhook import telegram_bp, setup_webhook
