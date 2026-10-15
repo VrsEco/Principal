@@ -6,12 +6,16 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
+from sqlalchemy import or_
+
 from models import db
 from models.contracts import Contract, ContractFinancialTerm, ContractNativeBilling, ContractNativeBillingItem
 from models.financial import (
     FinancialChartAccount,
     FinancialCostCenter,
     FinancialCounterparty,
+    FinancialEntry,
+    FinancialEntryAllocation,
     FinancialSatelliteExecution,
     FinancialSatellitePolicy,
     FinancialSchedule,
@@ -1008,6 +1012,160 @@ class ContractFinancialService:
         except Exception:
             db.session.rollback()
             raise
+
+    @staticmethod
+    def _is_contract_automatic_settlement(settlement: FinancialSettlement) -> bool:
+        """Baixa gerada pelo motor de satélites do contrato (ex.: compensação do ISS retido)."""
+        metadata = dict(getattr(settlement, "metadata_json", None) or {})
+        return (
+            str(getattr(settlement, "settlement_type", "") or "").strip().lower() == "automatic_rule"
+            and bool(metadata.get("contract_satellite_engine_managed"))
+        )
+
+    @staticmethod
+    def list_entries_for_schedules(*, company_id: int, schedule_ids: list[int]) -> list[FinancialEntry]:
+        """Títulos (entries) ativos gerados pelos agendamentos informados."""
+        normalized_ids = [int(item) for item in dict.fromkeys(schedule_ids or []) if item]
+        if not normalized_ids:
+            return []
+        references = [f"financial_schedule:{item}" for item in normalized_ids]
+        return (
+            FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+                or_(
+                    FinancialEntry.financial_schedule_id.in_(normalized_ids),
+                    FinancialEntry.external_reference.in_(references),
+                ),
+            )
+            .order_by(FinancialEntry.id.asc())
+            .all()
+        )
+
+    @staticmethod
+    def analyze_billing_entry(entry: FinancialEntry) -> dict:
+        """Classifica as baixas de um título de faturamento (somente leitura).
+
+        Separa as baixas automáticas de retenção (reversíveis) das baixas reais
+        (recebimento/pagamento), que bloqueiam o cancelamento, e aponta os demais
+        impedimentos (conciliação e borderô ativo).
+        """
+        from services.financial_bordero_service import FinancialBorderoService
+
+        settlements = (
+            FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == entry.company_id,
+                FinancialSettlement.financial_entry_id == entry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            )
+            .order_by(FinancialSettlement.id.asc())
+            .all()
+        )
+        automatic = [item for item in settlements if ContractFinancialService._is_contract_automatic_settlement(item)]
+        real = [item for item in settlements if item not in automatic]
+        reconciled = [
+            item
+            for item in settlements
+            if str(getattr(item, "reconciliation_status", "") or "").strip().lower() in {"matched", "reconciled"}
+        ]
+        bordero = FinancialBorderoService.get_active_bordero_for_entry(company_id=entry.company_id, entry=entry)
+        reasons: list[str] = []
+        if real:
+            codes = ", ".join(str(item.settlement_code) for item in real)
+            reasons.append(f"possui baixa que não é retenção automática ({codes})")
+        if reconciled:
+            codes = ", ".join(str(item.settlement_code) for item in reconciled)
+            reasons.append(f"possui baixa conciliada ({codes})")
+        if bordero is not None:
+            reasons.append(f"participa do borderô ativo {bordero.bordero_code}")
+        return {
+            "entry": entry,
+            "settlements": settlements,
+            "automatic_settlements": automatic,
+            "real_settlements": real,
+            "automatic_amount": sum((ContractFinancialService._money(item.principal_amount) for item in automatic), Decimal("0.00")),
+            "real_amount": sum((ContractFinancialService._money(item.principal_amount) for item in real), Decimal("0.00")),
+            "blocking_reasons": reasons,
+        }
+
+    @staticmethod
+    def cancel_billing_titles(
+        *,
+        company_id: int,
+        schedule_ids: list[int],
+        native_billing: ContractNativeBilling,
+        user_id: Optional[int],
+        reason: Optional[str] = None,
+        now: Optional[datetime] = None,
+    ) -> dict:
+        """Cancela, na transação corrente, os títulos do ledger de um faturamento cancelado.
+
+        Os títulos (principal e satélites de retenção) saem do contas a receber/pagar
+        por exclusão lógica (`deleted_at`, status `cancelled`) e as baixas automáticas
+        de retenção são estornadas. Nada é alterado quando algum título tem baixa
+        real, conciliação ou borderô ativo: nesse caso levanta ValueError.
+        Não faz commit; o chamador controla a transação.
+        """
+        now = now or datetime.utcnow()
+        entries = ContractFinancialService.list_entries_for_schedules(company_id=company_id, schedule_ids=schedule_ids)
+        analyses = [ContractFinancialService.analyze_billing_entry(entry) for entry in entries]
+        blocked = [item for item in analyses if item["blocking_reasons"]]
+        if blocked:
+            details = "; ".join(
+                f"título {item['entry'].entry_code} {', '.join(item['blocking_reasons'])}" for item in blocked
+            )
+            raise ValueError(
+                f"Não é possível cancelar o faturamento {native_billing.billing_code}: {details}. "
+                "Estorne a baixa (ou retire o título do borderô) antes de cancelar."
+            )
+
+        reason_text = ContractFinancialService._normalize_text(reason) or None
+        cancelled_entry_ids: list[int] = []
+        reversed_settlement_ids: list[int] = []
+        for analysis in analyses:
+            entry = analysis["entry"]
+            entry_reversed_ids: list[int] = []
+            for settlement in analysis["automatic_settlements"]:
+                settlement.settlement_status = "cancelled"
+                settlement.deleted_at = now
+                settlement.metadata_json = {
+                    **dict(settlement.metadata_json or {}),
+                    "deleted_at": now.isoformat(),
+                    "deleted_via": "contract_financial_service.cancel_billing_titles",
+                    "reversed_from_contract_billing": True,
+                    "cancelled_native_billing_id": native_billing.id,
+                    "reversed_by_user_id": user_id,
+                }
+                entry_reversed_ids.append(settlement.id)
+            FinancialEntryAllocation.query.filter(
+                FinancialEntryAllocation.company_id == company_id,
+                FinancialEntryAllocation.financial_entry_id == entry.id,
+                FinancialEntryAllocation.deleted_at.is_(None),
+            ).update({"deleted_at": now}, synchronize_session=False)
+            entry.metadata_json = {
+                **dict(entry.metadata_json or {}),
+                "billing_cancellation": {
+                    "cancelled_at": now.isoformat(),
+                    "cancelled_by_user_id": user_id,
+                    "reason": reason_text,
+                    "native_billing_id": native_billing.id,
+                    "billing_code": native_billing.billing_code,
+                    "previous_status": entry.status,
+                    "original_amount": float(ContractFinancialService._money(entry.original_amount)),
+                    "reversed_settlement_ids": entry_reversed_ids,
+                    "reversed_settlement_amount": float(analysis["automatic_amount"]),
+                },
+            }
+            entry.status = "cancelled"
+            entry.deleted_at = now
+            cancelled_entry_ids.append(entry.id)
+            reversed_settlement_ids.extend(entry_reversed_ids)
+        db.session.flush()
+        return {
+            "cancelled_entry_ids": cancelled_entry_ids,
+            "reversed_settlement_ids": reversed_settlement_ids,
+        }
 
     @staticmethod
     def list_contract_financial_titles(contract: Contract) -> list[dict]:
