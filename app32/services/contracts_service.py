@@ -2782,6 +2782,21 @@ class ContractService:
         schedule_ids.extend(ContractService._normalize_id_list(financial_integration.get("satellite_schedule_ids")))
         schedule_ids = list(dict.fromkeys(schedule_ids))
 
+        cancelled_titles = {"cancelled_entry_ids": [], "reversed_settlement_ids": []}
+        if schedule_ids:
+            # Primeiro os títulos do ledger: se algum tiver baixa real, conciliação ou
+            # borderô, levanta ValueError antes de qualquer alteração.
+            from services.contract_financial_service import ContractFinancialService
+
+            cancelled_titles = ContractFinancialService.cancel_billing_titles(
+                company_id=company_id,
+                schedule_ids=schedule_ids,
+                native_billing=native_billing,
+                user_id=user_id,
+                reason=reason,
+                now=now,
+            )
+
         if schedule_ids:
             schedules = FinancialSchedule.query.filter(
                 FinancialSchedule.company_id == company_id,
@@ -2838,6 +2853,8 @@ class ContractService:
 
         financial_integration["cancelled_at"] = now.isoformat()
         financial_integration["cancelled_schedule_ids"] = schedule_ids
+        financial_integration["cancelled_entry_ids"] = cancelled_titles["cancelled_entry_ids"]
+        financial_integration["reversed_settlement_ids"] = cancelled_titles["reversed_settlement_ids"]
         metadata["financial_integration"] = financial_integration
         metadata["cancellation"] = {
             "cancelled_at": now.isoformat(),
@@ -2869,6 +2886,8 @@ class ContractService:
                     "native_billing_id": native_billing.id,
                     "billing_code": native_billing.billing_code,
                     "cancelled_schedule_ids": schedule_ids,
+                    "cancelled_entry_ids": cancelled_titles["cancelled_entry_ids"],
+                    "reversed_settlement_ids": cancelled_titles["reversed_settlement_ids"],
                     "reason": ContractService._normalize_text(reason) or None,
                 },
                 user_id=user_id,

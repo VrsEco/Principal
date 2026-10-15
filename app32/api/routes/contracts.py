@@ -1209,7 +1209,7 @@ def contracts_billing_done():
                     user_id=_current_user_id(),
                     reason=request.form.get("cancel_reason"),
                 )
-                flash("Faturamento cancelado e vínculos financeiros satélites marcados para auditoria.", "success")
+                flash("Faturamento cancelado: títulos do financeiro cancelados e baixas automáticas de retenção estornadas.", "success")
         except Exception as exc:
             flash(f"Não foi possível processar o faturamento: {exc}", "error")
         return redirect(url_for("contracts.contracts_billing_done", company_id=company.id))
