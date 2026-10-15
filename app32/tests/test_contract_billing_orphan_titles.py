@@ -266,3 +266,20 @@ def test_execute_ignores_titles_not_in_the_approved_dry_run(seeded):
 
     assert results == []
     assert db.session.get(FinancialEntry, 4076).deleted_at is None
+
+
+def test_execute_cancels_reviewed_billing_only_when_explicitly_accepted(seeded):
+    approved = {row["entry_id"] for row in OrphanBillingTitlesService.build_rows(OrphanBillingTitlesService.scan(company_id=COMPANY_ID))}
+
+    results = OrphanBillingTitlesService.execute(
+        company_id=COMPANY_ID,
+        user_id=14,
+        approved_entry_ids=approved,
+        accepted_review_billing_codes={"AL.B.376", "AL.B.377"},  # 377 está bloqueado: aceite não libera
+        log=lambda *_: None,
+    )
+
+    outcome = {item["billing_code"]: item["resultado"] for item in results}
+    assert outcome == {"AL.B.378": "cancelado", "AL.B.377": "ignorado_bloqueado", "AL.B.376": "cancelado"}
+    assert db.session.get(FinancialEntry, 4072).deleted_at is not None
+    assert db.session.get(FinancialEntry, 4074).deleted_at is None
