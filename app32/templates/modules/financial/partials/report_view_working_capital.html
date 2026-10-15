@@ -51,7 +51,7 @@
                     <span>{{ group.code }} - {{ group.label }}</span>
                     <strong>{{ group.amount }}</strong>
                 </div>
-                {% for item in group.items %}
+                {% for item in group['items'] %}
                 <div class="wc-detail-row">
                     <span>{{ item.code }} - {{ item.label }}</span>
                     <strong>{{ item.amount }}</strong>
@@ -76,7 +76,7 @@
                     <span>{{ group.code }} - {{ group.label }}</span>
                     <strong>{{ group.amount }}</strong>
                 </div>
-                {% for item in group.items %}
+                {% for item in group['items'] %}
                 <div class="wc-detail-row">
                     <span>{{ item.code }} - {{ item.label }}</span>
                     <strong>{{ item.amount }}</strong>
