@@ -1,13 +1,19 @@
 import io
+import logging
 import re
+import uuid
 
 from flask import abort, jsonify, redirect, render_template, request, send_file, url_for
 
 from services.financial_report_service import FinancialReportService
+from models import db
 from utils.company_access import get_accessible_company_ids
+from utils.error_handling import log_exception_with_context
 from utils.permissions import active_company_permission_required
 
 from .financial import financial_bp, get_active_company
+
+logger = logging.getLogger(__name__)
 
 
 _BOOLEAN_FILTER_KEYS = {
@@ -193,12 +199,28 @@ def _build_financial_report_or_abort(report_slug: str):
     if not company:
         abort(400, description='Empresa ativa não identificada para relatórios financeiros.')
 
-    report, error = FinancialReportService.build_management_report(
-        company_id=company.id,
-        report_type=report_slug,
-        filters=_request_filters_payload(),
-        allowed_company_ids=get_accessible_company_ids(),
-    )
+    try:
+        report, error = FinancialReportService.build_management_report(
+            company_id=company.id,
+            report_type=report_slug,
+            filters=_request_filters_payload(),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+    except Exception as exc:
+        db.session.rollback()
+        reference = uuid.uuid4().hex[:8]
+        log_exception_with_context(
+            logger,
+            exc,
+            context=f"Falha ao gerar relatório financeiro slug={report_slug} company_id={company.id} ref={reference}",
+        )
+        abort(
+            500,
+            description=(
+                f"Não foi possível gerar o relatório '{report_slug}' para a empresa ativa "
+                f"({type(exc).__name__}). Informe ao suporte o código {reference}."
+            ),
+        )
     if error:
         abort(400, description=error)
     return company, report
