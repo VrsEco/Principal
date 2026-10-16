@@ -672,6 +672,8 @@ _supplemental_mcp_tools = (
             "list_financial_schedules",
             "get_financial_payables_due_summary",
             "create_financial_schedule",
+            "create_financial_schedule_secure",
+            "delete_financial_entry",
             "update_financial_schedule",
             "toggle_financial_schedule",
             "generate_due_financial_schedules",

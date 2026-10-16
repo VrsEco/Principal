@@ -962,6 +962,16 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
                 ),
             }
 
+        requested_entry_type = str(normalized_payload.get("entry_type") or "").strip().lower()
+        if requested_entry_type in {"payable", "receivable"} and not normalized_payload.get("financial_schedule_id"):
+            return {
+                "success": False,
+                "error": (
+                    "Conta a pagar/receber deve nascer de um agendamento (Títulos Financeiros). "
+                    "Use create_financial_schedule_secure; lançamento direto fica restrito a movimento já efetivado."
+                ),
+            }
+
         # Aprovação e data nunca vêm do cliente: só da aprovação humana que o
         # runtime consumiu para esta chamada.
         normalized_payload.pop("approved_by_user_id", None)
@@ -1006,6 +1016,106 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         if error:
             return {"success": False, "error": error}
         return {"success": True, "item": entry}
+
+    @mcp.tool()
+    def create_financial_schedule_secure(company_id: int, payload: dict, idempotency_key: str) -> dict:
+        """
+        Cria agendamento (título a pagar/receber, avulso ou recorrente) com tenant explícito.
+
+        É o caminho obrigatório para contas a pagar/receber: o título aparece em
+        Títulos Financeiros e no relatório correspondente no vencimento. Exige
+        aprovação humana persistida; ``company_id`` do payload deve coincidir.
+        ``idempotency_key`` é obrigatória: repetir a chamada devolve o mesmo agendamento.
+        """
+        from services.financial_schedule_service import FinancialScheduleService
+
+        if isinstance(company_id, bool) or not isinstance(company_id, int) or company_id <= 0:
+            return {"success": False, "error": "company_id válido é obrigatório"}
+        normalized_payload = dict(payload or {})
+        payload_company_id = normalized_payload.get("company_id")
+        if payload_company_id not in (None, ""):
+            try:
+                if int(payload_company_id) != company_id:
+                    return {
+                        "success": False,
+                        "error": "company_id do payload diverge do tenant da requisição",
+                    }
+            except (TypeError, ValueError):
+                return {"success": False, "error": "company_id do payload é inválido"}
+        normalized_payload["company_id"] = company_id
+        key = str(idempotency_key or "").strip()
+        if not key or len(key) > 120:
+            return {"success": False, "error": "idempotency_key é obrigatória (até 120 caracteres)"}
+        normalized_payload["metadata_json"] = {**dict(normalized_payload.get("metadata_json") or {}), "idempotency_key": key}
+
+        def _create_once(*, payload: dict):
+            from models.financial import FinancialSchedule
+
+            existing = FinancialSchedule.query.filter(
+                FinancialSchedule.company_id == company_id,
+                FinancialSchedule.deleted_at.is_(None),
+                FinancialSchedule.metadata_json["idempotency_key"].astext == key,
+            ).first()
+            if existing is not None:
+                return {**existing.to_dict(), "idempotent_replay": True}, None
+            return FinancialScheduleService.create_schedule(payload=payload)
+
+        result, error = _run_financial_action(
+            _create_once,
+            payload=_attach_mcp_audit_payload(normalized_payload),
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def delete_financial_entry(company_id: int, entry_id: int) -> dict:
+        """
+        Exclui (lógico) lançamento sem baixa nem conciliação criado por conector MCP.
+
+        Recusa lançamentos criados pela interface, vinculados a agendamento,
+        com baixa ativa, conciliados ou em borderô. Exige aprovação humana.
+        """
+        from models.financial import FinancialEntry, FinancialSettlement
+        from services.financial_service import FinancialService
+
+        if isinstance(company_id, bool) or not isinstance(company_id, int) or company_id <= 0:
+            return {"success": False, "error": "company_id válido é obrigatório"}
+        if isinstance(entry_id, bool) or not isinstance(entry_id, int) or entry_id <= 0:
+            return {"success": False, "error": "entry_id válido é obrigatório"}
+
+        def _guarded_delete():
+            entry = FinancialEntry.query.filter(
+                FinancialEntry.id == entry_id,
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            ).first()
+            if entry is None:
+                return None, "Lançamento financeiro não encontrado no escopo da empresa."
+            if not str(getattr(entry, "created_by_agent", "") or "").strip():
+                return None, "Somente lançamentos criados por conector MCP podem ser excluídos por esta tool."
+            if getattr(entry, "financial_schedule_id", None):
+                return None, "Lançamento vinculado a agendamento deve ser tratado pelo agendamento."
+            if FinancialService.is_entry_reconciled(entry):
+                return None, "Lançamento conciliado não pode ser excluído por esta tool."
+            from services.financial_bordero_service import FinancialBorderoService
+
+            if FinancialBorderoService.get_active_bordero_for_entry(company_id=company_id, entry=entry):
+                return None, "Lançamento em borderô ativo não pode ser excluído por esta tool."
+            has_settlement = FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.financial_entry_id == entry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            ).first()
+            if has_settlement is not None:
+                return None, "Lançamento com baixa ativa não pode ser excluído por esta tool."
+            return FinancialService.delete_entry(entry_id=entry_id, company_id=company_id)
+
+        result, error = _run_financial_action(_guarded_delete)
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **(result or {})}
 
     @mcp.tool()
     def create_financial_direct_entry(company_id: int, payload: dict) -> dict:
