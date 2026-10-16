@@ -1902,7 +1902,7 @@ class FinancialService:
                 covers_entry = (
                     single.percentage == Decimal("100")
                     if single.allocation_type == "percentage"
-                    else single.allocated_amount in {entry.original_amount, principal_basis_amount}
+                    else single.allocated_amount in {entry.original_amount, FinancialService._resolve_entry_principal_basis_amount(entry)}
                 )
                 if covers_entry:
                     if entry.chart_account_id is None and single.chart_account_id:
