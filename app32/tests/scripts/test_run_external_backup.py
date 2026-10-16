@@ -300,6 +300,19 @@ def test_prune_drive_never_deletes_without_a_current_run_or_with_bad_manifest():
     assert "skipped" in runner.prune_drive_expired(only_old, now)
     assert only_old.deleted == []
 
-    manifests[1]["payload"].pop("retain_until")
+    manifests[1]["payload"]["retain_until"] = "nao-e-data"
     with pytest.raises(runner.BackupRunError):
         runner.prune_drive_expired(_FakeDrive(manifests, children), now)
+
+
+def test_prune_drive_keeps_legacy_manifest_without_retain_until_and_protects_its_refs():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    manifests[1]["payload"] = {"code_reference": {"drive_file_id": "code-1"},
+                               "artifacts": [{"type": "database", "sha256": "keepme"}]}
+    drive = _FakeDrive(manifests, children)
+
+    summary = runner.prune_drive_expired(drive, now)
+
+    assert summary["legacy_runs_kept"] == 1
+    assert drive.deleted == ["db-old"]
