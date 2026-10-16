@@ -252,6 +252,79 @@ def prune_local_staging(staging: Path, now: datetime, *, exclude: Path) -> list[
     return removed
 
 
+def drive_prune_enabled() -> bool:
+    return os.getenv("GV_BACKUP_DRIVE_PRUNE", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def prune_drive_expired(
+    client: GoogleDriveBackupClient,
+    now: datetime,
+    *,
+    protect_ids: set[str] | None = None,
+    dry_run: bool = False,
+) -> dict[str, object]:
+    """Remove do Drive as execuções GFS cujo ``retain_until`` já venceu.
+
+    Fail-closed: qualquer manifesto ilegível aborta a poda, e nada é apagado se
+    não restar ao menos uma execução vigente. Arquivos são content-addressed e
+    podem ser reaproveitados por execuções posteriores (bundle de código via
+    ``code_reference``, objetos por ``type:sha256``); esses nunca são excluídos
+    enquanto algum manifesto vigente (ou a execução em curso) os referenciar.
+    """
+    kept: list[dict[str, object]] = []
+    expired: list[tuple[dict[str, object], dict[str, object]]] = []
+    for meta in client.list_manifests():
+        payload = client.read_json(meta["id"])
+        try:
+            until = datetime.fromisoformat(payload["retain_until"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise BackupRunError(f"Manifesto {meta.get('id')} sem retain_until válido; poda abortada.") from exc
+        if until.tzinfo is None or until > now:
+            kept.append(payload)
+        else:
+            expired.append((meta, payload))
+    summary: dict[str, object] = {"dry_run": dry_run, "kept_runs": len(kept), "expired_runs": len(expired),
+                                  "deleted_files": 0, "freed_bytes": 0, "retained_shared_files": 0}
+    if not kept:
+        summary["skipped"] = "nenhuma execução vigente; nada apagado"
+        return summary
+
+    protected_ids = set(protect_ids or ())
+    protected_keys: set[str] = set()
+    for payload in kept:
+        reference = payload.get("code_reference") or {}
+        if reference.get("drive_file_id"):
+            protected_ids.add(str(reference["drive_file_id"]))
+        for item in payload.get("artifacts", []):
+            protected_keys.add(f"{item.get('type')}:{item.get('sha256')}")
+
+    for meta, _payload in expired:
+        folder_id = (meta.get("parents") or [None])[0]
+        if not folder_id:
+            continue
+        manifest_left = None
+        shared = 0
+        for child in client.list_children(folder_id):
+            if child["id"] == meta["id"]:
+                manifest_left = child
+                continue
+            key = (child.get("appProperties") or {}).get("gv_backup_object_key")
+            if child["id"] in protected_ids or (key and key in protected_keys) \
+                    or child.get("mimeType") == "application/vnd.google-apps.folder":
+                shared += 1
+                continue
+            if not dry_run:
+                client.delete_file(child["id"])
+            summary["deleted_files"] += 1
+            summary["freed_bytes"] += int(child.get("size") or 0)
+        summary["retained_shared_files"] += shared
+        if shared == 0 and manifest_left is not None and not dry_run:
+            client.delete_file(folder_id)  # remove a pasta e o manifesto restante
+        elif shared == 0 and manifest_left is not None:
+            summary["deleted_files"] += 1
+    return summary
+
+
 def create_drive_client(env_file: Path) -> GoogleDriveBackupClient:
     values = load_env_file(env_file)
     return GoogleDriveBackupClient(
@@ -309,6 +382,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--upload", action="store_true", help="Permite envio externo ao Google Drive.")
     parser.add_argument("--dry-run", action="store_true", help="Mostra o plano sem criar ou enviar artefatos.")
+    parser.add_argument(
+        "--prune-drive-only",
+        action="store_true",
+        help="Apenas poda execuções GFS vencidas no Drive (sem gerar backup). Use com --prune-dry-run para simular.",
+    )
+    parser.add_argument("--prune-dry-run", action="store_true", help="Com --prune-drive-only, lista sem apagar.")
     return parser.parse_args(argv)
 
 
@@ -319,6 +398,10 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     run_id = now.strftime("%Y%m%dT%H%M%S%z")
     tier, expires = retention_metadata(now)
     remote_folder = f"gfs/{tier}/{now:%Y/%m/%d}/{run_id}"
+    if args.prune_drive_only:
+        client = create_drive_client(Path(args.drive_env_file))
+        return {"ok": True, "mode": "prune-drive",
+                "drive_pruned": prune_drive_expired(client, now, dry_run=args.prune_dry_run)}
     if args.dry_run:
         return {"ok": True, "mode": "dry-run", "remote_folder": remote_folder, "upload_enabled": False}
     if not args.upload:
@@ -374,6 +457,15 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         records.append({"path": manifest, "type": "manifest"})
         artifacts = [BackupArtifact(item["path"], item.get("sha256") or sha256_file(item["path"]), item["type"], item.get("extra_properties", {})) for item in records]
         existing = existing_artifacts(client, artifacts)
+        drive_pruned: dict[str, object] | None = None
+        if drive_prune_enabled():
+            protect = {str(v["id"]) for v in existing.values()}
+            if existing_code:
+                protect.add(str(existing_code["id"]))
+            try:
+                drive_pruned = prune_drive_expired(client, now, protect_ids=protect)
+            except Exception as exc:  # poda nunca derruba o backup; a checagem de quota segue valendo
+                drive_pruned = {"error": str(exc)[:300]}
         required_bytes = sum(item.path.stat().st_size for item in artifacts if item.object_key not in existing)
         assert_drive_capacity(client.storage_quota(), required_bytes, minimum_free_bytes())
         results = upload_artifacts(client, artifacts, remote_folder, existing=existing)
@@ -385,7 +477,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             bundle.unlink()
         removed = prune_local_staging(staging, now, exclude=run_dir)
     return {"ok": True, "mode": "upload", "run_dir": str(run_dir), "remote_folder": remote_folder,
-            "retention_tier": tier, "retain_until": expires.isoformat(), "local_pruned_runs": removed, "results": results}
+            "retention_tier": tier, "retain_until": expires.isoformat(), "local_pruned_runs": removed, "drive_pruned": drive_pruned, "results": results}
 
 
 def _alert_setting(name: str, file_values: dict[str, str]) -> str:

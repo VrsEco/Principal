@@ -215,3 +215,91 @@ def test_no_alert_without_upload_flag(tmp_path, monkeypatch):
 
     assert runner.main() == 2
     assert calls == []
+
+
+class _FakeDrive:
+    def __init__(self, manifests, children):
+        self._manifests, self._children, self.deleted = manifests, children, []
+
+    def list_manifests(self):
+        return [m["meta"] for m in self._manifests]
+
+    def read_json(self, file_id):
+        return next(m["payload"] for m in self._manifests if m["meta"]["id"] == file_id)
+
+    def list_children(self, folder_id):
+        return self._children[folder_id]
+
+    def delete_file(self, file_id):
+        self.deleted.append(file_id)
+
+
+def _drive_fixture(now):
+    old = (now - timedelta(days=1)).isoformat()
+    new = (now + timedelta(days=30)).isoformat()
+    manifests = [
+        {"meta": {"id": "m-old", "parents": ["f-old"]},
+         "payload": {"retain_until": old, "artifacts": [], "code_reference": None}},
+        {"meta": {"id": "m-new", "parents": ["f-new"]},
+         "payload": {"retain_until": new, "code_reference": {"drive_file_id": "code-1"},
+                     "artifacts": [{"type": "database", "sha256": "keepme"}]}},
+    ]
+    children = {
+        "f-old": [
+            {"id": "m-old", "size": "10"},
+            {"id": "db-old", "size": "500", "appProperties": {"gv_backup_object_key": "database:gone"}},
+            {"id": "code-1", "size": "900", "appProperties": {"gv_backup_object_key": "code:abc"}},
+            {"id": "db-shared", "size": "400", "appProperties": {"gv_backup_object_key": "database:keepme"}},
+        ],
+        "f-new": [],
+    }
+    return manifests, children
+
+
+def test_prune_drive_deletes_only_unreferenced_files_of_expired_runs():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    drive = _FakeDrive(manifests, children)
+
+    summary = runner.prune_drive_expired(drive, now)
+
+    assert drive.deleted == ["db-old"]  # code-1 e db-shared seguem referenciados; pasta mantida
+    assert summary["freed_bytes"] == 500
+    assert summary["retained_shared_files"] == 2
+
+
+def test_prune_drive_removes_whole_folder_when_nothing_is_shared():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    manifests[1]["payload"]["code_reference"] = None
+    manifests[1]["payload"]["artifacts"] = []
+    drive = _FakeDrive(manifests, children)
+
+    runner.prune_drive_expired(drive, now)
+
+    assert drive.deleted == ["db-old", "code-1", "db-shared", "f-old"]
+
+
+def test_prune_drive_protects_ids_of_current_run_and_supports_dry_run():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    manifests[1]["payload"]["code_reference"] = None
+    manifests[1]["payload"]["artifacts"] = []
+    drive = _FakeDrive(manifests, children)
+
+    summary = runner.prune_drive_expired(drive, now, protect_ids={"code-1"}, dry_run=True)
+
+    assert drive.deleted == []
+    assert summary["deleted_files"] == 2 and summary["retained_shared_files"] == 1
+
+
+def test_prune_drive_never_deletes_without_a_current_run_or_with_bad_manifest():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    only_old = _FakeDrive(manifests[:1], children)
+    assert "skipped" in runner.prune_drive_expired(only_old, now)
+    assert only_old.deleted == []
+
+    manifests[1]["payload"].pop("retain_until")
+    with pytest.raises(runner.BackupRunError):
+        runner.prune_drive_expired(_FakeDrive(manifests, children), now)

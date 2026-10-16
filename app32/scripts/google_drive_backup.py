@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Envio *append-only* de artefatos de backup para o Google Drive.
 
-Esta ferramenta e executada no Configr. Ela deliberadamente nao implementa
-nenhuma chamada de exclusao ou de sobrescrita remota: cada artefato recebe um
-nome imutavel e uma segunda execucao do mesmo arquivo somente o ignora.
+Esta ferramenta e executada no Configr. Ela nao sobrescreve nada: cada artefato
+recebe um nome imutavel e uma segunda execucao do mesmo arquivo somente o
+ignora. A unica exclusao existente (``delete_file``) e acionada pela poda GFS
+de execucoes com ``retain_until`` vencido, em ``run_external_backup``.
 
 Os segredos devem ficar fora do Git, por exemplo em
 ``/home/app/.config/gv-backup/google_oauth.env`` (modo 0600). O token de
@@ -82,7 +83,7 @@ class BackupArtifact:
 
 
 class GoogleDriveBackupClient:
-    """Cliente minimo da Drive API sem operacoes destrutivas."""
+    """Cliente minimo da Drive API (exclusao restrita a ``delete_file``)."""
 
     def __init__(self, client_id: str, client_secret: str, refresh_token: str) -> None:
         self.client_id = client_id
@@ -180,6 +181,45 @@ class GoogleDriveBackupClient:
         )
         matches = self._list(query)
         return matches[0] if matches else None
+
+    def list_all(self, query: str) -> list[dict[str, Any]]:
+        """Lista todas as páginas de uma consulta (somente leitura)."""
+        files: list[dict[str, Any]] = []
+        token: str | None = None
+        while True:
+            params = {
+                "q": query,
+                "spaces": "drive",
+                "fields": "nextPageToken,files(id,name,mimeType,appProperties,size,createdTime,parents)",
+                "pageSize": 100,
+            }
+            if token:
+                params["pageToken"] = token
+            payload = self._request("GET", f"{DRIVE_API}/files", params=params).json()
+            files.extend(payload.get("files", []))
+            token = payload.get("nextPageToken")
+            if not token:
+                return files
+
+    def list_manifests(self) -> list[dict[str, Any]]:
+        """Manifestos de execução já enviados (um por pasta de execução)."""
+        return self.list_all(
+            "appProperties has { key='gv_backup_type' and value='manifest' } and trashed = false"
+        )
+
+    def list_children(self, folder_id: str) -> list[dict[str, Any]]:
+        return self.list_all(f"'{escape_drive_query(folder_id)}' in parents and trashed = false")
+
+    def read_json(self, file_id: str) -> Any:
+        response = self._request("GET", f"{DRIVE_API}/files/{file_id}", params={"alt": "media"})
+        return response.json()
+
+    def delete_file(self, file_id: str) -> None:
+        """Exclusão permanente (a lixeira continuaria ocupando a quota).
+
+        Usada exclusivamente pela poda GFS em ``run_external_backup``.
+        """
+        self._request("DELETE", f"{DRIVE_API}/files/{file_id}")
 
     def storage_quota(self) -> dict[str, int | None]:
         """Lê a quota da conta, sem alterar arquivos do Drive."""
