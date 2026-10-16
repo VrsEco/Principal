@@ -316,3 +316,43 @@ def test_prune_drive_keeps_legacy_manifest_without_retain_until_and_protects_its
 
     assert summary["legacy_runs_kept"] == 1
     assert drive.deleted == ["db-old"]
+
+
+class _VerifyDrive:
+    def __init__(self, objects, manifests):
+        self._objects, self._manifests = objects, manifests
+
+    def list_backup_objects(self):
+        return self._objects
+
+    def list_manifests(self):
+        return [{"id": k} for k in self._manifests]
+
+    def read_json(self, file_id):
+        return self._manifests[file_id]
+
+
+def _obj(file_id, key, size):
+    return {"id": file_id, "size": str(size), "appProperties": {"gv_backup_object_key": key}}
+
+
+def test_verify_drive_reports_missing_and_mismatched_files():
+    now = datetime.now(runner.TZ)
+    drive = _VerifyDrive(
+        [_obj("d1", "database:aaa", 10), _obj("c1", "code:ccc", 99)],
+        {
+            "good": {"artifacts": [{"type": "database", "name": "database.dump", "sha256": "aaa", "size": 10}],
+                     "code_reference": {"drive_file_id": "c1", "git_commit": "abcdef1234567"}},
+            "bad": {"artifacts": [{"type": "database", "name": "database.dump", "sha256": "zzz", "size": 10},
+                                  {"type": "code", "name": "source.bundle", "sha256": "ccc", "size": 5}],
+                    "code_reference": {"drive_file_id": "gone", "git_commit": "deadbeef0000"}},
+        },
+    )
+
+    result = runner.verify_drive_backups(drive, now)
+
+    assert (result["checked_runs"], result["ok_runs"], result["broken_runs"]) == (2, 1, 1)
+    problems = result["broken"][0]["problems"]
+    assert any("ausente: database" in p for p in problems)
+    assert any("tamanho divergente" in p for p in problems)
+    assert any("bundle de código ausente" in p for p in problems)
