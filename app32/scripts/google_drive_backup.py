@@ -207,6 +207,15 @@ class GoogleDriveBackupClient:
             "appProperties has { key='gv_backup_type' and value='manifest' } and trashed = false"
         )
 
+    def list_backup_objects(self) -> list[dict[str, Any]]:
+        """Todos os arquivos de backup (com ``gv_backup_object_key``) não excluídos."""
+        files: list[dict[str, Any]] = []
+        for kind in ("database", "code", "uploads", "uploads_inventory"):
+            files += self.list_all(
+                f"appProperties has {{ key='gv_backup_type' and value='{kind}' }} and trashed = false"
+            )
+        return files
+
     def list_children(self, folder_id: str) -> list[dict[str, Any]]:
         return self.list_all(f"'{escape_drive_query(folder_id)}' in parents and trashed = false")
 
