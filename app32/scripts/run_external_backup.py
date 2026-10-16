@@ -350,23 +350,29 @@ def verify_drive_backups(client: GoogleDriveBackupClient, now: datetime) -> dict
     for meta in client.list_manifests():
         payload = client.read_json(meta["id"])
         if not isinstance(payload, dict):
-            runs.append({"manifest_id": meta["id"], "problems": ["manifesto ilegível"]})
+            runs.append({"manifest_id": meta["id"], "errors": ["manifesto ilegível"], "warnings": []})
             continue
-        problems: list[str] = []
+        errors: list[str] = []
+        warnings: list[str] = []
         for art in payload.get("artifacts", []):
+            # Código é redundante com o Git; banco, anexos e inventário não são.
+            bucket = warnings if art.get("type") == "code" else errors
             found = by_key.get(f"{art.get('type')}:{art.get('sha256')}")
             if found is None:
-                problems.append(f"ausente: {art.get('type')} {art.get('name')}")
+                bucket.append(f"ausente: {art.get('type')} {art.get('name')}")
             elif art.get("size") is not None and found.get("size") not in (None, "")                     and int(found["size"]) != int(art["size"]):
-                problems.append(f"tamanho divergente: {art.get('name')}")
+                bucket.append(f"tamanho divergente: {art.get('name')}")
         ref = payload.get("code_reference") or {}
         if ref.get("drive_file_id") and str(ref["drive_file_id"]) not in ids:
-            problems.append(f"bundle de código ausente (commit {str(ref.get('git_commit'))[:10]})")
+            warnings.append(f"bundle de código ausente (commit {str(ref.get('git_commit'))[:10]})")
         runs.append({"manifest_id": meta["id"], "created_at": payload.get("created_at"),
-                     "tier": payload.get("retention_tier"), "problems": problems})
-    broken = [run for run in runs if run["problems"]]
-    return {"checked_runs": len(runs), "ok_runs": len(runs) - len(broken), "broken_runs": len(broken),
-            "broken": broken[:50], "checked_at": now.isoformat()}
+                     "tier": payload.get("retention_tier"), "errors": errors, "warnings": warnings})
+    with_errors = [run for run in runs if run["errors"]]
+    with_warnings = [run for run in runs if run["warnings"] and not run["errors"]]
+    return {"checked_runs": len(runs), "ok_runs": len(runs) - len(with_errors) - len(with_warnings),
+            "runs_with_errors": len(with_errors), "runs_with_code_warnings": len(with_warnings),
+            "data_restorable_runs": len(runs) - len(with_errors),
+            "errors": with_errors[:50], "checked_at": now.isoformat()}
 
 
 def create_drive_client(env_file: Path) -> GoogleDriveBackupClient:
@@ -434,7 +440,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--verify-drive",
         action="store_true",
-        help="Somente leitura: confere se os arquivos de cada manifesto no Drive existem e têm o tamanho registrado.",
+        help="Somente leitura: confere se os arquivos de cada manifesto no Drive existem e têm o tamanho registrado (código ausente é aviso; banco/anexos ausentes são erro).",
     )
     parser.add_argument("--prune-dry-run", action="store_true", help="Com --prune-drive-only, lista sem apagar.")
     return parser.parse_args(argv)
@@ -450,7 +456,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     if args.verify_drive:
         client = create_drive_client(Path(args.drive_env_file))
         result = verify_drive_backups(client, now)
-        return {"ok": result["broken_runs"] == 0, "mode": "verify-drive", "verification": result}
+        return {"ok": result["runs_with_errors"] == 0, "mode": "verify-drive", "verification": result}
     if args.prune_drive_only:
         client = create_drive_client(Path(args.drive_env_file))
         return {"ok": True, "mode": "prune-drive",
