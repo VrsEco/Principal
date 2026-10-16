@@ -161,12 +161,22 @@ def test_create_financial_schedule_secure_rejects_payload_company_different_from
     mcp = _FakeMCP()
     register_financial_mcp_tools(mcp)
 
-    response = mcp.registered["create_financial_schedule_secure"](10, {"company_id": 11})
+    response = mcp.registered["create_financial_schedule_secure"](10, {"company_id": 11}, "k1")
 
     assert response == {
         "success": False,
         "error": "company_id do payload diverge do tenant da requisição",
     }
+
+
+def test_create_financial_schedule_secure_requires_idempotency_key():
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_schedule_secure"](10, {}, "  ")
+
+    assert response["success"] is False
+    assert "idempotency_key" in response["error"]
 
 
 def test_delete_financial_entry_requires_valid_ids():

@@ -1018,13 +1018,14 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
         return {"success": True, "item": entry}
 
     @mcp.tool()
-    def create_financial_schedule_secure(company_id: int, payload: dict) -> dict:
+    def create_financial_schedule_secure(company_id: int, payload: dict, idempotency_key: str) -> dict:
         """
         Cria agendamento (título a pagar/receber, avulso ou recorrente) com tenant explícito.
 
         É o caminho obrigatório para contas a pagar/receber: o título aparece em
         Títulos Financeiros e no relatório correspondente no vencimento. Exige
         aprovação humana persistida; ``company_id`` do payload deve coincidir.
+        ``idempotency_key`` é obrigatória: repetir a chamada devolve o mesmo agendamento.
         """
         from services.financial_schedule_service import FinancialScheduleService
 
@@ -1042,9 +1043,25 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
             except (TypeError, ValueError):
                 return {"success": False, "error": "company_id do payload é inválido"}
         normalized_payload["company_id"] = company_id
+        key = str(idempotency_key or "").strip()
+        if not key or len(key) > 120:
+            return {"success": False, "error": "idempotency_key é obrigatória (até 120 caracteres)"}
+        normalized_payload["metadata_json"] = {**dict(normalized_payload.get("metadata_json") or {}), "idempotency_key": key}
+
+        def _create_once(*, payload: dict):
+            from models.financial import FinancialSchedule
+
+            existing = FinancialSchedule.query.filter(
+                FinancialSchedule.company_id == company_id,
+                FinancialSchedule.deleted_at.is_(None),
+                FinancialSchedule.metadata_json["idempotency_key"].astext == key,
+            ).first()
+            if existing is not None:
+                return {**existing.to_dict(), "idempotent_replay": True}, None
+            return FinancialScheduleService.create_schedule(payload=payload)
 
         result, error = _run_financial_action(
-            FinancialScheduleService.create_schedule,
+            _create_once,
             payload=_attach_mcp_audit_payload(normalized_payload),
         )
         if error:
