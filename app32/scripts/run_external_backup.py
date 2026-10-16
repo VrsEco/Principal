@@ -273,17 +273,24 @@ def prune_drive_expired(
     """
     kept: list[dict[str, object]] = []
     expired: list[tuple[dict[str, object], dict[str, object]]] = []
+    legacy = 0
     for meta in client.list_manifests():
         payload = client.read_json(meta["id"])
+        if not isinstance(payload, dict):
+            raise BackupRunError(f"Manifesto {meta.get('id')} ilegível; poda abortada.")
+        if not payload.get("retain_until"):
+            legacy += 1  # execução anterior ao GFS: sem prazo, nunca é apagada
+            kept.append(payload)
+            continue
         try:
             until = datetime.fromisoformat(payload["retain_until"])
-        except (KeyError, TypeError, ValueError) as exc:
-            raise BackupRunError(f"Manifesto {meta.get('id')} sem retain_until válido; poda abortada.") from exc
+        except (TypeError, ValueError) as exc:
+            raise BackupRunError(f"Manifesto {meta.get('id')} com retain_until inválido; poda abortada.") from exc
         if until.tzinfo is None or until > now:
             kept.append(payload)
         else:
             expired.append((meta, payload))
-    summary: dict[str, object] = {"dry_run": dry_run, "kept_runs": len(kept), "expired_runs": len(expired),
+    summary: dict[str, object] = {"dry_run": dry_run, "kept_runs": len(kept), "expired_runs": len(expired), "legacy_runs_kept": legacy,
                                   "deleted_files": 0, "freed_bytes": 0, "retained_shared_files": 0}
     if not kept:
         summary["skipped"] = "nenhuma execução vigente; nada apagado"
