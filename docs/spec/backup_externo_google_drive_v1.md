@@ -151,6 +151,25 @@ nada era removido do Drive. Corrigido nos PRs #185 e #186.
   vencidas, 23 arquivos / ~237 MB removíveis, 32 arquivos compartilhados
   preservados.
 
+## Verificação de integridade e regra de operação
+`run_external_backup.py --verify-drive` (somente leitura) cruza cada manifesto do
+Drive com os arquivos existentes (`tipo:sha256`, tamanho e `code_reference`).
+Banco, anexos e inventário ausentes ou com tamanho divergente são **erro**; código
+(`source.bundle`) ausente é **aviso**, pois o Git guarda o histórico. A saída traz
+`runs_with_errors`, `runs_with_code_warnings` e `data_restorable_runs`; `ok` é
+`false` só se houver erro. Não valida conteúdo: isso exige o exercício de restauração.
+
+Achado de 2026-10-16: após limpeza manual do Drive, 72 execuções verificadas, 67
+sem o bundle de código (apagado à mão) e 2 sem `database.dump` (12/10 18h e 22h);
+as demais tinham banco e anexos íntegros.
+
+**Regra:** não apagar arquivos de `GV-Backups` manualmente. Os artefatos são
+content-addressed e compartilhados entre execuções (o bundle de um commit é
+referenciado por várias); apagar à mão deixa manifestos vigentes apontando para
+arquivos inexistentes. Para liberar espaço use `--prune-drive-only` (com
+`--prune-dry-run` antes) e, depois de qualquer intervenção manual, rode
+`--verify-drive`.
+
 ## Pendências
 1. Acompanhar o próximo ciclo do cron (03h, 07h, 12h, 18h, 22h BRT) e confirmar que
    `last_status.json` fica com `ok: true` e `last_success_at` atualizado.

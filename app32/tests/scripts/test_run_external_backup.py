@@ -351,8 +351,25 @@ def test_verify_drive_reports_missing_and_mismatched_files():
 
     result = runner.verify_drive_backups(drive, now)
 
-    assert (result["checked_runs"], result["ok_runs"], result["broken_runs"]) == (2, 1, 1)
-    problems = result["broken"][0]["problems"]
-    assert any("ausente: database" in p for p in problems)
-    assert any("tamanho divergente" in p for p in problems)
-    assert any("bundle de código ausente" in p for p in problems)
+    assert (result["checked_runs"], result["ok_runs"]) == (2, 1)
+    assert (result["runs_with_errors"], result["data_restorable_runs"]) == (1, 1)
+    errors = result["errors"][0]["errors"]
+    warnings = result["errors"][0]["warnings"]
+    assert any("ausente: database" in p for p in errors)
+    assert any("tamanho divergente: source.bundle" in p for p in warnings)
+    assert any("bundle de código ausente" in p for p in warnings)
+
+
+def test_verify_drive_treats_missing_code_as_warning_only():
+    now = datetime.now(runner.TZ)
+    drive = _VerifyDrive(
+        [_obj("d1", "database:aaa", 10)],
+        {"m": {"artifacts": [{"type": "database", "name": "database.dump", "sha256": "aaa", "size": 10},
+                             {"type": "code", "name": "source.bundle", "sha256": "ccc", "size": 5}],
+               "code_reference": None}},
+    )
+
+    result = runner.verify_drive_backups(drive, now)
+
+    assert result["runs_with_errors"] == 0 and result["runs_with_code_warnings"] == 1
+    assert result["data_restorable_runs"] == 1
