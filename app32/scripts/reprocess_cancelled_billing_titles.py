@@ -35,6 +35,7 @@ from app import create_app  # noqa: E402
 from models import Company, db  # noqa: E402
 from services.contract_billing_orphan_titles_service import (  # noqa: E402
     ACTION_CANCEL,
+    ACTION_REVIEW,
     OrphanBillingTitlesService,
 )
 
@@ -59,20 +60,29 @@ def _dry_run(company_id: int, output_dir: Path) -> dict:
     return {"company_id": company_id, "rows": len(rows), "totais": summary, "metricas": metrics, "arquivos": files}
 
 
-def _execute(company_id: int, user_id: int, approved_file: Path, output_dir: Path) -> dict:
+def _execute(company_id: int, user_id: int, approved_file: Path, output_dir: Path, accepted_review: set[str]) -> dict:
     approved = json.loads(approved_file.read_text(encoding="utf-8"))
     if int(approved.get("meta", {}).get("company_id", 0)) != company_id:
         raise SystemExit("O dry-run aprovado pertence a outra empresa.")
-    approved_entry_ids = {int(row["entry_id"]) for row in approved.get("titulos", []) if row.get("acao") == ACTION_CANCEL}
+    rows = approved.get("titulos", [])
+    approved_entry_ids = {
+        int(row["entry_id"])
+        for row in rows
+        if row.get("acao") == ACTION_CANCEL or (row.get("acao") == ACTION_REVIEW and row.get("billing_code") in accepted_review)
+    }
     if not approved_entry_ids:
-        raise SystemExit("Nenhum título com ação 'cancelar' no dry-run aprovado.")
+        raise SystemExit("Nenhum título aprovado ('cancelar' ou 'revisar' aceito) no dry-run.")
+    unknown = accepted_review - {row.get("billing_code") for row in rows if row.get("acao") == ACTION_REVIEW}
+    if unknown:
+        raise SystemExit(f"Faturamentos aceitos que não estão como 'revisar' no dry-run: {sorted(unknown)}")
 
     stamp = _stamp()
     before = OrphanBillingTitlesService.ledger_metrics(company_id=company_id)
     groups = [
         group
         for group in OrphanBillingTitlesService.scan(company_id=company_id)
-        if group["action"] == ACTION_CANCEL and approved_entry_ids.intersection(item["entry"].id for item in group["analyses"])
+        if OrphanBillingTitlesService.is_eligible(group, accepted_review)
+        and approved_entry_ids.intersection(item["entry"].id for item in group["analyses"])
     ]
     entries = [item["entry"] for group in groups for item in group["analyses"]]
     snapshot_path = output_dir / f"snapshot_antes_company{company_id}_{stamp}.json"
@@ -88,7 +98,12 @@ def _execute(company_id: int, user_id: int, approved_file: Path, output_dir: Pat
     )
     print(f"Snapshot gravado em {snapshot_path}")
 
-    results = OrphanBillingTitlesService.execute(company_id=company_id, user_id=user_id, approved_entry_ids=approved_entry_ids)
+    results = OrphanBillingTitlesService.execute(
+        company_id=company_id,
+        user_id=user_id,
+        approved_entry_ids=approved_entry_ids,
+        accepted_review_billing_codes=accepted_review,
+    )
     after = OrphanBillingTitlesService.ledger_metrics(company_id=company_id)
     report = {
         "company_id": company_id,
@@ -122,6 +137,11 @@ def main() -> int:
     parser.add_argument("--execute", action="store_true", help="Aplica o cancelamento (exige --approved-dry-run e --user-id).")
     parser.add_argument("--approved-dry-run", help="JSON do dry-run aprovado por um humano.")
     parser.add_argument("--user-id", type=int, help="Usuário registrado na auditoria da execução.")
+    parser.add_argument(
+        "--accept-reviewed-billings",
+        default="",
+        help="Códigos de faturamento (AL.B.007,AL.B.008,...) em 'revisar' que um humano aceitou cancelar. Nunca libera 'bloqueado'.",
+    )
     args = parser.parse_args()
 
     if args.execute and args.all_companies:
@@ -135,7 +155,8 @@ def main() -> int:
     app = create_app()
     with app.app_context():
         if args.execute:
-            report = _execute(args.company_id, args.user_id, Path(args.approved_dry_run), output_dir)
+            accepted = {code.strip() for code in args.accept_reviewed_billings.split(',') if code.strip()}
+            report = _execute(args.company_id, args.user_id, Path(args.approved_dry_run), output_dir, accepted)
             print(json.dumps({k: report[k] for k in ("faturamentos_cancelados", "variacao_receber_aberto", "faturamentos_ativos_intactos")}, ensure_ascii=False, indent=2))
             return 1 if report["faturamentos_com_erro"] else 0
 

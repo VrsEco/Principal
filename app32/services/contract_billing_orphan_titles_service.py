@@ -284,21 +284,32 @@ class OrphanBillingTitlesService:
         return totals
 
     @staticmethod
+    def is_eligible(group: dict, accepted_review_billing_codes: Optional[set[str]] = None) -> bool:
+        if group["action"] == ACTION_CANCEL:
+            return True
+        return group["action"] == ACTION_REVIEW and group["billing"].billing_code in (accepted_review_billing_codes or set())
+
+    @staticmethod
     def execute(
         *,
         company_id: int,
         user_id: int,
         approved_entry_ids: set[int],
+        accepted_review_billing_codes: Optional[set[str]] = None,
         log=print,
     ) -> list[dict]:
-        """Cancela os grupos aprovados que continuam com ação ``cancelar``. Um commit por faturamento."""
+        """Cancela os grupos aprovados que continuam elegíveis. Um commit por faturamento.
+
+        Elegível = ação ``cancelar`` ou, só para os faturamentos aceitos explicitamente por
+        um humano, ação ``revisar``. Nunca ``bloqueado``.
+        """
         results: list[dict] = []
         for group in OrphanBillingTitlesService.scan(company_id=company_id):
             billing = group["billing"]
             entry_ids = [item["entry"].id for item in group["analyses"]]
             if not approved_entry_ids.intersection(entry_ids):
                 continue
-            if group["action"] != ACTION_CANCEL:
+            if not OrphanBillingTitlesService.is_eligible(group, accepted_review_billing_codes):
                 log(f"[ignorado] {billing.billing_code}: ação atual '{group['action']}' ({'; '.join(group['reasons'])})")
                 results.append({"billing_code": billing.billing_code, "entry_ids": entry_ids, "resultado": f"ignorado_{group['action']}"})
                 continue
