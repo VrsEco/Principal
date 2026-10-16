@@ -139,3 +139,167 @@ def test_upload_records_keep_relative_paths_in_inventory_not_drive_properties(tm
     assert asset_record["type"] == "uploads"
     assert "extra_properties" not in asset_record
     assert metadata["files_count"] == 1
+
+
+def _alert_args(tmp_path):
+    return runner.parse_args(
+        ["--repo", str(tmp_path), "--staging-dir", str(tmp_path / "staging"),
+         "--drive-env-file", str(tmp_path / "missing.env"), "--upload"]
+    )
+
+
+def test_failure_sends_alert_once_within_throttle_window(tmp_path, monkeypatch):
+    sent = []
+    monkeypatch.setenv("GV_BACKUP_ALERT_WEBHOOK_URL", "https://alerts.example/hook")
+    monkeypatch.setattr(runner, "send_failure_alert", lambda settings, subject, body: sent.append(body) or ["webhook"])
+    args = _alert_args(tmp_path)
+
+    runner.notify_failure(args, "Nao foi possivel renovar token OAuth (HTTP 400).")
+    runner.notify_failure(args, "Nao foi possivel renovar token OAuth (HTTP 400).")
+
+    assert len(sent) == 1
+    assert "renovar token OAuth" in sent[0]
+    status = json.loads((tmp_path / "staging" / "last_status.json").read_text(encoding="utf-8"))
+    assert status["ok"] is False
+
+
+def test_alert_repeats_after_throttle_window(tmp_path):
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    old = datetime.now(runner.TZ) - timedelta(hours=13)
+    (staging / ".last-alert.json").write_text(json.dumps({"sent_at": old.isoformat()}), encoding="utf-8")
+
+    assert runner.should_send_alert(staging, datetime.now(runner.TZ), 12) is True
+
+
+def test_alert_failure_never_masks_original_error(tmp_path, monkeypatch):
+    def boom(*_args):
+        raise OSError("smtp indisponivel")
+
+    monkeypatch.setattr(runner, "send_failure_alert", boom)
+    monkeypatch.setenv("GV_BACKUP_ALERT_WEBHOOK_URL", "https://alerts.example/hook")
+
+    runner.notify_failure(_alert_args(tmp_path), "erro original")  # nao deve levantar
+
+
+def test_main_alerts_on_drive_error_and_returns_nonzero(tmp_path, monkeypatch):
+    calls = []
+    args = _alert_args(tmp_path)
+    monkeypatch.setattr(runner, "parse_args", lambda: args)
+
+    def failing_run(_args):
+        raise sys.modules["google_drive_backup"].BackupDriveError("token expirado")
+
+    monkeypatch.setattr(runner, "run", failing_run)
+    monkeypatch.setattr(runner, "notify_failure", lambda args, error: calls.append(error))
+
+    assert runner.main() == 2
+    assert calls == ["token expirado"]
+
+
+def test_main_records_success_status(tmp_path, monkeypatch):
+    args = _alert_args(tmp_path)
+    monkeypatch.setattr(runner, "parse_args", lambda: args)
+    monkeypatch.setattr(runner, "run", lambda _args: {"ok": True, "mode": "upload"})
+
+    assert runner.main() == 0
+    status = json.loads((tmp_path / "staging" / "last_status.json").read_text(encoding="utf-8"))
+    assert status["ok"] is True and status["last_success_at"]
+
+
+def test_no_alert_without_upload_flag(tmp_path, monkeypatch):
+    calls = []
+    args = runner.parse_args(["--repo", str(tmp_path), "--staging-dir", str(tmp_path / "staging")])
+    monkeypatch.setattr(runner, "parse_args", lambda: args)
+    monkeypatch.setattr(runner, "notify_failure", lambda *_: calls.append(1))
+
+    assert runner.main() == 2
+    assert calls == []
+
+
+class _FakeDrive:
+    def __init__(self, manifests, children):
+        self._manifests, self._children, self.deleted = manifests, children, []
+
+    def list_manifests(self):
+        return [m["meta"] for m in self._manifests]
+
+    def read_json(self, file_id):
+        return next(m["payload"] for m in self._manifests if m["meta"]["id"] == file_id)
+
+    def list_children(self, folder_id):
+        return self._children[folder_id]
+
+    def delete_file(self, file_id):
+        self.deleted.append(file_id)
+
+
+def _drive_fixture(now):
+    old = (now - timedelta(days=1)).isoformat()
+    new = (now + timedelta(days=30)).isoformat()
+    manifests = [
+        {"meta": {"id": "m-old", "parents": ["f-old"]},
+         "payload": {"retain_until": old, "artifacts": [], "code_reference": None}},
+        {"meta": {"id": "m-new", "parents": ["f-new"]},
+         "payload": {"retain_until": new, "code_reference": {"drive_file_id": "code-1"},
+                     "artifacts": [{"type": "database", "sha256": "keepme"}]}},
+    ]
+    children = {
+        "f-old": [
+            {"id": "m-old", "size": "10"},
+            {"id": "db-old", "size": "500", "appProperties": {"gv_backup_object_key": "database:gone"}},
+            {"id": "code-1", "size": "900", "appProperties": {"gv_backup_object_key": "code:abc"}},
+            {"id": "db-shared", "size": "400", "appProperties": {"gv_backup_object_key": "database:keepme"}},
+        ],
+        "f-new": [],
+    }
+    return manifests, children
+
+
+def test_prune_drive_deletes_only_unreferenced_files_of_expired_runs():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    drive = _FakeDrive(manifests, children)
+
+    summary = runner.prune_drive_expired(drive, now)
+
+    assert drive.deleted == ["db-old"]  # code-1 e db-shared seguem referenciados; pasta mantida
+    assert summary["freed_bytes"] == 500
+    assert summary["retained_shared_files"] == 2
+
+
+def test_prune_drive_removes_whole_folder_when_nothing_is_shared():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    manifests[1]["payload"]["code_reference"] = None
+    manifests[1]["payload"]["artifacts"] = []
+    drive = _FakeDrive(manifests, children)
+
+    runner.prune_drive_expired(drive, now)
+
+    assert drive.deleted == ["db-old", "code-1", "db-shared", "f-old"]
+
+
+def test_prune_drive_protects_ids_of_current_run_and_supports_dry_run():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    manifests[1]["payload"]["code_reference"] = None
+    manifests[1]["payload"]["artifacts"] = []
+    drive = _FakeDrive(manifests, children)
+
+    summary = runner.prune_drive_expired(drive, now, protect_ids={"code-1"}, dry_run=True)
+
+    assert drive.deleted == []
+    assert summary["deleted_files"] == 2 and summary["retained_shared_files"] == 1
+
+
+def test_prune_drive_never_deletes_without_a_current_run_or_with_bad_manifest():
+    now = datetime.now(runner.TZ)
+    manifests, children = _drive_fixture(now)
+    only_old = _FakeDrive(manifests[:1], children)
+    assert "skipped" in runner.prune_drive_expired(only_old, now)
+    assert only_old.deleted == []
+
+    manifests[1]["payload"].pop("retain_until")
+    with pytest.raises(runner.BackupRunError):
+        runner.prune_drive_expired(_FakeDrive(manifests, children), now)
