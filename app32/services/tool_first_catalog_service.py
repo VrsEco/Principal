@@ -301,6 +301,8 @@ class ToolFirstCatalogService:
                 "toggle_financial_catalog_item",
                 "list_financial_schedules",
                 "create_financial_schedule",
+                "create_financial_schedule_secure",
+                "delete_financial_entry",
                 "update_financial_schedule",
                 "toggle_financial_schedule",
                 "generate_due_financial_schedules",

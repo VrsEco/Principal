@@ -56,6 +56,8 @@ PILOT_ANALYTICS_FINANCE_READ_TOOL_NAMES: tuple[str, ...] = (
 )
 PILOT_FINANCE_OPERATIONAL_TOOL_NAMES: tuple[str, ...] = (
     "create_financial_entry",
+    "create_financial_schedule_secure",
+    "delete_financial_entry",
     "create_financial_settlement",
 )
 PILOT_UNIFIED_PRIVILEGED_TOOL_NAMES: tuple[str, ...] = (
