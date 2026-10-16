@@ -5,7 +5,7 @@
 **Owner:** Engenharia Versus
 
 ## Objetivo
-Criar cópia externa diretamente do Configr para a conta dedicada `versusconsultoria@gmail.com`, sem depender de sincronização local, sem senha no repositório e sem exclusão automática no Google Drive.
+Criar cópia externa diretamente do Configr para a conta dedicada `versusconsultoria@gmail.com`, sem depender de sincronização local, sem senha no repositório e com exclusão remota restrita à poda GFS de execuções vencidas (ver "Poda GFS no Drive").
 
 ## Escopo da fase 1
 - banco PostgreSQL: dump lógico comprimido + checksum + manifesto;
@@ -18,12 +18,11 @@ Criar cópia externa diretamente do Configr para a conta dedicada `versusconsult
 - até 30 dias: todos os snapshots;
 - dias 31–90: somente snapshots executados às 03h;
 - dias 91–180: somente snapshots do dia 1 às 03h;
-- nenhum artefato remoto é removido automaticamente na fase 1.
+- execuções vencidas são removidas do Drive pela poda GFS (ver "Poda GFS no Drive"); fora dela, nada remoto é removido.
 
-O prazo mensal oficial desta fase é **180 dias**, não 365. Como o Drive não
-recebe exclusão automática, os três níveis são registrados em `retention_tier`
-e `retain_until` no manifesto; a limpeza do Drive é procedimento manual
-autorizado. O staging local pode eliminar exclusivamente diretórios já vencidos
+O prazo mensal oficial desta fase é **180 dias**, não 365. Os três níveis são
+registrados em `retention_tier` e `retain_until` no manifesto, e é esse prazo
+que a poda GFS usa para remover execuções do Drive. O staging local pode eliminar exclusivamente diretórios já vencidos
 e com manifesto válido.
 
 ## Segurança
@@ -32,7 +31,8 @@ e com manifesto válido.
 - cliente OAuth e arquivo de configuração protegidos no Configr, em diretório
   exclusivo com permissão `0600`; nenhum segredo é incluído em código, `.env` ou Git;
 - escopo previsto: `drive.file`. A implementação usa somente leitura/criação/upload;
-  ela não contém operação remota de exclusão ou sobrescrita. O escopo, porém, não
+  ela não sobrescreve objetos; a única exclusão remota é a poda GFS
+  (`delete_file`, exclusão permanente, sem lixeira). O escopo, porém, não
   transforma o Drive pessoal em armazenamento imutável;
 - MFA obrigatório e auditoria de uploads/manifests;
 - falha de upload, checksum ou espaço gera alerta e bloqueia conclusão do job;
@@ -127,20 +127,44 @@ Para não repetir o aviso a cada execução (5 por dia), há intervalo mínimo d
 registrada no log e em `last_status.json`; configurar ao menos um canal é
 condição para considerar a rotina monitorada.
 
+## Poda GFS no Drive
+Incidente de 2026-10-16: o backup falhou por falta de espaço (1,45 GB livres;
+1,56 GB exigidos, incluindo reserva de 1 GB), pois o envio era append-only e
+nada era removido do Drive. Corrigido nos PRs #185 e #186.
+
+- `prune_drive_expired` (em `run_external_backup.py`) roda a cada backup, antes da
+  checagem de quota, e remove do Drive as execuções cujo `retain_until` do
+  manifesto já venceu.
+- Exclusão permanente (a lixeira continuaria ocupando quota).
+- Não apaga arquivo referenciado por manifesto vigente (`code_reference` ou
+  `tipo:sha256`) nem pelos objetos da execução em curso, pois os artefatos são
+  content-addressed e reaproveitados entre execuções.
+- Fail-closed: manifesto ilegível ou com data inválida aborta a poda; sem
+  execução vigente nada é apagado. Manifestos legados sem `retain_until`
+  (anteriores ao GFS) são mantidos (`legacy_runs_kept`).
+- Erro na poda não derruba o backup (`drive_pruned.error`); a checagem de quota
+  segue valendo.
+- Operação: `run_external_backup.py --prune-drive-only [--prune-dry-run]`; a poda
+  automática desliga com `GV_BACKUP_DRIVE_PRUNE=0`. O cron usa o Python do
+  virtualenv (`.virtualenv/3.12/bin/python`), não o `python` do sistema.
+- Simulação em produção (2026-10-16): 70 execuções vigentes (2 legadas), 12
+  vencidas, 23 arquivos / ~237 MB removíveis, 32 arquivos compartilhados
+  preservados.
+
 ## Pendências
 1. Acompanhar o próximo ciclo do cron (03h, 07h, 12h, 18h, 22h BRT) e confirmar que
    `last_status.json` fica com `ok: true` e `last_success_at` atualizado.
 2. Localizar e recuperar, se possível, os binários históricos da automação
    financeira ausentes do storage canônico.
 3. Exercício documentado de restauração isolada de banco, código e anexos.
-4. Definir procedimento humano e periodicidade para limpeza remota após o prazo GFS.
+4. Acompanhar as primeiras podas reais (campo `drive_pruned` no log do cron) e revisar a retenção se o Drive voltar a encher.
 5. Corrigir a sincronização local do Windows (`download_backups.py`, falha de
    autenticação SSH desde 2026-09-12), que hoje também falha sem aviso.
 6. Revisar o texto da Política de Privacidade (razão social, encarregado/DPO, prazos).
 
 ## Componentes implementados
-- `app32/scripts/google_drive_backup.py`: uploader direto do Configr, append-only,
-  com hash SHA-256, idempotência por `appProperties` e upload resumível.
+- `app32/scripts/google_drive_backup.py`: uploader direto do Configr, sem sobrescrita
+  (exclusão só via poda GFS), com hash SHA-256, idempotência por `appProperties` e upload resumível.
 - `app32/scripts/google_drive_authorize.py`: auxiliar local de autorização OAuth
   com callback em loopback; deve ser executado somente em estação confiável.
 - `app32/scripts/run_external_backup.py`: orquestrador protegido que gera dump
@@ -152,4 +176,4 @@ condição para considerar a rotina monitorada.
   essa opção está ativa no cron produtivo.
 
 ## Fora do escopo
-Não usar cópia local como requisito, não gravar credenciais no `.env`, não executar limpeza remota automática e não substituir backup/PITR por snapshot de provedor.
+Não usar cópia local como requisito, não gravar credenciais no `.env`, não executar exclusão remota fora da poda GFS e não substituir backup/PITR por snapshot de provedor.
