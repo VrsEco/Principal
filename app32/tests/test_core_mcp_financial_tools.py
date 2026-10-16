@@ -4,6 +4,8 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
+
 from src.core.mcp_financial_tools import register_financial_mcp_tools
 
 
@@ -123,6 +125,37 @@ def test_create_financial_entry_rejects_payload_company_different_from_explicit_
         "success": False,
         "error": "company_id do payload diverge do tenant da requisição",
     }
+
+
+@pytest.mark.parametrize("entry_type", ["payable", "receivable"])
+def test_create_financial_entry_rejects_title_types_outside_schedule(entry_type):
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_entry"](10, {"entry_type": entry_type})
+
+    assert response["success"] is False
+    assert "create_financial_schedule_secure" in response["error"]
+
+
+def test_create_financial_schedule_secure_rejects_payload_company_different_from_tenant():
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_schedule_secure"](10, {"company_id": 11})
+
+    assert response == {
+        "success": False,
+        "error": "company_id do payload diverge do tenant da requisição",
+    }
+
+
+def test_delete_financial_entry_requires_valid_ids():
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    assert mcp.registered["delete_financial_entry"](0, 5)["success"] is False
+    assert mcp.registered["delete_financial_entry"](10, 0)["success"] is False
 
 
 def test_create_financial_schedule_attaches_agent_audit_context(monkeypatch):

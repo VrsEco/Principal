@@ -1863,6 +1863,19 @@ class FinancialService:
                 db.session.add(allocation)
                 created.append(allocation)
 
+            if len(normalized_allocations) == 1:
+                single = normalized_allocations[0]
+                covers_entry = (
+                    single.percentage == Decimal("100")
+                    if single.allocation_type == "percentage"
+                    else single.allocated_amount in {entry.original_amount, principal_basis_amount}
+                )
+                if covers_entry:
+                    if entry.chart_account_id is None and single.chart_account_id:
+                        entry.chart_account_id = single.chart_account_id
+                    if entry.cost_center_id is None and single.cost_center_id:
+                        entry.cost_center_id = single.cost_center_id
+
             financial_commit(db.session)
             return created, None
         except Exception as exc:
