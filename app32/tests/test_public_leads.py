@@ -177,14 +177,18 @@ def test_ip_is_stored_only_as_hash():
     assert len(digest) == 64 and "203" not in digest
 
 
-def test_cors_origin_header_omitted_when_proxy_owns_it(client):
+def test_cors_origin_header_split_with_proxy(client):
     client.application.config["LEADS_EMIT_CORS_ORIGIN"] = False
     preflight = client.options("/public/leads", headers={"Origin": ORIGIN})
     assert preflight.status_code == 204
     assert "Access-Control-Allow-Origin" not in preflight.headers
     assert preflight.headers["Access-Control-Allow-Methods"] == "POST, OPTIONS"
-    ok = _post(client, _payload())
-    assert ok.status_code == 202
-    assert "Access-Control-Allow-Origin" not in ok.headers
+    created = _post(client, _payload())
+    assert created.status_code == 202
+    assert created.headers["Access-Control-Allow-Origin"] == ORIGIN
+    rejected = _post(client, {"source": "site-a"})
+    assert rejected.status_code == 400
+    assert rejected.headers["Access-Control-Allow-Origin"] == ORIGIN
     bad = _post(client, _payload(), origin="https://evil.example.org")
     assert bad.status_code == 403
+    assert "Access-Control-Allow-Origin" not in bad.headers
