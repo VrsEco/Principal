@@ -248,7 +248,7 @@ class SiteLeadService:
 
             result, error = ProjectTaskMCPService.create_task(**SiteLeadService._task_kwargs(lead, source_cfg))
             if error or not result:
-                logger.warning("site_lead task_not_created lead=%s", lead.id)
+                logger.warning("site_lead task_not_created lead=%s error=%s", lead.id, error or "sem resultado")
                 return None
             return int(result["task"]["id"])
         except Exception:
