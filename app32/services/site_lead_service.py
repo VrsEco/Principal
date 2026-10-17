@@ -5,7 +5,7 @@ import hmac
 import json
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 from urllib.parse import urlparse
 
@@ -212,6 +212,27 @@ class SiteLeadService:
         )
 
     @staticmethod
+    def next_business_day(today: date | None = None) -> date:
+        """Prazo padrão da tarefa do lead: 1 dia útil (segunda a sexta, sem feriados) em America/Bahia (UTC-3)."""
+        base = today or (datetime.utcnow() - timedelta(hours=3)).date()
+        due = base + timedelta(days=1)
+        while due.weekday() >= 5:
+            due += timedelta(days=1)
+        return due
+
+    @staticmethod
+    def _task_kwargs(lead: SiteLead, source_cfg: dict[str, Any], today: date | None = None) -> dict[str, Any]:
+        return {
+            "company_id": lead.company_id,
+            "user_id": int(source_cfg["task_user_id"]),
+            "project_code": str(source_cfg["project_code"]),
+            "task_name": f"Lead novo: {lead.assunto}",
+            "notes": SiteLeadService._task_notes(lead),
+            "idempotency_key": f"site_lead:{lead.id}",
+            "due_date": SiteLeadService.next_business_day(today).isoformat(),
+        }
+
+    @staticmethod
     def _create_owner_task(lead: SiteLead, source_cfg: dict[str, Any]) -> int | None:
         """Tarefa 'novo' no projeto do dono; falha aqui nunca derruba o registro do lead."""
         project_code = source_cfg.get("project_code")
@@ -222,13 +243,7 @@ class SiteLeadService:
             from services.project_task_mcp_service import ProjectTaskMCPService
 
             with db.session.begin_nested():
-                result, error = ProjectTaskMCPService.create_task(
-                    company_id=lead.company_id,
-                    user_id=int(user_id),
-                    project_code=str(project_code),
-                    task_name=f"Lead novo: {lead.assunto}",
-                    notes=SiteLeadService._task_notes(lead),
-                )
+                result, error = ProjectTaskMCPService.create_task(**SiteLeadService._task_kwargs(lead, source_cfg))
             if error or not result:
                 logger.warning("site_lead task_not_created lead=%s", lead.id)
                 return None

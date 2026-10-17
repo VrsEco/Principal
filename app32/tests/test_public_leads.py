@@ -192,3 +192,28 @@ def test_cors_origin_header_split_with_proxy(client):
     bad = _post(client, _payload(), origin="https://evil.example.org")
     assert bad.status_code == 403
     assert "Access-Control-Allow-Origin" not in bad.headers
+
+
+def test_next_business_day_skips_weekend():
+    from datetime import date
+
+    service = public_leads.leads.SiteLeadService
+    assert service.next_business_day(date(2026, 10, 16)) == date(2026, 10, 19)  # sexta -> segunda
+    assert service.next_business_day(date(2026, 10, 17)) == date(2026, 10, 19)  # sabado -> segunda
+    assert service.next_business_day(date(2026, 10, 19)) == date(2026, 10, 20)  # segunda -> terca
+
+
+def test_owner_task_kwargs_match_create_task_signature():
+    import inspect
+    from datetime import date
+    from types import SimpleNamespace
+
+    from services.project_task_mcp_service import ProjectTaskMCPService
+
+    lead = SimpleNamespace(id="abc", company_id=9, assunto="Outro assunto", utm_source=None, utm_medium=None,
+                           utm_campaign=None, page=None, nome="N", relato="R")
+    cfg = {"project_code": "AA.J.26", "task_user_id": 3}
+    kwargs = public_leads.leads.SiteLeadService._task_kwargs(lead, cfg, today=date(2026, 10, 16))
+    inspect.signature(ProjectTaskMCPService.create_task).bind(**kwargs)
+    assert kwargs["due_date"] == "2026-10-19"
+    assert kwargs["idempotency_key"] == "site_lead:abc"
