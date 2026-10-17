@@ -8,6 +8,7 @@
     const tbody = document.getElementById('schedule-table-body');
     const kpis = Array.from(document.querySelectorAll('#schedule-kpis .sched-kpi'));
     const filtersCount = document.getElementById('schedule-filters-count');
+    const periodBanner = document.getElementById('schedule-period-banner');
     const clearFiltersButton = document.getElementById('schedule-clear-filters');
     const sidebarClearFiltersButton = document.getElementById('schedule-sidebar-clear-filters');
     const filters = {
@@ -185,6 +186,15 @@
       }, 0);
 
       if (filtersCount) filtersCount.textContent = String(activeCount);
+      if (periodBanner) {
+        const from = String(filters.dueDateFrom?.value || '').trim();
+        const to = String(filters.dueDateTo?.value || '').trim();
+        const fmt = (iso) => iso.split('-').reverse().join('/');
+        periodBanner.hidden = !(from || to);
+        periodBanner.textContent = (from || to)
+          ? 'Filtro de vencimento ativo: ' + (from ? fmt(from) : 'início') + ' a ' + (to ? fmt(to) : 'sem limite') + '. Use "Limpar filtros" para ver todos os títulos.'
+          : '';
+      }
     }
 
     async function fetchJson(url, options) {

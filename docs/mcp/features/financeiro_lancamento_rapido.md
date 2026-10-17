@@ -49,10 +49,12 @@ Registrar em um único passo um movimento financeiro que já aconteceu (pagament
 5. Ao confirmar, o sistema cria **de uma vez** o título, o lançamento e a baixa (liquidação), já como um movimento efetivado — diferente do fluxo de Agendamentos, que separa a criação do título da baixa futura.
 
 ## Uso por IA / MCP
-Hoje esta feature é **operacional apenas no APP** — não há tool MCP dedicada ao lançamento rápido. Via MCP, a IA pode:
+Lançamento rápido **não substitui agendamento**. Conta a pagar ou a receber (título que ainda vai vencer) é sempre um agendamento: via MCP, use `create_financial_schedule_secure` (ver a feature `financeiro_agendamentos`). A tool `create_financial_entry` recusa `payable` e `receivable`.
+
+Via MCP, a IA pode:
 - consultar lançamentos já existentes (`list_financial_entries`) para dar contexto sobre movimentos já registrados;
 - explicar quando usar lançamento rápido em vez de agendamento, usando este guia;
-- **não pode** criar lançamento rápido por MCP — essa ação ainda não é capability canônica remota.
+- **não pode** criar lançamento rápido por MCP: essa ação ainda não é capability canônica remota.
 
 Qualquer evolução futura que exponha lançamento rápido via MCP deve seguir o mesmo padrão de mutação sensível já usado em `create_financial_settlement` (gate humano obrigatório).
 

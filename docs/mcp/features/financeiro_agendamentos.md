@@ -57,12 +57,48 @@ Cadastrar e gerenciar títulos financeiros — a pagar ou a receber, avulsos ou 
 8. Excluir um agendamento que já tem baixas ativas exige atenção — normalmente exige tratar as baixas antes.
 
 ## Uso por IA / MCP
-Hoje esta feature é **operacional apenas no APP** — não há tool MCP dedicada à criação ou gestão de agendamentos. Via MCP, a IA pode:
-- consultar lançamentos e catálogos financeiros já existentes (`list_financial_entries`, `list_financial_catalog_items`) para dar contexto sobre títulos já cadastrados;
-- explicar o fluxo de agendamento (avulso ou recorrente) usando este guia, orientando o usuário a executar os passos no APP;
-- **não pode** criar, editar, pausar, excluir agendamento nem gerar lançamento/baixa por MCP — essas ações ainda não são capability canônica remota.
+Regra do produto: **toda conta a pagar ou a receber é um agendamento** (Títulos Financeiros). Nunca crie conta a pagar/receber por `create_financial_entry`: a tool recusa `payable` e `receivable`.
 
-Qualquer evolução futura que exponha agendamentos via MCP deve seguir o mesmo padrão de mutação sensível já usado em `create_financial_settlement` (gate humano obrigatório).
+Tools disponíveis:
+- `create_financial_schedule_secure(company_id, payload, idempotency_key)`: cria o agendamento (avulso com `frequency: "one_time"` ou recorrente). **Exige aprovação humana** (gate) no APP32: a primeira chamada devolve o número da solicitação; após a aprovação, repita exatamente a mesma chamada. Repetir com a mesma `idempotency_key` devolve o mesmo agendamento, sem duplicar.
+- `list_financial_schedules`, `update_financial_schedule`, `toggle_financial_schedule`, `generate_due_financial_schedules`: consulta e gestão.
+- `delete_financial_entry(company_id, entry_id)`: exclusão lógica de lançamento criado por conector MCP, sem baixa, conciliação, borderô ou agendamento vinculado. Exige aprovação humana. Para desfazer um agendamento, use `toggle_financial_schedule` com status `cancelled`.
+
+Campos aceitos no `payload` (o `company_id` do payload, se informado, deve coincidir com o da chamada):
+- obrigatórios: `name`, `description`, `entry_type` (`payable`/`receivable`), `movement_nature` (`debit` para pagar, `credit` para receber), `start_date`, `first_due_date`, `template_amount`
+- recorrência: `frequency` (`one_time`, `weekly`, `monthly`, `yearly`), `interval_value`, `day_of_month`, `end_date`
+- `status`: use `active` para o título valer; o padrão é `draft`
+- `competence_date` (padrão: `start_date`; `first_due_date` não pode ser anterior à competência), `document_number_prefix`, `memo`
+- vínculos: `counterparty_id` (favorecido), `bank_account_id`, `chart_account_id`, `cost_center_id`, `activity_id`, `process_instance_id`, `routine_id`
+- `allocations`: rateio; cada item com `allocation_type` (`percentage` ou `amount`), `percentage` ou `allocated_amount`, `chart_account_id` e `cost_center_id`; a soma deve fechar 100% (ou o valor do título)
+- `schedule_code` é opcional: se omitido, o sistema gera `AG-000001`, `AG-000002` e assim por diante
+
+Exemplo (título a pagar avulso, rateio de 100%), argumentos da tool:
+
+```json
+{
+  "company_id": 16,
+  "idempotency_key": "sefaz-ba-paf-128984-2026-09",
+  "payload": {
+    "name": "SEFAZ-BA Transação Tributária - PAF 128984.0120/24-9",
+    "description": "SEFAZ-BA Transação Tributária - PAF 128984.0120/24-9",
+    "entry_type": "payable",
+    "movement_nature": "debit",
+    "frequency": "one_time",
+    "status": "active",
+    "start_date": "2026-09-30",
+    "competence_date": "2026-09-30",
+    "first_due_date": "2026-09-30",
+    "template_amount": 2635.95,
+    "counterparty_id": 223,
+    "allocations": [
+      {"allocation_type": "percentage", "percentage": 100, "chart_account_id": 805, "cost_center_id": 67}
+    ]
+  }
+}
+```
+
+O agendamento aparece em **Financeiro > Títulos Financeiros** e no relatório de títulos, no vencimento informado. A tela de Títulos abre com o filtro de vencimento do mês corrente (agora indicado em destaque); para ver títulos de outros meses, ajuste ou limpe o filtro.
 
 ## Validações e restrições
 - `company_id` obrigatório; `movement_nature` deve ser compatível com `entry_type`
