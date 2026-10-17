@@ -64,13 +64,15 @@ def direct_entry(arguments: Mapping[str, Any]) -> str | None:
 
 
 def financial_entry(arguments: Mapping[str, Any]) -> str | None:
-    """Título a pagar ou a receber: valida o lançamento e o rateio obrigatório sem gravar nada."""
+    """Conta a pagar/receber é recusada (deve ser agendamento); os demais tipos seguem validados sem gravar nada."""
     from src.core.mcp_financial_tools import _bound_payload
     from services.financial_title_rules import requires_allocations, validate_title_creation
 
     payload, company_error = _bound_payload(arguments.get("company_id"), arguments.get("payload"))
     if company_error:
         return company_error.get("error")
+    if str(payload.get("entry_type") or "").strip().lower() in {"payable", "receivable"}:
+        return "Conta a pagar/receber deve ser criada como agendamento. Use create_financial_schedule_secure."
     for forged in ("approved_by_user_id", "approved_at"):
         payload.pop(forged, None)
     if not (requires_allocations(payload.get("entry_type")) or payload.get("allocations")):

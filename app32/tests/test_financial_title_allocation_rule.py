@@ -179,20 +179,21 @@ def tool(monkeypatch):
     return mcp.registered["create_financial_entry"], seen
 
 
-def test_a_payable_without_the_rateio_is_refused_by_the_tool(tool):
+REFUSAL = "Conta a pagar/receber deve ser criada como agendamento. Use create_financial_schedule_secure."
+
+
+def test_a_payable_is_refused_by_the_tool_even_without_the_rateio(tool):
     create, seen = tool
     result = create(10, dict(BASE))
-    assert result["success"] is False and "allocations" in result["error"]
+    assert result == {"success": False, "error": REFUSAL}
     assert "atomic" not in seen and "plain" not in seen
 
 
-def test_a_payable_with_the_rateio_is_created_atomically_without_allocations_in_the_entry_payload(tool):
+def test_a_payable_is_refused_by_the_tool_even_with_the_rateio(tool):
     create, seen = tool
     result = create(10, {**BASE, "allocations": GOOD})
-    assert result["success"] is True
-    payload, allocations = seen["atomic"]
-    assert "allocations" not in payload and allocations[0]["cost_center_id"] == 24
-    assert payload["created_by_user_id"] == 14
+    assert result == {"success": False, "error": REFUSAL}
+    assert "atomic" not in seen and "plain" not in seen
 
 
 def test_other_entry_types_keep_the_previous_behavior(tool):
@@ -206,7 +207,11 @@ def test_prevalidator_runs_the_same_rule_and_skips_types_without_the_requirement
     monkeypatch.setattr(
         rules, "validate_title_creation", lambda *, company_id, payload: calls.append(payload) or (None, None, "erro de rateio")
     )
-    assert mcp_prevalidation.financial_entry({"company_id": 10, "payload": dict(BASE)}) == "erro de rateio"
+    refused = mcp_prevalidation.financial_entry({"company_id": 10, "payload": dict(BASE)})
+    assert refused == "Conta a pagar/receber deve ser criada como agendamento. Use create_financial_schedule_secure."
+    assert not calls
+    with_allocations = {**BASE, "entry_type": "bank_movement", "allocations": [{"allocation_type": "percentage", "percentage": 100}]}
+    assert mcp_prevalidation.financial_entry({"company_id": 10, "payload": with_allocations}) == "erro de rateio"
     assert calls[0]["company_id"] == 10
     assert mcp_prevalidation.financial_entry({"company_id": 10, "payload": {**BASE, "entry_type": "bank_movement"}}) is None
     forged = mcp_prevalidation.financial_entry({"company_id": 10, "payload": {**BASE, "company_id": 11}})
