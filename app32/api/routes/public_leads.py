@@ -19,11 +19,17 @@ def _allowed_origins() -> set[str]:
     return {o.strip().rstrip("/").lower() for o in (current_app.config.get("LEADS_ALLOWED_ORIGINS") or []) if o.strip()}
 
 
+# Status em que o nginx (add_header sem "always") já acrescenta Access-Control-Allow-Origin.
+_PROXY_CORS_STATUSES = {200, 201, 204, 206, 301, 302, 303, 304, 307, 308}
+
+
 def _respond(body: dict, status: int, origin: str | None = None):
     response = make_response(jsonify(body), status)
-    # Com LEADS_EMIT_CORS_ORIGIN=false o proxy (nginx do Configr) é o único a enviar
-    # Access-Control-Allow-Origin; enviar aqui também duplicaria o cabeçalho e o navegador rejeitaria.
-    if origin and current_app.config.get("LEADS_EMIT_CORS_ORIGIN", True):
+    # Com LEADS_EMIT_CORS_ORIGIN=false o proxy envia o cabeçalho nos status que ele cobre;
+    # enviar aqui também duplicaria e o navegador rejeitaria. Nos demais (202, 4xx, 503) o
+    # proxy não envia, então o Flask precisa enviar para o site conseguir ler a resposta.
+    proxy_adds = (not current_app.config.get("LEADS_EMIT_CORS_ORIGIN", True)) and status in _PROXY_CORS_STATUSES
+    if origin and not proxy_adds:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
     response.headers["Cache-Control"] = "no-store"
