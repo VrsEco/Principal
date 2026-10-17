@@ -198,9 +198,13 @@ class SiteLeadService:
             dedupe_hash=digest,
         )
         db.session.add(lead)
-        db.session.flush()
-        lead.project_task_id = SiteLeadService._create_owner_task(lead, source_cfg)
         db.session.commit()
+        # A tarefa vem depois do commit do lead: create_project_task comita por conta própria e,
+        # dentro de begin_nested, fechava a transação e a tarefa nunca era ligada ao lead.
+        task_id = SiteLeadService._create_owner_task(lead, source_cfg)
+        if task_id:
+            lead.project_task_id = task_id
+            db.session.commit()
         return lead.id, False
 
     @staticmethod
@@ -242,13 +246,13 @@ class SiteLeadService:
         try:
             from services.project_task_mcp_service import ProjectTaskMCPService
 
-            with db.session.begin_nested():
-                result, error = ProjectTaskMCPService.create_task(**SiteLeadService._task_kwargs(lead, source_cfg))
+            result, error = ProjectTaskMCPService.create_task(**SiteLeadService._task_kwargs(lead, source_cfg))
             if error or not result:
                 logger.warning("site_lead task_not_created lead=%s", lead.id)
                 return None
             return int(result["task"]["id"])
         except Exception:
+            db.session.rollback()
             logger.exception("site_lead task_error lead=%s", lead.id)
             return None
 
