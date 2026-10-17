@@ -21,7 +21,9 @@ def _allowed_origins() -> set[str]:
 
 def _respond(body: dict, status: int, origin: str | None = None):
     response = make_response(jsonify(body), status)
-    if origin:
+    # Com LEADS_EMIT_CORS_ORIGIN=false o proxy (nginx do Configr) é o único a enviar
+    # Access-Control-Allow-Origin; enviar aqui também duplicaria o cabeçalho e o navegador rejeitaria.
+    if origin and current_app.config.get("LEADS_EMIT_CORS_ORIGIN", True):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
     response.headers["Cache-Control"] = "no-store"

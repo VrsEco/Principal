@@ -48,6 +48,7 @@ Regras:
 | `LEADS_IP_HASH_SALT` | sal do hash de IP (padrão: `SECRET_KEY`) |
 | `LEADS_RATE_LIMIT_IP` / `LEADS_RATE_LIMIT_SOURCE` | req/min (padrão 10 / 120) |
 | `LEADS_REQUIRE_HTTPS` | padrão `true` |
+| `LEADS_EMIT_CORS_ORIGIN` | padrão `true`. Use `false` quando o proxy já envia `Access-Control-Allow-Origin` (produção Configr: allow_origin `*`), para não duplicar o cabeçalho. A origem continua validada no servidor (403 fora da lista) |
 
 Sem `LEADS_ALLOWED_ORIGINS`, `LEADS_SOURCES_JSON` e `LEADS_PRIVACY_POLICY_VERSION`, o endpoint responde 503.
 

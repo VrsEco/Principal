@@ -75,6 +75,7 @@ class Config:
     LEADS_SOURCES_JSON = os.environ.get("LEADS_SOURCES_JSON") or ""
     LEADS_IP_HASH_SALT = os.environ.get("LEADS_IP_HASH_SALT") or ""
     LEADS_REQUIRE_HTTPS = env_flag("LEADS_REQUIRE_HTTPS", default=True)
+    LEADS_EMIT_CORS_ORIGIN = env_flag("LEADS_EMIT_CORS_ORIGIN", default=True)
     LEADS_RATE_LIMIT_IP = int(os.environ.get("LEADS_RATE_LIMIT_IP") or 10)
     LEADS_RATE_LIMIT_SOURCE = int(os.environ.get("LEADS_RATE_LIMIT_SOURCE") or 120)
     LEADS_DEDUPE_WINDOW_SECONDS = int(os.environ.get("LEADS_DEDUPE_WINDOW_SECONDS") or 600)
