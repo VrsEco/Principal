@@ -157,6 +157,18 @@ def test_create_financial_entry_rejects_title_types_outside_schedule(entry_type)
     assert "create_financial_schedule_secure" in response["error"]
 
 
+def test_create_financial_entry_rejects_title_types_even_with_schedule_id():
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    response = mcp.registered["create_financial_entry"](10, {"entry_type": "payable", "financial_schedule_id": 7})
+
+    assert response == {
+        "success": False,
+        "error": "Conta a pagar/receber deve ser criada como agendamento. Use create_financial_schedule_secure.",
+    }
+
+
 def test_create_financial_schedule_secure_rejects_payload_company_different_from_tenant():
     mcp = _FakeMCP()
     register_financial_mcp_tools(mcp)

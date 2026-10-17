@@ -920,12 +920,10 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
     @mcp.tool()
     def create_financial_entry(company_id: int, payload: dict) -> dict:
         """
-        Cria um lançamento financeiro (conta a pagar ou a receber) no ledger. Exige idempotency_key e aprovação humana.
+        Cria um lançamento financeiro já efetivado no ledger (movimento ocorrido). Exige idempotency_key e aprovação humana.
 
-        RATEIO OBRIGATÓRIO para ``entry_type`` payable ou receivable: informe ``allocations`` na mesma chamada, com soma
-        de 100% (ou valores somando o valor do título) e plano de contas e centro de resultado analíticos em cada linha.
-        Exemplo: ``[{"allocation_type": "percentage", "percentage": 100, "chart_account_id": 217, "cost_center_id": 24}]``.
-        Lançamento e rateio são gravados juntos. Conta bancária é opcional (só o lançamento direto a exige).
+        NÃO cria conta a pagar nem a receber: ``entry_type`` payable/receivable é recusado. Toda conta a pagar/receber
+        é um AGENDAMENTO (Financeiro > Títulos Financeiros) e deve ser criada com ``create_financial_schedule_secure``.
 
         ``company_id`` é deliberadamente explícito na assinatura MCP para que a policy OAuth valide o tenant antes da
         service. Se o payload também o informar, ambos devem coincidir; o cliente nunca escolhe um tenant diferente do
@@ -963,12 +961,12 @@ def register_financial_mcp_tools(mcp: Any, *, include_diagnostic_reads: bool = F
             }
 
         requested_entry_type = str(normalized_payload.get("entry_type") or "").strip().lower()
-        if requested_entry_type in {"payable", "receivable"} and not normalized_payload.get("financial_schedule_id"):
+        if requested_entry_type in {"payable", "receivable"}:
             return {
                 "success": False,
                 "error": (
-                    "Conta a pagar/receber deve nascer de um agendamento (Títulos Financeiros). "
-                    "Use create_financial_schedule_secure; lançamento direto fica restrito a movimento já efetivado."
+                    "Conta a pagar/receber deve ser criada como agendamento. "
+                    "Use create_financial_schedule_secure."
                 ),
             }
 
